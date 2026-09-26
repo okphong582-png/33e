@@ -2,7 +2,7 @@
 #import <Security/Security.h>
 #import <CommonCrypto/CommonDigest.h>
 
-@interface LicenseSession ()
+@interface LicenseSession () <NSURLSessionDelegate, NSURLSessionTaskDelegate>
 @property(nonatomic,strong) NSURLSession *session;
 @property(nonatomic,strong) NSDictionary *config;
 @property(nonatomic,strong) NSTimer *timer;
