@@ -5,7 +5,7 @@
     "licenses": {
       "$keyHash": {
         ".read": true,
-        ".write": false,
+        ".write": "!data.exists() && newData.hasChildren(['enabled', 'expiresAt'])",
         ".validate": "newData.hasChildren(['enabled', 'expiresAt']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber()"
       }
     }
