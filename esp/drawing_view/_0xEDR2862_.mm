@@ -2,6 +2,7 @@
 #include "KabraxHide.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 UIFont *VietnameseFontForLayer(CGFloat size) {
     return [UIFont systemFontOfSize:size weight:UIFontWeightSemibold];
@@ -57,7 +58,8 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     const float halfWidth = knocked ? 0.48f : 0.30f;
     const float halfDepth = knocked ? 0.48f : 0.23f;
     Vector3 corners[8];
-    CGFloat minX = width, minY = height, maxX = 0, maxY = 0;
+    CGFloat minX = std::numeric_limits<CGFloat>::infinity();
+    CGFloat minY = minX, maxX = -minX, maxY = -minX;
     for (int i = 0; i < 8; ++i) {
         Vector3 world(hip.x + ((i & 1) ? halfWidth : -halfWidth),
                       (i & 2) ? highY : lowY,
