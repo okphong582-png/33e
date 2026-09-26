@@ -358,44 +358,8 @@ self.window.bounds = targetFrame;
     [invocation setArgument:&windowLevel atIndex:3];
     [invocation invoke];
     
-    // Game check timer
-        // ===== GAME CHECK TIMER (cho phép chờ tối đa 20s) =====
-    static const char *kGameProcessName = "FreeFire";
-    __block NSTimeInterval startTime = [NSDate timeIntervalSinceReferenceDate];
-    const NSTimeInterval timeout = 20.0; // 20 giây
-    
-    dispatch_source_t gameCheckTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
-    if (gameCheckTimer) {
-        // Timer chạy mỗi 1 giây, bắt đầu ngay lập tức
-        dispatch_source_set_timer(gameCheckTimer, DISPATCH_TIME_NOW, (uint64_t)(1.0 * NSEC_PER_SEC), (uint64_t)(0.1 * NSEC_PER_SEC));
-        
-        __weak __typeof__(self) weakSelf = self;
-        dispatch_source_set_event_handler(gameCheckTimer, ^{
-            __strong __typeof__(weakSelf) strongSelf = weakSelf;
-            if (!strongSelf) return;
-            
-            // Kiểm tra tiến trình game
-            if (GetGameProcesspid((char *)kGameProcessName) != -1) {
-                // Đã tìm thấy game → hủy timer, giữ HUD
-                dispatch_source_cancel(gameCheckTimer);
-                return;
-            }
-            
-            // Chưa thấy game → kiểm tra thời gian đã trôi qua
-            NSTimeInterval elapsed = [NSDate timeIntervalSinceReferenceDate] - startTime;
-            if (elapsed >= timeout) {
-                // Quá 20 giây → kill HUD
-                if (strongSelf->_gameCheckTimer) {
-                    dispatch_source_cancel(strongSelf->_gameCheckTimer);
-                }
-                exit(0);
-            }
-        });
-        
-        // Lưu timer vào biến instance để có thể hủy sau
-        _gameCheckTimer = gameCheckTimer;
-        dispatch_resume(gameCheckTimer);
-    }
+    // Không tự dừng HUD theo timer kiểm tra process game. Việc dừng chỉ do
+    // người dùng bấm Dừng menu hoặc phiên license bị thu hồi.
 
 
 // [NSTimer scheduledTimerWithTimeInterval:0.5 

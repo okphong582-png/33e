@@ -41,6 +41,7 @@ static bool isAimbotScope = YES;
 static bool isAimNeck = YES;
 static bool showFov = YES;
 static float fovPercent = 40.0f;
+bool isBox3D = YES;
 static uint64_t gAimLockTarget = 0;
 static uint64_t gAimLocalPlayer = 0;
 
@@ -61,6 +62,7 @@ void ESPSyncFromPrefs(void) {
     isAimNeck = ESPPrefsBool(@"AimNeck", YES);
     showFov = ESPPrefsBool(@"ShowFov", YES);
     fovPercent = ESPPrefsFloat(@"FovSize", 40);
+    isBox3D = ESPPrefsBool(@"Box3D", YES);
 
     // ESP Count logic
     if (isLine || isBox || isHealth) {
@@ -419,8 +421,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     @autoreleasepool {
 #ifdef NOTIFY_DESTROY_HUD
         if (GetGameProcesspid((char *)KH_STR("FreeFire")) == -1) {
-            notify_post(NOTIFY_DESTROY_HUD);
-            exit(0);
+            Moudule_Base = (uint64_t)-1;
+            [self clearAllContent];
+            return;
         }
 #endif
         if (Moudule_Base == (uint64_t)-1)

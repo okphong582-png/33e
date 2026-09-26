@@ -1,4 +1,5 @@
 #import "esp.h"
+#import "ESPPrefs.h"
 #include "KabraxHide.h"
 #include <algorithm>
 #include <cmath>
@@ -77,12 +78,16 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
 
     CGMutablePathRef boxPath = knocked ? buffers->boxKnockPath : (bot ? buffers->boxBotPath : buffers->boxPlayerPath);
     if (isBox) {
-        for (int i = 0; i < 8; ++i) {
-            for (int bit = 1; bit <= 4; bit <<= 1) {
-                if (i & bit) continue;
-                const Vector3 a = corners[i], b = corners[i | bit];
-                AddLine(boxPath, CGPointMake(a.x, a.y), CGPointMake(b.x, b.y));
+        if (isBox3D) {
+            for (int i = 0; i < 8; ++i) {
+                for (int bit = 1; bit <= 4; bit <<= 1) {
+                    if (i & bit) continue;
+                    const Vector3 a = corners[i], b = corners[i | bit];
+                    AddLine(boxPath, CGPointMake(a.x, a.y), CGPointMake(b.x, b.y));
+                }
             }
+        } else {
+            CGPathAddRect(boxPath, nullptr, CGRectMake(minX, minY, maxX - minX, maxY - minY));
         }
         if (knocked) buffers->boxKnockDirty = true;
         else if (bot) buffers->boxBotDirty = true;

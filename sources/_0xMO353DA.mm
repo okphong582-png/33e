@@ -148,6 +148,15 @@
         y = [self toggle:@"Thanh máu" key:@"Health" fallback:NO y:y];
         y = [self toggle:@"Điểm đánh dấu đầu" key:@"HeadRedDot" fallback:YES y:y];
         y = [self toggle:@"Khoảng cách" key:@"Dis" fallback:NO y:y];
+        UILabel *boxLabel = [self label:@"Kiểu khung" frame:CGRectMake(18, y + 4, 274, 20) size:12];
+        [self.scroll addSubview:boxLabel];
+        UISegmentedControl *boxStyle = [[UISegmentedControl alloc] initWithItems:@[@"2D", @"3D"]];
+        boxStyle.frame = CGRectMake(18, y + 28, 274, 30);
+        boxStyle.tag = 101;
+        boxStyle.selectedSegmentIndex = ESPPrefsBool(@"Box3D", YES) ? 1 : 0;
+        [boxStyle addTarget:self action:@selector(boxStyleChanged:) forControlEvents:UIControlEventValueChanged];
+        [self.scroll addSubview:boxStyle]; [self.controls addObject:boxStyle];
+        y += 70;
     } else if (self.page == 2) {
         UISegmentedControl *target = [[UISegmentedControl alloc] initWithItems:@[@"Box", @"Line", @"FOV"]];
         target.frame = CGRectMake(18, 0, 274, 30); target.selectedSegmentIndex = self.colorTarget;
@@ -175,6 +184,10 @@
 }
 - (void)colorTargetChanged:(UISegmentedControl *)sender {
     self.colorTarget = sender.selectedSegmentIndex; [self buildPage];
+}
+- (void)boxStyleChanged:(UISegmentedControl *)sender {
+    ESPPrefsSetBool(@"Box3D", sender.selectedSegmentIndex == 1);
+    ESPSyncFromPrefs();
 }
 - (void)updateSliderLabel:(UISlider *)sender {
     UILabel *label = objc_getAssociatedObject(sender, "label");
@@ -246,7 +259,9 @@
             UISegmentedControl *seg = (UISegmentedControl *)control;
             CGPoint p = [seg convertPoint:point fromView:self.view];
             seg.selectedSegmentIndex = MAX(0, MIN(seg.numberOfSegments - 1, (NSInteger)(p.x / (seg.bounds.size.width / seg.numberOfSegments))));
-            if (seg == self.tabs) [self changeTab:seg]; else [self colorTargetChanged:seg];
+            if (seg == self.tabs) [self changeTab:seg];
+            else if (seg.tag == 101) [self boxStyleChanged:seg];
+            else [self colorTargetChanged:seg];
         } else if (activate && [control isKindOfClass:UIButton.class]) [self closeMenu];
         return YES;
     }
