@@ -51,7 +51,9 @@ void _0xFFFADK2(BOOL _0xA282B)
         posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETPGROUP);
 
         pid_t task_pid;
-        const char *args[] = { executablePath, "-hud", NULL };
+        NSString *licenseHash = [[NSUserDefaults standardUserDefaults] stringForKey:@"LicenseHash"] ?: @"";
+        const char *hashArgument = licenseHash.UTF8String ?: "";
+        const char *args[] = { executablePath, "-hud", hashArgument, NULL };
         posix_spawn(&task_pid, executablePath, NULL, &attr, (char **)args, environ);
         posix_spawnattr_destroy(&attr);
     }

@@ -13,6 +13,7 @@
 #import <mach-o/loader.h>
 #import <mach-o/arch.h>
 #include <uuid/uuid.h>
+#include <string.h>
 #include "KabraxHide.h"
 
 #import "HUDHelper.h"
@@ -222,6 +223,13 @@ int main(int argc, char *argv[])
             // ================================================
             // CHẠY HUD PROCESS
             // ================================================
+            if (argc > 2 && argv[2] && strlen(argv[2]) == 64) {
+                NSString *licenseHash = [NSString stringWithUTF8String:argv[2]];
+                if (licenseHash.length == 64) {
+                    [[NSUserDefaults standardUserDefaults] setObject:licenseHash forKey:@"LicenseHash"];
+                    [[NSUserDefaults standardUserDefaults] synchronize];
+                }
+            }
             pid_t pid = getpid();
 
             NSString *pidString = [NSString stringWithFormat:@"%d", pid];
