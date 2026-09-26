@@ -10,6 +10,7 @@
     main{background:#171a22;border:1px solid #343a48;border-radius:18px;padding:24px;box-shadow:0 14px 45px #0008}
     h1{font-size:22px;margin:0 0 6px}p{color:#aab2c2;line-height:1.45}
     label{display:block;margin:18px 0 7px;color:#cbd2df}input,textarea,button{font:inherit;border-radius:10px}
+    .quick{display:flex;gap:8px}.quick input{flex:1}.quick button{margin:0}
     input,textarea{width:100%;box-sizing:border-box;background:#0e1015;color:#fff;border:1px solid #3a4252;padding:11px}
     button{border:0;background:#3277d8;color:#fff;padding:11px 15px;margin:18px 8px 0 0;cursor:pointer}
     button.secondary{background:#303746}button:disabled{opacity:.5;cursor:not-allowed}
@@ -20,9 +21,9 @@
 <main>
   <h1>Tạo license key offline</h1>
   <p>Trang này không kết nối Firebase và không chứa service-account key. Hãy mở bằng file local trên máy quản trị.</p>
-  <label for="days">Thời hạn (ngày)</label>
-  <input id="days" type="number" min="1" max="3650" value="30">
-  <button id="generate">Tạo key</button><button id="copy" class="secondary" disabled>Copy JSON</button>
+  <label for="keyInput">Key cấp phép <span class="warning">(để trống để tự sinh, mặc định 30 ngày)</span></label>
+  <div class="quick"><input id="keyInput" autocomplete="off" placeholder="HH-..."><button id="generate">Tạo</button></div>
+  <button id="copy" class="secondary" disabled>Copy JSON</button>
   <label>Key cấp cho người dùng</label>
   <textarea id="key" rows="2" readonly></textarea>
   <label>SHA-256 path</label>
@@ -45,13 +46,14 @@ function randomKey(){
 }
 function pretty(value){return JSON.stringify(value,null,2)}
 $("generate").onclick = async () => {
-  const days = Number($("days").value);
-  if(!Number.isFinite(days) || days < 1 || days > 3650){alert("Thời hạn phải từ 1 đến 3650 ngày.");return}
-  const key = randomKey(), hash = await digest(key);
-  const expiresAt = Date.now() + Math.round(days * 86400000);
+  const typed = $("keyInput").value.trim().toUpperCase();
+  const key = typed || randomKey();
+  if(key.length < 8 || key.length > 128){alert("Key phải dài từ 8 đến 128 ký tự.");return}
+  const hash = await digest(key);
+  const expiresAt = Date.now() + 30 * 86400000;
   const record = {enabled:true, expiresAt};
   latest = pretty(record);
-  $("key").value = key; $("hash").value = hash; $("record").value = latest;
+  $("keyInput").value = key; $("key").value = key; $("hash").value = hash; $("record").value = latest;
   $("copy").disabled = false;
 };
 $("copy").onclick = async () => {
