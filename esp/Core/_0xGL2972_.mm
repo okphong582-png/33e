@@ -141,7 +141,7 @@ uint64_t getRoot(uint64_t player) {
 
 bool get_IsFiring(uint64_t playerPawn) {
     
-    return ReadAddr<bool>(playerPawn + OFF64(0x848)); // private bool <IsPrepareAttack>k__BackingField; private bool <LPEIEILIKGC>k__BackingField; // 0x7D8
+    return isVaildPtr(playerPawn) && ReadAddr<uint8_t>(playerPawn + kIsFiring) == 1;
 }
 
 
@@ -193,18 +193,18 @@ uint64_t getRightHand(uint64_t player) {
 }
 
 bool getIsVisible(uint64_t playerPawn) {
-    if (playerPawn == 0) return false;
-    uint64_t AvatarManager = ReadAddr<uint64_t>(playerPawn + _0x27276BC); // protected AvatarManager m_AvatarManager; // 0x620 protected AvatarManager FOGJNGDMJKJ; // 0x710
-
-
-    if (AvatarManager == 0) return false;
-    uint64_t IUmaAvatar = ReadAddr<uint64_t>(AvatarManager + _0x28726BD); // internal IUmaAvatar m_Avatar; // 0x118 internal IUmaAvatar EEAGBKBMBLD; // 0x128
-
-
-    if (IUmaAvatar == 0) return false;
-    return ReadAddr<bool>(IUmaAvatar + _0x2872DCF); // private bool IsVisible; // 0x101
-
-
+    if (!isVaildPtr(playerPawn)) return false;
+    const uint64_t visibleObject = ReadAddr<uint64_t>(playerPawn + kVisibleObj);
+    if (isVaildPtr(visibleObject)) {
+        uint32_t flags = 0;
+        if (_read((long)(visibleObject + kVisibleObjFlags), &flags, sizeof(flags)))
+            return (flags & kISVisibleCamera) != 0;
+    }
+    // Compatibility fallback for builds with the avatar visibility layout.
+    const uint64_t avatarManager = ReadAddr<uint64_t>(playerPawn + _0x27276BC);
+    if (!isVaildPtr(avatarManager)) return false;
+    const uint64_t avatar = ReadAddr<uint64_t>(avatarManager + _0x28726BD);
+    return isVaildPtr(avatar) && ReadAddr<uint8_t>(avatar + _0x2872DCF) == 1;
 }
 
 
@@ -225,7 +225,7 @@ int GetDataUInt16(uint64_t player, int varID) {
     if (!isVaildPtr(v2)) return 0;
     uint64_t v4 = ReadAddr<uint64_t>(v2 + kDataPoolEntryStride * (uint64_t)varID + kDataPoolEntriesBase);
     if (!isVaildPtr(v4)) return 0;
-    return ReadAddr<int>(v4 + kDataPoolValue);
+    return ReadAddr<uint16_t>(v4 + kDataPoolValue);
 }
 
 void SetDataUInt16(uint64_t player, int varID, uint16_t value) {

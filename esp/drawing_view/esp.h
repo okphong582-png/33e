@@ -12,6 +12,9 @@ typedef struct {
     CGMutablePathRef snaplinePath;
     CGMutablePathRef hpBackgroundPath;
     CGMutablePathRef hpFillPath;
+    CGMutablePathRef hpWarningPath;
+    CGMutablePathRef hpCriticalPath;
+    CGMutablePathRef hpHighlightPath;
     CGMutablePathRef aimAssistPath;
     CGMutablePathRef alertPath;
 
@@ -38,6 +41,9 @@ bool lineKnockDirty;
     bool snaplineDirty;
     bool hpBackgroundDirty;
     bool hpFillDirty;
+    bool hpWarningDirty;
+    bool hpCriticalDirty;
+    bool hpHighlightDirty;
     bool aimAssistDirty;
     bool alertDirty;
 } ESPGeometryBuffers;
@@ -51,6 +57,7 @@ typedef void (*ESPAddTextCallback)(
     BOOL leftAligned
 );
 
+extern bool isHeadRedDot;
 extern bool isBox;
 extern bool isBone;
 extern bool isHealth;

@@ -14,15 +14,15 @@ static const CGFloat kHeaderHeight    = 45.0f;
 static const CGFloat kRowHeight       = 43.0f;
 static const CGFloat kSliderRowHeight = 55.0f;
 static const CGFloat kFooterHeight    = 25.0f;
-static const CGFloat kCornerRadius    = 8.0f;
-static const CGFloat kSeparatorHeight = 1.5f;
+static const CGFloat kCornerRadius    = 16.0f;
+static const CGFloat kSeparatorHeight = 0.5f;
 
-#define kColorRed        [UIColor colorWithRed:0.95f green:0.25f blue:0.15f alpha:1.0f]
-#define kColorBlue       [UIColor colorWithRed:0.07f green:0.07f blue:0.12f alpha:0.96f]
-#define kColorGray       [UIColor colorWithRed:0.12f green:0.12f blue:0.18f alpha:0.95f]
-#define kColorActive     [UIColor colorWithRed:1.00f green:0.65f blue:0.00f alpha:1.0f]
+#define kColorRed        [UIColor colorWithWhite:0.18 alpha:1.0]
+#define kColorBlue       [UIColor colorWithWhite:0.035 alpha:0.98]
+#define kColorGray       [UIColor colorWithWhite:0.065 alpha:1.0]
+#define kColorActive     [UIColor colorWithWhite:0.12 alpha:1.0]
 #define kColorText       [UIColor whiteColor]
-#define kColorSeparator  [UIColor colorWithRed:1.00f green:0.75f blue:0.00f alpha:0.35f]
+#define kColorSeparator  [UIColor colorWithWhite:1.0 alpha:0.08]
 
 @interface _0xDEADBEEE () <UIGestureRecognizerDelegate>
 @property (nonatomic, strong) UIView       *_0xP001;
@@ -54,36 +54,10 @@ static const CGFloat kSeparatorHeight = 1.5f;
 @implementation _0xDEADBEEE
 
 - (NSAttributedString *)_0xF001:(NSString *)text large:(CGFloat)lSize small:(CGFloat)sSize kern:(CGFloat)kernValue {
-    NSString *upperText = [text uppercaseString];
-    NSArray *words = [upperText componentsSeparatedByString:@" "];
-    NSMutableAttributedString *finalAttr = [[NSMutableAttributedString alloc] init];
-
-    for (NSInteger w = 0; w < words.count; w++) {
-        NSString *word = words[w];
-        if (word.length == 0) {
-            [finalAttr appendAttributedString:[[NSAttributedString alloc] initWithString:@" "]];
-            continue;
-        }
-
-        NSMutableAttributedString *wordAttr = [[NSMutableAttributedString alloc] init];
-        for (NSInteger i = 0; i < word.length; i++) {
-            NSString *ch = [word substringWithRange:NSMakeRange(i, 1)];
-            CGFloat fontSize = (i == 0) ? lSize : sSize;
-            UIFont *font = [UIFont fontWithName:KH_NS("AvenirNext-Bold") size:fontSize];
-            if (!font) font = [UIFont systemFontOfSize:fontSize weight:UIFontWeightBold];
-            NSAttributedString *chAttr = [[NSAttributedString alloc] initWithString:ch
-                                                                          attributes:@{NSFontAttributeName: font}];
-            [wordAttr appendAttributedString:chAttr];
-        }
-        [finalAttr appendAttributedString:wordAttr];
-
-        if (w < words.count - 1) {
-            [finalAttr appendAttributedString:[[NSAttributedString alloc] initWithString:@" "]];
-        }
-    }
-
-    [finalAttr addAttribute:NSKernAttributeName value:@(kernValue) range:NSMakeRange(0, finalAttr.length)];
-    return finalAttr;
+    return [[NSAttributedString alloc] initWithString:text attributes:@{
+        NSFontAttributeName: [UIFont systemFontOfSize:lSize weight:UIFontWeightSemibold],
+        NSKernAttributeName: @(0.3f)
+    }];
 }
 
 - (void)viewDidLoad {
@@ -94,6 +68,9 @@ static const CGFloat kSeparatorHeight = 1.5f;
     self._0xP00E = NO;
     self._0xP00F = NO;
 
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
+        @"AimbotFire": @YES, @"AimbotScope": @YES, @"HeadRedDot": @YES
+    }];
     [self _0xF002];
     [self _0xF003];
 
@@ -153,22 +130,22 @@ static const CGFloat kSeparatorHeight = 1.5f;
     CGPoint pos = [self _0xF008];
     self._0xP001 = [[UIView alloc] initWithFrame:CGRectMake(pos.x, pos.y, kPanelWidth, kPanelHeight)];
     self._0xP001.backgroundColor     = [UIColor clearColor];
-    self._0xP001.layer.shadowColor   = [UIColor colorWithRed:1.0f green:0.6f blue:0.0f alpha:0.8f].CGColor;
-    self._0xP001.layer.shadowOpacity = 0.8f;
-    self._0xP001.layer.shadowRadius  = 12.0f;
-    self._0xP001.layer.shadowOffset  = CGSizeZero;
+    self._0xP001.layer.shadowColor   = UIColor.blackColor.CGColor;
+    self._0xP001.layer.shadowOpacity = 0.5f;
+    self._0xP001.layer.shadowRadius  = 20.0f;
+    self._0xP001.layer.shadowOffset  = CGSizeMake(0, 8);
     [self.view addSubview:self._0xP001];
 
     UIView *clip = [[KH_CLS("UIView") alloc] initWithFrame:self._0xP001.bounds];
     clip.backgroundColor    = kColorBlue;
     clip.layer.cornerRadius = kCornerRadius;
-    clip.layer.borderWidth  = 1.5f;
-    clip.layer.borderColor  = [UIColor colorWithRed:1.0f green:0.75f blue:0.0f alpha:0.8f].CGColor;
+    clip.layer.borderWidth  = 0.75f;
+    clip.layer.borderColor  = [UIColor colorWithWhite:1 alpha:0.16].CGColor;
     clip.clipsToBounds      = YES;
     [self._0xP001 addSubview:clip];
 
     UIView *headerView = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, 0, kPanelWidth, kHeaderHeight)];
-    headerView.backgroundColor = [UIColor colorWithRed:0.95f green:0.30f blue:0.0f alpha:1.0f];
+    headerView.backgroundColor = [UIColor colorWithWhite:0.025 alpha:1.0];
     [clip addSubview:headerView];
 
     UILabel *_0x28620 = [[KH_CLS("UILabel") alloc] initWithFrame:headerView.bounds];
@@ -197,11 +174,11 @@ static const CGFloat kSeparatorHeight = 1.5f;
     [self._0xP002 addSubview:self._0xP003];
 
     UIView *footer = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, kPanelHeight - kFooterHeight, kPanelWidth, kFooterHeight)];
-    footer.backgroundColor = [UIColor colorWithRed:0.95f green:0.30f blue:0.0f alpha:1.0f];
+    footer.backgroundColor = [UIColor colorWithWhite:0.025 alpha:1.0];
     
     UILabel *footerLbl = [[UILabel alloc] initWithFrame:footer.bounds];
-    footerLbl.text = @"⚡ HOANGHA VIP MOD ⚡";
-    footerLbl.textColor = [UIColor whiteColor];
+    footerLbl.text = @"HOANGHA  /  BLACK EDITION";
+    footerLbl.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
     footerLbl.font = [UIFont systemFontOfSize:11 weight:UIFontWeightBold];
     footerLbl.textAlignment = NSTextAlignmentCenter;
     [footer addSubview:footerLbl];
@@ -225,11 +202,21 @@ static const CGFloat kSeparatorHeight = 1.5f;
     objc_setAssociatedObject(rv, "type", @"toggle", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(rv, "key", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
-    UILabel *lbl = [[KH_CLS("UILabel") alloc] initWithFrame:rv.bounds];
+    UILabel *lbl = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectMake(16, 0, kPanelWidth - 78, kRowHeight)];
     lbl.attributedText = [self _0xF001:title large:15.0f small:13.0f kern:2.0f];
-    lbl.textColor = isOn ? [UIColor blackColor] : kColorText;
-    lbl.textAlignment = NSTextAlignmentCenter;
+    lbl.textColor = isOn ? UIColor.whiteColor : [UIColor colorWithWhite:0.65 alpha:1];
+    lbl.textAlignment = NSTextAlignmentLeft;
     [rv addSubview:lbl];
+    UILabel *state = [[UILabel alloc] initWithFrame:CGRectMake(kPanelWidth - 56, 12, 40, 20)];
+    state.tag = 7301;
+    state.text = isOn ? @"ON" : @"OFF";
+    state.font = [UIFont systemFontOfSize:10 weight:UIFontWeightBold];
+    state.textAlignment = NSTextAlignmentCenter;
+    state.textColor = isOn ? UIColor.whiteColor : [UIColor colorWithWhite:0.4 alpha:1];
+    state.layer.cornerRadius = 6;
+    state.clipsToBounds = YES;
+    state.backgroundColor = [UIColor colorWithWhite:1 alpha:0.06];
+    [rv addSubview:state];
 
     UIView *sep = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, kRowHeight - kSeparatorHeight, kPanelWidth, kSeparatorHeight)];
     sep.backgroundColor = kColorSeparator;
@@ -242,7 +229,7 @@ static const CGFloat kSeparatorHeight = 1.5f;
     CGFloat radius = 12.0f;
     UIGraphicsBeginImageContextWithOptions(CGSizeMake(radius*2, radius*2), NO, 0.0);
     CGContextRef ctx = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(ctx, [UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f].CGColor);
+    CGContextSetFillColorWithColor(ctx, [UIColor colorWithWhite:0.9 alpha:1].CGColor);
     CGContextFillEllipseInRect(ctx, CGRectMake(0, 0, radius*2, radius*2));
     UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
@@ -359,16 +346,19 @@ static const CGFloat kSeparatorHeight = 1.5f;
     [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Line") key:@"Line" y:y]];
     y += kRowHeight;
 
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Box")  key:@"Box" y:y]];
+    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Box 3D")  key:@"Box" y:y]];
     y += kRowHeight;
 
     [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Head Red") key:@"HeadRedDot" y:y]];
     y += kRowHeight;
 
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Hp")   key:@"Health" y:y]];
+    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("Thanh máu")   key:@"Health" y:y]];
     y += kRowHeight;
 
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("Aimbot Fire") key:@"AimbotFire" y:y]];
+    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("Aim đầu khi bắn") key:@"AimbotFire" y:y]];
+    y += kRowHeight;
+
+    [self._0xP003 addSubview:[self _0xF004:@"Aim khi mở ngắm" key:@"AimbotScope" y:y]];
     y += kRowHeight;
 
     CGRect containerFrame = self._0xP003.frame;
@@ -632,7 +622,8 @@ static const CGFloat kSeparatorHeight = 1.5f;
                 self._0xP008.backgroundColor = newState ? kColorActive : kColorGray;
                 for (UIView *sub in self._0xP008.subviews) {
                     if ([sub isKindOfClass:[UILabel class]]) {
-                        ((UILabel *)sub).textColor = newState ? [UIColor blackColor] : kColorText;
+                        ((UILabel *)sub).textColor = newState ? UIColor.whiteColor : [UIColor colorWithWhite:0.65 alpha:1];
+                        if (sub.tag == 7301) ((UILabel *)sub).text = newState ? @"ON" : @"OFF";
                     }
                 }
             } completion:nil];

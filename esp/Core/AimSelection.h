@@ -1,0 +1,37 @@
+#pragma once
+#include <cmath>
+#include <cstdint>
+#include <limits>
+
+namespace AimSelection {
+inline bool Triggered(bool fireEnabled, bool scopeEnabled, bool firing, bool scoping) {
+    return (fireEnabled && firing) || (scopeEnabled && scoping);
+}
+
+// A valid retained target wins over a new target closer to the crosshair.
+struct Selection {
+    uint64_t previous = 0;
+    uint64_t target = 0;
+    float bestDistanceSquared = std::numeric_limits<float>::max();
+    bool retained = false;
+
+    void consider(uint64_t id, float x, float y, float depth,
+                  float width, float height, float radius, bool eligible) {
+        if (!eligible || !id || !std::isfinite(x) || !std::isfinite(y) ||
+            !std::isfinite(depth) || depth <= 0.001f ||
+            width <= 0 || height <= 0 || radius <= 0 ||
+            x < 0 || x > width || y < 0 || y > height) return;
+        const float dx = x - width * 0.5f, dy = y - height * 0.5f;
+        const float distanceSquared = dx * dx + dy * dy;
+        const bool same = id == previous;
+        const float limit = radius * (same ? 1.5f : 1.0f);
+        if (distanceSquared > limit * limit) return;
+        if (same || (!retained && (distanceSquared < bestDistanceSquared ||
+            (distanceSquared == bestDistanceSquared && id < target)))) {
+            target = id;
+            bestDistanceSquared = distanceSquared;
+            retained = same;
+        }
+    }
+};
+}

@@ -1,0 +1,45 @@
+#include "../esp/Core/AimSelection.h"
+#include <cassert>
+#include <iostream>
+
+using AimSelection::Selection;
+int main() {
+    using AimSelection::Triggered;
+    assert(!Triggered(true, true, false, false));
+    assert(Triggered(true, true, true, false));
+    assert(Triggered(true, true, false, true));
+    assert(!Triggered(false, false, true, true));
+    assert(!Triggered(true, false, false, true));
+    assert(!Triggered(false, true, true, false));
+    auto add = [](Selection &s, uint64_t id, float x, bool eligible = true) {
+        s.consider(id, x, 250, 1, 1000, 500, 100, eligible);
+    };
+    Selection nearest;
+    add(nearest, 1, 560); add(nearest, 2, 510);
+    assert(nearest.target == 2);
+    Selection sticky; sticky.previous = 1;
+    add(sticky, 2, 501); add(sticky, 1, 640); add(sticky, 3, 500);
+    assert(sticky.target == 1 && sticky.retained);
+    Selection reverse; reverse.previous = 1;
+    add(reverse, 1, 640); add(reverse, 3, 500);
+    assert(reverse.target == 1);
+    Selection lost; lost.previous = 1;
+    add(lost, 1, 640, false); add(lost, 2, 510);
+    assert(lost.target == 2 && !lost.retained);
+    Selection outOfRange; outOfRange.previous = 1;
+    add(outOfRange, 1, 651); add(outOfRange, 2, 620);
+    assert(outOfRange.target == 0);
+    Selection invalid;
+    invalid.consider(1, 500, 250, -1, 1000, 500, 100, true);
+    invalid.consider(2, NAN, 250, 1, 1000, 500, 100, true);
+    invalid.consider(3, 500, INFINITY, 1, 1000, 500, 100, true);
+    invalid.consider(4, -1, 250, 1, 1000, 500, 1000, true);
+    add(invalid, 0, 500);
+    assert(invalid.target == 0);
+    Selection emptyFrame; emptyFrame.previous = 1;
+    assert(emptyFrame.target == 0);
+    Selection tie;
+    add(tie, 2, 500); add(tie, 1, 500);
+    assert(tie.target == 1);
+    std::cout << "Aim selection: all checks passed\n";
+}

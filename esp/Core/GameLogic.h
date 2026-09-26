@@ -15,7 +15,7 @@ float* GetViewMatrix(uint64_t cameraMain);
 bool IsAtLobby(uint64_t Moudule_Base);
 uint64_t getTransNode(uint64_t BodyPart);
 bool get_IsFiring(uint64_t playerPawn);
-//bool get_IsScoping(uint64_t playerPawn);
+bool get_IsScoping(uint64_t playerPawn);
 uint64_t getHead(uint64_t player);
 uint64_t getHip(uint64_t player);
 uint64_t getRoot(uint64_t player);

@@ -1,8 +1,4 @@
-// ============================================================
-// _0xE298S9_.mm
-// ESP chính - BẢN ĐÃ XÓA AIMBOT / SILENT AIM / AIM LOCK
-// CHỈ GIỮ LẠI: ESP Line, Box, Hp, Count
-// ============================================================
+#include "../Core/AimSelection.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -15,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include "KabraxHide.h"
 #include <float.h>
 #include <unordered_map>
@@ -23,14 +20,6 @@
 #include <condition_variable>
 #include <map>
 
-// ============================================================
-// ❌ ĐÃ XÓA: Thread silent aim
-// std::thread _0x2872TH2;
-// std::mutex _0x2OK2872;
-// std::condition_variable _0x2829CV;
-// bool _0x2RSL292 = false;
-// bool _0xESL2872 = false;
-// ============================================================
 
 uint64_t Moudule_Base = -1;
 float percent = 0.0f;
@@ -46,6 +35,9 @@ bool isDis        = YES;
 bool isLine       = YES;
 bool isHeadRedDot = YES;
 bool isAimbotFire = YES;
+static bool isAimbotScope = YES;
+static uint64_t gAimLockTarget = 0;
+static uint64_t gAimLocalPlayer = 0;
 
 static bool gESPPrefsLoadedOnce = false;
 
@@ -60,6 +52,7 @@ void ESPSyncFromPrefs(void) {
     isLine       = ESPPrefsBool(KH_NS("Line"),       NO);
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
     isAimbotFire = ESPPrefsBool(KH_NS("AimbotFire"), YES);
+    isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
 
     // ESP Count logic
     if (isLine || isBox || isHealth) {
@@ -69,12 +62,6 @@ void ESPSyncFromPrefs(void) {
     }
 }
 
-// ============================================================
-// ❌ ĐÃ XÓA: Aim lock state
-// static uint64_t gAimLockTarget       = 0;
-// static int      gAimLockLostFrames   = 0;
-// static const int kAimLockMaxLostFrames = 10;
-// ============================================================
 
 static const NSUInteger kMaxTextLayerPoolSize = 128;
 
@@ -96,7 +83,6 @@ BOOL hasSavedOriginalID = false;
 static uint64_t cachedMatchGame  = 0;
 static uint64_t cachedCamera     = 0;
 static uint64_t cachedMatch      = 0;
-static int      cacheRefreshTick = 0;
 
 typedef struct {
     int playerCount;
@@ -112,7 +98,7 @@ static inline float Clamp01f(float v) {
 static inline void ESPReleasePath(CGMutablePathRef p) { if (p) CGPathRelease(p); }
 
 static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
-    ESPGeometryBuffers b;
+    ESPGeometryBuffers b{};
     b.boxBotPath       = CGPathCreateMutable();
     b.boxPlayerPath    = CGPathCreateMutable();
     b.boxKnockPath     = CGPathCreateMutable();
@@ -125,6 +111,9 @@ static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
     b.snaplinePath     = CGPathCreateMutable();
     b.hpBackgroundPath = CGPathCreateMutable();
     b.hpFillPath       = CGPathCreateMutable();
+    b.hpWarningPath = CGPathCreateMutable();
+    b.hpCriticalPath = CGPathCreateMutable();
+    b.hpHighlightPath = CGPathCreateMutable();
     b.aimAssistPath    = CGPathCreateMutable();
     b.alertPath        = CGPathCreateMutable();
 
@@ -147,6 +136,9 @@ static inline void ESPGeometryBuffersRelease(ESPGeometryBuffers *b) {
     ESPReleasePath(b->snaplinePath);
     ESPReleasePath(b->hpBackgroundPath);
     ESPReleasePath(b->hpFillPath);
+    ESPReleasePath(b->hpWarningPath);
+    ESPReleasePath(b->hpCriticalPath);
+    ESPReleasePath(b->hpHighlightPath);
     ESPReleasePath(b->aimAssistPath);
     ESPReleasePath(b->alertPath);
 }
@@ -211,6 +203,9 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 @property (nonatomic, strong) CAShapeLayer           *snaplineLayer;
 @property (nonatomic, strong) CAShapeLayer           *hpBackgroundLayer;
 @property (nonatomic, strong) CAShapeLayer           *hpFillLayer;
+@property (nonatomic, strong) CAShapeLayer *hpWarningLayer;
+@property (nonatomic, strong) CAShapeLayer *hpCriticalLayer;
+@property (nonatomic, strong) CAShapeLayer *hpHighlightLayer;
 @property (nonatomic, strong) CAShapeLayer           *aimAssistLayer;
 @property (nonatomic, strong) CAShapeLayer           *alertLayer;
 @property (nonatomic, strong) CAShapeLayer           *fovLayer;
@@ -248,11 +243,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
                           frame.size.height);
 
     CGFloat finalSize = fontSize;
-    if ([str hasPrefix:@"[KH_STR("] || [str hasSuffix:@")]"]) {
-        finalSize = 7.5f;
-    } else {
-        finalSize = 9.0f;
-    }
 
     [view addText:str frame:f
             color:color
@@ -285,27 +275,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (self.superview) self.frame = self.superview.bounds;
 }
 
-// ============================================================
-// ❌ ĐÃ XÓA: Global variables cho silent aim
-// uint64_t _0xHIT2872 = 0;
-// Vector3 g_TargetDir = {0, 0, 0};
-// Vector3 g_TargetPos = {0,0,0};
-// Vector3 g_HitLocation = {0,0,0};
-// uint8_t g_SpecialHitType = 0;
-// Vector3 g_HitNormal = {0,0,0};
-// Vector3 g_StartPosition = {0,0,0};
-// Vector3 g_StartPositionOrg = {0,0,0};
-// bool g_IgnoreHappens;
-// bool g_ViewBlocked;
-// uint64_t g_HitGroup = 0;
-// bool _0xD8A2T7A = false;
-// std::atomic<float> _0x287SL28{ -1.0f };
-// ============================================================
 
-// ============================================================
-// ❌ ĐÃ XÓA: Hàm silent aim thread
-// void _0xASI2872D() { ... }
-// ============================================================
 
 - (void)setupModuleBase {
     static dispatch_once_t once;
@@ -324,19 +294,23 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     l.strokeColor     = stroke ? stroke.CGColor : nil;
     l.fillColor       = fill   ? fill.CGColor   : UIColor.clearColor.CGColor;
     l.lineWidth       = lw;
-    l.lineJoin        = kCALineJoinMiter;
-    l.lineCap         = kCALineCapSquare;
+    l.lineJoin        = kCALineJoinRound;
+    l.lineCap         = kCALineCapRound;
     l.contentsScale   = UIScreen.mainScreen.scale;
     l.zPosition       = z;
-    l.allowsEdgeAntialiasing = NO;
+    l.allowsEdgeAntialiasing = YES;
+    l.shadowColor = UIColor.blackColor.CGColor;
+    l.shadowOffset = CGSizeMake(0, 1);
+    l.shadowOpacity = 0.65f;
+    l.shadowRadius = 1.0f;
     l.actions = @{ KH_NS("path"): NSNull.null };
     return l;
 }
 
 - (void)configureRenderingLayers {
-    UIColor *white  = UIColor.whiteColor;
+    UIColor *white  = [UIColor colorWithRed:0.72 green:0.91 blue:1.0 alpha:0.95];
     UIColor *clear  = UIColor.clearColor;
-    UIColor *yellow = UIColor.yellowColor;
+    UIColor *yellow = [UIColor colorWithRed:0.95 green:0.79 blue:0.48 alpha:0.9];
 
     UIColor *hpGreen = [UIColor colorWithRed:0.0f green:0.85f blue:0.2f alpha:1.0f];
     UIColor *red     = [UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f];
@@ -355,10 +329,14 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.8f zPos:1];
     self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:0.5f zPos:2];
     self.boxLayer          = [self makeShapeLayer:white   fill:nil     lineWidth:0.5f zPos:3];
-    self.hpBackgroundLayer = [self makeShapeLayer:nil     fill:clear   lineWidth:0    zPos:4];
+    self.hpBackgroundLayer = [self makeShapeLayer:nil     fill:[UIColor colorWithWhite:0.02 alpha:0.9] lineWidth:0 zPos:4];
     self.hpFillLayer       = [self makeShapeLayer:nil     fill:hpGreen lineWidth:0    zPos:5];
 
-    for (CAShapeLayer *l in @[self.fovLayer, self.snaplineLayer, self.boneLayer, self.boxLayer,
+    self.hpWarningLayer = [self makeShapeLayer:nil fill:[UIColor colorWithRed:1 green:0.72 blue:0.25 alpha:1] lineWidth:0 zPos:5];
+    self.hpCriticalLayer = [self makeShapeLayer:nil fill:[UIColor colorWithRed:1 green:0.27 blue:0.32 alpha:1] lineWidth:0 zPos:5];
+    self.hpHighlightLayer = [self makeShapeLayer:nil fill:[UIColor colorWithWhite:1 alpha:0.4] lineWidth:0 zPos:6];
+
+    for (CAShapeLayer *l in @[self.hpWarningLayer, self.hpCriticalLayer, self.hpHighlightLayer, self.fovLayer, self.snaplineLayer, self.boneLayer, self.boxLayer,
                                self.hpBackgroundLayer, self.hpFillLayer,
                             self.boxBotLayer, self.boxPlayerLayer, self.lineBotLayer, self.linePlayerLayer, self.lineKnockLayer, self.boxKnockLayer]) {
         [self.layer addSublayer:l];
@@ -369,17 +347,16 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.statusLayer.alignmentMode   = kCAAlignmentCenter;
     self.statusLayer.fontSize        = 16.0f;
     self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:16.0f weight:UIFontWeightHeavy];
-    self.statusLayer.backgroundColor = [UIColor colorWithRed:0.04f green:0.08f blue:0.05f alpha:0.92f].CGColor;
-    self.statusLayer.borderColor     = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:0.9f].CGColor;
-    self.statusLayer.borderWidth     = 1.5f;
-    self.statusLayer.cornerRadius    = 16.0f;
-    self.statusLayer.shadowColor     = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:0.8f].CGColor;
-    self.statusLayer.shadowOffset    = CGSizeZero;
-    self.statusLayer.shadowOpacity   = 0.9f;
-    self.statusLayer.shadowRadius    = 8.0f;
+    self.statusLayer.backgroundColor = UIColor.clearColor.CGColor;
+    self.statusLayer.borderWidth = 0;
+    self.statusLayer.cornerRadius = 0;
+    self.statusLayer.shadowColor = UIColor.blackColor.CGColor;
+    self.statusLayer.shadowOffset = CGSizeMake(0, 1);
+    self.statusLayer.shadowOpacity = 0.85f;
+    self.statusLayer.shadowRadius = 1.5f;
     self.statusLayer.contentsScale   = UIScreen.mainScreen.scale;
     self.statusLayer.zPosition       = 8;
-    self.statusLayer.actions = @{ KH_NS("stringKH_STR("):NSNull.null, KH_NS(")frameKH_STR("):NSNull.null, @")hidden":NSNull.null };
+    self.statusLayer.actions = @{ @"string":NSNull.null, @"frame":NSNull.null, @"hidden":NSNull.null };
     [self.layer addSublayer:self.statusLayer];
 }
 
@@ -400,8 +377,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         layer.shadowOffset  = CGSizeMake(0.5f, 0.5f);
         layer.shadowOpacity = 1.0f;
         layer.shadowRadius  = 0.0f;
-        layer.actions = @{ KH_NS("positionKH_STR("):NSNull.null, KH_NS(")bounds"):NSNull.null,
-                           KH_NS("stringKH_STR("):NSNull.null,   @")hidden":NSNull.null };
+        layer.actions = @{ @"position":NSNull.null, @"bounds":NSNull.null, @"string":NSNull.null, @"hidden":NSNull.null };
         [self.textLayerPool addObject:layer];
         [self.layer addSublayer:layer];
     } else {
@@ -429,9 +405,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     l.shadowRadius    = 0.0f;
 }
 
-// ============================================================
-// ✅ UPDATE FRAME - ĐÃ XÓA FOV CIRCLE (aimbot)
-// ============================================================
 - (void)updateFrame {
     if (!self.window) return;
     @autoreleasepool {
@@ -476,18 +449,15 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         ApplyPath(self.lineBotLayer,      buffers.lineBotPath,      buffers.lineBotDirty);
         ApplyPath(self.linePlayerLayer,   buffers.linePlayerPath,   buffers.linePlayerDirty);
 
+        ApplyPath(self.hpWarningLayer, buffers.hpWarningPath, buffers.hpWarningDirty);
+        ApplyPath(self.hpCriticalLayer, buffers.hpCriticalPath, buffers.hpCriticalDirty);
+        ApplyPath(self.hpHighlightLayer, buffers.hpHighlightPath, buffers.hpHighlightDirty);
         ESPGeometryBuffersRelease(&buffers);
 
-        // ❌ ĐÃ XÓA: FOV Circle rendering
-        // CGMutablePathRef fovPath = CGPathCreateMutable();
-        // BOOL hasFov = RenderFOVCirclePath(fovPath, vw, vh, _0x3872DB, aimFov);
-        // self.fovLayer.path = hasFov ? fovPath : nil;
-        // CGPathRelease(fovPath);
-        
         self.fovLayer.path = nil;   // Ẩn FOV circle hoàn toàn
 
-        // ESP Count hiển thị - Từ đầu dây xuống (High-Tech Emerald Green Badge)
-        if (isCount || isLine || isBox) {
+        // Plain enemy count, with no icon or background.
+        if (stats.inMatch && (isCount || isLine || isBox)) {
             int totalEnemies = stats.playerCount + stats.botCount;
 
             UIFont *fontBasic = [UIFont systemFontOfSize:16.0f weight:UIFontWeightHeavy];
@@ -495,12 +465,12 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             attributes[NSFontAttributeName] = fontBasic;
             attributes[NSForegroundColorAttributeName] = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:1.0f];
 
-            NSString *countStr = [NSString stringWithFormat:@"🎯 ĐỊCH: %d", totalEnemies];
+            NSString *countStr = [NSString stringWithFormat:@"ĐỊCH: %d", totalEnemies];
             NSAttributedString *attrStr = [[NSAttributedString alloc] initWithString:countStr attributes:attributes];
             self.statusLayer.string = attrStr;
 
-            CGFloat bannerWidth = 140.0f;
-            self.statusLayer.frame = CGRectMake(vw / 2.0f - (bannerWidth / 2.0f), 22.0f, bannerWidth, 32.0f);
+            CGFloat bannerWidth = 120.0f;
+            self.statusLayer.frame = CGRectMake(vw / 2.0f - (bannerWidth / 2.0f), 22.0f, bannerWidth, 22.0f);
             self.statusLayer.alignmentMode = kCAAlignmentCenter;
             self.statusLayer.hidden = NO;
         } else {
@@ -518,6 +488,10 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)clearAllContent {
+    gAimLockTarget = 0;
+    self.statusLayer.hidden = YES;
+    self.boxKnockLayer.path = self.lineKnockLayer.path = self.fovLayer.path = nil;
+    self.hpWarningLayer.path = self.hpCriticalLayer.path = self.hpHighlightLayer.path = nil;
     self.boxLayer.path = self.boneLayer.path = self.snaplineLayer.path = self.lineBotLayer.path = self.linePlayerLayer.path = self.boxBotLayer.path = self.boxPlayerLayer.path = nil;
     self.hpBackgroundLayer.path = self.hpFillLayer.path                 = nil;
     self.aimAssistLayer.path = self.alertLayer.path = nil;
@@ -529,12 +503,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     _displayLink = nil;
 }
 
-// ============================================================
-// ❌ ĐÃ XÓA: Toàn bộ hàm aimbot
-// Quaternion GetRotationToLocation(...)
-// Vector3 GetAimTargetPos(...)
-// void _0x387228(...)
-// ============================================================
 
 static inline bool IsZeroVec(const Vector3 &v) {
     return v.x == 0.0f && v.y == 0.0f && v.z == 0.0f;
@@ -562,107 +530,93 @@ bool get_IsKnockedDown(uint64_t player) {
 
 bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) != 0; }
 
-// ============================================================
-// ✅ MAIN ESP RENDER - CHỈ CÒN ESP LINE / BOX / HP / COUNT
-// ============================================================
 - (ESPFrameStats)renderESPWithBuffers:(ESPGeometryBuffers *)buffers
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
-
     ESPFrameStats stats = {0, 0, false};
-    if (!buffers || Moudule_Base == -1 || IsAtLobby(Moudule_Base)) return stats;
-
-    cacheRefreshTick++;
-    if (cacheRefreshTick > 30 ||
-        !isVaildPtr(cachedMatchGame) || !isVaildPtr(cachedMatch) || !isVaildPtr(cachedCamera)) {
-        cachedMatchGame = getMatchGame(Moudule_Base);
-        if (!isVaildPtr(cachedMatchGame)) return stats;
-        cachedCamera     = CameraMain(cachedMatchGame);
-        cachedMatch      = getMatch(cachedMatchGame);
-        cacheRefreshTick = 0;
+    const uint64_t previousTarget = gAimLockTarget;
+    gAimLockTarget = 0; // Every early return releases stale targets.
+    if (!buffers || !isVaildPtr(Moudule_Base) || IsAtLobby(Moudule_Base)) {
+        cachedMatchGame = cachedMatch = cachedCamera = gAimLocalPlayer = 0;
+        return stats;
     }
-    if (!isVaildPtr(cachedCamera) || !isVaildPtr(cachedMatch)) return stats;
+    // Refresh the match identity each frame so a new match cannot reuse a stale lock.
+    const uint64_t matchGame = getMatchGame(Moudule_Base);
+    const uint64_t match = getMatch(matchGame);
+    const bool sameMatch = match == cachedMatch;
+    cachedMatchGame = matchGame;
+    cachedMatch = match;
+    cachedCamera = CameraMain(matchGame);
+    if (!isVaildPtr(cachedCamera) || !isVaildPtr(match)) return stats;
 
-    uint64_t _0x2872P = getLocalPlayer(cachedMatch);
-    if (!isVaildPtr(_0x2872P) || get_CurHP(_0x2872P) <= 0) return stats;
-
-    stats.inMatch = true;
-
-    uint64_t camTransform = ReadAddr<uint64_t>(_0x2872P + kMainCameraTransform);
+    const uint64_t local = getLocalPlayer(match);
+    if (!isVaildPtr(local) || get_CurHP(local) <= 0) return stats;
+    const bool sameLocal = local == gAimLocalPlayer;
+    gAimLocalPlayer = local;
+    const uint64_t camTransform = ReadAddr<uint64_t>(local + kMainCameraTransform);
     if (!isVaildPtr(camTransform)) return stats;
-    Vector3 myLoc = getPositionExt(camTransform);
+    const Vector3 myLoc = getPositionExt(camTransform);
+    if (IsZeroVec(myLoc) || !std::isfinite(myLoc.x) || !std::isfinite(myLoc.y) || !std::isfinite(myLoc.z)) return stats;
 
-    uint64_t playerDict = ReadAddr<uint64_t>(cachedMatch + kMatchPlayerDict);
-    if (!isVaildPtr(playerDict)) return stats;
-
-    int      dictCount  = ReadAddr<int>(playerDict + kDictCount);
-    uint64_t entriesArr = ReadAddr<uint64_t>(playerDict + kDictEntries);
-    if (!isVaildPtr(entriesArr)) return stats;
-
-    int slotCap = ReadAddr<int>(entriesArr + kIl2CppArrayMaxLength);
-    if (slotCap <= 0 || slotCap > 256 || dictCount <= 0) return stats;
-
+    const uint64_t dict = ReadAddr<uint64_t>(match + kMatchPlayerDict);
+    if (!isVaildPtr(dict)) return stats;
+    const int count = ReadAddr<int>(dict + kDictCount);
+    const uint64_t entries = ReadAddr<uint64_t>(dict + kDictEntries);
+    if (!isVaildPtr(entries)) return stats;
+    const int capacity = ReadAddr<int>(entries + kIl2CppArrayMaxLength);
+    if (capacity <= 0 || capacity > 256 || count < 0 || count > capacity) return stats;
     float *matrix = GetViewMatrix(cachedCamera);
     if (!matrix) return stats;
+    stats.inMatch = true;
 
-    CGFloat screenVpW = vpW > 1.0 ? vpW : vw;
-    CGFloat screenVpH = vpH > 1.0 ? vpH : vh;
-
-    const uint64_t base = entriesArr + kIl2CppArrayItems;
-
-    // ====================================================
-    // LOOP QUA TẤT CẢ PLAYER - CHỈ VẼ ESP
-    // ====================================================
-    for (int i = 0; i < slotCap; i++) {
-        uint64_t ent = base + (uint64_t)kDictEntryStrideBytePlayer * (uint64_t)i;
-        if (ReadAddr<int>(ent) == 0) continue;
-
-        uint64_t pawn = ReadAddr<uint64_t>(ent + (uint64_t)kDictEntryValueOffByte);
-        if (!isVaildPtr(pawn) || isLocalTeamMate(_0x2872P, pawn)) continue;
-
-        int hp = get_CurHP(pawn);
+    const bool aiming = !get_IsKnockedDown(local) && AimSelection::Triggered(
+        isAimbotFire, isAimbotScope, get_IsFiring(local), get_IsScoping(local));
+    AimSelection::Selection selection;
+    selection.previous = sameMatch && sameLocal && aiming ? previousTarget : 0;
+    Vector3 targetHead;
+    const float radius = (float)std::min(vw, vh) * 0.40f;
+    const uint64_t base = entries + kIl2CppArrayItems;
+    for (int i = 0; i < count; ++i) {
+        const uint64_t entry = base + (uint64_t)kDictEntryStrideBytePlayer * i;
+        if (ReadAddr<int>(entry) < 0) continue; // Removed dictionary entries have a negative hash.
+        const uint64_t pawn = ReadAddr<uint64_t>(entry + kDictEntryValueOffByte);
+        if (!isVaildPtr(pawn) || pawn == local || isLocalTeamMate(local, pawn)) continue;
+        const int hp = get_CurHP(pawn);
         if (hp <= 0) continue;
-
-        Vector3 footPos = getPositionExt(getHip(pawn));
-        if (IsZeroVec(footPos)) continue;
-
-        float dis = Vector3::Distance(myLoc, footPos);
-        if (dis > 150.0f) continue;
-
-        bool isBot     = get_IsBot(pawn);
-        bool isKnocked = get_IsKnockedDown(pawn);
-        bool Visible   = getIsVisible(pawn);
-        bool espVis    = Visible || isKnocked;
-
-        // ❌ ĐÃ XÓA: Toàn bộ logic aimbot
-        // - Tìm bestTarget
-        // - Tính bestScore / bestDistance
-        // - Silent aim write memory
-        // - Aimbot rotation
-
-        if (espVis) {
-            if (isBot)
-                stats.botCount++;
-            else
-                stats.playerCount++;
-
-            // ✅ Vẽ ESP cho pawn này
-            _0x35572DA(buffers,
-                       ESPTextCallback,
-                       (__bridge void *)self,
-                       pawn, hp, dis, matrix,
-                       (float)vw, (float)vh,
-                       (float)screenVpW, (float)screenVpH);
+        const Vector3 hip = getPositionExt(getHip(pawn));
+        if (IsZeroVec(hip)) continue;
+        const float distance = Vector3::Distance(myLoc, hip);
+        if (!std::isfinite(distance) || distance > 150.0f) continue;
+        const bool knocked = get_IsKnockedDown(pawn);
+        const bool visible = getIsVisible(pawn);
+        if (aiming && visible && !knocked) {
+            const Vector3 head = getPositionExt(getHead(pawn));
+            if (!IsZeroVec(head) && std::isfinite(head.x) && std::isfinite(head.y) && std::isfinite(head.z)) {
+                const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
+                selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
+                if (selection.target == pawn) targetHead = head;
+            }
+        }
+        if (visible || knocked) {
+            if (get_IsBot(pawn)) ++stats.botCount;
+            else ++stats.playerCount;
+            _0x35572DA(buffers, ESPTextCallback, (__bridge void *)self,
+                       pawn, hp, distance, matrix, vw, vh, vpW, vpH);
         }
     }
-
-    // ❌ ĐÃ XÓA: Toàn bộ logic sau loop
-    // if(_0x2872o) {...}
-    // if(_0x83278) {...}
-    // if (!(_0x3872DA || aimsilent1)) {...}
-    // if (aimsilent1 && bestTarget) {...}
-    // if (_0x3872DA && bestTarget) {...}
-
+    if (aiming && selection.target) {
+        const Vector3 direction = targetHead - myLoc;
+        if (Vector3::SqrMagnitude(direction) > 0.0001f) {
+            const Quaternion rotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));
+            if (std::isfinite(rotation.x) && std::isfinite(rotation.y) &&
+                std::isfinite(rotation.z) && std::isfinite(rotation.w)) {
+                if (WriteAddr<Quaternion>(local + kAimRotation, rotation)) {
+                    WriteAddr<Quaternion>(local + kAimRotationAux, rotation);
+                    gAimLockTarget = selection.target;
+                }
+            }
+        }
+    }
     return stats;
 }
 
