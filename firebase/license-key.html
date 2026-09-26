@@ -60,11 +60,19 @@ $("generate").onclick = async () => {
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({enabled:true, expiresAt:Date.now() + Math.round(days * 86400000)})
     });
-    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    if(!response.ok){
+      const detail = await response.text();
+      throw new Error(`HTTP ${response.status}${detail ? `: ${detail.slice(0,120)}` : ""}`);
+    }
     $("keyInput").value = key;
     setStatus(`Đã tạo và đồng bộ key: ${key}`);
   } catch(error) {
-    setStatus("Không ghi được vào Realtime Database. Hãy kiểm tra Rules và kết nối mạng.", true);
+    const message = String(error && error.message || "");
+    if(message.includes("401") || message.includes("403")) {
+      setStatus("Firebase từ chối ghi (401/403). Hãy deploy database.rules.json rồi thử lại.", true);
+    } else {
+      setStatus(`Không ghi được vào Realtime Database: ${message || "kiểm tra kết nối mạng"}`, true);
+    }
   } finally { $("generate").disabled = false; }
 };
 </script>
