@@ -4,10 +4,9 @@
     ".write": false,
     "licenses": {
       "$keyHash": {
-        ".read": "auth != null && data.child('enabled').val() == true && data.child('expiresAt').isNumber() && data.child('expiresAt').val() > now && (!data.child('ownerUid').exists() || data.child('ownerUid').val() == auth.uid)",
-        "ownerUid": {
-          ".write": "auth != null && !data.exists() && newData.isString() && newData.val() == auth.uid && data.parent().child('enabled').val() == true && data.parent().child('expiresAt').isNumber() && data.parent().child('expiresAt').val() > now"
-        }
+        ".read": true,
+        ".write": false,
+        ".validate": "newData.hasChildren(['enabled', 'expiresAt']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber()"
       }
     }
   }
