@@ -327,8 +327,6 @@ self.window.bounds = targetFrame;
     self.window.windowLevel = 10000010.0;
     self.window.hidden = NO;
     [self.window makeKeyAndVisible];
-    // Mở bảng điều khiển ngay sau khi Start menu, không bắt người dùng bấm nút nổi lần nữa.
-    [menuView showMenu];
     
     // FORCE ROTATE LẦN ĐẦU
     UIInterfaceOrientation initialOrientation = [self currentInterfaceOrientation];
