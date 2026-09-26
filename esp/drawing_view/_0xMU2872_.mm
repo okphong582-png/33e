@@ -5,13 +5,15 @@
 #import "esp.h"
 #import "../../mahoa.h"
 #import <UIKit/UIKit.h>
+#import <ImageIO/ImageIO.h>
 #include "KabraxHide.h"
 
-static const CGFloat kMenuButtonSize = 56.0f;
+static const CGFloat kMenuButtonSize = 64.0f;
 static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
 
 @interface _0xB1872A2 ()
 @property (nonatomic, strong) UIButton *menuButton;
+@property (nonatomic, strong) UIImageView *gifImageView;
 @property (nonatomic, assign) NSInteger trackingPointerId;
 @property (nonatomic, assign) BOOL touchOnButton;
 @property (nonatomic, assign) BOOL buttonDragging;
@@ -22,15 +24,69 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
 
 @implementation _0xB1872A2
 
+- (UIImage *)loadAnimatedGIFNamed:(NSString *)name {
+    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:nil];
+    if (!path) {
+        path = [[NSBundle mainBundle] pathForResource:[name stringByDeletingPathExtension] ofType:[name pathExtension]];
+    }
+    if (!path) {
+        path = [@"/Applications/Bugchi.app" stringByAppendingPathComponent:name];
+    }
+    if (!path) {
+        path = @"/Applications/Bugchi.app/Dragon Ball Z Rage GIF.gif";
+    }
+    
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    if (!data) return nil;
+    
+    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef)data, NULL);
+    if (!source) return nil;
+    
+    size_t count = CGImageSourceGetCount(source);
+    if (count <= 1) {
+        CFRelease(source);
+        return [UIImage imageWithData:data];
+    }
+    
+    NSMutableArray<UIImage *> *images = [NSMutableArray array];
+    NSTimeInterval totalDuration = 0.0;
+    
+    for (size_t i = 0; i < count; i++) {
+        CGImageRef imageRef = CGImageSourceCreateImageAtIndex(source, i, NULL);
+        if (imageRef) {
+            [images addObject:[UIImage imageWithCGImage:imageRef]];
+            CGImageRelease(imageRef);
+        }
+        
+        float frameDuration = 0.08f;
+        CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(source, i, NULL);
+        if (properties) {
+            CFDictionaryRef gifProps = (CFDictionaryRef)CFDictionaryGetValue(properties, kCGImagePropertyGIFDictionary);
+            if (gifProps) {
+                NSNumber *delayTime = (__bridge NSNumber *)CFDictionaryGetValue(gifProps, kCGImagePropertyGIFUnclampedDelayTime);
+                if (!delayTime || [delayTime floatValue] == 0) {
+                    delayTime = (__bridge NSNumber *)CFDictionaryGetValue(gifProps, kCGImagePropertyGIFDelayTime);
+                }
+                if (delayTime && [delayTime floatValue] > 0) {
+                    frameDuration = [delayTime floatValue];
+                }
+            }
+            CFRelease(properties);
+        }
+        totalDuration += frameDuration;
+    }
+    CFRelease(source);
+    
+    return [UIImage animatedImageWithImages:images duration:totalDuration > 0 ? totalDuration : (count * 0.08f)];
+}
+
 - (void)layoutSubviews {
     [super layoutSubviews];
     
-    // Giữ icon luôn nằm trong viền màn hình khi xoay và giữ nguyên kích thước 56x56
     if (self.superview && _menuButton) {
         CGSize size = self.superview.bounds.size;
         CGRect frame = _menuButton.frame;
         
-        // Khóa cứng kích thước chuẩn, tránh bị co rút toạ độ
         frame.size.width = kMenuButtonSize;
         frame.size.height = kMenuButtonSize;
         
@@ -40,6 +96,7 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
         if (frame.origin.y < 0) frame.origin.y = 0;
         
         _menuButton.frame = frame;
+        _gifImageView.frame = _menuButton.bounds;
     }
 }
 
@@ -68,41 +125,38 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
 - (void)setupMenuButton {
     _menuButton = [UIButton buttonWithType:UIButtonTypeCustom];
     _menuButton.frame = CGRectMake(20, 100, kMenuButtonSize, kMenuButtonSize);
-    _menuButton.backgroundColor = [UIColor clearColor];
-    
-    // Đặt zPosition cực cao để không bao giờ bị các layer ESP (statusLayer có z=8) đè mất
+    _menuButton.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.4];
+    _menuButton.layer.cornerRadius = kMenuButtonSize / 2.0f;
+    _menuButton.layer.borderWidth = 2.0f;
+    _menuButton.layer.borderColor = [UIColor colorWithRed:1.0f green:0.8f blue:0.0f alpha:1.0f].CGColor;
+    _menuButton.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.6f blue:0.0f alpha:1.0f].CGColor;
+    _menuButton.layer.shadowOffset = CGSizeZero;
+    _menuButton.layer.shadowRadius = 10.0f;
+    _menuButton.layer.shadowOpacity = 0.9f;
     _menuButton.layer.zPosition = 999.0f;
+    _menuButton.clipsToBounds = YES;
     
-    UIImage *icon = FloatButtonIcon();
-    if (!icon) {
-        if (@available(iOS 13.0, *)) {
-            _menuButton.tintColor = [UIColor colorWithRed:kAccentR green:kAccentG blue:kAccentB alpha:1.0f];
-            icon = [UIImage systemImageNamed:KH_NS("line.3.horizontal")];
-            UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:22 weight:UIImageSymbolWeightMedium];
-            icon = [icon imageByApplyingSymbolConfiguration:cfg];
-        }
-    }
-
-    if (icon) {
-        if (FloatButtonIcon() != nil) {
-            icon = [icon imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-        } else {
-            icon = [icon imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            _menuButton.tintColor = [UIColor colorWithRed:kAccentR green:kAccentG blue:kAccentB alpha:1.0f];
-        }
-        
-        [_menuButton setImage:icon forState:UIControlStateNormal];
-        [_menuButton setImage:icon forState:UIControlStateHighlighted];
-        _menuButton.backgroundColor = [UIColor clearColor]; 
-        _menuButton.layer.borderWidth = 0.0f; 
-        _menuButton.layer.cornerRadius = 0.0f;
-        _menuButton.clipsToBounds = NO; 
+    _gifImageView = [[UIImageView alloc] initWithFrame:_menuButton.bounds];
+    _gifImageView.contentMode = UIViewContentModeScaleAspectFill;
+    _gifImageView.clipsToBounds = YES;
+    _gifImageView.layer.cornerRadius = kMenuButtonSize / 2.0f;
+    _gifImageView.userInteractionEnabled = NO;
+    
+    UIImage *gifAnim = [self loadAnimatedGIFNamed:@"Dragon Ball Z Rage GIF.gif"];
+    if (gifAnim) {
+        _gifImageView.image = gifAnim;
     } else {
-        [_menuButton setTitle:KH_NS("M") forState:UIControlStateNormal];
-        [_menuButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        _menuButton.titleLabel.font = [UIFont boldSystemFontOfSize:20.0f];
+        UIImage *icon = FloatButtonIcon();
+        if (icon) {
+            _gifImageView.image = icon;
+        } else {
+            [_menuButton setTitle:KH_NS("DBZ") forState:UIControlStateNormal];
+            [_menuButton setTitleColor:[UIColor yellowColor] forState:UIControlStateNormal];
+            _menuButton.titleLabel.font = [UIFont boldSystemFontOfSize:18.0f];
+        }
     }
     
+    [_menuButton addSubview:_gifImageView];
     [self addSubview:_menuButton];
     [self loadMenuButtonPosition];
 }

@@ -415,14 +415,18 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     }
 
     self.statusLayer = [CATextLayer layer];
-    self.statusLayer.foregroundColor = [UIColor redColor].CGColor;
+    self.statusLayer.foregroundColor = [UIColor colorWithRed:1.0f green:0.85f blue:0.0f alpha:1.0f].CGColor;
     self.statusLayer.alignmentMode   = kCAAlignmentCenter;
-    self.statusLayer.fontSize        = 28.0f;
-    self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:28.0f weight:UIFontWeightHeavy];
-    self.statusLayer.shadowColor     = UIColor.blackColor.CGColor;
-    self.statusLayer.shadowOffset    = CGSizeMake(1.5f, 1.5f);
-    self.statusLayer.shadowOpacity   = 1.0f;
-    self.statusLayer.shadowRadius    = 1.0f;
+    self.statusLayer.fontSize        = 17.0f;
+    self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:17.0f weight:UIFontWeightHeavy];
+    self.statusLayer.backgroundColor = [UIColor colorWithRed:0.05f green:0.05f blue:0.12f alpha:0.85f].CGColor;
+    self.statusLayer.borderColor     = [UIColor colorWithRed:1.0f green:0.75f blue:0.0f alpha:0.9f].CGColor;
+    self.statusLayer.borderWidth     = 1.5f;
+    self.statusLayer.cornerRadius    = 16.0f;
+    self.statusLayer.shadowColor     = [UIColor colorWithRed:1.0f green:0.5f blue:0.0f alpha:0.8f].CGColor;
+    self.statusLayer.shadowOffset    = CGSizeZero;
+    self.statusLayer.shadowOpacity   = 0.9f;
+    self.statusLayer.shadowRadius    = 6.0f;
     self.statusLayer.contentsScale   = UIScreen.mainScreen.scale;
     self.statusLayer.zPosition       = 8;
     self.statusLayer.actions = @{ KH_NS("stringKH_STR("):NSNull.null, KH_NS(")frameKH_STR("):NSNull.null, @")hidden":NSNull.null };
@@ -532,20 +536,21 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         
         self.fovLayer.path = nil;   // Ẩn FOV circle hoàn toàn
 
-        // ESP Count hiển thị
-        if (isCount) {
+        // ESP Count hiển thị - Từ đầu dây xuống (Top-Center Player Counter Badge)
+        if (isCount || isLine || isBox) {
             int totalEnemies = stats.playerCount + stats.botCount;
 
-            UIFont *fontBasic = [UIFont systemFontOfSize:28.0f weight:UIFontWeightBold];
+            UIFont *fontBasic = [UIFont systemFontOfSize:17.0f weight:UIFontWeightHeavy];
             NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
             attributes[NSFontAttributeName] = fontBasic;
-            attributes[NSForegroundColorAttributeName] = [UIColor redColor];
+            attributes[NSForegroundColorAttributeName] = (totalEnemies > 0) ? [UIColor colorWithRed:1.0f green:0.85f blue:0.0f alpha:1.0f] : [UIColor colorWithRed:0.8f green:0.8f blue:0.8f alpha:1.0f];
 
-            NSString *countStr = [NSString stringWithFormat:@"%d", totalEnemies];
+            NSString *countStr = [NSString stringWithFormat:@"🎯 PLAYERS NEARBY: %d", totalEnemies];
             NSAttributedString *attrStr = [[NSAttributedString alloc] initWithString:countStr attributes:attributes];
             self.statusLayer.string = attrStr;
 
-            self.statusLayer.frame = CGRectMake(vw / 2.0f - 50.0f, 30.0f, 100.0f, 28.0f);
+            CGFloat bannerWidth = 210.0f;
+            self.statusLayer.frame = CGRectMake(vw / 2.0f - (bannerWidth / 2.0f), 22.0f, bannerWidth, 32.0f);
             self.statusLayer.alignmentMode = kCAAlignmentCenter;
             self.statusLayer.hidden = NO;
         } else {

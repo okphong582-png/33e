@@ -17,11 +17,12 @@ static const CGFloat kFooterHeight    = 25.0f;
 static const CGFloat kCornerRadius    = 8.0f;
 static const CGFloat kSeparatorHeight = 1.5f;
 
-#define kColorRed        [UIColor colorWithRed:0.95f green:0.00f blue:0.00f alpha:1.0f]
-#define kColorBlue       [UIColor colorWithRed:0.00f green:0.00f blue:0.90f alpha:1.0f]
-#define kColorGray       [UIColor colorWithRed:0.35f green:0.35f blue:0.35f alpha:1.0f]
+#define kColorRed        [UIColor colorWithRed:0.95f green:0.25f blue:0.15f alpha:1.0f]
+#define kColorBlue       [UIColor colorWithRed:0.07f green:0.07f blue:0.12f alpha:0.96f]
+#define kColorGray       [UIColor colorWithRed:0.12f green:0.12f blue:0.18f alpha:0.95f]
+#define kColorActive     [UIColor colorWithRed:1.00f green:0.65f blue:0.00f alpha:1.0f]
 #define kColorText       [UIColor whiteColor]
-#define kColorSeparator  [UIColor whiteColor]
+#define kColorSeparator  [UIColor colorWithRed:1.00f green:0.75f blue:0.00f alpha:0.35f]
 
 @interface _0xDEADBEEE () <UIGestureRecognizerDelegate>
 @property (nonatomic, strong) UIView       *_0xP001;
@@ -152,20 +153,22 @@ static const CGFloat kSeparatorHeight = 1.5f;
     CGPoint pos = [self _0xF008];
     self._0xP001 = [[UIView alloc] initWithFrame:CGRectMake(pos.x, pos.y, kPanelWidth, kPanelHeight)];
     self._0xP001.backgroundColor     = [UIColor clearColor];
-    self._0xP001.layer.shadowColor   = [UIColor blackColor].CGColor;
-    self._0xP001.layer.shadowOpacity = 0.5f;
-    self._0xP001.layer.shadowRadius  = 5.0f;
-    self._0xP001.layer.shadowOffset  = CGSizeMake(0, 2);
+    self._0xP001.layer.shadowColor   = [UIColor colorWithRed:1.0f green:0.6f blue:0.0f alpha:0.8f].CGColor;
+    self._0xP001.layer.shadowOpacity = 0.8f;
+    self._0xP001.layer.shadowRadius  = 12.0f;
+    self._0xP001.layer.shadowOffset  = CGSizeZero;
     [self.view addSubview:self._0xP001];
 
     UIView *clip = [[KH_CLS("UIView") alloc] initWithFrame:self._0xP001.bounds];
     clip.backgroundColor    = kColorBlue;
     clip.layer.cornerRadius = kCornerRadius;
+    clip.layer.borderWidth  = 1.5f;
+    clip.layer.borderColor  = [UIColor colorWithRed:1.0f green:0.75f blue:0.0f alpha:0.8f].CGColor;
     clip.clipsToBounds      = YES;
     [self._0xP001 addSubview:clip];
 
     UIView *headerView = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, 0, kPanelWidth, kHeaderHeight)];
-    headerView.backgroundColor = kColorRed;
+    headerView.backgroundColor = [UIColor colorWithRed:0.95f green:0.30f blue:0.0f alpha:1.0f];
     [clip addSubview:headerView];
 
     UILabel *_0x28620 = [[KH_CLS("UILabel") alloc] initWithFrame:headerView.bounds];
@@ -173,19 +176,8 @@ static const CGFloat kSeparatorHeight = 1.5f;
     _0x28620.textAlignment = NSTextAlignmentCenter;
 
     NSMutableAttributedString *headerAttr = [[NSMutableAttributedString alloc] init];
-
-    NSAttributedString *_0x8462 = [self _0xF001:KH_NS("Free Fire") large:19.0f small:17.0f kern:4.0f];
+    NSAttributedString *_0x8462 = [self _0xF001:KH_NS("DRAGON BALL Z") large:17.0f small:15.0f kern:3.0f];
     [headerAttr appendAttributedString:_0x8462];
-
-    [headerAttr appendAttributedString:[[KH_CLS("NSAttributedString") alloc] initWithString:NSSENCRYPT(" ")]];
-
-    UIFont *maxFont = [UIFont fontWithName:NSSENCRYPT("AvenirNext-Bold") size:19.0f];
-    if (!maxFont) maxFont = [UIFont systemFontOfSize:19.0f weight:UIFontWeightBold];
-    NSAttributedString *maxAttr = [[NSAttributedString alloc] initWithString:KH_NS("TH")
-                                                                  attributes:@{NSFontAttributeName: maxFont,
-                                                                               NSKernAttributeName: @(4.0f)}];
-    [headerAttr appendAttributedString:maxAttr];
-
     _0x28620.attributedText = headerAttr;
     [headerView addSubview:_0x28620];
 
@@ -195,9 +187,9 @@ static const CGFloat kSeparatorHeight = 1.5f;
 
     self._0xP002 = [[KH_CLS("UIScrollView") alloc] initWithFrame:CGRectMake(0, kHeaderHeight, kPanelWidth, kPanelHeight - kHeaderHeight - kFooterHeight)];
     self._0xP002.backgroundColor = [UIColor clearColor];
-    self._0xP002.scrollEnabled = NO;
-    self._0xP002.showsVerticalScrollIndicator = NO;
-    self._0xP002.bounces = NO;
+    self._0xP002.scrollEnabled = YES;
+    self._0xP002.showsVerticalScrollIndicator = YES;
+    self._0xP002.bounces = YES;
     [clip addSubview:self._0xP002];
 
     self._0xP003 = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, 0, kPanelWidth, 0)];
@@ -205,7 +197,14 @@ static const CGFloat kSeparatorHeight = 1.5f;
     [self._0xP002 addSubview:self._0xP003];
 
     UIView *footer = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, kPanelHeight - kFooterHeight, kPanelWidth, kFooterHeight)];
-    footer.backgroundColor = kColorRed;
+    footer.backgroundColor = [UIColor colorWithRed:0.95f green:0.30f blue:0.0f alpha:1.0f];
+    
+    UILabel *footerLbl = [[UILabel alloc] initWithFrame:footer.bounds];
+    footerLbl.text = @"⚡ DBZ RAGE VIP MOD ⚡";
+    footerLbl.textColor = [UIColor whiteColor];
+    footerLbl.font = [UIFont systemFontOfSize:11 weight:UIFontWeightBold];
+    footerLbl.textAlignment = NSTextAlignmentCenter;
+    [footer addSubview:footerLbl];
     [clip addSubview:footer];
 
     self._0xP001.alpha = 0.0f;
@@ -221,14 +220,14 @@ static const CGFloat kSeparatorHeight = 1.5f;
     UIView *rv = [[UIView alloc] initWithFrame:CGRectMake(0, y, kPanelWidth, kRowHeight)];
 
     BOOL isOn = [[KH_CLS("NSUserDefaults") standardUserDefaults] boolForKey:key];
-    rv.backgroundColor = isOn ? kColorBlue : kColorGray;
+    rv.backgroundColor = isOn ? kColorActive : kColorGray;
 
     objc_setAssociatedObject(rv, "type", @"toggle", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(rv, "key", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
     UILabel *lbl = [[KH_CLS("UILabel") alloc] initWithFrame:rv.bounds];
     lbl.attributedText = [self _0xF001:title large:15.0f small:13.0f kern:2.0f];
-    lbl.textColor = kColorText;
+    lbl.textColor = isOn ? [UIColor blackColor] : kColorText;
     lbl.textAlignment = NSTextAlignmentCenter;
     [rv addSubview:lbl];
 
@@ -622,9 +621,14 @@ static const CGFloat kSeparatorHeight = 1.5f;
             ESPPrefsSetBool(key, newState);
             ESPSyncFromPrefs();
             }
-            [UIView animateWithDuration:0.45 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            [UIView animateWithDuration:0.25 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
                 self._0xP008.alpha = 1.0f;
-                self._0xP008.backgroundColor = newState ? kColorBlue : kColorGray;
+                self._0xP008.backgroundColor = newState ? kColorActive : kColorGray;
+                for (UIView *sub in self._0xP008.subviews) {
+                    if ([sub isKindOfClass:[UILabel class]]) {
+                        ((UILabel *)sub).textColor = newState ? [UIColor blackColor] : kColorText;
+                    }
+                }
             } completion:nil];
         }
         else if (self._0xP00C && self._0xP00D && !isCancel) {

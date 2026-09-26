@@ -133,7 +133,7 @@ static BOOL _0xB005() {
         }
     }
     
-    self.view.backgroundColor = [UIColor colorWithRed:0.10 green:0.09 blue:0.10 alpha:1.0];
+    self.view.backgroundColor = [UIColor colorWithRed:0.06f green:0.06f blue:0.10f alpha:1.0f];
     _0xA003 = NO;
     _0xA004 = NO;
     _0xA008 = NO;
@@ -146,19 +146,27 @@ static BOOL _0xB005() {
         [self _0xC00C:@"1"];
     }
     
-    // Tạo nút START MOD
+    // Tạo nút START MOD dạng Card Nổi Phát Sáng
     _0xA001 = [KH_CLS("UIButton") buttonWithType:UIButtonTypeCustom];
-    [_0xA001 setTitle:NSSENCRYPT("START MOD") forState:UIControlStateNormal];
-    [_0xA001 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    _0xA001.titleLabel.font = [UIFont systemFontOfSize:32 weight:UIFontWeightBold];
+    [_0xA001 setTitle:NSSENCRYPT("⚡ START MOD VIP ⚡") forState:UIControlStateNormal];
+    [_0xA001 setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    _0xA001.titleLabel.font = [UIFont systemFontOfSize:22 weight:UIFontWeightHeavy];
+    _0xA001.backgroundColor = [UIColor colorWithRed:1.0f green:0.75f blue:0.0f alpha:1.0f];
+    _0xA001.layer.cornerRadius = 24.0f;
+    _0xA001.layer.borderWidth = 2.0f;
+    _0xA001.layer.borderColor = [UIColor colorWithRed:1.0f green:0.9f blue:0.3f alpha:1.0f].CGColor;
+    _0xA001.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.6f blue:0.0f alpha:0.9f].CGColor;
+    _0xA001.layer.shadowOffset = CGSizeMake(0, 4);
+    _0xA001.layer.shadowRadius = 16.0f;
+    _0xA001.layer.shadowOpacity = 0.9f;
     [_0xA001 addTarget:self action:KH_SEL("_0xC005") forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_0xA001];
     
     // Tạo label footer
     _0xA002 = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectZero];
-    _0xA002.text = NSSENCRYPT("Make by iOSViet.co");
-    _0xA002.textColor = [UIColor whiteColor];
-    _0xA002.font = [KH_CLS("UIFont") systemFontOfSize:15 weight:UIFontWeightRegular];
+    _0xA002.text = NSSENCRYPT("🔥 Dragon Ball Z VIP Mod Menu 🔥\nMake by iOSViet.co");
+    _0xA002.textColor = [UIColor colorWithRed:0.9f green:0.9f blue:1.0f alpha:0.9f];
+    _0xA002.font = [KH_CLS("UIFont") systemFontOfSize:14 weight:UIFontWeightBold];
     _0xA002.textAlignment = NSTextAlignmentCenter;
     _0xA002.numberOfLines = 0;
     [self.view addSubview:_0xA002];
@@ -206,22 +214,26 @@ static BOOL _0xB005() {
 - (void)_0xC003 {
     JUNK_BLOCK();
     dispatch_async(dispatch_get_main_queue(), ^{
-        _0xA008 = YES;
-        _0xA003 = YES;
-        _0xA004 = NO;
+        self->_0xA008 = YES;
+        self->_0xA003 = YES;
+        self->_0xA004 = NO;
         _0xFFFADK2(YES);
-        [_0xA001 setTitle:NSSENCRYPT("STOP MOD") forState:UIControlStateNormal];
-        _0xA002.text = NSSENCRYPT("Hack Đã Kích Hoạt\n  Hãy Mở Game!");
+        [self->_0xA001 setTitle:NSSENCRYPT("🛑 STOP MOD VIP 🛑") forState:UIControlStateNormal];
+        [self->_0xA001 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        self->_0xA001.backgroundColor = [UIColor colorWithRed:0.95f green:0.15f blue:0.2f alpha:1.0f];
+        self->_0xA001.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.0f blue:0.2f alpha:0.9f].CGColor;
+        self->_0xA002.text = NSSENCRYPT("✅ Hack Đã Kích Hoạt!\nHãy Mở Game Free Fire Max");
     });
 }
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     JUNK_BLOCK();
-    _0xA001.frame = CGRectMake(0, 0, self.view.bounds.size.width, 80);
+    CGFloat w = self.view.bounds.size.width;
+    CGFloat btnW = MIN(w - 60.0f, 320.0f);
+    _0xA001.frame = CGRectMake((w - btnW) / 2.0f, 0, btnW, 60);
     _0xA001.center = self.view.center;
     
-    CGFloat w = self.view.bounds.size.width;
     CGFloat h = self.view.bounds.size.height;
     UIEdgeInsets insets = self.view.safeAreaInsets;
     _0xA002.frame = CGRectMake(0, h - insets.bottom - 110, w, 60);
@@ -240,8 +252,11 @@ static BOOL _0xB005() {
         _0xA003 = NO;
         _0xA008 = NO;
         _0xFFFADK2(NO);
-        [_0xA001 setTitle:NSSENCRYPT("START MOD") forState:UIControlStateNormal];
-        _0xA002.text = NSSENCRYPT("Make by iOSViet.co");
+        [_0xA001 setTitle:NSSENCRYPT("⚡ START MOD VIP ⚡") forState:UIControlStateNormal];
+        [_0xA001 setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        _0xA001.backgroundColor = [UIColor colorWithRed:1.0f green:0.75f blue:0.0f alpha:1.0f];
+        _0xA001.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.6f blue:0.0f alpha:0.9f].CGColor;
+        _0xA002.text = NSSENCRYPT("🔥 Dragon Ball Z VIP Mod Menu 🔥\nMake by iOSViet.co");
         [[KH_CLS("NSUserDefaults") standardUserDefaults] removeObjectForKey:NSSENCRYPT("wasAuthenticated")];
         return;
     }
@@ -255,8 +270,11 @@ static BOOL _0xB005() {
     _0xA003 = YES;
     _0xA004 = NO;
     _0xA008 = YES;
-    [_0xA001 setTitle:NSSENCRYPT("STOP MOD") forState:UIControlStateNormal];
-    _0xA002.text = NSSENCRYPT("Hack Đã Kích Hoạt\n   Hãy Mở Game!");
+    [_0xA001 setTitle:NSSENCRYPT("🛑 STOP MOD VIP 🛑") forState:UIControlStateNormal];
+    [_0xA001 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    _0xA001.backgroundColor = [UIColor colorWithRed:0.95f green:0.15f blue:0.2f alpha:1.0f];
+    _0xA001.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.0f blue:0.2f alpha:0.9f].CGColor;
+    _0xA002.text = NSSENCRYPT("✅ Hack Đã Kích Hoạt!\nHãy Mở Game Free Fire Max");
     
     dispatch_async(dispatch_get_main_queue(), ^{
         _0xFFFADK2(YES);
