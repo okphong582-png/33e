@@ -3,7 +3,7 @@
 #import "LicenseSession.h"
 #import "../esp/drawing_view/ESPStyle.h"
 
-@interface _0xHOMEVC () <UITextFieldDelegate>
+@interface _0xHOMEVC () <UITextFieldDelegate, UIGestureRecognizerDelegate>
 @property (nonatomic, strong) UIView *card;
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *subtitle;
@@ -52,6 +52,10 @@
     [self.theme addTarget:self action:@selector(themeChanged) forControlEvents:UIControlEventValueChanged]; [self.view addSubview:self.theme];
     self.themeLabel = [UILabel new]; self.themeLabel.text = @"Giao diện tối";
     self.themeLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium]; [self.view addSubview:self.themeLabel];
+    UITapGestureRecognizer *dismissKeyboard = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard:)];
+    dismissKeyboard.cancelsTouchesInView = NO;
+    dismissKeyboard.delegate = self;
+    [self.view addGestureRecognizer:dismissKeyboard];
     self.loggedIn = NO;
     // Remove the old client-side bypass; this value is never consulted for authorization.
     [NSUserDefaults.standardUserDefaults removeObjectForKey:@"wasAuthenticated"];
@@ -93,6 +97,17 @@
     [self.logoutButton setTitleColor:muted forState:UIControlStateNormal];
 }
 - (void)themeChanged { ESPPrefsSetBool(@"DarkTheme", self.theme.on); [self applyAppearance]; }
+- (void)dismissKeyboard:(UITapGestureRecognizer *)gesture {
+    if (gesture.state == UIGestureRecognizerStateEnded) [self.view endEditing:YES];
+}
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    UIView *view = touch.view;
+    while (view) {
+        if ([view isKindOfClass:UIControl.class]) return NO;
+        view = view.superview;
+    }
+    return YES;
+}
 - (void)updateControls {
     self.keyField.hidden = self.submit.hidden = self.loggedIn;
     self.start.hidden = self.logoutButton.hidden = !self.loggedIn;
