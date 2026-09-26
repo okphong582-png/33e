@@ -495,7 +495,6 @@ static BOOL _0xB005() {
     _0xD033.titleLabel.font = [UIFont systemFontOfSize:20 weight:UIFontWeightHeavy];
     [_0xD033 addTarget:self action:KH_SEL("_0xC011") forControlEvents:UIControlEventTouchUpInside];
     [_0xA006 addSubview:_0xD033];
-}
     
     UILabel *_0xD034 = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectMake(-100, -100, 10, 10)];
     _0xD034.text = _0xB002(@"JUNK");
