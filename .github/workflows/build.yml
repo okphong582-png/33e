@@ -29,6 +29,7 @@ jobs:
 
       - name: Setup iOS SDKs
         run: |
+          rm -rf $HOME/theos/sdks
           git clone --depth=1 https://github.com/theos/sdks.git $HOME/theos/sdks
 
       - name: Build TIPA Package
