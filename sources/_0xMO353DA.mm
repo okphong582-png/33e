@@ -1,665 +1,255 @@
 #import "ModMenuViewController.h"
 #import "../esp/drawing_view/esp.h"
-#import "../esp/drawing_view/ESPPrefs.h"
-#import "../esp/drawing_view/menu.h"
-#import "../mahoa.h"
-#import <UIKit/UIKit.h>
+#import "../esp/drawing_view/ESPStyle.h"
 #import <objc/runtime.h>
-#import <QuartzCore/QuartzCore.h>
-#include "KabraxHide.h"
 
-static const CGFloat kPanelWidth      = 280.0f;
-static const CGFloat kPanelHeight     = 340.0f;
-static const CGFloat kHeaderHeight    = 45.0f;
-static const CGFloat kRowHeight       = 43.0f;
-static const CGFloat kSliderRowHeight = 55.0f;
-static const CGFloat kFooterHeight    = 25.0f;
-static const CGFloat kCornerRadius    = 16.0f;
-static const CGFloat kSeparatorHeight = 0.5f;
-
-#define kColorRed        [UIColor colorWithWhite:0.18 alpha:1.0]
-#define kColorBlue       [UIColor colorWithWhite:0.035 alpha:0.98]
-#define kColorGray       [UIColor colorWithWhite:0.065 alpha:1.0]
-#define kColorActive     [UIColor colorWithWhite:0.12 alpha:1.0]
-#define kColorText       [UIColor whiteColor]
-#define kColorSeparator  [UIColor colorWithWhite:1.0 alpha:0.08]
-
-@interface _0xDEADBEEE () <UIGestureRecognizerDelegate>
-@property (nonatomic, strong) UIView       *_0xP001;
-@property (nonatomic, strong) UIScrollView *_0xP002;
-@property (nonatomic, strong) UIView       *_0xP003;
-
-@property (nonatomic, assign) NSInteger _0xP004;
-@property (nonatomic, assign) BOOL      _0xP005;
-@property (nonatomic, assign) CGPoint   _0xP006;
-@property (nonatomic, assign) CGPoint   _0xP007;
-
-@property (nonatomic, weak)   UIView   *_0xP008;
-@property (nonatomic, assign) BOOL     _0xP009;
-
-@property (nonatomic, weak)   UIView   *_0xP00A;
-@property (nonatomic, weak)   UISlider *_0xP00B;
-
-@property (nonatomic, weak)   UIView   *_0xP00C;
-@property (nonatomic, assign) BOOL     _0xP00D;
-
-@property (nonatomic, assign) BOOL          _0xP00E;
-@property (nonatomic, assign) BOOL          _0xP00F;
-@property (nonatomic, assign) CGFloat       _0xP010;
-@property (nonatomic, assign) CGFloat       _0xP011;
-@property (nonatomic, strong) CADisplayLink *_0xP012;
-@property (nonatomic, copy)   void (^_0xP013)(void);
+@interface _0xDEADBEEE ()
+@property (nonatomic, strong) UIView *panel;
+@property (nonatomic, strong) UIView *header;
+@property (nonatomic, strong) UISegmentedControl *tabs;
+@property (nonatomic, strong) UIScrollView *scroll;
+@property (nonatomic, strong) NSMutableArray<UIControl *> *controls;
+@property (nonatomic, strong) UILabel *swatch;
+@property (nonatomic, assign) NSInteger page;
+@property (nonatomic, assign) NSInteger colorTarget;
+@property (nonatomic, assign) NSInteger pointer;
+@property (nonatomic, assign) CGPoint began;
+@property (nonatomic, assign) CGPoint panelOrigin;
+@property (nonatomic, assign) CGFloat scrollOrigin;
+@property (nonatomic, assign) BOOL dragging;
+@property (nonatomic, assign) BOOL scrolling;
+@property (nonatomic, strong) UIControl *activeControl;
 @end
 
 @implementation _0xDEADBEEE
-
-- (NSAttributedString *)_0xF001:(NSString *)text large:(CGFloat)lSize small:(CGFloat)sSize kern:(CGFloat)kernValue {
-    return [[NSAttributedString alloc] initWithString:text attributes:@{
-        NSFontAttributeName: [UIFont systemFontOfSize:lSize weight:UIFontWeightSemibold],
-        NSKernAttributeName: @(0.3f)
-    }];
-}
-
+- (UIColor *)textColor { return ESPDarkTheme() ? [UIColor colorWithWhite:0.94 alpha:1] : [UIColor colorWithWhite:0.08 alpha:1]; }
+- (UIColor *)mutedColor { return ESPDarkTheme() ? [UIColor colorWithWhite:0.55 alpha:1] : [UIColor colorWithWhite:0.45 alpha:1]; }
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor      = [UIColor clearColor];
-    self.view.multipleTouchEnabled = YES;
-    self._0xP004  = -1;
-    self._0xP00E = NO;
-    self._0xP00F = NO;
-
-    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
-        @"AimbotFire": @YES, @"AimbotScope": @YES, @"HeadRedDot": @YES
-    }];
-    [self _0xF002];
-    [self _0xF003];
-
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_0xF00F:)];
-    tap.cancelsTouchesInView = NO;
-    tap.delegate = self;
-    [self.view addGestureRecognizer:tap];
+    self.view.backgroundColor = UIColor.clearColor;
+    self.pointer = -1;
+    self.controls = [NSMutableArray array];
+    self.panel = [[UIView alloc] initWithFrame:CGRectMake(24, 20, 310, 340)];
+    self.panel.layer.cornerRadius = 20;
+    self.panel.layer.borderWidth = 0.5;
+    self.panel.clipsToBounds = YES;
+    [self.view addSubview:self.panel];
+    self.header = [[UIView alloc] initWithFrame:CGRectZero];
+    [self.panel addSubview:self.header];
+    UILabel *brand = [[UILabel alloc] initWithFrame:CGRectMake(18, 11, 220, 23)];
+    brand.text = @"HOANGHA";
+    brand.font = [UIFont systemFontOfSize:18 weight:UIFontWeightSemibold];
+    brand.tag = 10;
+    [self.header addSubview:brand];
+    UILabel *caption = [[UILabel alloc] initWithFrame:CGRectMake(18, 35, 220, 14)];
+    caption.text = @"Điều khiển";
+    caption.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
+    caption.tag = 11;
+    [self.header addSubview:caption];
+    UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
+    close.frame = CGRectMake(268, 10, 32, 36);
+    close.tag = 12;
+    [close setTitle:@"×" forState:UIControlStateNormal];
+    close.titleLabel.font = [UIFont systemFontOfSize:25 weight:UIFontWeightLight];
+    [close addTarget:self action:@selector(closeMenu) forControlEvents:UIControlEventTouchUpInside];
+    [self.header addSubview:close];
+    self.tabs = [[UISegmentedControl alloc] initWithItems:@[@"Aim", @"ESP", @"Màu", @"Giao diện"]];
+    self.tabs.selectedSegmentIndex = 0;
+    [self.tabs addTarget:self action:@selector(changeTab:) forControlEvents:UIControlEventValueChanged];
+    [self.panel addSubview:self.tabs];
+    self.scroll = [[UIScrollView alloc] initWithFrame:CGRectZero];
+    self.scroll.showsVerticalScrollIndicator = YES;
+    self.scroll.bounces = NO;
+    [self.panel addSubview:self.scroll];
+    [self buildPage];
 }
-
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
-    [self _0xF007];
+    CGFloat w = MIN(310, self.view.bounds.size.width - 16);
+    CGFloat h = MIN(500, self.view.bounds.size.height - 16);
+    CGRect f = self.panel.frame;
+    f.size = CGSizeMake(w, h);
+    f.origin.x = MAX(8, MIN(f.origin.x, self.view.bounds.size.width - w - 8));
+    f.origin.y = MAX(8, MIN(f.origin.y, self.view.bounds.size.height - h - 8));
+    self.panel.frame = f;
+    self.header.frame = CGRectMake(0, 0, w, 58);
+    [self.header viewWithTag:12].frame = CGRectMake(w - 42, 10, 32, 36);
+    self.tabs.frame = CGRectMake(12, 62, w - 24, 30);
+    self.scroll.frame = CGRectMake(0, 104, w, h - 112);
 }
-
-- (void)_0xF007 {
-    if (!self._0xP001) return;
-
-    CGRect screenBounds = self.view.bounds;
-    CGFloat panelW = CGRectGetWidth(self._0xP001.frame);
-    CGFloat panelH = CGRectGetHeight(self._0xP001.frame);
-
-    CGFloat minX = 0;
-    CGFloat maxX = screenBounds.size.width - panelW;
-    CGFloat minY = 0;
-    CGFloat maxY = screenBounds.size.height - panelH;
-
-    CGFloat currentX = self._0xP001.frame.origin.x;
-    CGFloat currentY = self._0xP001.frame.origin.y;
-
-    currentX = MAX(minX, MIN(maxX, currentX));
-    currentY = MAX(minY, MIN(maxY, currentY));
-
-    if (currentX != self._0xP001.frame.origin.x || currentY != self._0xP001.frame.origin.y) {
-        CGRect newFrame = self._0xP001.frame;
-        newFrame.origin.x = currentX;
-        newFrame.origin.y = currentY;
-        self._0xP001.frame = newFrame;
-
-        [[KH_CLS("NSUserDefaults") standardUserDefaults] setFloat:currentX forKey:NSSENCRYPT("FloatingPanelX")];
-        [[KH_CLS("NSUserDefaults") standardUserDefaults] setFloat:currentY forKey:NSSENCRYPT("FloatingPanelY")];
-        [[KH_CLS("NSUserDefaults") standardUserDefaults] synchronize];
+- (void)closeMenu { if (self.onCloseBlock) self.onCloseBlock(); }
+- (void)changeTab:(UISegmentedControl *)sender {
+    self.page = sender.selectedSegmentIndex;
+    [self buildPage];
+}
+- (NSString *)colorPrefix { return @[@"BoxColor", @"LineColor", @"FovColor"][self.colorTarget]; }
+- (UILabel *)label:(NSString *)text frame:(CGRect)frame size:(CGFloat)size {
+    UILabel *label = [[UILabel alloc] initWithFrame:frame];
+    label.text = text; label.textColor = [self textColor];
+    label.font = [UIFont systemFontOfSize:size weight:UIFontWeightMedium];
+    return label;
+}
+- (CGFloat)toggle:(NSString *)title key:(NSString *)key fallback:(BOOL)fallback y:(CGFloat)y {
+    UIView *row = [[UIView alloc] initWithFrame:CGRectMake(12, y, 286, 48)];
+    row.backgroundColor = ESPDarkTheme() ? [UIColor colorWithWhite:1 alpha:0.035] : [UIColor colorWithWhite:0 alpha:0.025];
+    row.layer.cornerRadius = 10;
+    [row addSubview:[self label:title frame:CGRectMake(12, 0, 215, 48) size:13]];
+    UISwitch *sw = [[UISwitch alloc] initWithFrame:CGRectMake(229, 9, 51, 31)];
+    sw.transform = CGAffineTransformMakeScale(0.82, 0.82);
+    sw.onTintColor = [UIColor colorWithRed:0.22 green:0.52 blue:0.91 alpha:1];
+    sw.on = ESPPrefsBool(key, fallback);
+    objc_setAssociatedObject(sw, "key", key, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    [sw addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
+    [row addSubview:sw]; [self.controls addObject:sw]; [self.scroll addSubview:row];
+    return y + 54;
+}
+- (CGFloat)slider:(NSString *)title key:(NSString *)key min:(float)minimum max:(float)maximum fallback:(float)fallback y:(CGFloat)y {
+    UIView *row = [[UIView alloc] initWithFrame:CGRectMake(18, y, 274, 66)];
+    UILabel *label = [self label:title frame:CGRectMake(0, 0, 274, 20) size:12];
+    [row addSubview:label];
+    UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(0, 25, 274, 30)];
+    slider.minimumValue = minimum; slider.maximumValue = maximum;
+    slider.value = ESPPrefsFloat(key, fallback);
+    slider.minimumTrackTintColor = [UIColor colorWithRed:0.22 green:0.52 blue:0.91 alpha:1];
+    objc_setAssociatedObject(slider, "key", key, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(slider, "label", label, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(slider, "title", title, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
+    [row addSubview:slider]; [self.controls addObject:slider]; [self.scroll addSubview:row];
+    [self updateSliderLabel:slider];
+    return y + 70;
+}
+- (CGFloat)note:(NSString *)text y:(CGFloat)y {
+    UILabel *label = [self label:text frame:CGRectMake(20, y, 270, 44) size:11];
+    label.textColor = [self mutedColor]; label.numberOfLines = 0;
+    [self.scroll addSubview:label]; return y + 48;
+}
+- (void)buildPage {
+    for (UIView *v in self.scroll.subviews) [v removeFromSuperview];
+    [self.controls removeAllObjects]; self.swatch = nil;
+    self.panel.backgroundColor = ESPDarkTheme() ? [UIColor colorWithWhite:0.045 alpha:0.98] : [UIColor colorWithWhite:0.98 alpha:0.98];
+    self.panel.layer.borderColor = [UIColor colorWithWhite:0.5 alpha:0.24].CGColor;
+    ((UILabel *)[self.header viewWithTag:10]).textColor = [self textColor];
+    ((UILabel *)[self.header viewWithTag:11]).textColor = [self mutedColor];
+    [(UIButton *)[self.header viewWithTag:12] setTitleColor:[self mutedColor] forState:UIControlStateNormal];
+    if (@available(iOS 13.0, *)) self.panel.overrideUserInterfaceStyle = ESPDarkTheme() ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
+    CGFloat y = 0;
+    if (self.page == 0) {
+        y = [self toggle:@"Aim khi bắn" key:@"AimbotFire" fallback:YES y:y];
+        y = [self toggle:@"Aim khi mở ngắm" key:@"AimbotScope" fallback:YES y:y];
+        y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:YES y:y];
+        y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
+        y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:150 fallback:40 y:y + 6];
+        y = [self note:@"Chỉ aim khi điểm ngắm nằm trong vòng. Ẩn vòng vẫn giữ giới hạn FOV." y:y];
+        y = [self note:@"Aim cổ dùng vị trí ước tính giữa đầu và vai. Tắt để aim đầu." y:y];
+    } else if (self.page == 1) {
+        y = [self toggle:@"Đường nối" key:@"Line" fallback:NO y:y];
+        y = [self toggle:@"Khung 3D" key:@"Box" fallback:NO y:y];
+        y = [self toggle:@"Thanh máu" key:@"Health" fallback:NO y:y];
+        y = [self toggle:@"Điểm đánh dấu đầu" key:@"HeadRedDot" fallback:YES y:y];
+        y = [self toggle:@"Khoảng cách" key:@"Dis" fallback:NO y:y];
+    } else if (self.page == 2) {
+        UISegmentedControl *target = [[UISegmentedControl alloc] initWithItems:@[@"Box", @"Line", @"FOV"]];
+        target.frame = CGRectMake(18, 0, 274, 30); target.selectedSegmentIndex = self.colorTarget;
+        [target addTarget:self action:@selector(colorTargetChanged:) forControlEvents:UIControlEventValueChanged];
+        [self.scroll addSubview:target]; [self.controls addObject:target];
+        self.swatch = [self label:@"" frame:CGRectMake(18, 42, 274, 38) size:12];
+        self.swatch.textAlignment = NSTextAlignmentCenter; self.swatch.layer.cornerRadius = 9; self.swatch.clipsToBounds = YES;
+        [self.scroll addSubview:self.swatch]; y = 92;
+        NSString *prefix = [self colorPrefix];
+        float defaults[3] = {0.72f, 0.91f, 1}; if(self.colorTarget == 2) defaults[0] = defaults[1] = 1;
+        NSArray *names = @[@"Đỏ", @"Lục", @"Lam"], *suffixes = @[@"R", @"G", @"B"];
+        for (int i = 0; i < 3; ++i) y = [self slider:names[i] key:[prefix stringByAppendingString:suffixes[i]] min:0 max:1 fallback:defaults[i] y:y];
+        [self updateSwatch];
+    } else {
+        y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
+        y = [self note:@"Kéo thanh tiêu đề để di chuyển menu. Các lựa chọn được lưu tự động." y:y];
     }
+    self.scroll.contentSize = CGSizeMake(310, y + 8);
+    self.scroll.contentOffset = CGPointZero;
 }
-
-- (CGPoint)_0xF008 {
-    CGFloat x = [[KH_CLS("NSUserDefaults") standardUserDefaults] floatForKey:NSSENCRYPT("FloatingPanelX")];
-    CGFloat y = [[KH_CLS("NSUserDefaults") standardUserDefaults] floatForKey:NSSENCRYPT("FloatingPanelY")];
-    if (x == 0 && y == 0) {
-        CGRect screen = [UIScreen mainScreen].bounds;
-        x = (screen.size.width - kPanelWidth) / 2.0f;
-        y = 80.0f;
-    }
-    return CGPointMake(x, y);
-}
-
-- (void)_0xF002 {
-    CGPoint pos = [self _0xF008];
-    self._0xP001 = [[UIView alloc] initWithFrame:CGRectMake(pos.x, pos.y, kPanelWidth, kPanelHeight)];
-    self._0xP001.backgroundColor     = [UIColor clearColor];
-    self._0xP001.layer.shadowColor   = UIColor.blackColor.CGColor;
-    self._0xP001.layer.shadowOpacity = 0.5f;
-    self._0xP001.layer.shadowRadius  = 20.0f;
-    self._0xP001.layer.shadowOffset  = CGSizeMake(0, 8);
-    [self.view addSubview:self._0xP001];
-
-    UIView *clip = [[KH_CLS("UIView") alloc] initWithFrame:self._0xP001.bounds];
-    clip.backgroundColor    = kColorBlue;
-    clip.layer.cornerRadius = kCornerRadius;
-    clip.layer.borderWidth  = 0.75f;
-    clip.layer.borderColor  = [UIColor colorWithWhite:1 alpha:0.16].CGColor;
-    clip.clipsToBounds      = YES;
-    [self._0xP001 addSubview:clip];
-
-    UIView *headerView = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, 0, kPanelWidth, kHeaderHeight)];
-    headerView.backgroundColor = [UIColor colorWithWhite:0.025 alpha:1.0];
-    [clip addSubview:headerView];
-
-    UILabel *_0x28620 = [[KH_CLS("UILabel") alloc] initWithFrame:headerView.bounds];
-    _0x28620.textColor = kColorText;
-    _0x28620.textAlignment = NSTextAlignmentCenter;
-
-    NSMutableAttributedString *headerAttr = [[NSMutableAttributedString alloc] init];
-    NSAttributedString *_0x8462 = [self _0xF001:KH_NS("HOANGHA VIP") large:17.0f small:15.0f kern:3.0f];
-    [headerAttr appendAttributedString:_0x8462];
-    _0x28620.attributedText = headerAttr;
-    [headerView addSubview:_0x28620];
-
-    UIView *headerSep = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, kHeaderHeight - kSeparatorHeight, kPanelWidth, kSeparatorHeight)];
-    headerSep.backgroundColor = kColorSeparator;
-    [headerView addSubview:headerSep];
-
-    self._0xP002 = [[KH_CLS("UIScrollView") alloc] initWithFrame:CGRectMake(0, kHeaderHeight, kPanelWidth, kPanelHeight - kHeaderHeight - kFooterHeight)];
-    self._0xP002.backgroundColor = [UIColor clearColor];
-    self._0xP002.scrollEnabled = YES;
-    self._0xP002.showsVerticalScrollIndicator = YES;
-    self._0xP002.bounces = YES;
-    [clip addSubview:self._0xP002];
-
-    self._0xP003 = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, 0, kPanelWidth, 0)];
-    self._0xP003.backgroundColor = [UIColor clearColor];
-    [self._0xP002 addSubview:self._0xP003];
-
-    UIView *footer = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, kPanelHeight - kFooterHeight, kPanelWidth, kFooterHeight)];
-    footer.backgroundColor = [UIColor colorWithWhite:0.025 alpha:1.0];
-    
-    UILabel *footerLbl = [[UILabel alloc] initWithFrame:footer.bounds];
-    footerLbl.text = @"HOANGHA  /  BLACK EDITION";
-    footerLbl.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
-    footerLbl.font = [UIFont systemFontOfSize:11 weight:UIFontWeightBold];
-    footerLbl.textAlignment = NSTextAlignmentCenter;
-    [footer addSubview:footerLbl];
-    [clip addSubview:footer];
-
-    self._0xP001.alpha = 0.0f;
-    [UIView animateWithDuration:0.28
-                          delay:0
-                        options:UIViewAnimationOptionCurveEaseOut
-                     animations:^{
-        self._0xP001.alpha = 1.0f;
-    } completion:nil];
-}
-
-- (UIView *)_0xF004:(NSString *)title key:(NSString *)key y:(CGFloat)y {
-    UIView *rv = [[UIView alloc] initWithFrame:CGRectMake(0, y, kPanelWidth, kRowHeight)];
-
-    BOOL isOn = [[KH_CLS("NSUserDefaults") standardUserDefaults] boolForKey:key];
-    rv.backgroundColor = isOn ? kColorActive : kColorGray;
-
-    objc_setAssociatedObject(rv, "type", @"toggle", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    objc_setAssociatedObject(rv, "key", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
-    UILabel *lbl = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectMake(16, 0, kPanelWidth - 78, kRowHeight)];
-    lbl.attributedText = [self _0xF001:title large:15.0f small:13.0f kern:2.0f];
-    lbl.textColor = isOn ? UIColor.whiteColor : [UIColor colorWithWhite:0.65 alpha:1];
-    lbl.textAlignment = NSTextAlignmentLeft;
-    [rv addSubview:lbl];
-    UILabel *state = [[UILabel alloc] initWithFrame:CGRectMake(kPanelWidth - 56, 12, 40, 20)];
-    state.tag = 7301;
-    state.text = isOn ? @"ON" : @"OFF";
-    state.font = [UIFont systemFontOfSize:10 weight:UIFontWeightBold];
-    state.textAlignment = NSTextAlignmentCenter;
-    state.textColor = isOn ? UIColor.whiteColor : [UIColor colorWithWhite:0.4 alpha:1];
-    state.layer.cornerRadius = 6;
-    state.clipsToBounds = YES;
-    state.backgroundColor = [UIColor colorWithWhite:1 alpha:0.06];
-    [rv addSubview:state];
-
-    UIView *sep = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, kRowHeight - kSeparatorHeight, kPanelWidth, kSeparatorHeight)];
-    sep.backgroundColor = kColorSeparator;
-    [rv addSubview:sep];
-
-    return rv;
-}
-
-- (UIImage *)_0xF009 {
-    CGFloat radius = 12.0f;
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(radius*2, radius*2), NO, 0.0);
-    CGContextRef ctx = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(ctx, [UIColor colorWithWhite:0.9 alpha:1].CGColor);
-    CGContextFillEllipseInRect(ctx, CGRectMake(0, 0, radius*2, radius*2));
-    UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return img;
-}
-
-- (CGFloat)_0xF005:(NSString *)title key:(NSString *)key def:(CGFloat)def min:(float)min max:(float)max y:(CGFloat)y {
-    UIView *rv = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, y, kPanelWidth, kSliderRowHeight)];
-
-    NSString *visualToggleKey = [key isEqualToString:@"Fov"] ? @"ShowFov" : [key stringByAppendingString:@"_visual_toggle"];
-    if ([[KH_CLS("NSUserDefaults") standardUserDefaults] objectForKey:visualToggleKey] == nil) {
-        [[KH_CLS("NSUserDefaults") standardUserDefaults] setBool:YES forKey:visualToggleKey];
-    }
-    BOOL isRowOn = [[KH_CLS("NSUserDefaults") standardUserDefaults] boolForKey:visualToggleKey];
-    rv.backgroundColor = isRowOn ? kColorBlue : kColorGray;
-
-    objc_setAssociatedObject(rv, "type", @"slider_row", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    objc_setAssociatedObject(rv, "key", visualToggleKey, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
-    CGFloat val = ESPPrefsFloat(key, def);
-
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(15, 4, kPanelWidth - 30, 20)];
-    lbl.textColor = [UIColor whiteColor];
-
-    NSMutableAttributedString *attrTitle = [[self _0xF001:title large:13.0f small:12.0f kern:1.5f] mutableCopy];
-    NSString *valStr = [KH_CLS("NSString") stringWithFormat:@" %.2f", val];
-
-    UIFont *valFont = [UIFont fontWithName:NSSENCRYPT("AvenirNext-Bold") size:11.0f];
-    if (!valFont) valFont = [UIFont systemFontOfSize:11.0f weight:UIFontWeightBold];
-
-    NSAttributedString *attrVal = [[NSAttributedString alloc] initWithString:valStr
-                                                                  attributes:@{NSFontAttributeName: valFont,
-                                                                               NSForegroundColorAttributeName: kColorText}];
-    [attrTitle appendAttributedString:attrVal];
-
-    lbl.attributedText = attrTitle;
-    [rv addSubview:lbl];
-
-    CGFloat btnY = 26.0f;
-    CGFloat btnSize = 22.0f;
-
-    UIFont *btnFont = [UIFont fontWithName:NSSENCRYPT("AvenirNext-Bold") size:15.0f];
-    if (!btnFont) btnFont = [UIFont systemFontOfSize:15.0f weight:UIFontWeightBold];
-
-    UIView *btnMinus = [[UIView alloc] initWithFrame:CGRectMake(15, btnY, btnSize, btnSize)];
-    btnMinus.backgroundColor = kColorRed;
-    objc_setAssociatedObject(btnMinus, "action", @"minus", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    UILabel *lMinus = [[UILabel alloc] initWithFrame:btnMinus.bounds];
-    lMinus.text = @"-"; lMinus.textColor = kColorText; lMinus.textAlignment = NSTextAlignmentCenter; lMinus.font = btnFont;
-    [btnMinus addSubview:lMinus];
-    [rv addSubview:btnMinus];
-
-    UIView *btnPlus = [[UIView alloc] initWithFrame:CGRectMake(kPanelWidth - 15 - btnSize, btnY, btnSize, btnSize)];
-    btnPlus.backgroundColor = kColorRed;
-    objc_setAssociatedObject(btnPlus, "action", @"plus", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    UILabel *lPlus = [[UILabel alloc] initWithFrame:btnPlus.bounds];
-    lPlus.text = @"+"; lPlus.textColor = kColorText; lPlus.textAlignment = NSTextAlignmentCenter; lPlus.font = btnFont;
-    [btnPlus addSubview:lPlus];
-    [rv addSubview:btnPlus];
-
-    CGFloat sliderX = 15 + btnSize + 10;
-    CGFloat sliderW = kPanelWidth - (sliderX * 2);
-    UISlider *sl = [[UISlider alloc] initWithFrame:CGRectMake(sliderX, btnY, sliderW, btnSize)];
-    sl.minimumValue = min; sl.maximumValue = max; sl.value = val;
-    sl.minimumTrackTintColor = kColorSeparator;
-    sl.maximumTrackTintColor = kColorSeparator;
-    [sl setThumbImage:[self _0xF009] forState:UIControlStateNormal];
-    sl.userInteractionEnabled = NO;
-
-    objc_setAssociatedObject(sl, "key", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    objc_setAssociatedObject(sl, "label", lbl, OBJC_ASSOCIATION_ASSIGN);
-    objc_setAssociatedObject(sl, "title", title, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    [rv addSubview:sl];
-
-    objc_setAssociatedObject(btnMinus, "slider", sl, OBJC_ASSOCIATION_ASSIGN);
-    objc_setAssociatedObject(btnPlus,  "slider", sl, OBJC_ASSOCIATION_ASSIGN);
-
-    UIView *sep = [[UIView alloc] initWithFrame:CGRectMake(0, kSliderRowHeight - kSeparatorHeight, kPanelWidth, kSeparatorHeight)];
-    sep.backgroundColor = kColorSeparator;
-    [rv addSubview:sep];
-
-    [self._0xP003 addSubview:rv];
-    return y + kSliderRowHeight;
-}
-
-- (void)_0xF006:(UISlider *)sender {
+- (void)toggleChanged:(UISwitch *)sender {
     NSString *key = objc_getAssociatedObject(sender, "key");
-    NSString *title = objc_getAssociatedObject(sender, "title");
-    UILabel *lbl = objc_getAssociatedObject(sender, "label");
-
-    if (!key) return;
-    float val = sender.value;
-    ESPPrefsSetFloat(key, val);
-    [[NSUserDefaults standardUserDefaults] setFloat:val forKey:key];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    ESPSyncFromPrefs();
-
-    if (lbl && title) {
-        NSMutableAttributedString *attrTitle = [[self _0xF001:title large:13.0f small:12.0f kern:1.5f] mutableCopy];
-        NSString *valStr = [NSString stringWithFormat:NSSENCRYPT(" %.2f"), val];
-
-        UIFont *valFont = [UIFont fontWithName:NSSENCRYPT("AvenirNext-Bold") size:11.0f];
-        if (!valFont) valFont = [UIFont systemFontOfSize:11.0f weight:UIFontWeightBold];
-
-        NSAttributedString *attrVal = [[NSAttributedString alloc] initWithString:valStr attributes:@{NSFontAttributeName: valFont, NSForegroundColorAttributeName: kColorText}];
-        [attrTitle appendAttributedString:attrVal];
-        lbl.attributedText = attrTitle;
-    }
+    ESPPrefsSetBool(key, sender.on); ESPSyncFromPrefs();
+    if ([key isEqualToString:@"DarkTheme"]) [self buildPage];
 }
-
-- (void)_0xF003 {
-    CGFloat y = 0.0f;
-
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Line") key:@"Line" y:y]];
-    y += kRowHeight;
-
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Box 3D")  key:@"Box" y:y]];
-    y += kRowHeight;
-
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Head Red") key:@"HeadRedDot" y:y]];
-    y += kRowHeight;
-
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("Thanh máu")   key:@"Health" y:y]];
-    y += kRowHeight;
-
-    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("Aim đầu khi bắn") key:@"AimbotFire" y:y]];
-    y += kRowHeight;
-
-    [self._0xP003 addSubview:[self _0xF004:@"Aim khi mở ngắm" key:@"AimbotScope" y:y]];
-    y += kRowHeight;
-
-    CGRect containerFrame = self._0xP003.frame;
-    containerFrame.size.height = y;
-    self._0xP003.frame = containerFrame;
-    self._0xP002.contentSize = CGSizeMake(kPanelWidth, y);
+- (void)colorTargetChanged:(UISegmentedControl *)sender {
+    self.colorTarget = sender.selectedSegmentIndex; [self buildPage];
 }
-
-- (void)_0xF00A:(CGFloat)delta {
-    CGFloat contentH = self._0xP002.contentSize.height;
-    CGFloat viewH = self._0xP002.bounds.size.height;
-    CGFloat maxOff = MAX(0, contentH - viewH);
-    CGFloat newOff = self._0xP002.contentOffset.y + delta;
-    newOff = MAX(0, MIN(maxOff, newOff));
-    self._0xP002.contentOffset = CGPointMake(0, newOff);
+- (void)updateSliderLabel:(UISlider *)sender {
+    UILabel *label = objc_getAssociatedObject(sender, "label");
+    NSString *key = objc_getAssociatedObject(sender, "key"), *title = objc_getAssociatedObject(sender, "title");
+    label.text = [key isEqualToString:@"FovSize"] ? [NSString stringWithFormat:@"%@   %.0f%%", title, sender.value] : [NSString stringWithFormat:@"%@   %.0f", title, sender.value * 255];
 }
-
-- (void)_0xF00B {
-    [self _0xF00C];
-    if (fabs(self._0xP011) < 1.0f) return;
-    self._0xP012 = [CADisplayLink displayLinkWithTarget:self selector:@selector(_0xF00D)];
-    [self._0xP012 addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+- (void)sliderChanged:(UISlider *)sender {
+    ESPPrefsSetFloat(objc_getAssociatedObject(sender, "key"), sender.value);
+    ESPSyncFromPrefs(); [self updateSliderLabel:sender]; [self updateSwatch];
 }
-
-- (void)_0xF00C {
-    [self._0xP012 invalidate];
-    self._0xP012 = nil;
+- (void)updateSwatch {
+    if (!self.swatch) return;
+    UIColor *color = ESPColor([self colorPrefix], self.colorTarget == 2 ? 1 : 0.72, self.colorTarget == 2 ? 1 : 0.91, 1);
+    CGFloat r, g, b, a; [color getRed:&r green:&g blue:&b alpha:&a];
+    self.swatch.backgroundColor = color;
+    self.swatch.textColor = (r * 0.299 + g * 0.587 + b * 0.114) > 0.6 ? UIColor.blackColor : UIColor.whiteColor;
+    self.swatch.text = [NSString stringWithFormat:@"#%02X%02X%02X", (int)round(r * 255), (int)round(g * 255), (int)round(b * 255)];
 }
-
-- (void)_0xF00D {
-    self._0xP011 *= 0.92f;
-    if (fabs(self._0xP011) < 0.5f) { [self _0xF00C]; return; }
-    [self _0xF00A:self._0xP011];
+- (void)setSlider:(UISlider *)slider point:(CGPoint)point {
+    CGPoint p = [slider convertPoint:point fromView:self.view];
+    CGFloat ratio = MAX(0, MIN(1, (p.x - 14) / MAX(1, slider.bounds.size.width - 28)));
+    slider.value = slider.minimumValue + ratio * (slider.maximumValue - slider.minimumValue);
+    [self sliderChanged:slider];
 }
-
-- (void)_0xF00E {
-    [[NSUserDefaults standardUserDefaults] setFloat:self._0xP001.frame.origin.x forKey:@"FloatingPanelX"];
-    [[NSUserDefaults standardUserDefaults] setFloat:self._0xP001.frame.origin.y forKey:@"FloatingPanelY"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-
-    [UIView animateWithDuration:0.20 animations:^{
-        self._0xP001.alpha = 0.0f;
-    } completion:^(BOOL finished){
-        if (self.onCloseBlock) self.onCloseBlock();
-        if (self._0xP013) self._0xP013();
-    }];
-}
-
-- (void)_0xF00F:(UITapGestureRecognizer *)tap {
-    CGPoint p = [tap locationInView:self.view];
-    if (!CGRectContainsPoint(self._0xP001.frame, p)) [self _0xF00E];
-}
-
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gr shouldReceiveTouch:(UITouch *)touch {
-    return !CGRectContainsPoint(self._0xP001.frame, [touch locationInView:self.view]);
-}
-
-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    UITouch *touch = [touches anyObject];
-    CGPoint pt = [touch locationInView:self.view];
-    [self _0xF010:pt phase:UITouchPhaseBegan pointerId:(NSInteger)touch];
-}
-
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    UITouch *touch = [touches anyObject];
-    CGPoint pt = [touch locationInView:self.view];
-    [self _0xF010:pt phase:UITouchPhaseMoved pointerId:(NSInteger)touch];
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    UITouch *touch = [touches anyObject];
-    CGPoint pt = [touch locationInView:self.view];
-    [self _0xF010:pt phase:UITouchPhaseEnded pointerId:(NSInteger)touch];
-}
-
-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    UITouch *touch = [touches anyObject];
-    CGPoint pt = [touch locationInView:self.view];
-    [self _0xF010:pt phase:UITouchPhaseCancelled pointerId:(NSInteger)touch];
-}
-
+// The system-wide HUD receives forwarded touches, so controls also route here.
 - (BOOL)_0xF010:(CGPoint)point phase:(NSInteger)phase pointerId:(NSInteger)pointerId {
-    BOOL insidePanel = CGRectContainsPoint(self._0xP001.frame, point);
-    UITouchPhase ph = (UITouchPhase)phase;
-
-    if (ph == UITouchPhaseBegan) {
-        if (!insidePanel) return NO;
-        if (self._0xP004 != -1 && self._0xP004 != pointerId) return NO;
-
-        self._0xP004 = pointerId;
-        self._0xP005 = NO;
-        self._0xP008 = nil; self._0xP00A = nil; self._0xP00B = nil; self._0xP00C = nil;
-        self._0xP00E = NO;
-        self._0xP00F = NO;
-        [self _0xF00C];
-        self._0xP011 = 0;
-
-        CGPoint inPanel = CGPointMake(point.x - self._0xP001.frame.origin.x, point.y - self._0xP001.frame.origin.y);
-
-        if (inPanel.y < kHeaderHeight) {
-            self._0xP005 = YES;
-            self._0xP006 = self._0xP001.frame.origin;
-            self._0xP007  = point;
-            return YES;
-        }
-
-        CGPoint inContainer = [self._0xP003 convertPoint:inPanel fromView:self._0xP001];
-        for (UIView *rv in self._0xP003.subviews) {
-            if (CGRectContainsPoint(rv.frame, inContainer)) {
-                NSString *type = objc_getAssociatedObject(rv, "type");
-                if ([type isEqualToString:@"toggle"]) {
-                    self._0xP00F = YES;
-                    self._0xP008 = rv;
-                    self._0xP009 = YES;
-                    [UIView animateWithDuration:0.15 animations:^{
-                        self._0xP008.alpha = 0.5f;
-                    }];
-                    break;
-                } else if ([type isEqualToString:@"slider_row"]) {
-                    self._0xP00F = YES;
-                    self._0xP00A = rv;
-                    BOOL hitControl = NO;
-                    for (UIView *sub in rv.subviews) {
-                        CGPoint subPt = CGPointMake(inContainer.x - rv.frame.origin.x, inContainer.y - rv.frame.origin.y);
-                        if ([sub isKindOfClass:[UISlider class]]) {
-                            if (CGRectContainsPoint(CGRectInset(sub.frame, -10, -15), subPt)) {
-                                self._0xP00B = (UISlider *)sub;
-                                hitControl = YES;
-                                break;
-                            }
-                        } else {
-                            NSString *action = objc_getAssociatedObject(sub, "action");
-                            if (action && CGRectContainsPoint(CGRectInset(sub.frame, -5, -5), subPt)) {
-                                self._0xP00C = sub;
-                                self._0xP00D = YES;
-                                hitControl = YES;
-                                [UIView animateWithDuration:0.15 animations:^{
-                                    self._0xP00C.alpha = 0.5f;
-                                }];
-                                break;
-                            }
-                        }
-                    }
-                    if (!hitControl) {
-                        self._0xP008 = rv;
-                        self._0xP009 = YES;
-                        [UIView animateWithDuration:0.15 animations:^{
-                            self._0xP008.alpha = 0.5f;
-                        }];
-                    }
-                    break;
-                }
+    if (phase == UITouchPhaseBegan) {
+        if (!CGRectContainsPoint(self.panel.frame, point)) return NO;
+        if (self.pointer != -1) return YES;
+        self.pointer = pointerId; self.began = point; self.panelOrigin = self.panel.frame.origin;
+        self.scrollOrigin = self.scroll.contentOffset.y; self.scrolling = NO; self.activeControl = nil;
+        CGPoint local = [self.panel convertPoint:point fromView:self.view];
+        self.dragging = local.y < 58 && local.x < self.panel.bounds.size.width - 46;
+        if (self.dragging) return YES;
+        NSArray *fixed = @[self.tabs, [self.header viewWithTag:12]];
+        for (UIControl *c in fixed) if (CGRectContainsPoint(c.bounds, [c convertPoint:point fromView:self.view])) self.activeControl = c;
+        if (CGRectContainsPoint(self.scroll.bounds, [self.scroll convertPoint:point fromView:self.view])) {
+            for (UIControl *c in self.controls) {
+                CGRect hit = c.bounds;
+                if ([c isKindOfClass:UISwitch.class]) hit = CGRectMake(-220, -8, 280, 48);
+                if (CGRectContainsPoint(hit, [c convertPoint:point fromView:self.view])) { self.activeControl = c; break; }
             }
         }
-
-        self._0xP010 = point.y;
+        if ([self.activeControl isKindOfClass:UISlider.class]) [self setSlider:(UISlider *)self.activeControl point:point];
         return YES;
     }
-
-    if (ph == UITouchPhaseMoved) {
-        if (pointerId != self._0xP004) return NO;
-
-        if (self._0xP005) {
-            CGFloat dx = point.x - self._0xP007.x;
-            CGFloat dy = point.y - self._0xP007.y;
-            self._0xP001.frame = CGRectMake(self._0xP006.x + dx, self._0xP006.y + dy, kPanelWidth, kPanelHeight);
-            return YES;
+    if (self.pointer != pointerId) return NO;
+    CGFloat dx = point.x - self.began.x, dy = point.y - self.began.y;
+    if (phase == UITouchPhaseMoved) {
+        if (self.dragging) {
+            CGRect f = self.panel.frame; f.origin = CGPointMake(self.panelOrigin.x + dx, self.panelOrigin.y + dy); self.panel.frame = f;
+            [self viewDidLayoutSubviews];
+        } else if ([self.activeControl isKindOfClass:UISlider.class]) {
+            [self setSlider:(UISlider *)self.activeControl point:point];
+        } else if (fabs(dy) > 7 || self.scrolling) {
+            self.scrolling = YES;
+            CGFloat maxY = MAX(0, self.scroll.contentSize.height - self.scroll.bounds.size.height);
+            self.scroll.contentOffset = CGPointMake(0, MAX(0, MIN(maxY, self.scrollOrigin - dy)));
         }
-
-        if (self._0xP00B) {
-            CGPoint inPanel = CGPointMake(point.x - self._0xP001.frame.origin.x, point.y - self._0xP001.frame.origin.y);
-            CGPoint inContainer = [self._0xP003 convertPoint:inPanel fromView:self._0xP001];
-            UISlider *sl = self._0xP00B;
-            UIView *parent = sl.superview;
-            CGFloat ratio = (inContainer.x - parent.frame.origin.x - sl.frame.origin.x) / sl.frame.size.width;
-            ratio = MAX(0, MIN(1, ratio));
-            sl.value = sl.minimumValue + (float)ratio * (sl.maximumValue - sl.minimumValue);
-            [self _0xF006:sl];
-            self._0xP010 = point.y;
-            return YES;
-        }
-
-        CGFloat dy = point.y - self._0xP010;
-
-        if (!self._0xP00E && self._0xP00F) {
-            if (fabs(dy) > 5.0f) {
-                self._0xP00E = YES;
-                self._0xP00F = NO;
-                if (self._0xP008) {
-                    [UIView animateWithDuration:0.2 animations:^{
-                        self._0xP008.alpha = 1.0f;
-                    }];
-                }
-                if (self._0xP00C) {
-                    [UIView animateWithDuration:0.2 animations:^{
-                        self._0xP00C.alpha = 1.0f;
-                    }];
-                }
-                self._0xP008 = nil;
-                self._0xP00C = nil;
-                self._0xP00A = nil;
-            } else {
-                if (self._0xP008) {
-                    CGPoint inPanel = CGPointMake(point.x - self._0xP001.frame.origin.x, point.y - self._0xP001.frame.origin.y);
-                    CGPoint inContainer = [self._0xP003 convertPoint:inPanel fromView:self._0xP001];
-                    BOOL currentlyInside = CGRectContainsPoint(self._0xP008.frame, inContainer);
-                    if (currentlyInside != self._0xP009) {
-                        self._0xP009 = currentlyInside;
-                        [UIView animateWithDuration:0.25 animations:^{
-                            self._0xP008.alpha = currentlyInside ? 0.5f : 1.0f;
-                        }];
-                    }
-                }
-                self._0xP010 = point.y;
-                return YES;
-            }
-        }
-
-        if (self._0xP00E || !self._0xP00F) {
-            [self _0xF00A:-dy];
-            self._0xP011 = -dy;
-            if (fabs(dy) > 3) self._0xP00E = YES;
-        }
-
-        self._0xP010 = point.y;
         return YES;
     }
-
-    if (ph == UITouchPhaseEnded || ph == UITouchPhaseCancelled) {
-        if (pointerId != self._0xP004) return NO;
-        BOOL isCancel = (ph == UITouchPhaseCancelled);
-
-        if (self._0xP005) {
-            CGFloat dx = point.x - self._0xP007.x;
-            CGFloat dy = point.y - self._0xP007.y;
-            if (fabs(dx) < 5.0f && fabs(dy) < 5.0f && !isCancel) {
-                self._0xP004 = -1;
-                [self _0xF00E];
-                return YES;
-            }
-            [[NSUserDefaults standardUserDefaults] setFloat:self._0xP001.frame.origin.x forKey:NSSENCRYPT("FloatingPanelX")];
-            [[NSUserDefaults standardUserDefaults] setFloat:self._0xP001.frame.origin.y forKey:NSSENCRYPT("FloatingPanelY")];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-        }
-        else if (self._0xP00E) {
-            [self _0xF00B];
-        }
-        else if (self._0xP008 && self._0xP009 && !isCancel) {
-            NSString *key = objc_getAssociatedObject(self._0xP008, "key");
-            BOOL newState = ![[NSUserDefaults standardUserDefaults] boolForKey:key];
-            [[NSUserDefaults standardUserDefaults] setBool:newState forKey:key];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            if (![key isEqualToString:@"Fov"] &&
-            ![key isEqualToString:@"AimSpeed"] &&
-            ![key isEqualToString:@"Distance"]) {
-            ESPPrefsSetBool(key, newState);
-            ESPSyncFromPrefs();
-            }
-            [UIView animateWithDuration:0.25 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-                self._0xP008.alpha = 1.0f;
-                self._0xP008.backgroundColor = newState ? kColorActive : kColorGray;
-                for (UIView *sub in self._0xP008.subviews) {
-                    if ([sub isKindOfClass:[UILabel class]]) {
-                        ((UILabel *)sub).textColor = newState ? UIColor.whiteColor : [UIColor colorWithWhite:0.65 alpha:1];
-                        if (sub.tag == 7301) ((UILabel *)sub).text = newState ? @"ON" : @"OFF";
-                    }
-                }
-            } completion:nil];
-        }
-        else if (self._0xP00C && self._0xP00D && !isCancel) {
-            NSString *action = objc_getAssociatedObject(self._0xP00C, "action");
-            UISlider *sl = objc_getAssociatedObject(self._0xP00C, "slider");
-            if (sl && action) {
-                float step = 1.0f;
-                if ([action isEqualToString:@"plus"]) {
-                    sl.value = MIN(sl.maximumValue, sl.value + step);
-                } else {
-                    sl.value = MAX(sl.minimumValue, sl.value - step);
-                }
-                [self _0xF006:sl];
-            }
-            [UIView animateWithDuration:0.45 animations:^{
-                self._0xP00C.alpha = 1.0f;
-            }];
-        }
-        else {
-            [UIView animateWithDuration:0.2 animations:^{
-                if (self._0xP008) self._0xP008.alpha = 1.0f;
-                if (self._0xP00C) self._0xP00C.alpha = 1.0f;
-            }];
-        }
-
-        self._0xP004 = -1;
-        self._0xP005 = NO;
-        self._0xP00E = NO;
-        self._0xP00F = NO;
-        self._0xP008 = nil; self._0xP00A = nil; self._0xP00B = nil; self._0xP00C = nil;
+    if (phase == UITouchPhaseEnded || phase == UITouchPhaseCancelled) {
+        UIControl *control = self.activeControl;
+        BOOL activate = phase == UITouchPhaseEnded && !self.dragging && !self.scrolling && fabs(dx) < 24 && fabs(dy) < 24;
+        self.pointer = -1; self.activeControl = nil;
+        if (activate && [control isKindOfClass:UISwitch.class]) {
+            UISwitch *sw = (UISwitch *)control; [sw setOn:!sw.on animated:NO]; [self toggleChanged:sw];
+        } else if (activate && [control isKindOfClass:UISegmentedControl.class]) {
+            UISegmentedControl *seg = (UISegmentedControl *)control;
+            CGPoint p = [seg convertPoint:point fromView:self.view];
+            seg.selectedSegmentIndex = MAX(0, MIN(seg.numberOfSegments - 1, (NSInteger)(p.x / (seg.bounds.size.width / seg.numberOfSegments))));
+            if (seg == self.tabs) [self changeTab:seg]; else [self colorTargetChanged:seg];
+        } else if (activate && [control isKindOfClass:UIButton.class]) [self closeMenu];
         return YES;
     }
-
     return YES;
 }
-
 @end

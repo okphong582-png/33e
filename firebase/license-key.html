@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hoangha License Key Tool</title>
+  <style>
+    :root{color-scheme:dark;font:15px system-ui,sans-serif;background:#0e1015;color:#e9edf5}
+    body{max-width:720px;margin:32px auto;padding:0 18px}
+    main{background:#171a22;border:1px solid #343a48;border-radius:18px;padding:24px;box-shadow:0 14px 45px #0008}
+    h1{font-size:22px;margin:0 0 6px}p{color:#aab2c2;line-height:1.45}
+    label{display:block;margin:18px 0 7px;color:#cbd2df}input,textarea,button{font:inherit;border-radius:10px}
+    input,textarea{width:100%;box-sizing:border-box;background:#0e1015;color:#fff;border:1px solid #3a4252;padding:11px}
+    button{border:0;background:#3277d8;color:#fff;padding:11px 15px;margin:18px 8px 0 0;cursor:pointer}
+    button.secondary{background:#303746}button:disabled{opacity:.5;cursor:not-allowed}
+    code{word-break:break-all;color:#a9d2ff}.warning{color:#ffbd72;font-size:13px}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Tạo license key offline</h1>
+  <p>Trang này không kết nối Firebase và không chứa service-account key. Hãy mở bằng file local trên máy quản trị.</p>
+  <label for="days">Thời hạn (ngày)</label>
+  <input id="days" type="number" min="1" max="3650" value="30">
+  <button id="generate">Tạo key</button><button id="copy" class="secondary" disabled>Copy JSON</button>
+  <label>Key cấp cho người dùng</label>
+  <textarea id="key" rows="2" readonly></textarea>
+  <label>SHA-256 path</label>
+  <textarea id="hash" rows="2" readonly></textarea>
+  <label>Bản ghi để nhập vào Realtime Database tại <code>licenses/&lt;SHA-256 path&gt;</code></label>
+  <textarea id="record" rows="7" readonly></textarea>
+  <p class="warning">Không đặt trang này lên hosting công khai. Key chỉ hiện một lần trong trình duyệt; hãy lưu vào trình quản lý bí mật trước khi đóng.</p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let latest = "";
+function hex(bytes){return [...bytes].map(x=>x.toString(16).padStart(2,"0")).join("")}
+async function digest(text){
+  const bytes = new TextEncoder().encode(text);
+  return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
+}
+function randomKey(){
+  const bytes = new Uint8Array(32); crypto.getRandomValues(bytes);
+  return "HH-" + hex(bytes).toUpperCase();
+}
+function pretty(value){return JSON.stringify(value,null,2)}
+$("generate").onclick = async () => {
+  const days = Number($("days").value);
+  if(!Number.isFinite(days) || days < 1 || days > 3650){alert("Thời hạn phải từ 1 đến 3650 ngày.");return}
+  const key = randomKey(), hash = await digest(key);
+  const expiresAt = Date.now() + Math.round(days * 86400000);
+  const record = {enabled:true, expiresAt};
+  latest = pretty(record);
+  $("key").value = key; $("hash").value = hash; $("record").value = latest;
+  $("copy").disabled = false;
+};
+$("copy").onclick = async () => {
+  if(!latest) return;
+  await navigator.clipboard.writeText(latest);
+  $("copy").textContent = "Đã copy";
+  setTimeout(() => $("copy").textContent = "Copy JSON", 1200);
+};
+</script>
+</body>
+</html>

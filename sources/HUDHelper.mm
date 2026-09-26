@@ -7,6 +7,7 @@
 #include "KabraxHide.h"
 
 #import "HUDHelper.h"
+#import "LicenseSession.h"
 
 extern "C" char **environ;
 
@@ -28,6 +29,7 @@ BOOL IsHUDEnabled(void)
 
 void _0xFFFADK2(BOOL _0xA282B)
 {
+    if (_0xA282B && ![LicenseSession shared].authorized) return;
     notify_post(NOTIFY_DESTROY_HUD);
 
     posix_spawnattr_t attr;

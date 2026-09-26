@@ -6,3 +6,15 @@
 *.deb
 *.ipa
 packages/
+
+node_modules/
+.env*
+!.env.example
+AuthConfig.plist
+!layout/Resources/AuthConfig.plist
+backend/.firebaserc
+backend/*-debug.log
+*.private.pem
+*service-account*.json
+*.license.key
+*.private.pem.public.txt

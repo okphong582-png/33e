@@ -2,6 +2,8 @@
 
 #import "esp.h"
 #import "ESPPrefs.h"
+#import "ESPStyle.h"
+#import "LicenseSession.h"
 #import "../drawing_view/offset.h"
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
@@ -36,6 +38,9 @@ bool isLine       = YES;
 bool isHeadRedDot = YES;
 bool isAimbotFire = YES;
 static bool isAimbotScope = YES;
+static bool isAimNeck = YES;
+static bool showFov = YES;
+static float fovPercent = 40.0f;
 static uint64_t gAimLockTarget = 0;
 static uint64_t gAimLocalPlayer = 0;
 
@@ -53,6 +58,9 @@ void ESPSyncFromPrefs(void) {
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
     isAimbotFire = ESPPrefsBool(KH_NS("AimbotFire"), YES);
     isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
+    isAimNeck = ESPPrefsBool(@"AimNeck", YES);
+    showFov = ESPPrefsBool(@"ShowFov", YES);
+    fovPercent = ESPPrefsFloat(@"FovSize", 40);
 
     // ESP Count logic
     if (isLine || isBox || isHealth) {
@@ -407,6 +415,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 
 - (void)updateFrame {
     if (!self.window) return;
+    if (![LicenseSession shared].authorized) { [self clearAllContent]; return; }
     @autoreleasepool {
 #ifdef NOTIFY_DESTROY_HUD
         if (GetGameProcesspid((char *)KH_STR("FreeFire")) == -1) {
@@ -454,7 +463,16 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         ApplyPath(self.hpHighlightLayer, buffers.hpHighlightPath, buffers.hpHighlightDirty);
         ESPGeometryBuffersRelease(&buffers);
 
-        self.fovLayer.path = nil;   // Ẩn FOV circle hoàn toàn
+        UIColor *boxColor = ESPColor(@"BoxColor", 0.72, 0.91, 1.0);
+        UIColor *lineColor = ESPColor(@"LineColor", 0.72, 0.91, 1.0);
+        self.boxBotLayer.strokeColor = self.boxPlayerLayer.strokeColor = self.boxKnockLayer.strokeColor = boxColor.CGColor;
+        self.lineBotLayer.strokeColor = self.linePlayerLayer.strokeColor = self.lineKnockLayer.strokeColor = lineColor.CGColor;
+        self.fovLayer.strokeColor = ESPColor(@"FovColor", 1, 1, 1).CGColor;
+        CGMutablePathRef fovPath = CGPathCreateMutable();
+        const float radius = AimSelection::Radius(vw, vh, fovPercent);
+        BOOL hasFov = RenderFOVCirclePath(fovPath, vw, vh, showFov && stats.inMatch, radius);
+        self.fovLayer.path = hasFov ? fovPath : nil;
+        CGPathRelease(fovPath);
 
         // Plain enemy count, with no icon or background.
         if (stats.inMatch && (isCount || isLine || isBox)) {
@@ -574,7 +592,7 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) !
     AimSelection::Selection selection;
     selection.previous = sameMatch && sameLocal && aiming ? previousTarget : 0;
     Vector3 targetHead;
-    const float radius = (float)std::min(vw, vh) * 0.40f;
+    const float radius = AimSelection::Radius(vw, vh, fovPercent);
     const uint64_t base = entries + kIl2CppArrayItems;
     for (int i = 0; i < count; ++i) {
         const uint64_t entry = base + (uint64_t)kDictEntryStrideBytePlayer * i;
@@ -590,7 +608,14 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) !
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
         if (aiming && visible && !knocked) {
-            const Vector3 head = getPositionExt(getHead(pawn));
+            Vector3 head = getPositionExt(getHead(pawn));
+            if (isAimNeck) {
+                // Estimated neck from available bones; no unverified neck offset is used.
+                const Vector3 left = getPositionExt(getLeftShoulder(pawn));
+                const Vector3 right = getPositionExt(getRightShoulder(pawn));
+                if (IsZeroVec(left) || IsZeroVec(right) || IsZeroVec(head)) head = Vector3();
+                else head = Vector3::Lerp((left + right) * 0.5f, head, 0.30f);
+            }
             if (!IsZeroVec(head) && std::isfinite(head.x) && std::isfinite(head.y) && std::isfinite(head.z)) {
                 const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
                 selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);

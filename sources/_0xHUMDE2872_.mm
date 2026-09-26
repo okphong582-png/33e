@@ -15,6 +15,7 @@
 
 #import "../esp/Core/pid.h"
 #import "HUDHelper.h"
+#import "LicenseSession.h"
 #import "UIView+SecureView.h"
 
 // FBSOrientationObserver
@@ -251,6 +252,10 @@ self.window.bounds = targetFrame;
 // HUDMainApplicationDelegate.mm - THÊM FORCE ROTATE BẰNG UIDevice
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary <UIApplicationLaunchOptionsKey, id> *)launchOptions {
+    [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
+        if (!ok) { RequestExitHUD(); return; }
+        [[LicenseSession shared] monitor];
+    }];
     
     // KHÔNG dùng setValue:forKey:
     
