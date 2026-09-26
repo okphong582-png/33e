@@ -1,0 +1,191 @@
+export default {
+  async fetch(request, env, ctx) {
+    return handleRequest(request, env);
+  }
+};
+
+// Hàm hỗ trợ băm SHA-256 cho mật khẩu
+async function hashPassword(password) {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function handleRequest(request, env) {
+  const url = new URL(request.url);
+  const userAgent = request.headers.get('User-Agent') || '';
+
+  // Lấy giá trị trực tiếp từ Environment Variables / Secrets trên Cloudflare
+  const secretKey = env.SECRET_KEY;
+const appUserAgent = env.APP_USER_AGENT;
+const validUUID = env.VALID_UUID;
+
+
+
+  // Nếu chưa thiết lập Environment Variables → báo lỗi 500
+  if (!secretKey || !appUserAgent || !validUUID) {
+    return new Response(
+        'Server Configuration Error: Missing Environment Variables',
+        { status: 500 }
+    );
+}
+
+  // Cho phép truy cập trang admin nếu đúng key
+  if (url.pathname === '/admin' && url.searchParams.get('key') === secretKey) {
+    return serveAdminPage();
+  }
+
+  // Kiểm tra User-Agent cho các API
+ 
+
+if (url.pathname === '/auth' && request.method === 'POST') {
+    return handleAuth(request, env);
+  } else if (url.pathname === '/create-account' && request.method === 'POST') {
+    return handleCreateAccount(request, env);
+ } else if (url.pathname === '/uuid' && request.method === 'GET') {
+    return handleUUID(env);
+} else {
+    return new Response('Not Found', { status: 404 });
+  }
+}
+
+
+async function handleAuth(request, env) {
+  try {
+    const { account, password, udid } = await request.json();
+    if (!account || !password || !udid) {
+      return json({ success: false, message: 'Invalid payload' });
+    }
+
+    const accountKey = `account:${account}`;
+    const accountData = await env.ACCOUNT_DATA.get(accountKey);
+    if (!accountData) {
+      return json({ success: false, message: 'Account not found' });
+    }
+
+    const data = JSON.parse(accountData);
+    const hashedPassword = await hashPassword(password);
+
+    if (data.password !== hashedPassword) {
+      return json({ success: false, message: 'Incorrect password' });
+    }
+
+    // Kiểm tra UDID
+    if (data.udid && data.udid !== udid) {
+      return json({ success: false, message: 'UDID mismatch' });
+    }
+
+    // Gán UDID nếu chưa có
+    if (!data.udid) {
+      data.udid = udid;
+      await env.ACCOUNT_DATA.put(accountKey, JSON.stringify(data));
+    }
+
+    // Kiểm tra thời hạn
+    const now = Date.now();
+    const expiry = data.expiry ? new Date(data.expiry).getTime() : 0;
+    if (expiry && now > expiry) {
+      return json({ success: false, message: 'Expired' });
+    }
+
+    const remainingHours = Math.max(0, (expiry - now) / 3600000);
+    return json({ success: true, vip_hours: Math.floor(remainingHours) });
+  } catch (e) {
+    return json({ success: false, message: 'Server error' });
+  }
+}
+
+async function handleCreateAccount(request, env) {
+  try {
+    const { secret, account, password, hours } = await request.json();
+    const secretKey = env.SECRET_KEY;
+
+    if (secret !== secretKey) {
+      return new Response(JSON.stringify({ success: false, message: 'Unauthorized' }), { status: 401 });
+    }
+    if (!account || !password) {
+      return json({ success: false, message: 'Missing fields' });
+    }
+
+    const accountKey = `account:${account}`;
+    const existing = await env.ACCOUNT_DATA.get(accountKey);
+    if (existing) {
+      return json({ success: false, message: 'Account already exists' });
+    }
+
+    const expiryDate = new Date(Date.now() + (hours || 9999) * 3600000).toISOString();
+    const hashedPassword = await hashPassword(password);
+
+    const newAccount = {
+      password: hashedPassword,
+      udid: null,
+      expiry: expiryDate
+    };
+    await env.ACCOUNT_DATA.put(accountKey, JSON.stringify(newAccount));
+
+    return json({ success: true, message: 'Account created', expiry: expiryDate });
+  } catch (e) {
+    return json({ success: false, message: 'Server error' });
+  }
+
+function handleUUID(env) {
+  const uuid = env.VALID_UUID;
+
+  if (!uuid) {
+    return new Response('UUID not configured', {
+      status: 500
+    });
+  }
+
+  return new Response(uuid, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8'
+    }
+  });
+}
+
+function serveAdminPage() {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Quản lý tài khoản</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 400px; }
+    input, button { width: 100%; margin: 0.4rem 0; padding: 0.5rem; box-sizing: border-box; }
+    button { background: #0066cc; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Tạo tài khoản mới</h2>
+  <input id="account" placeholder="Tài khoản">
+  <input id="password" type="password" placeholder="Mật khẩu">
+  <input id="hours" type="number" value="9999" placeholder="Giờ VIP">
+  <button onclick="create()">Tạo tài khoản</button>
+  <p id="msg"></p>
+  <script>
+    async function create() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const secret = urlParams.get('key');
+      const account = document.getElementById('account').value;
+      const password = document.getElementById('password').value;
+      const hours = parseInt(document.getElementById('hours').value) || 9999;
+      
+      const res = await fetch('/create-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'PubgModVip/1.0' },
+        body: JSON.stringify({ secret, account, password, hours })
+      });
+      const data = await res.json();
+      document.getElementById('msg').innerText = data.message || JSON.stringify(data);
+    }
+  </script>
+</body>
+</html>`;
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+function json(obj) {
+  return new Response(JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
+}

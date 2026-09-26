@@ -1,0 +1,244 @@
+#import "InfoViewController.h"
+#import <QuartzCore/QuartzCore.h>
+#import <sys/utsname.h>
+#include "KabraxHide.h"
+
+// ──────────────────────────────────────────────────────────────
+// MARK: - InfoRowView
+// ──────────────────────────────────────────────────────────────
+@interface InfoRowView : UIView
+@property (nonatomic, strong) UILabel *leftLabel;
+@property (nonatomic, strong) UILabel *rightLabel;
+@end
+
+@implementation InfoRowView
+
+- (instancetype)initWithLeft:(NSString *)left right:(NSString *)right rightColor:(UIColor *)rightColor {
+    self = [super initWithFrame:CGRectZero];
+    if (!self) return nil;
+    self.backgroundColor = [UIColor clearColor];
+
+    _leftLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    _leftLabel.text = left ?: @"";
+    _leftLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightRegular];
+    _leftLabel.textColor = [UIColor whiteColor];
+    [self addSubview:_leftLabel];
+
+    _rightLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    _rightLabel.text = right ?: KH_NS("—");
+    _rightLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightRegular];
+    _rightLabel.textColor = rightColor ?: [UIColor systemGrayColor]; 
+    _rightLabel.textAlignment = NSTextAlignmentRight;
+    _rightLabel.adjustsFontSizeToFitWidth = YES;
+    _rightLabel.minimumScaleFactor = 0.8;
+    [self addSubview:_rightLabel];
+    
+    return self;
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGFloat w = self.bounds.size.width;
+    CGFloat h = self.bounds.size.height;
+    
+    _leftLabel.frame = CGRectMake(16, 0, w * 0.40f - 16, h);
+    _rightLabel.frame = CGRectMake(w * 0.40f, 0, w * 0.60f - 16, h);
+}
+@end
+
+
+// ──────────────────────────────────────────────────────────────
+// MARK: - InfoViewController
+// ──────────────────────────────────────────────────────────────
+@interface InfoViewController ()
+
+@property (nonatomic, strong) UILabel *buildHeaderLabel;
+@property (nonatomic, strong) UIView *buildCardView;
+@property (nonatomic, strong) NSArray<InfoRowView *> *buildRows;
+
+@property (nonatomic, strong) UILabel *deviceHeaderLabel;
+@property (nonatomic, strong) UIView *deviceCardView;
+@property (nonatomic, strong) NSArray<InfoRowView *> *deviceRows;
+
+@end
+
+@implementation InfoViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    // Nền đen thuần túy
+    self.view.backgroundColor = [UIColor blackColor];
+    
+    // Bật giám sát pin để lấy % pin thực tế
+    [UIDevice currentDevice].batteryMonitoringEnabled = YES;
+
+    [self setupBuildSection];
+    [self setupDeviceSection];
+}
+
+- (void)setupBuildSection {
+    // Tiêu đề Section 1
+    _buildHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    _buildHeaderLabel.text = KH_NS("THÔNG TIN BẢN DỰNG");
+    _buildHeaderLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
+    _buildHeaderLabel.textColor = [UIColor systemGrayColor];
+    [self.view addSubview:_buildHeaderLabel];
+
+    // Card View 1
+    _buildCardView = [self createCardView];
+    [self.view addSubview:_buildCardView];
+
+    // Lấy thông tin từ Info.plist
+    NSDictionary *info = [NSBundle mainBundle].infoDictionary ?: @{};
+    NSString *bundleName = info[KH_NS("CFBundleDisplayNameKH_STR(")] ?: info[KH_NS(")CFBundleNameKH_STR(")] ?: KH_NS(")VN MOD");
+    NSString *buildVer = info[KH_NS("CFBundleVersionKH_STR(")] ?: KH_NS(")1.0.0");
+    NSString *shortVer = info[KH_NS("CFBundleShortVersionStringKH_STR(")] ?: KH_NS(")1.0.0");
+    NSString *bundleID = info[KH_NS("CFBundleIdentifierKH_STR(")] ?: KH_NS(")bimodgame");
+
+    NSDateFormatter *df = [[NSDateFormatter alloc] init];
+    df.dateFormat = KH_NS("MMM dd yyyy");
+    NSString *created = [df stringFromDate:[NSDate date]];
+
+    _buildRows = @[
+        [[InfoRowView alloc] initWithLeft:KH_NS("Tên bản dựng") right:bundleName rightColor:[UIColor whiteColor]],
+        [[InfoRowView alloc] initWithLeft:KH_NS("Số bản dựng") right:buildVer rightColor:[UIColor whiteColor]],
+        [[InfoRowView alloc] initWithLeft:KH_NS("Phiên bản") right:shortVer rightColor:[UIColor systemGreenColor]],
+        [[InfoRowView alloc] initWithLeft:KH_NS("Sản phẩm") right:bundleID rightColor:nil],
+        [[InfoRowView alloc] initWithLeft:KH_NS("Ngày tạo") right:created rightColor:nil]
+    ];
+
+    [self addRows:_buildRows toCard:_buildCardView];
+}
+
+- (void)setupDeviceSection {
+    // Tiêu đề Section 2
+    _deviceHeaderLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    _deviceHeaderLabel.text = KH_NS("THÔNG TIN THIẾT BỊ");
+    _deviceHeaderLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
+    _deviceHeaderLabel.textColor = [UIColor systemGrayColor];
+    [self.view addSubview:_deviceHeaderLabel];
+
+    // Card View 2
+    _deviceCardView = [self createCardView];
+    [self.view addSubview:_deviceCardView];
+
+    // 1. Lấy Model Máy
+    struct utsname systemInfo;
+    uname(&systemInfo);
+    NSString *deviceModel = [NSString stringWithCString:systemInfo.machine encoding:NSUTF8StringEncoding];
+    
+    // 2. Lấy iOS Version
+    NSString *iosVersion = [NSString stringWithFormat:KH_NS("iOS %@"), [[UIDevice currentDevice] systemVersion]];
+    
+    // 3. Lấy thông tin Pin
+    float batLeft = [UIDevice currentDevice].batteryLevel * 100;
+    UIDeviceBatteryState state = [UIDevice currentDevice].batteryState;
+    NSString *batStateStr = (state == UIDeviceBatteryStateCharging) ? KH_NS(" (Đang sạc)") : @"";
+    NSString *batteryStr = batLeft >= 0 ? [NSString stringWithFormat:KH_NS("%.0f%%%@"), batLeft, batStateStr] : KH_NS("Không rõ");
+    
+    // 4. Check Jailbreak cơ bản
+    NSString *jbStatus = [self isJailbroken] ? KH_NS("CóKH_STR(") : KH_NS(")Không");
+
+    _deviceRows = @[
+        [[InfoRowView alloc] initWithLeft:KH_NS("Mẫu thiết bị") right:deviceModel rightColor:nil],
+        [[InfoRowView alloc] initWithLeft:KH_NS("Phiên bản iOS") right:iosVersion rightColor:nil],
+        [[InfoRowView alloc] initWithLeft:KH_NS("Thông tin pin") right:batteryStr rightColor:nil],
+        [[InfoRowView alloc] initWithLeft:KH_NS("Jailbreak") right:jbStatus rightColor:nil]
+    ];
+
+    [self addRows:_deviceRows toCard:_deviceCardView];
+}
+
+#pragma mark - Helpers
+
+- (UIView *)createCardView {
+    UIView *card = [[UIView alloc] initWithFrame:CGRectZero];
+    card.backgroundColor = [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0]; // Màu nền chuẩn Inset Grouped Dark
+    card.layer.cornerRadius = 12;
+    card.clipsToBounds = YES;
+    return card;
+}
+
+- (void)addRows:(NSArray<InfoRowView *> *)rows toCard:(UIView *)card {
+    for (NSUInteger i = 0; i < rows.count; i++) {
+        [card addSubview:rows[i]];
+        
+        // Thêm đường line mờ phân cách giữa các dòng (trừ dòng cuối cùng)
+        if (i != rows.count - 1) {
+            UIView *separator = [[UIView alloc] initWithFrame:CGRectZero];
+            separator.backgroundColor = [UIColor colorWithRed:0.24 green:0.24 blue:0.26 alpha:0.29];
+            separator.tag = 1000 + (int)i; 
+            [card addSubview:separator];
+        }
+    }
+}
+
+- (BOOL)isJailbroken {
+#if TARGET_IPHONE_SIMULATOR
+    return NO;
+#else
+    NSArray *jbPaths = @[
+        KH_NS("/Applications/Cydia.app"),
+        KH_NS("/Library/MobileSubstrate/MobileSubstrate.dylib"),
+        KH_NS("/bin/bash"),
+        KH_NS("/usr/sbin/sshd"),
+        KH_NS("/etc/apt")
+    ];
+    for (NSString *path in jbPaths) {
+        if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+            return YES;
+        }
+    }
+    return NO;
+#endif
+}
+
+#pragma mark - Layout
+
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    
+    UIEdgeInsets insets = self.view.safeAreaInsets;
+    CGFloat w = self.view.bounds.size.width;
+    CGFloat paddingX = 16;
+    CGFloat cardW = w - (paddingX * 2);
+    CGFloat rowH = 44; // Chiều cao chuẩn của row trên iOS
+    
+    // --- Layout SECTION 1 (Build Info) ---
+    CGFloat startY = insets.top + 20;
+    
+    _buildHeaderLabel.frame = CGRectMake(paddingX + 16, startY, cardW, 20);
+    
+    CGFloat buildCardY = CGRectGetMaxY(_buildHeaderLabel.frame) + 8;
+    CGFloat buildCardH = rowH * _buildRows.count;
+    _buildCardView.frame = CGRectMake(paddingX, buildCardY, cardW, buildCardH);
+    
+    [self layoutRows:_buildRows inCard:_buildCardView rowHeight:rowH];
+    
+    // --- Layout SECTION 2 (Device Info) ---
+    CGFloat section2Y = CGRectGetMaxY(_buildCardView.frame) + 24;
+    
+    _deviceHeaderLabel.frame = CGRectMake(paddingX + 16, section2Y, cardW, 20);
+    
+    CGFloat deviceCardY = CGRectGetMaxY(_deviceHeaderLabel.frame) + 8;
+    CGFloat deviceCardH = rowH * _deviceRows.count;
+    _deviceCardView.frame = CGRectMake(paddingX, deviceCardY, cardW, deviceCardH);
+    
+    [self layoutRows:_deviceRows inCard:_deviceCardView rowHeight:rowH];
+}
+
+- (void)layoutRows:(NSArray<InfoRowView *> *)rows inCard:(UIView *)card rowHeight:(CGFloat)rowH {
+    CGFloat w = card.bounds.size.width;
+    for (NSUInteger i = 0; i < rows.count; i++) {
+        InfoRowView *rv = rows[i];
+        rv.frame = CGRectMake(0, (CGFloat)i * rowH, w, rowH);
+        
+        UIView *sep = [card viewWithTag:1000 + (int)i];
+        if (sep) {
+            sep.frame = CGRectMake(16, CGRectGetMaxY(rv.frame) - 0.5f, w - 16, 0.5f);
+        }
+    }
+}
+
+@end
