@@ -202,7 +202,7 @@ float y = w2sHead.y;
     uint64_t headNode = getHead(PawnObject);
     if (isVaildPtr(headNode)) {
         Vector3 headPos = getPositionExt(headNode);
-        if (!IsZeroVec(headPos)) {
+        if (headPos.x != 0.0f || headPos.y != 0.0f || headPos.z != 0.0f) {
             Vector3 w2sDot = WorldToScreenLayer(headPos, matrix, matrixVpWidth, matrixVpHeight, layerWidth, layerHeight);
             if (w2sDot.z > 0.001f) {
                 // Vẽ Chấm Đỏ Hình Tròn Trực Tiếp Trên Đầu Người Chơi
