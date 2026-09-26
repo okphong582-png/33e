@@ -38,83 +38,33 @@ float percent = 0.0f;
 // ============================================================
 // ✅ BIẾN ESP (GIỮ LẠI)
 // ============================================================
-bool isBox      = YES;
-bool isCount    = NO;
-bool isHealth   = YES;
-bool isName     = YES;
-bool isDis      = YES;
-bool isLine     = YES;
-
-// ❌ ĐÃ XÓA: Biến aimbot
-// bool isEspBot   = NO;
-// bool isBone     = NO;
-// bool _0x92710   = NO;
-// bool _0x3872DA  = NO;
-// bool isAimIgnoreBot    = NO;
-// bool isAimIgnoreKnock  = YES;
-// bool isAimCheckVisible = NO;
-// bool isAimRage         = NO;
-// bool isLineAim         = YES;
-// bool _0x3872DB         = YES;
-// bool _0x2872o          = NO;
-// bool aimsilent1        = NO;
-// int  box               = 0;
-// int  triggerMode       = 3;
-// int  _0x2874           = 0;
-// int  _0x3872AB         = 0;
-// int  aimTargetMode     = 0;
-// float aimFov           = 150.0f;
-// float aimDistance      = 150.0f;
-// float aimSpeed         = 0.95f;
-// bool _0x2873           = NO;
-// bool _0x83278          = NO;
-// int  _0x28726          = 0;
+bool isBox        = YES;
+bool isCount      = NO;
+bool isHealth     = YES;
+bool isName       = YES;
+bool isDis        = YES;
+bool isLine       = YES;
+bool isHeadRedDot = YES;
+bool isAimbotFire = YES;
 
 static bool gESPPrefsLoadedOnce = false;
 
 // ============================================================
-// ✅ SYNC PREFS - CHỈ ESP
+// ✅ SYNC PREFS - ESP & AIMBOT
 // ============================================================
 void ESPSyncFromPrefs(void) {
-    isBox    = ESPPrefsBool(KH_NS("Box"),    NO);
-    isHealth = ESPPrefsBool(KH_NS("Health"), NO);
-    isName   = ESPPrefsBool(KH_NS("Name"),   NO);
-    isDis    = ESPPrefsBool(KH_NS("Dis"),    NO);
-    isLine   = ESPPrefsBool(KH_NS("Line"),   NO);
-    
-    // ❌ ĐÃ XÓA: Toàn bộ sync aimbot
-    // isBone            = ESPPrefsBool(KH_NS("Bone"),            NO);
-    // isEspBot          = ESPPrefsBool(KH_NS("EspBot"),          NO);
-    // isAimIgnoreBot    = ESPPrefsBool(KH_NS("AimIgnoreBot"),    NO);
-    // isAimCheckVisible = ESPPrefsBool(KH_NS("AimCheckVisible"), NO);
-    // isAimRage         = ESPPrefsBool(KH_NS("AimRage"),         NO);
-    // isLineAim         = ESPPrefsBool(KH_NS("LineAim"),         YES);
-    // _0x3872DA         = ESPPrefsBool(KH_NS("Aimbot"),          NO);
-    // aimsilent1        = ESPPrefsBool(KH_NS("aimsilent"),       NO);
-    // _0x92710          = ESPPrefsBool(KH_NS("aiplayer"),        NO);
-    // _0x2872o          = ESPPrefsBool(KH_NS("AimHead"),         NO);
-    // _0x2873           = ESPPrefsBool(KH_NS("AimSHead"),        NO);
-    // _0x3872DB         = ESPPrefsBool(KH_NS("ShowFov"),         YES);
-    // _0x83278          = ESPPrefsBool(KH_NS("AIPos"),           NO);
-    // box               = (int)ESPPrefsFloat(KH_NS("box"), 0.0f);
-    // triggerMode       = (int)ESPPrefsFloat(KH_NS("TriggerMode"), 3.0f);
-    // _0x2874           = (int)ESPPrefsFloat(KH_NS("AimPos"), 0.0f);
-    // aimTargetMode     = (int)ESPPrefsFloat(KH_NS("AimTargetMode"), 0.0f);
-    // aimFov            = ESPPrefsFloat(KH_NS("Fov"), 150.0f);
-    // aimDistance       = ESPPrefsFloat(KH_NS("Distance"), 150.0f);
-    // aimSpeed          = ESPPrefsFloat(KH_NS("Speed"), 75.0f) / 100.0f;
+    isBox        = ESPPrefsBool(KH_NS("Box"),        NO);
+    isHealth     = ESPPrefsBool(KH_NS("Health"),     NO);
+    isName       = ESPPrefsBool(KH_NS("Name"),       NO);
+    isDis        = ESPPrefsBool(KH_NS("Dis"),        NO);
+    isLine       = ESPPrefsBool(KH_NS("Line"),       NO);
+    isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
+    isAimbotFire = ESPPrefsBool(KH_NS("AimbotFire"), YES);
 
     // ESP Count logic
-    if (isLine) {
+    if (isLine || isBox || isHealth) {
         isCount = YES;
-    }
-    else if (isBox) {
-        isCount = YES;
-    }
-    else if (isHealth) {
-        isCount = YES;
-    }
-    else {
+    } else {
         isCount = NO;
     }
 }
@@ -415,18 +365,18 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     }
 
     self.statusLayer = [CATextLayer layer];
-    self.statusLayer.foregroundColor = [UIColor colorWithRed:1.0f green:0.85f blue:0.0f alpha:1.0f].CGColor;
+    self.statusLayer.foregroundColor = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:1.0f].CGColor;
     self.statusLayer.alignmentMode   = kCAAlignmentCenter;
-    self.statusLayer.fontSize        = 17.0f;
-    self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:17.0f weight:UIFontWeightHeavy];
-    self.statusLayer.backgroundColor = [UIColor colorWithRed:0.05f green:0.05f blue:0.12f alpha:0.85f].CGColor;
-    self.statusLayer.borderColor     = [UIColor colorWithRed:1.0f green:0.75f blue:0.0f alpha:0.9f].CGColor;
+    self.statusLayer.fontSize        = 16.0f;
+    self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:16.0f weight:UIFontWeightHeavy];
+    self.statusLayer.backgroundColor = [UIColor colorWithRed:0.04f green:0.08f blue:0.05f alpha:0.92f].CGColor;
+    self.statusLayer.borderColor     = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:0.9f].CGColor;
     self.statusLayer.borderWidth     = 1.5f;
     self.statusLayer.cornerRadius    = 16.0f;
-    self.statusLayer.shadowColor     = [UIColor colorWithRed:1.0f green:0.5f blue:0.0f alpha:0.8f].CGColor;
+    self.statusLayer.shadowColor     = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:0.8f].CGColor;
     self.statusLayer.shadowOffset    = CGSizeZero;
     self.statusLayer.shadowOpacity   = 0.9f;
-    self.statusLayer.shadowRadius    = 6.0f;
+    self.statusLayer.shadowRadius    = 8.0f;
     self.statusLayer.contentsScale   = UIScreen.mainScreen.scale;
     self.statusLayer.zPosition       = 8;
     self.statusLayer.actions = @{ KH_NS("stringKH_STR("):NSNull.null, KH_NS(")frameKH_STR("):NSNull.null, @")hidden":NSNull.null };
@@ -536,20 +486,20 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         
         self.fovLayer.path = nil;   // Ẩn FOV circle hoàn toàn
 
-        // ESP Count hiển thị - Từ đầu dây xuống (Top-Center Player Counter Badge)
+        // ESP Count hiển thị - Từ đầu dây xuống (High-Tech Emerald Green Badge)
         if (isCount || isLine || isBox) {
             int totalEnemies = stats.playerCount + stats.botCount;
 
-            UIFont *fontBasic = [UIFont systemFontOfSize:17.0f weight:UIFontWeightHeavy];
+            UIFont *fontBasic = [UIFont systemFontOfSize:16.0f weight:UIFontWeightHeavy];
             NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
             attributes[NSFontAttributeName] = fontBasic;
-            attributes[NSForegroundColorAttributeName] = (totalEnemies > 0) ? [UIColor colorWithRed:1.0f green:0.85f blue:0.0f alpha:1.0f] : [UIColor colorWithRed:0.8f green:0.8f blue:0.8f alpha:1.0f];
+            attributes[NSForegroundColorAttributeName] = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:1.0f];
 
-            NSString *countStr = [NSString stringWithFormat:@"🎯 PLAYERS NEARBY: %d", totalEnemies];
+            NSString *countStr = [NSString stringWithFormat:@"🎯 ĐỊCH: %d", totalEnemies];
             NSAttributedString *attrStr = [[NSAttributedString alloc] initWithString:countStr attributes:attributes];
             self.statusLayer.string = attrStr;
 
-            CGFloat bannerWidth = 210.0f;
+            CGFloat bannerWidth = 140.0f;
             self.statusLayer.frame = CGRectMake(vw / 2.0f - (bannerWidth / 2.0f), 22.0f, bannerWidth, 32.0f);
             self.statusLayer.alignmentMode = kCAAlignmentCenter;
             self.statusLayer.hidden = NO;

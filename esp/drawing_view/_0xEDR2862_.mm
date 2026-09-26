@@ -198,6 +198,20 @@ float x = w2sHead.x - boxWidth * 0.5f;
 
 float y = w2sHead.y;
 
+    // ─── VẼ BỘ PHẬN ĐẦU MÀU ĐỎ (HEAD RED DOT ESP) ───────────────
+    uint64_t headNode = getHead(PawnObject);
+    if (isVaildPtr(headNode)) {
+        Vector3 headPos = getPositionExt(headNode);
+        if (!IsZeroVec(headPos)) {
+            Vector3 w2sDot = WorldToScreenLayer(headPos, matrix, matrixVpWidth, matrixVpHeight, layerWidth, layerHeight);
+            if (w2sDot.z > 0.001f) {
+                // Vẽ Chấm Đỏ Hình Tròn Trực Tiếp Trên Đầu Người Chơi
+                CGPathAddArc(buffers->boxKnockPath, NULL, (CGFloat)w2sDot.x, (CGFloat)w2sDot.y, 5.5f, 0, M_PI * 2, YES);
+                buffers->boxKnockDirty = true;
+            }
+        }
+    }
+
     // ─── SNAPLINE ──────────────────────────────────────────────
     if (isLine) {
         CGPoint lineStart = CGPointMake((CGFloat)layerWidth / 2.0f, 20.0f);

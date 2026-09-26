@@ -176,7 +176,7 @@ static const CGFloat kSeparatorHeight = 1.5f;
     _0x28620.textAlignment = NSTextAlignmentCenter;
 
     NSMutableAttributedString *headerAttr = [[NSMutableAttributedString alloc] init];
-    NSAttributedString *_0x8462 = [self _0xF001:KH_NS("DRAGON BALL Z") large:17.0f small:15.0f kern:3.0f];
+    NSAttributedString *_0x8462 = [self _0xF001:KH_NS("HOANGHA VIP") large:17.0f small:15.0f kern:3.0f];
     [headerAttr appendAttributedString:_0x8462];
     _0x28620.attributedText = headerAttr;
     [headerView addSubview:_0x28620];
@@ -200,7 +200,7 @@ static const CGFloat kSeparatorHeight = 1.5f;
     footer.backgroundColor = [UIColor colorWithRed:0.95f green:0.30f blue:0.0f alpha:1.0f];
     
     UILabel *footerLbl = [[UILabel alloc] initWithFrame:footer.bounds];
-    footerLbl.text = @"⚡ DBZ RAGE VIP MOD ⚡";
+    footerLbl.text = @"⚡ HOANGHA VIP MOD ⚡";
     footerLbl.textColor = [UIColor whiteColor];
     footerLbl.font = [UIFont systemFontOfSize:11 weight:UIFontWeightBold];
     footerLbl.textAlignment = NSTextAlignmentCenter;
@@ -362,7 +362,13 @@ static const CGFloat kSeparatorHeight = 1.5f;
     [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Box")  key:@"Box" y:y]];
     y += kRowHeight;
 
+    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Head Red") key:@"HeadRedDot" y:y]];
+    y += kRowHeight;
+
     [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("ESP Hp")   key:@"Health" y:y]];
+    y += kRowHeight;
+
+    [self._0xP003 addSubview:[self _0xF004:NSSENCRYPT("Aimbot Fire") key:@"AimbotFire" y:y]];
     y += kRowHeight;
 
     CGRect containerFrame = self._0xP003.frame;

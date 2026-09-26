@@ -164,8 +164,8 @@ static BOOL _0xB005() {
     
     // Tạo label footer
     _0xA002 = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectZero];
-    _0xA002.text = NSSENCRYPT("🔥 Dragon Ball Z VIP Mod Menu 🔥\nMake by iOSViet.co");
-    _0xA002.textColor = [UIColor colorWithRed:0.9f green:0.9f blue:1.0f alpha:0.9f];
+    _0xA002.text = NSSENCRYPT("🔥 HOANGHA VIP MOD MENU 🔥\nMake by iOSViet.co");
+    _0xA002.textColor = [UIColor colorWithRed:0.9f green:0.95f blue:1.0f alpha:0.9f];
     _0xA002.font = [KH_CLS("UIFont") systemFontOfSize:14 weight:UIFontWeightBold];
     _0xA002.textAlignment = NSTextAlignmentCenter;
     _0xA002.numberOfLines = 0;
@@ -222,7 +222,7 @@ static BOOL _0xB005() {
         [self->_0xA001 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         self->_0xA001.backgroundColor = [UIColor colorWithRed:0.95f green:0.15f blue:0.2f alpha:1.0f];
         self->_0xA001.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.0f blue:0.2f alpha:0.9f].CGColor;
-        self->_0xA002.text = NSSENCRYPT("✅ Hack Đã Kích Hoạt!\nHãy Mở Game Free Fire Max");
+        self->_0xA002.text = NSSENCRYPT("✅ HOANGHA VIP MOD Đã Kích Hoạt!\nHãy Mở Game Free Fire Max");
     });
 }
 
@@ -256,7 +256,7 @@ static BOOL _0xB005() {
         [_0xA001 setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
         _0xA001.backgroundColor = [UIColor colorWithRed:1.0f green:0.75f blue:0.0f alpha:1.0f];
         _0xA001.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.6f blue:0.0f alpha:0.9f].CGColor;
-        _0xA002.text = NSSENCRYPT("🔥 Dragon Ball Z VIP Mod Menu 🔥\nMake by iOSViet.co");
+        _0xA002.text = NSSENCRYPT("🔥 HOANGHA VIP MOD MENU 🔥\nMake by iOSViet.co");
         [[KH_CLS("NSUserDefaults") standardUserDefaults] removeObjectForKey:NSSENCRYPT("wasAuthenticated")];
         return;
     }
@@ -274,35 +274,35 @@ static BOOL _0xB005() {
     [_0xA001 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     _0xA001.backgroundColor = [UIColor colorWithRed:0.95f green:0.15f blue:0.2f alpha:1.0f];
     _0xA001.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.0f blue:0.2f alpha:0.9f].CGColor;
-    _0xA002.text = NSSENCRYPT("✅ Hack Đã Kích Hoạt!\nHãy Mở Game Free Fire Max");
+    _0xA002.text = NSSENCRYPT("✅ HOANGHA VIP MOD Đã Kích Hoạt!\nHãy Mở Game Free Fire Max");
     
     dispatch_async(dispatch_get_main_queue(), ^{
         _0xFFFADK2(YES);
     });
 }
 
-#pragma mark - Login Prompt (Tài khoản & Mật khẩu mặc định: 1 / 1)
+#pragma mark - Login Prompt (Key VIP mặc định: 1 / 1)
 - (void)_0xC006 {
     JUNK_BLOCK();
     NSString *savedAcc = [self _0xC00B] ?: @"1";
     NSString *savedPass = [self _0xC00D] ?: @"1";
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSSENCRYPT("ĐĂNG NHẬP")
-                                                                   message:NSSENCRYPT("Tài khoản và mật khẩu mặc định: 1 / 1")
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSSENCRYPT("🔐 HOANGHA VIP - XÁC THỰC KEY")
+                                                                   message:NSSENCRYPT("Nhập Tài khoản & Mật khẩu Key (Mặc định: 1 / 1)")
                                                             preferredStyle:UIAlertControllerStyleAlert];
     
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        textField.placeholder = NSSENCRYPT("Tài khoản");
+        textField.placeholder = NSSENCRYPT("Tài khoản Key");
         textField.text = savedAcc;
     }];
     
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        textField.placeholder = NSSENCRYPT("Mật khẩu");
+        textField.placeholder = NSSENCRYPT("Mật khẩu Key");
         textField.secureTextEntry = YES;
         textField.text = savedPass;
     }];
     
-    UIAlertAction *loginAction = [UIAlertAction actionWithTitle:NSSENCRYPT("Đăng Nhập")
+    UIAlertAction *loginAction = [UIAlertAction actionWithTitle:NSSENCRYPT("XÁC NHẬN KEY")
                                                           style:UIAlertActionStyleDefault
                                                         handler:^(UIAlertAction *action) {
         UITextField *accField = alert.textFields.firstObject;
@@ -321,8 +321,8 @@ static BOOL _0xB005() {
             [self _0xC005];
             [self _0xC010:@9999];
         } else {
-            UIAlertController *errAlert = [UIAlertController alertControllerWithTitle:NSSENCRYPT("Lỗi Đăng Nhập")
-                                                                              message:NSSENCRYPT("Tài khoản hoặc mật khẩu không chính xác! (Mặc định: 1 / 1)")
+            UIAlertController *errAlert = [UIAlertController alertControllerWithTitle:NSSENCRYPT("❌ LỖI KEY")
+                                                                              message:NSSENCRYPT("Key không chính xác! (Mặc định: 1 / 1)")
                                                                        preferredStyle:UIAlertControllerStyleAlert];
             [errAlert addAction:[UIAlertAction actionWithTitle:NSSENCRYPT("Thử lại") style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
                 [self _0xC006];
@@ -446,73 +446,56 @@ static BOOL _0xB005() {
     return (_0xD02F & P_TRACED) != 0;
 }
 
-#pragma mark - Custom Alert (giữ nguyên toàn bộ UI)
+#pragma mark - Custom Alert (HOANGHA VIP Dialog)
 - (void)_0xC010:(NSNumber *)_0xD014 {
     JUNK_BLOCK();
     if (_0xA005) return;
     
     _0xA005 = [[KH_CLS("UIView") alloc] initWithFrame:self.view.bounds];
-    _0xA005.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.6];
+    _0xA005.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.7];
     [self.view addSubview:_0xA005];
     
-    CGFloat _0xD030 = 300.0;
+    CGFloat _0xD030 = 310.0;
     _0xA006 = [[KH_CLS("UIView") alloc] initWithFrame:CGRectMake(0, 0, _0xD030, 240)];
     _0xA006.center = self.view.center;
-    _0xA006.backgroundColor = [UIColor whiteColor];
-    _0xA006.layer.cornerRadius = 14.0;
-    _0xA006.layer.masksToBounds = YES;
+    _0xA006.backgroundColor = [UIColor colorWithRed:0.08f green:0.08f blue:0.12f alpha:1.0f];
+    _0xA006.layer.cornerRadius = 18.0;
+    _0xA006.layer.borderWidth = 2.0f;
+    _0xA006.layer.borderColor = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:0.9f].CGColor;
+    _0xA006.layer.shadowColor = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:0.8f].CGColor;
+    _0xA006.layer.shadowRadius = 16.0f;
+    _0xA006.layer.shadowOpacity = 0.9f;
+    _0xA006.layer.masksToBounds = NO;
     [_0xA005 addSubview:_0xA006];
     
     UILabel *_0xD031 = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectMake(0, 20, _0xD030, 25)];
-    _0xD031.text = NSSENCRYPT("Thành Công");
-    _0xD031.font = [UIFont systemFontOfSize:19 weight:UIFontWeightBold];
-    _0xD031.textColor = [UIColor blackColor];
+    _0xD031.text = NSSENCRYPT("✅ HOANGHA VIP KÍCH HOẠT");
+    _0xD031.font = [UIFont systemFontOfSize:17 weight:UIFontWeightHeavy];
+    _0xD031.textColor = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:1.0f];
     _0xD031.textAlignment = NSTextAlignmentCenter;
     [_0xA006 addSubview:_0xD031];
     
-    double _0xD04D = _0xD014 ? [_0xD014 doubleValue] : 9999.0;
-    int _0xH635 = (int)_0xD04D;
-    int _0xDK534 = (int)((_0xD04D - _0xH635) * 60);
+    NSString *_0xD04E = @"👑 HOANGHA SYSTEM VIP 👑\nThời hạn: Vĩnh Viễn (9999 Giờ)\n\n• Đã bật ESP Line, Box & Head Red Dot\n• Đã bật Aimbot Auto Lock khi bắn\n• Đếm số ĐỊCH hiển thị thời gian thực";
     
-    NSString *format = KH_NS("[iosviet.co] ");
-    format = [format stringByAppendingString:KH_NS("VIP của bạn ")];
-    format = [format stringByAppendingString:KH_NS("còn:\n")];
-    format = [format stringByAppendingString:KH_NS("%d giờ ")];
-    format = [format stringByAppendingString:KH_NS("và %d phút\n")];
-    format = [format stringByAppendingString:KH_NS("Vui lòng ")];
-    format = [format stringByAppendingString:KH_NS("không:\n")];
-    format = [format stringByAppendingString:KH_NS("[Chia sẻ ")];
-    format = [format stringByAppendingString:KH_NS("key cho ")];
-    format = [format stringByAppendingString:KH_NS("người khác]\n")];
-    format = [format stringByAppendingString:KH_NS("[Sử dụng ")];
-    format = [format stringByAppendingString:KH_NS("trên 2 ")];
-    format = [format stringByAppendingString:KH_NS("thiết bị ")];
-    format = [format stringByAppendingString:KH_NS("trở lên]\n")];
-    format = [format stringByAppendingString:KH_NS("[Gỡ game ")];
-    format = [format stringByAppendingString:KH_NS("cài lại ")];
-    format = [format stringByAppendingString:KH_NS("nếu không ")];
-    format = [format stringByAppendingString:KH_NS("cần thiết]")];
-    
-    NSString *_0xD04E = [NSString stringWithFormat:format, _0xH635, _0xDK534];
-    
-    UILabel *_0xD032 = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectMake(15, 55, _0xD030-30, 110)];
+    UILabel *_0xD032 = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectMake(15, 52, _0xD030-30, 115)];
     _0xD032.text = _0xD04E;
-    _0xD032.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
-    _0xD032.textColor = [UIColor darkGrayColor];
+    _0xD032.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+    _0xD032.textColor = [UIColor colorWithRed:0.9f green:0.95f blue:1.0f alpha:0.9f];
     _0xD032.textAlignment = NSTextAlignmentCenter;
     _0xD032.numberOfLines = 0;
     [_0xA006 addSubview:_0xD032];
     
     UIButton *_0xD033 = [KH_CLS("UIButton") buttonWithType:UIButtonTypeCustom];
     CGFloat _0xD04F = 38.0;
-    _0xD033.frame = CGRectMake((_0xD030-_0xD04F)/2, 180, _0xD04F, _0xD04F);
-    _0xD033.backgroundColor = [UIColor systemRedColor];
+    _0xD033.frame = CGRectMake((_0xD030-_0xD04F)/2, 182, _0xD04F, _0xD04F);
+    _0xD033.backgroundColor = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:1.0f];
     _0xD033.layer.cornerRadius = _0xD04F/2.0;
-    [_0xD033 setTitle:KH_NS("✕") forState:UIControlStateNormal];
-    [_0xD033 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    _0xD033.titleLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
+    [_0xD033 setTitle:KH_NS("✓") forState:UIControlStateNormal];
+    [_0xD033 setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    _0xD033.titleLabel.font = [UIFont systemFontOfSize:20 weight:UIFontWeightHeavy];
     [_0xD033 addTarget:self action:KH_SEL("_0xC011") forControlEvents:UIControlEventTouchUpInside];
     [_0xA006 addSubview:_0xD033];
+}
     
     UILabel *_0xD034 = [[KH_CLS("UILabel") alloc] initWithFrame:CGRectMake(-100, -100, 10, 10)];
     _0xD034.text = _0xB002(@"JUNK");
