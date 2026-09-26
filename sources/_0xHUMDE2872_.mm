@@ -252,6 +252,7 @@ self.window.bounds = targetFrame;
 // HUDMainApplicationDelegate.mm - THÊM FORCE ROTATE BẰNG UIDevice
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary <UIApplicationLaunchOptionsKey, id> *)launchOptions {
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(licenseBecameInvalid:) name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
     [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
         if (!ok) { RequestExitHUD(); return; }
         [[LicenseSession shared] monitor];
@@ -399,6 +400,11 @@ self.window.bounds = targetFrame;
 
     
     
+}
+
+- (void)licenseBecameInvalid:(NSNotification *)notification {
+    (void)notification;
+    RequestExitHUD();
 }
 
 // HÀM FORCE ROTATE - GỌI KHI CẦN XOAY

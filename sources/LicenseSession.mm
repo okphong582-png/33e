@@ -12,6 +12,8 @@
 
 @implementation LicenseSession
 
+NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"LicenseSessionDidBecomeUnauthorizedNotification";
+
 + (instancetype)shared {
     static LicenseSession *instance;
     static dispatch_once_t once;
@@ -115,7 +117,18 @@
     }];
 }
 
-- (void)monitor { if (!self.timer) self.timer = [NSTimer scheduledTimerWithTimeInterval:40 repeats:YES block:^(NSTimer *timer) { [self refresh:nil]; }]; }
+- (void)monitor {
+    if (!self.timer) {
+        self.timer = [NSTimer scheduledTimerWithTimeInterval:10 repeats:YES block:^(NSTimer *timer) {
+            [self refresh:^(BOOL valid, NSString *message) {
+                (void)message;
+                if (!valid) {
+                    [[NSNotificationCenter defaultCenter] postNotificationName:LicenseSessionDidBecomeUnauthorizedNotification object:self];
+                }
+            }];
+        }];
+    }
+}
 
 - (void)logout {
     ++self.generation; self.busy = NO; self.validUntilUptime = 0; [self.timer invalidate]; self.timer = nil;

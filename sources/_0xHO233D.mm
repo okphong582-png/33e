@@ -55,7 +55,11 @@
     self.loggedIn = NO;
     // Remove the old client-side bypass; this value is never consulted for authorization.
     [NSUserDefaults.standardUserDefaults removeObjectForKey:@"wasAuthenticated"];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(licenseBecameInvalid:) name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
     [self applyAppearance]; [self updateControls];
+}
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
 }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
@@ -121,6 +125,13 @@
 - (void)logout {
     _0xFFFADK2(NO); [[LicenseSession shared] logout];
     self.loggedIn = NO; self.status.text = @"Đã đăng xuất."; [self updateControls];
+}
+- (void)licenseBecameInvalid:(NSNotification *)notification {
+    (void)notification;
+    _0xFFFADK2(NO);
+    self.loggedIn = NO;
+    self.status.text = @"Key hết hạn, bị xóa hoặc mất kết nối mạng.";
+    [self updateControls];
 }
 - (void)_0xDAH2863 {
     if (!self.isViewLoaded || !self.loggedIn) return;
