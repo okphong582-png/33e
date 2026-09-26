@@ -327,6 +327,14 @@ self.window.bounds = targetFrame;
     self.window.windowLevel = 10000010.0;
     self.window.hidden = NO;
     [self.window makeKeyAndVisible];
+    menuView.hidden = NO;
+    menuView.alpha = 1.0;
+    menuView.userInteractionEnabled = YES;
+    [containerView bringSubviewToFront:menuView];
+    [containerView setNeedsLayout];
+    [containerView layoutIfNeeded];
+    [menuView setNeedsLayout];
+    [menuView layoutIfNeeded];
     
     // FORCE ROTATE LẦN ĐẦU
     UIInterfaceOrientation initialOrientation = [self currentInterfaceOrientation];

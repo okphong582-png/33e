@@ -15,6 +15,7 @@
 @property (nonatomic, strong) UISwitch *theme;
 @property (nonatomic, strong) UILabel *themeLabel;
 @property (nonatomic, assign) BOOL loggedIn;
+- (void)waitForHUDStart:(NSInteger)attempt;
 @end
 @implementation _0xHOMEVC
 - (UIButton *)button:(NSString *)text action:(SEL)action {
@@ -131,11 +132,33 @@
     if (IsHUDEnabled()) { _0xFFFADK2(NO); [self updateControls]; return; }
     self.start.enabled = NO; self.status.text = @"Đang kiểm tra phiên…";
     [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
-        self.start.enabled = YES;
-        if (ok) { _0xFFFADK2(YES); self.status.text = @"Menu đã khởi động. Mở game để sử dụng."; }
-        else { self.loggedIn = NO; self.status.text = message; }
-        [self updateControls];
+        if (!ok) {
+            self.start.enabled = YES;
+            self.loggedIn = NO;
+            self.status.text = message;
+            [self updateControls];
+            return;
+        }
+        _0xFFFADK2(YES);
+        [self waitForHUDStart:0];
     }];
+}
+- (void)waitForHUDStart:(NSInteger)attempt {
+    if (IsHUDEnabled()) {
+        self.start.enabled = YES;
+        self.status.text = @"Menu đã khởi động. Bấm nút GIF nổi để mở.";
+        [self updateControls];
+        return;
+    }
+    if (attempt >= 30) {
+        self.start.enabled = YES;
+        self.status.text = @"Không khởi động được menu. Hãy thử lại.";
+        [self updateControls];
+        return;
+    }
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 100 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+        [self waitForHUDStart:attempt + 1];
+    });
 }
 - (void)logout {
     _0xFFFADK2(NO); [[LicenseSession shared] logout];
