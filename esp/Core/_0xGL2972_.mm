@@ -1,4 +1,5 @@
 #import "GameLogic.h"
+#include "AimSelection.h"
 #import "../drawing_view/offset.h"
 #import <Foundation/Foundation.h>
 #import <math.h>
@@ -48,9 +49,10 @@ uint64_t CameraMain(uint64_t matchgame) {
     return ReadAddr<uint64_t>(CameraControllerManager + kMainCamera);
 }
 
-static void TipaReadMatrix16(uint64_t addr, float *out) {
-    for (int i = 0; i < 16; i++)
-        out[i] = ReadAddr<float>(addr + (uint64_t)i * 4u);
+static bool TipaReadMatrix16(uint64_t addr, float *out) {
+    if (!_read((long)addr, out, 16 * sizeof(float))) return false;
+    for (int i = 0; i < 16; ++i) if (!std::isfinite(out[i])) return false;
+    return true;
 }
 
 static void TipaMultiply4x4(const float *P, const float *V, float *out) {
@@ -73,8 +75,8 @@ float* GetViewMatrix(uint64_t cameraMain) {
         return nullptr;
 
     float V[16], P[16];
-    TipaReadMatrix16(v1 + kViewMatrixOff, V);
-    TipaReadMatrix16(v1 + kProjMatrixOff, P);
+    if (!TipaReadMatrix16(v1 + kViewMatrixOff, V) ||
+        !TipaReadMatrix16(v1 + kProjMatrixOff, P)) return nullptr;
     TipaMultiply4x4(P, V, matrix);
     return matrix;
 }
@@ -135,7 +137,7 @@ uint64_t getRoot(uint64_t player) {
 
 bool get_IsFiring(uint64_t playerPawn) {
     
-    return isVaildPtr(playerPawn) && ReadAddr<uint8_t>(playerPawn + kIsFiring) == 1;
+    return isVaildPtr(playerPawn) && AimSelection::BooleanState(ReadAddr<uint8_t>(playerPawn + kIsFiring));
 }
 
 
@@ -199,6 +201,15 @@ bool getIsVisible(uint64_t playerPawn) {
     if (!isVaildPtr(avatarManager)) return false;
     const uint64_t avatar = ReadAddr<uint64_t>(avatarManager + _0x28726BD);
     return isVaildPtr(avatar) && ReadAddr<uint8_t>(avatar + _0x2872DCF) == 1;
+}
+
+bool getAimVisibility(uint64_t playerPawn) {
+    if (!isVaildPtr(playerPawn)) return false;
+    const uint64_t object = ReadAddr<uint64_t>(playerPawn + kVisibleObj);
+    if (!isVaildPtr(object)) return false;
+    uint32_t flags = 0;
+    const bool readOK = _read((long)(object + kVisibleObjFlags), &flags, sizeof(flags));
+    return AimSelection::VisibleForAim(readOK, flags, kISVisibleCamera, kISVisibleDynamicPVS);
 }
 
 

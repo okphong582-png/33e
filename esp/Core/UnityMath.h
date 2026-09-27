@@ -34,6 +34,7 @@ Vector3 WorldToScreen(Vector3 obj, float *matrix, float screenX, float screenY);
 
 Vector3 WorldToScreenLayer(Vector3 obj, float *matrix, float vpW, float vpH, float layerW, float layerH);
 Vector3 getPositionExt(uint64_t transObj2);
+void BeginTransformFrame(void);
 NSString *GetNickName(uint64_t PawnObject);
 
 #endif

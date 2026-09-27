@@ -140,7 +140,7 @@ bool _write(long addr, const void *buffer, int len);
 template<typename T>
 T ReadAddr(long address) {
     T data{};
-    _read(address, reinterpret_cast<void *>(&data), sizeof(T));
+    if (!_read(address, reinterpret_cast<void *>(&data), sizeof(T))) return T{};
     return data;
 }
 

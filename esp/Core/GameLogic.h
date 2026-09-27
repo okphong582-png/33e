@@ -30,6 +30,7 @@ uint64_t getLeftHand(uint64_t player);
 uint64_t getRightHand(uint64_t player);
 uint64_t getLocalPlayer(uint64_t match);
 bool getIsVisible(uint64_t playerPawn);
+bool getAimVisibility(uint64_t playerPawn);
 int GetDataUInt16(uint64_t player, int varID);
 void SetDataUInt16(uint64_t player, int varID, uint16_t value);
 int get_CurHP(uint64_t Player);

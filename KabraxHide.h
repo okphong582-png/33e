@@ -542,7 +542,11 @@ namespace _kh_ {
 
 #define KH_HASH(s) (static_cast<uintptr_t>(_kh_::_fnv(s)))
 
-#define OFF64(v) KH_INT((uint64_t)(v))
+#define OFF64(v) \
+    ([]() -> uint64_t { \
+        static const uint64_t value = KH_INT((uint64_t)(v)); \
+        return value; \
+    }())
 
 #ifdef __OBJC__
 #define KH_NS(s)  ([NSString stringWithUTF8String:KH_STR(s)])

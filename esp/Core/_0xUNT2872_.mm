@@ -1,6 +1,8 @@
 #import "UnityMath.h"
 #import "../drawing_view/offset.h"
 #include "KabraxHide.h"
+#include "TransformTraversal.h"
+#include <cmath>
 
 #pragma mark - Function Unity
 
@@ -39,7 +41,11 @@ Vector3 WorldToScreenLayer(Vector3 obj, float *matrix, float vpW, float vpH, flo
     return v;
 }
 
-Vector3 getPositionExt(uint64_t transObj2) {
+static bool FinitePosition(const Vector3 &v) {
+    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+}
+
+static Vector3 ReadPosition(uint64_t transObj2) {
     Vector3 result{};
     if (!isVaildPtr((uintptr_t)transObj2)) return result;
 
@@ -49,22 +55,23 @@ Vector3 getPositionExt(uint64_t transObj2) {
     uint64_t matrix = ReadAddr<uint64_t>(transObj + kTransformMatrix);
     if (!isVaildPtr((uintptr_t)matrix)) return result;
 
-    uint64_t indexU = ReadAddr<uint64_t>(transObj + kTransformIndex);
-    if (indexU > 8192) return result;
-    size_t index = (size_t)indexU;
+    int32_t index = -1;
+    if (!_read((long)(transObj + kTransformIndex), &index, sizeof(index)) ||
+        index < 0 || index > TransformTraversal::MaxIndex) return result;
 
     uint64_t matrix_list = ReadAddr<uint64_t>(matrix + kMatrixList);
     if (!isVaildPtr((uintptr_t)matrix_list)) return result;
     uint64_t matrix_indices = ReadAddr<uint64_t>(matrix + kMatrixIndices);
     if (!isVaildPtr((uintptr_t)matrix_indices)) return result;
 
-    result = ReadAddr<Vector3>(matrix_list + sizeof(TMatrix) * index);
-    int transformIndex = ReadAddr<int>(matrix_indices + sizeof(int) * index);
-
-    static const int kMaxTransformDepth = 64;
-    for (int depth = 0; transformIndex >= 0 && depth < kMaxTransformDepth; depth++) {
-        if (transformIndex > 8192) break;
-        TMatrix tMatrix = ReadAddr<TMatrix>(matrix_list + sizeof(TMatrix) * (size_t)transformIndex);
+    if (!_read((long)(matrix_list + sizeof(TMatrix) * (size_t)index), &result, sizeof(result)) ||
+        !FinitePosition(result)) return Vector3();
+    auto readParent = [&](int child, int &parent) {
+        return _read((long)(matrix_indices + sizeof(int) * (size_t)child), &parent, sizeof(parent));
+    };
+    auto applyParent = [&](int transformIndex) {
+        TMatrix tMatrix{};
+        if (!_read((long)(matrix_list + sizeof(TMatrix) * (size_t)transformIndex), &tMatrix, sizeof(tMatrix))) return false;
 
         float rotX = tMatrix.rotation.x;
         float rotY = tMatrix.rotation.y;
@@ -88,10 +95,22 @@ Vector3 getPositionExt(uint64_t transObj2) {
                     (scaleY * ((rotY * rotZ * 2.0) - (rotW * rotX * -2.0))) +
                     (scaleZ * ((rotX * rotX * -2.0) - (rotY * rotY * 2.0)));
 
-        transformIndex = ReadAddr<int>(matrix_indices + sizeof(int) * (size_t)transformIndex);
-    }
+        return FinitePosition(result);
+    };
+    return TransformTraversal::Walk(index, readParent, applyParent) ? result : Vector3();
+}
 
-    return result;
+struct TransformCacheEntry { uint64_t key = 0, frame = 0; Vector3 position; };
+static TransformCacheEntry positionCache[1024];
+static uint64_t positionFrame = 0;
+void BeginTransformFrame(void) { ++positionFrame; }
+Vector3 getPositionExt(uint64_t transform) {
+    if (!positionFrame) return ReadPosition(transform);
+    auto &entry = positionCache[(transform >> 4) % 1024];
+    if (entry.frame == positionFrame && entry.key == transform) return entry.position;
+    Vector3 value = ReadPosition(transform);
+    entry.key = transform; entry.frame = positionFrame; entry.position = value;
+    return value;
 }
 
 static BOOL NickClusterIsIconOrEmoji(NSString *cluster) {

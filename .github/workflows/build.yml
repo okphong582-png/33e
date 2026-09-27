@@ -51,6 +51,13 @@ jobs:
       - name: Setup Theos & Toolchain
         uses: Randomblock1/theos-action@v1
 
+      - name: Test bounded skeleton reads and cached offsets
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/transform_traversal_test.cpp -o /tmp/transform-traversal-test
+          /tmp/transform-traversal-test
+          g++ -std=c++17 -I. tests/offset_constants_test.cpp -o /tmp/offset-constants-test
+          /tmp/offset-constants-test
+
       - name: Build TIPA Package
         run: |
           make clean package FINALPACKAGE=1 FOR_RELEASE=1

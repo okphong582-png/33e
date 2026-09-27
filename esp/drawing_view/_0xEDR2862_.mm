@@ -41,6 +41,30 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
 
     const Vector3 head = getPositionExt(getHead(pawn));
     if (!ValidPosition(head) || !ValidPosition(hip)) return;
+    auto project = [&](Vector3 v) {
+        return WorldToScreenLayer(v, matrix, vpWidth, vpHeight, width, height);
+    };
+    const Vector3 headScreen = project(head);
+    if (!ValidPosition(headScreen) || headScreen.z <= 0.001f) return;
+    // Head markers and lines do not need ankle transforms or a projected box.
+    if (!isBox && !isHealth && !isDis) {
+        if (isHeadRedDot && headScreen.x >= 0 && headScreen.x <= width &&
+            headScreen.y >= 0 && headScreen.y <= height) {
+            CGPathAddEllipseInRect(buffers->boxKnockPath, nullptr,
+                CGRectMake(headScreen.x - 3, headScreen.y - 3, 6, 6));
+            buffers->boxKnockDirty = true;
+        }
+        if (isLine) {
+            CGMutablePathRef path = knocked ? buffers->lineKnockPath :
+                (bot ? buffers->lineBotPath : buffers->linePlayerPath);
+            AddLine(path, CGPointMake(width * 0.5f, 48),
+                    CGPointMake(headScreen.x, headScreen.y - 4), width, height);
+            if (knocked) buffers->lineKnockDirty = true;
+            else if (bot) buffers->lineBotDirty = true;
+            else buffers->linePlayerDirty = true;
+        }
+        return;
+    }
     const Vector3 left = getPositionExt(getLeftAnkle(pawn));
     const Vector3 right = getPositionExt(getRightAnkle(pawn));
     Vector3 feet = hip;
@@ -49,12 +73,6 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     else if (ValidPosition(left)) feet = left;
     else if (ValidPosition(right)) feet = right;
     feet.y -= 0.08f;
-
-    auto project = [&](Vector3 v) {
-        return WorldToScreenLayer(v, matrix, vpWidth, vpHeight, width, height);
-    };
-    const Vector3 headScreen = project(head);
-    if (!ValidPosition(headScreen) || headScreen.z <= 0.001f) return;
 
     // Project all eight world-space corners, rather than offsetting a 2D rectangle.
     const float lowY = std::min(feet.y, head.y - 0.20f);
@@ -133,7 +151,15 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         }
     }
     if (isDis && textCallback) {
-        NSString *label = [NSString stringWithFormat:@"%dm", (int)distance];
+        static NSArray<NSString *> *labels;
+        static dispatch_once_t once;
+        dispatch_once(&once, ^{
+            NSMutableArray<NSString *> *items = [NSMutableArray arrayWithCapacity:151];
+            for (int meters = 0; meters <= 150; ++meters)
+                [items addObject:[NSString stringWithFormat:@"%dm", meters]];
+            labels = [items copy];
+        });
+        NSString *label = labels[std::max(0, std::min(150, (int)distance))];
         textCallback(context, label, CGRectMake((minX + maxX) / 2 - 28, maxY + 4, 56, 14),
                      UIColor.whiteColor, 10, NO);
     }

@@ -137,7 +137,7 @@
     if (self.page == 0) {
         y = [self toggle:@"Aim khi bắn" key:@"AimbotFire" fallback:YES y:y];
         y = [self toggle:@"Aim khi mở ngắm" key:@"AimbotScope" fallback:YES y:y];
-        y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:YES y:y];
+        y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:NO y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
         y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:150 fallback:40 y:y + 6];
         y = [self note:@"Chỉ aim khi điểm ngắm nằm trong vòng. Ẩn vòng vẫn giữ giới hạn FOV." y:y];

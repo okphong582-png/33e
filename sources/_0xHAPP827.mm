@@ -63,6 +63,7 @@ NSString *mDeviceModel(void) {
 // ============================================================
 void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHIDEventRef event)
 {
+    @autoreleasepool {
     static UIApplication *app = [UIApplication sharedApplication];
 
     if (@available(iOS 15.1, *)) {}
@@ -102,6 +103,7 @@ void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHI
 
         {
             void (^handleTouch)(void) = ^(void) {
+                @autoreleasepool {
                 // The HUD window is created after online verification completes.
                 UIWindow *keyWindow = [[app windows] firstObject];
                 if (!keyWindow) return;
@@ -132,6 +134,7 @@ void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHI
                                             inWindow:keyWindow
                                               onView:keyView];
                 }
+                }
             };
 
             if ([NSThread isMainThread]) {
@@ -140,6 +143,7 @@ void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHI
                 dispatch_async(dispatch_get_main_queue(), handleTouch);
             }
         }
+    }
     }
 }
 

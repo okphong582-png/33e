@@ -5,6 +5,16 @@
 using AimSelection::Selection;
 int main() {
     using AimSelection::Triggered;
+    assert(!AimSelection::BooleanState(0));
+    assert(AimSelection::BooleanState(1));
+    assert(!AimSelection::BooleanState(2));
+    assert(!AimSelection::BooleanState(255));
+    assert(!AimSelection::BooleanState(65535));
+    assert(!AimSelection::VisibleForAim(false, 0x100001, 1, 0x100000));
+    assert(!AimSelection::VisibleForAim(true, 0, 1, 0x100000));
+    assert(!AimSelection::VisibleForAim(true, 1, 1, 0x100000));
+    assert(!AimSelection::VisibleForAim(true, 0x100000, 1, 0x100000));
+    assert(AimSelection::VisibleForAim(true, 0x100001, 1, 0x100000));
     assert(!Triggered(true, true, false, false));
     assert(Triggered(true, true, true, false));
     assert(Triggered(true, true, false, true));

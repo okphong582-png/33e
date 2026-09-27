@@ -14,6 +14,8 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <array>
+#include <cstring>
 #include "KabraxHide.h"
 #include <float.h>
 #include <unordered_map>
@@ -38,7 +40,7 @@ bool isLine       = YES;
 bool isHeadRedDot = YES;
 bool isAimbotFire = YES;
 static bool isAimbotScope = YES;
-static bool isAimNeck = YES;
+static bool isAimNeck = NO;
 static bool showFov = YES;
 static float fovPercent = 40.0f;
 bool isBox3D = YES;
@@ -61,7 +63,7 @@ void ESPSyncFromPrefs(void) {
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
     isAimbotFire = ESPPrefsBool(KH_NS("AimbotFire"), YES);
     isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
-    isAimNeck = ESPPrefsBool(@"AimNeck", YES);
+    isAimNeck = ESPPrefsBool(@"AimNeck", NO);
     showFov = ESPPrefsBool(@"ShowFov", YES);
     fovPercent = ESPPrefsFloat(@"FovSize", 40);
     isBox3D = ESPPrefsBool(@"Box3D", YES);
@@ -234,6 +236,7 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 @property (nonatomic, strong) CAShapeLayer *boxKnockLayer;
 @property (nonatomic, strong) CAShapeLayer *lineKnockLayer;
 @property (nonatomic, assign) CFTimeInterval nextProcessCheck;
+@property (nonatomic, assign) CFTimeInterval nextRenderTime;
 @property (nonatomic, assign) NSUInteger appliedRenderRevision;
 @property (nonatomic, assign) CGSize lastFovSize;
 @property (nonatomic, assign) float lastFovRadius;
@@ -294,6 +297,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:KH_SEL("updateFrame")];
         self.appliedRenderRevision = 0;
         self.nextProcessCheck = 0;
+        self.nextRenderTime = 0;
         [self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
     }
 }
@@ -445,6 +449,8 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (![LicenseSession shared].authorized) { [self clearAllContent]; return; }
     @autoreleasepool {
         const CFTimeInterval now = CACurrentMediaTime();
+        if (now < self.nextRenderTime) return;
+        BeginTransformFrame();
         if (now >= self.nextProcessCheck) {
             self.nextProcessCheck = now + 1.0;
             [self setupModuleBase];
@@ -529,6 +535,10 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         }
 
         [CATransaction commit];
+        // Leave time for touch handling and license callbacks after expensive
+        // frames. Keep the last complete paths while skipping a display tick.
+        const CFTimeInterval finished = CACurrentMediaTime();
+        self.nextRenderTime = finished + std::max(0.0, finished - now - 0.002);
     }
 }
 
@@ -573,7 +583,7 @@ bool get_IsKnockedDown(uint64_t player) {
     return ReadAddr<uint8_t>(player + kKnocked) != 0;
 }
 
-bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) != 0; }
+bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::BooleanState(GetDataUInt16(p, 12)); }
 
 - (ESPFrameStats)renderESPWithBuffers:(ESPGeometryBuffers *)buffers
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
@@ -581,12 +591,16 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) !
     ESPFrameStats stats = {0, 0, false};
     const uint64_t previousTarget = gAimLockTarget;
     gAimLockTarget = 0; // Every early return releases stale targets.
-    if (!buffers || !isVaildPtr(Moudule_Base) || IsAtLobby(Moudule_Base)) {
+    if (!buffers || !isVaildPtr(Moudule_Base)) {
         cachedMatchGame = cachedMatch = cachedCamera = gAimLocalPlayer = 0;
         return stats;
     }
     // Refresh the match identity each frame so a new match cannot reuse a stale lock.
     const uint64_t matchGame = getMatchGame(Moudule_Base);
+    if (!isVaildPtr(matchGame)) {
+        cachedMatchGame = cachedMatch = cachedCamera = gAimLocalPlayer = 0;
+        return stats;
+    }
     const uint64_t match = getMatch(matchGame);
     const bool sameMatch = match == cachedMatch;
     cachedMatchGame = matchGame;
@@ -610,21 +624,27 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) !
     if (!isVaildPtr(entries)) return stats;
     const int capacity = ReadAddr<int>(entries + kIl2CppArrayMaxLength);
     if (capacity <= 0 || capacity > 256 || count < 0 || count > capacity) return stats;
+    std::array<uint8_t, 256 * kDictEntryStrideBytePlayer> snapshot{};
+    if (count && !_read((long)(entries + kIl2CppArrayItems), snapshot.data(),
+                       count * kDictEntryStrideBytePlayer)) return stats;
     float *matrix = GetViewMatrix(cachedCamera);
     if (!matrix) return stats;
     stats.inMatch = true;
 
     const bool aiming = !get_IsKnockedDown(local) && AimSelection::Triggered(
-        isAimbotFire, isAimbotScope, get_IsFiring(local), get_IsScoping(local));
+        isAimbotFire, isAimbotScope,
+        isAimbotFire && get_IsFiring(local), isAimbotScope && get_IsScoping(local));
     AimSelection::Selection selection;
     selection.previous = sameMatch && sameLocal && aiming ? previousTarget : 0;
     Vector3 targetHead;
     const float radius = AimSelection::Radius(vw, vh, fovPercent);
-    const uint64_t base = entries + kIl2CppArrayItems;
     for (int i = 0; i < count; ++i) {
-        const uint64_t entry = base + (uint64_t)kDictEntryStrideBytePlayer * i;
-        if (ReadAddr<int>(entry) < 0) continue; // Removed dictionary entries have a negative hash.
-        const uint64_t pawn = ReadAddr<uint64_t>(entry + kDictEntryValueOffByte);
+        const uint8_t *entry = snapshot.data() + kDictEntryStrideBytePlayer * i;
+        int hash = -1;
+        uint64_t pawn = 0;
+        std::memcpy(&hash, entry, sizeof(hash));
+        if (hash < 0) continue; // Removed dictionary entries have a negative hash.
+        std::memcpy(&pawn, entry + kDictEntryValueOffByte, sizeof(pawn));
         if (!isVaildPtr(pawn) || pawn == local || isLocalTeamMate(local, pawn)) continue;
         const int hp = get_CurHP(pawn);
         if (hp <= 0) continue;
@@ -634,7 +654,7 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) !
         if (!std::isfinite(distance) || distance > 150.0f) continue;
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
-        if (aiming && visible && !knocked) {
+        if (aiming && visible && !knocked && getAimVisibility(pawn)) {
             Vector3 head = getPositionExt(getHead(pawn));
             if (isAimNeck) {
                 // Estimated neck from available bones; no unverified neck offset is used.
@@ -657,7 +677,10 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) !
                        pawn, hp, distance, hip, knocked, bot, matrix, vw, vh, vpW, vpH);
         }
     }
-    if (aiming && selection.target) {
+    if (aiming && selection.target && getAimVisibility(selection.target) &&
+        get_CurHP(selection.target) > 0 && !get_IsKnockedDown(selection.target) &&
+        AimSelection::Triggered(isAimbotFire, isAimbotScope,
+            isAimbotFire && get_IsFiring(local), isAimbotScope && get_IsScoping(local))) {
         const Vector3 direction = targetHead - myLoc;
         if (Vector3::SqrMagnitude(direction) > 0.0001f) {
             const Quaternion rotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));

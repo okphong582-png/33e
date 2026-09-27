@@ -12,6 +12,12 @@ inline float Radius(float width, float height, float percent) {
 inline bool Triggered(bool fireEnabled, bool scopeEnabled, bool firing, bool scoping) {
     return (fireEnabled && firing) || (scopeEnabled && scoping);
 }
+inline bool BooleanState(uint32_t raw) { return raw == 1; }
+// Rendering-camera visibility alone does not establish an unobstructed target.
+// Missing, partial or unreadable flags are not eligible for aim.
+inline bool VisibleForAim(bool readOK, uint32_t flags, uint32_t cameraMask, uint32_t pvsMask) {
+    return readOK && (flags & cameraMask) == cameraMask && (flags & pvsMask) == pvsMask;
+}
 
 // A valid retained target wins over a new target closer to the crosshair.
 struct Selection {
