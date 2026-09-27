@@ -113,11 +113,6 @@ static const CGFloat kMenuButtonSize = 48.0f;
     _trackingPointerId = -1;
 }
 
-- (void)releaseAnimationFrames {
-    UIImage *first = _gifImageView.image.images.firstObject;
-    if (first) _gifImageView.image = first;
-}
-
 - (void)presentModMenu {
     if (self->_presentedModMenu) return;
     dispatch_async(dispatch_get_main_queue(), ^{
