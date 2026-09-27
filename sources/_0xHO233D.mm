@@ -23,6 +23,8 @@
 @property (nonatomic, assign) BOOL loggedIn;
 @property (nonatomic, assign) BOOL starting;
 @property (nonatomic, assign) BOOL hadRunningHUD;
+@property (nonatomic, assign) BOOL triedSavedKey;
+@property (nonatomic, assign) BOOL restoringKey;
 @property (nonatomic, assign) NSUInteger requestGeneration;
 @property (nonatomic, assign) CGFloat keyboardOverlap;
 - (void)waitForHUDStart:(NSInteger)attempt generation:(NSUInteger)generation;
@@ -94,7 +96,12 @@
 }
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
+    if (!self.triedSavedKey) {
+        self.triedSavedKey = YES;
+        [self restoreSavedKey];
+    }
     [self syncHUDState];
+    [self.stateTimer invalidate];
     __weak _0xHOMEVC *weakSelf = self;
     self.stateTimer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer) {
         (void)timer; [weakSelf syncHUDState];
@@ -182,6 +189,7 @@
     self.keyField.hidden = self.fieldLabel.hidden = self.submit.hidden = self.loggedIn;
     self.start.hidden = self.logoutButton.hidden = !self.loggedIn;
     self.start.enabled = !self.starting;
+    [self.submit setTitle:([LicenseSession shared].hasSavedKey ? @"Xác thực / dùng key đã lưu" : @"Xác thực key") forState:UIControlStateNormal];
     self.subtitle.text = self.loggedIn ? [@"Hạn sử dụng: " stringByAppendingString:[self licenseExpiryDescription]] : @"Nhập key để mở bảng điều khiển của bạn.";
     [self.start setTitle:IsHUDEnabled() ? @"Stop menu" : @"Start menu" forState:UIControlStateNormal];
     [self.view setNeedsLayout];
@@ -210,9 +218,30 @@
     [self updateControls];
 }
 - (BOOL)textFieldShouldReturn:(UITextField *)textField { (void)textField; [self login]; return YES; }
+- (void)restoreSavedKey {
+    if (self.loggedIn || self.restoringKey || ![LicenseSession shared].hasSavedKey) return;
+    self.restoringKey = YES;
+    self.submit.enabled = self.keyField.enabled = NO;
+    self.status.text = @"Đang xác thực online key đã lưu…";
+    const NSUInteger generation = ++self.requestGeneration;
+    [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
+        if (generation != self.requestGeneration) return;
+        self.restoringKey = NO;
+        self.submit.enabled = self.keyField.enabled = YES;
+        self.loggedIn = ok;
+        self.status.text = message;
+        if (ok) {
+            [[LicenseSession shared] monitor];
+            self.hadRunningHUD = IsHUDEnabled();
+            [self showLicenseExpiry];
+        }
+        [self updateControls];
+    }];
+}
 - (void)login {
     if (!self.submit.enabled) return;
     NSString *key = [self.keyField.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (!key.length && [LicenseSession shared].hasSavedKey) { [self restoreSavedKey]; return; }
     if (key.length < 8 || key.length > 128) { self.status.text = @"Key cần từ 8 đến 128 ký tự."; return; }
     [self.view endEditing:YES]; self.submit.enabled = NO; self.keyField.enabled = NO;
     self.status.text = @"Đang xác thực key…";
@@ -268,6 +297,7 @@
     });
 }
 - (void)logout {
+    self.restoringKey = NO;
     ++self.requestGeneration; self.starting = NO; self.hadRunningHUD = NO;
     StopHUD(); [[LicenseSession shared] logout];
     self.loggedIn = NO; self.keyField.text = @""; self.status.text = @"Đã đăng xuất.";
@@ -286,13 +316,15 @@
         return;
     }
     ++self.requestGeneration; self.starting = NO; self.hadRunningHUD = NO;
+    self.restoringKey = NO;
     StopHUDWithMessage(notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage); self.loggedIn = NO;
     self.submit.enabled = self.keyField.enabled = YES;
     self.status.text = notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage ?: @"Phiên truy cập đã kết thúc. Vui lòng nhập lại key.";
     [self updateControls];
 }
 - (void)_0xDAH2863 {
-    if (!self.isViewLoaded || !self.loggedIn || self.starting) return;
+    if (!self.isViewLoaded || self.starting || self.restoringKey) return;
+    if (!self.loggedIn) { [self restoreSavedKey]; return; }
     NSUInteger generation = self.requestGeneration;
     [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
         if (generation != self.requestGeneration) return;

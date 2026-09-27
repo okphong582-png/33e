@@ -204,12 +204,10 @@ bool getIsVisible(uint64_t playerPawn) {
 }
 
 bool getAimVisibility(uint64_t playerPawn) {
-    if (!isVaildPtr(playerPawn)) return false;
-    const uint64_t object = ReadAddr<uint64_t>(playerPawn + kVisibleObj);
-    if (!isVaildPtr(object)) return false;
-    uint32_t flags = 0;
-    const bool readOK = _read((long)(object + kVisibleObjFlags), &flags, sizeof(flags));
-    return AimSelection::VisibleForAim(readOK, flags, kISVisibleCamera, kISVisibleDynamicPVS);
+    // Use the existing visibility reader, including its supported fallback.
+    // DynamicPVS was not verified as a required bit and could reject every
+    // camera-visible target. Neither flag substitutes for a physics raycast.
+    return getIsVisible(playerPawn);
 }
 
 

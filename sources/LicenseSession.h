@@ -10,6 +10,7 @@ FOUNDATION_EXPORT NSNotificationName const LicenseSessionDidBecomeUnauthorizedNo
 @property (atomic, copy, readonly) NSString *lastMessage;
 @property (atomic, readonly) NSTimeInterval expiresAt;
 - (BOOL)configured;
+- (BOOL)hasSavedKey;
 - (void)loginWithKey:(NSString *)key completion:(void (^)(BOOL, NSString *))completion;
 // YES means this request was verified online. A transient failure never extends
 // an existing short lease; use authorized to decide whether a running UI must stop.

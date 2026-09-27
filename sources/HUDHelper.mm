@@ -11,6 +11,7 @@
 #import <unistd.h>
 #import <stdlib.h>
 #import <string.h>
+#import <mach/mach.h>
 
 extern "C" char **environ;
 extern "C" int posix_spawnattr_set_persona_np(const posix_spawnattr_t *, uid_t, uint32_t);
@@ -20,6 +21,7 @@ extern "C" int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t *, uid
 static pid_t spawnedHUD = 0;
 static void WriteStatus(NSString *state, NSString *message, pid_t pid);
 static NSString *StatusPath(void) { return [ROOT_PATH_NS(PID_PATH) stringByAppendingString:@".state.plist"]; }
+static NSString *HealthPath(void) { return [ROOT_PATH_NS(PID_PATH) stringByAppendingString:@".health.plist"]; }
 static NSDictionary *ReadStatus(void) { return [NSDictionary dictionaryWithContentsOfFile:StatusPath()] ?: @{}; }
 static pid_t ReadPID(void) {
     NSString *text = [NSString stringWithContentsOfFile:ROOT_PATH_NS(PID_PATH) encoding:NSUTF8StringEncoding error:nil];
@@ -69,7 +71,14 @@ NSString *HUDLastStatusMessage(void) {
     BOOL running = IsOurHUD(ReadPID());
     NSDictionary *status = ReadStatus();
     if (([status[@"state"] isEqual:@"ready"] || [status[@"state"] isEqual:@"starting"]) &&
-        !running) return @"Tiến trình menu đã dừng. Bấm Start để mở lại.";
+        !running) {
+        NSDictionary *health = [NSDictionary dictionaryWithContentsOfFile:HealthPath()];
+        if ([health[@"pid"] intValue] == [status[@"pid"] intValue]) {
+            return [NSString stringWithFormat:@"Menu dừng ngoài dự kiến. Lần cuối: %.0f MB, %.1f ms/khung, %@.",
+                    [health[@"memoryMB"] doubleValue], [health[@"frameMS"] doubleValue], health[@"aim"] ?: @"chờ dữ liệu"];
+        }
+        return @"Tiến trình menu dừng ngoài dự kiến; chưa có mã lỗi từ iOS. Bấm Start để mở lại.";
+    }
     return [status[@"message"] isKindOfClass:NSString.class] ? status[@"message"] : @"Menu chưa khởi động.";
 }
 static BOOL StartError(NSError **error, int code, NSString *message) {
@@ -127,6 +136,20 @@ void HUDMarkStarting(void) {
     WriteStatus(@"starting", @"Đang xác thực phiên menu…", getpid());
 }
 void HUDMarkReady(void) { WriteStatus(@"ready", @"Nút GIF đang chạy. Chạm để mở menu.", getpid()); }
+void HUDRecordFrame(double milliseconds, int players, NSString *aimState) {
+    static NSTimeInterval nextSample = 0;
+    const NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
+    if (now < nextSample) return;
+    nextSample = now + 5;
+    mach_task_basic_info_data_t info = {};
+    mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+    const BOOL haveMemory = task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &count) == KERN_SUCCESS;
+    NSDictionary *sample = @{@"pid":@(getpid()), @"frameMS":@(milliseconds),
+        @"memoryMB":@(haveMemory ? info.resident_size / (1024.0 * 1024.0) : 0),
+        @"players":@(players), @"aim":aimState ?: @"chờ dữ liệu"};
+    // One bounded record, never a growing log and never license/key data.
+    [sample writeToFile:HealthPath() atomically:YES];
+}
 void RequestExitHUDWithMessage(NSString *message) {
     if (ReadPID() == getpid()) {
         WriteStatus(@"stopped", message ?: @"Menu đã dừng.", 0);

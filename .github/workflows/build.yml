@@ -18,6 +18,10 @@ jobs:
         run: |
           clang++ -std=c++17 -fobjc-arc -I. -framework Foundation tests/offset_responsiveness_test.mm esp/Core/_0xNW2872_.mm -o /tmp/offset-responsiveness-test
           /tmp/offset-responsiveness-test
+      - name: Saved keys require fresh online verification
+        run: |
+          clang++ -std=c++17 -fobjc-arc -Wno-deprecated-declarations -I. -framework Foundation tests/license_restore_test.mm sources/LicenseSession.mm -o /tmp/license-restore-test
+          /tmp/license-restore-test
   build:
     name: Build .tipa package
     runs-on: ubuntu-latest

@@ -100,6 +100,7 @@ void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHI
         AXEventRepresentation *rep = [AXEventRepresentationCls
             representationWithHIDEvent:event
             hidStreamIdentifier:@"UIApplicationEvents"];
+        if (!rep || ![[[rep handInfo] paths] count]) return;
 
         {
             void (^handleTouch)(void) = ^(void) {
@@ -108,7 +109,7 @@ void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHI
                 UIWindow *keyWindow = [[app windows] firstObject];
                 if (!keyWindow) return;
 
-                UITouchPhase phase = UITouchPhaseEnded;
+                UITouchPhase phase;
                 if ([rep isTouchDown])
                     phase = UITouchPhaseBegan;
                 else if ([rep isMove])
@@ -117,23 +118,16 @@ void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHI
                     phase = UITouchPhaseCancelled;
                 else if ([rep isLift] || [rep isInRange] || [rep isInRangeLift])
                     phase = UITouchPhaseEnded;
+                else return;
 
                 NSInteger pointerId = [[[[rep handInfo] paths] firstObject] pathIdentity];
                 CGPoint loc = [rep location];
 
-                // Thử HUD trước
-                BOOL consumed = HUDFloatButtonHandleTouch(loc, phase, pointerId);
-                if (consumed) return;
-
-                // Nếu HUD không consume → chuyển cho game
-                if (pointerId > 0) {
-                    UIView *keyView = [keyWindow hitTest:loc withEvent:nil];
-                    [TSEventFetcher receiveAXEventID:MIN(MAX(pointerId, 1), 98)
-                                  atGlobalCoordinate:loc
-                                      withTouchPhase:phase
-                                            inWindow:keyWindow
-                                              onView:keyView];
-                }
+                // The menu handles its own controls. Unconsumed events belong
+                // to the foreground app, which already receives the original
+                // HID event. Synthesizing them in the HUD instead generated
+                // private UIKit touches for every game movement/fire gesture.
+                HUDFloatButtonHandleTouch(loc, phase, pointerId);
                 }
             };
 

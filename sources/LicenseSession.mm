@@ -66,6 +66,12 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     return LicenseSessionPolicy::Authorized(self.validUntilUptime, NSProcessInfo.processInfo.systemUptime);
 }
 
+- (BOOL)hasSavedKey {
+    NSString *hash = [NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"];
+    NSCharacterSet *nonHex = [[NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"] invertedSet];
+    return hash.length == 64 && [hash rangeOfCharacterFromSet:nonHex].location == NSNotFound;
+}
+
 - (NSString *)hash:(NSString *)value {
     NSData *data = [value dataUsingEncoding:NSUTF8StringEncoding];
     uint8_t digest[CC_SHA256_DIGEST_LENGTH];
@@ -96,6 +102,8 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     self.expiresAt = 0;
     self.lastMessage = message;
     self.lastReason = reason;
+    if ([@[@"missing", @"disabled", @"expired", @"invalid_record"] containsObject:reason])
+        [NSUserDefaults.standardUserDefaults removeObjectForKey:@"LicenseHash"];
     [self stopTimers];
     if (notify) {
         [NSNotificationCenter.defaultCenter postNotificationName:LicenseSessionDidBecomeUnauthorizedNotification
@@ -135,7 +143,10 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     NSArray *callbacks = [self takeCompletions];
     BOOL valid = LicenseSessionPolicy::Authorized(deadline, NSProcessInfo.processInfo.systemUptime);
     if (valid) {
-        [NSUserDefaults.standardUserDefaults setObject:licenseHash forKey:@"LicenseHash"];
+        if (![[NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"] isEqualToString:licenseHash]) {
+            [NSUserDefaults.standardUserDefaults setObject:licenseHash forKey:@"LicenseHash"];
+            [NSUserDefaults.standardUserDefaults synchronize];
+        }
         self.validUntilUptime = deadline;
         self.expiresAt = expiry;
         self.hadAuthorizedSession = YES;
@@ -250,8 +261,7 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
         return;
     }
     NSString *licenseHash = [NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"];
-    NSCharacterSet *nonHex = [[NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"] invertedSet];
-    BOOL validHash = licenseHash.length == 64 && [licenseHash rangeOfCharacterFromSet:nonHex].location == NSNotFound;
+    BOOL validHash = [self hasSavedKey];
     if (![self configured] || !validHash) {
         NSString *message = [self configured] ? @"Vui lòng nhập key." : @"Chưa cấu hình Realtime Database.";
         [self revokeWithMessage:message reason:@"configuration"];

@@ -142,6 +142,7 @@
         y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:150 fallback:40 y:y + 6];
         y = [self note:@"Chỉ aim khi điểm ngắm nằm trong vòng. Ẩn vòng vẫn giữ giới hạn FOV." y:y];
         y = [self note:@"Aim cổ dùng vị trí ước tính giữa đầu và vai. Tắt để aim đầu." y:y];
+        y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
     } else if (self.page == 1) {
         y = [self toggle:@"Đường nối" key:@"Line" fallback:NO y:y];
         y = [self toggle:@"Khung người chơi" key:@"Box" fallback:NO y:y];

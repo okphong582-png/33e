@@ -4,6 +4,7 @@
 #import "ESPPrefs.h"
 #import "ESPStyle.h"
 #import "LicenseSession.h"
+#import "HUDHelper.h"
 #import "../drawing_view/offset.h"
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
@@ -50,6 +51,7 @@ static uint64_t gAimLocalPlayer = 0;
 static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
 static bool gBalancedRender = true;
+static bool gAimDiagnostics = false;
 
 // ============================================================
 // ✅ SYNC PREFS - ESP & AIMBOT
@@ -68,6 +70,7 @@ void ESPSyncFromPrefs(void) {
     fovPercent = ESPPrefsFloat(@"FovSize", 40);
     isBox3D = ESPPrefsBool(@"Box3D", YES);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
+    gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -105,7 +108,22 @@ typedef struct {
     int playerCount;
     int botCount;
     bool inMatch;
+    bool firing;
+    bool scoping;
+    int aimState;
 } ESPFrameStats;
+
+static NSString *AimStateDescription(int state) {
+    switch (state) {
+        case 1: return @"chờ bắn/ngắm";
+        case 2: return @"chưa có mục tiêu trong FOV";
+        case 3: return @"không ghi được góc";
+        case 4: return @"đã ghi góc";
+        case 5: return @"mục tiêu/trạng thái đã đổi";
+        case 6: return @"chỉ ghi được góc chính";
+        default: return @"chờ dữ liệu trận";
+    }
+}
 
 // ─── Helpers ──────────────────────────────────
 static inline float Clamp01f(float v) {
@@ -228,6 +246,8 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 @property (nonatomic, strong) NSMutableArray<CATextLayer *> *textLayerPool;
 @property (nonatomic, assign) NSUInteger              activeTextLayerCount;
 @property (nonatomic, strong) CATextLayer            *statusLayer;
+@property (nonatomic, strong) CATextLayer *aimDiagnosticLayer;
+@property (nonatomic, assign) CFTimeInterval nextAimDiagnosticUpdate;
 
 @property (nonatomic, strong) CAShapeLayer *boxBotLayer;
 @property (nonatomic, strong) CAShapeLayer *boxPlayerLayer;
@@ -385,6 +405,14 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.statusLayer.zPosition       = 8;
     self.statusLayer.actions = @{ @"string":NSNull.null, @"frame":NSNull.null, @"hidden":NSNull.null };
     [self.layer addSublayer:self.statusLayer];
+    self.aimDiagnosticLayer = [CATextLayer layer];
+    self.aimDiagnosticLayer.foregroundColor = UIColor.whiteColor.CGColor;
+    self.aimDiagnosticLayer.fontSize = 11;
+    self.aimDiagnosticLayer.contentsScale = UIScreen.mainScreen.scale;
+    self.aimDiagnosticLayer.alignmentMode = kCAAlignmentCenter;
+    self.aimDiagnosticLayer.zPosition = 8;
+    self.aimDiagnosticLayer.hidden = YES;
+    [self.layer addSublayer:self.aimDiagnosticLayer];
 }
 
 - (void)resetTextLayers {
@@ -464,6 +492,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         [self applyRenderPreferences];
         if (!isVaildPtr(Moudule_Base)) {
             [self clearAllContent];
+            [self updateAimDiagnostic:(ESPFrameStats){} now:now];
             [CATransaction commit];
             return;
         }
@@ -534,17 +563,30 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             [self clearAllContent];
         }
 
+        [self updateAimDiagnostic:stats now:now];
         [CATransaction commit];
         // Leave time for touch handling and license callbacks after expensive
         // frames. Keep the last complete paths while skipping a display tick.
         const CFTimeInterval finished = CACurrentMediaTime();
         self.nextRenderTime = finished + std::max(0.0, finished - now - 0.002);
+        HUDRecordFrame((finished - now) * 1000, stats.playerCount + stats.botCount,
+                       AimStateDescription(stats.aimState));
     }
+}
+
+- (void)updateAimDiagnostic:(ESPFrameStats)stats now:(CFTimeInterval)now {
+    self.aimDiagnosticLayer.hidden = !gAimDiagnostics;
+    if (!gAimDiagnostics || now < self.nextAimDiagnosticUpdate) return;
+    self.nextAimDiagnosticUpdate = now + 0.5;
+    self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
+    self.aimDiagnosticLayer.string = [NSString stringWithFormat:@"Bắn:%d  Ngắm:%d · %@",
+        stats.firing, stats.scoping, AimStateDescription(stats.aimState)];
 }
 
 - (void)clearAllContent {
     gAimLockTarget = 0;
     self.statusLayer.hidden = YES;
+    self.aimDiagnosticLayer.hidden = YES;
     self.boxKnockLayer.path = self.lineKnockLayer.path = self.fovLayer.path = nil;
     self.hpWarningLayer.path = self.hpCriticalLayer.path = self.hpHighlightLayer.path = nil;
     self.boxLayer.path = self.boneLayer.path = self.snaplineLayer.path = self.lineBotLayer.path = self.linePlayerLayer.path = self.boxBotLayer.path = self.boxPlayerLayer.path = nil;
@@ -583,12 +625,12 @@ bool get_IsKnockedDown(uint64_t player) {
     return ReadAddr<uint8_t>(player + kKnocked) != 0;
 }
 
-bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::BooleanState(GetDataUInt16(p, 12)); }
+bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeState(GetDataUInt16(p, 12)); }
 
 - (ESPFrameStats)renderESPWithBuffers:(ESPGeometryBuffers *)buffers
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
-    ESPFrameStats stats = {0, 0, false};
+    ESPFrameStats stats = {};
     const uint64_t previousTarget = gAimLockTarget;
     gAimLockTarget = 0; // Every early return releases stale targets.
     if (!buffers || !isVaildPtr(Moudule_Base)) {
@@ -631,9 +673,12 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::BooleanS
     if (!matrix) return stats;
     stats.inMatch = true;
 
+    stats.firing = isAimbotFire && get_IsFiring(local);
+    stats.scoping = isAimbotScope && get_IsScoping(local);
     const bool aiming = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
-        isAimbotFire && get_IsFiring(local), isAimbotScope && get_IsScoping(local));
+        stats.firing, stats.scoping);
+    stats.aimState = aiming ? 2 : 1;
     AimSelection::Selection selection;
     selection.previous = sameMatch && sameLocal && aiming ? previousTarget : 0;
     Vector3 targetHead;
@@ -654,14 +699,16 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::BooleanS
         if (!std::isfinite(distance) || distance > 150.0f) continue;
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
-        if (aiming && visible && !knocked && getAimVisibility(pawn)) {
+        if (aiming && visible && !knocked) {
             Vector3 head = getPositionExt(getHead(pawn));
             if (isAimNeck) {
                 // Estimated neck from available bones; no unverified neck offset is used.
                 const Vector3 left = getPositionExt(getLeftShoulder(pawn));
                 const Vector3 right = getPositionExt(getRightShoulder(pawn));
-                if (IsZeroVec(left) || IsZeroVec(right) || IsZeroVec(head)) head = Vector3();
-                else head = Vector3::Lerp((left + right) * 0.5f, head, 0.30f);
+                if (!IsZeroVec(left) && !IsZeroVec(right) && !IsZeroVec(head) &&
+                    std::isfinite(left.x) && std::isfinite(left.y) && std::isfinite(left.z) &&
+                    std::isfinite(right.x) && std::isfinite(right.y) && std::isfinite(right.z))
+                    head = Vector3::Lerp((left + right) * 0.5f, head, 0.30f);
             }
             if (!IsZeroVec(head) && std::isfinite(head.x) && std::isfinite(head.y) && std::isfinite(head.z)) {
                 const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
@@ -677,6 +724,7 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::BooleanS
                        pawn, hp, distance, hip, knocked, bot, matrix, vw, vh, vpW, vpH);
         }
     }
+    if (aiming && selection.target) stats.aimState = 5;
     if (aiming && selection.target && getAimVisibility(selection.target) &&
         get_CurHP(selection.target) > 0 && !get_IsKnockedDown(selection.target) &&
         AimSelection::Triggered(isAimbotFire, isAimbotScope,
@@ -686,8 +734,9 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::BooleanS
             const Quaternion rotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));
             if (std::isfinite(rotation.x) && std::isfinite(rotation.y) &&
                 std::isfinite(rotation.z) && std::isfinite(rotation.w)) {
+                stats.aimState = 3;
                 if (WriteAddr<Quaternion>(local + kAimRotation, rotation)) {
-                    WriteAddr<Quaternion>(local + kAimRotationAux, rotation);
+                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, rotation) ? 4 : 6;
                     gAimLockTarget = selection.target;
                 }
             }
