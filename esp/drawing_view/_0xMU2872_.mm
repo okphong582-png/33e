@@ -8,11 +8,10 @@
 #import <ImageIO/ImageIO.h>
 #include "KabraxHide.h"
 
-static const CGFloat kMenuButtonSize = 64.0f;
+static const CGFloat kMenuButtonSize = 48.0f;
 
 @interface _0xB1872A2 ()
 @property (nonatomic, strong) UIButton *menuButton;
-@property (nonatomic, strong) UIImageView *gifImageView;
 @property (nonatomic, assign) NSInteger trackingPointerId;
 @property (nonatomic, assign) BOOL touchOnButton;
 @property (nonatomic, assign) BOOL buttonDragging;
@@ -22,74 +21,6 @@ static const CGFloat kMenuButtonSize = 64.0f;
 @end
 
 @implementation _0xB1872A2
-
-- (UIImage *)loadAnimatedGIFNamed:(NSString *)name {
-    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:nil];
-    if (!path) {
-        path = [[NSBundle mainBundle] pathForResource:[name stringByDeletingPathExtension] ofType:[name pathExtension]];
-    }
-    if (!path) {
-        path = [@"/Applications/Bugchi.app" stringByAppendingPathComponent:name];
-    }
-    if (!path) {
-        path = @"/Applications/Bugchi.app/Dragon Ball Z Rage GIF.gif";
-    }
-    
-    NSData *data = [NSData dataWithContentsOfFile:path];
-    if (!data) return nil;
-    
-    NSDictionary *sourceOptions = @{(__bridge NSString *)kCGImageSourceShouldCache: @NO};
-    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef)data, (__bridge CFDictionaryRef)sourceOptions);
-    if (!source) return nil;
-    
-    size_t count = CGImageSourceGetCount(source);
-    if (count == 0) {
-        CFRelease(source);
-        return nil;
-    }
-    
-    NSMutableArray<UIImage *> *images = [NSMutableArray array];
-    NSTimeInterval totalDuration = 0.0;
-    
-    // A 64-point button does not need every full-resolution GIF frame resident.
-    const size_t stride = MAX((size_t)1, (count + 47) / 48);
-    CGFloat scale = MIN(UIScreen.mainScreen.scale, 3.0);
-    NSDictionary *thumbnailOptions = @{
-        (__bridge NSString *)kCGImageSourceCreateThumbnailFromImageAlways: @YES,
-        (__bridge NSString *)kCGImageSourceThumbnailMaxPixelSize: @(kMenuButtonSize * scale),
-        (__bridge NSString *)kCGImageSourceShouldCacheImmediately: @YES,
-        (__bridge NSString *)kCGImageSourceCreateThumbnailWithTransform: @YES
-    };
-    for (size_t i = 0; i < count; i++) {
-        if (i % stride == 0) {
-            CGImageRef imageRef = CGImageSourceCreateThumbnailAtIndex(source, i, (__bridge CFDictionaryRef)thumbnailOptions);
-            if (imageRef) {
-                [images addObject:[UIImage imageWithCGImage:imageRef scale:scale orientation:UIImageOrientationUp]];
-                CGImageRelease(imageRef);
-            }
-        }
-        float frameDuration = 0.08f;
-        CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(source, i, NULL);
-        if (properties) {
-            CFDictionaryRef gifProps = (CFDictionaryRef)CFDictionaryGetValue(properties, kCGImagePropertyGIFDictionary);
-            if (gifProps) {
-                NSNumber *delayTime = (__bridge NSNumber *)CFDictionaryGetValue(gifProps, kCGImagePropertyGIFUnclampedDelayTime);
-                if (!delayTime || [delayTime floatValue] == 0) {
-                    delayTime = (__bridge NSNumber *)CFDictionaryGetValue(gifProps, kCGImagePropertyGIFDelayTime);
-                }
-                if (delayTime && [delayTime floatValue] > 0) {
-                    frameDuration = [delayTime floatValue];
-                }
-            }
-            CFRelease(properties);
-        }
-        totalDuration += frameDuration;
-    }
-    CFRelease(source);
-    if (images.count == 0) return nil;
-    if (images.count == 1) return images.firstObject;
-    return [UIImage animatedImageWithImages:images duration:totalDuration > 0 ? totalDuration : (count * 0.08f)];
-}
 
 - (void)layoutSubviews {
     [super layoutSubviews];
@@ -108,7 +39,6 @@ static const CGFloat kMenuButtonSize = 64.0f;
         if (frame.origin.y < 0) frame.origin.y = 0;
         
         _menuButton.frame = frame;
-        _gifImageView.frame = _menuButton.bounds;
     }
     if (_presentedModMenu && _presentedModMenu.view) {
         _presentedModMenu.view.frame = self.bounds;
@@ -127,9 +57,6 @@ static const CGFloat kMenuButtonSize = 64.0f;
                                                      name:UIApplicationWillResignActiveNotification
                                                    object:nil];
 
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(releaseAnimationFrames)
-                                                     name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
-
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(resetTouchState)
                                                      name:UIApplicationDidEnterBackgroundNotification
@@ -143,35 +70,22 @@ static const CGFloat kMenuButtonSize = 64.0f;
 - (void)setupMenuButton {
     _menuButton = [UIButton buttonWithType:UIButtonTypeCustom];
     _menuButton.frame = CGRectMake(20, 100, kMenuButtonSize, kMenuButtonSize);
-    _menuButton.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.4];
+    _menuButton.backgroundColor = [UIColor colorWithRed:0.08f green:0.08f blue:0.16f alpha:0.85f];
     _menuButton.layer.cornerRadius = kMenuButtonSize / 2.0f;
-    _menuButton.layer.borderWidth = 1.5f;
-    _menuButton.layer.borderColor = [UIColor colorWithRed:0.48f green:0.65f blue:1.0f alpha:0.9f].CGColor;
-    _menuButton.layer.shadowOpacity = 0;
+    _menuButton.layer.borderWidth = 2.0f;
+    _menuButton.layer.borderColor = [UIColor colorWithRed:0.2f green:0.75f blue:1.0f alpha:0.9f].CGColor;
+    _menuButton.layer.shadowColor = [UIColor blackColor].CGColor;
+    _menuButton.layer.shadowOffset = CGSizeMake(0, 2);
+    _menuButton.layer.shadowOpacity = 0.5f;
+    _menuButton.layer.shadowRadius = 4.0f;
     _menuButton.layer.zPosition = 999.0f;
     _menuButton.clipsToBounds = YES;
     
-    _gifImageView = [[UIImageView alloc] initWithFrame:_menuButton.bounds];
-    _gifImageView.contentMode = UIViewContentModeScaleAspectFill;
-    _gifImageView.clipsToBounds = YES;
-    _gifImageView.layer.cornerRadius = kMenuButtonSize / 2.0f;
-    _gifImageView.userInteractionEnabled = NO;
+    [_menuButton setTitle:KH_NS("hi") forState:UIControlStateNormal];
+    [_menuButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    _menuButton.titleLabel.font = [UIFont systemFontOfSize:18.0f weight:UIFontWeightBold];
+    _menuButton.titleLabel.textAlignment = NSTextAlignmentCenter;
     
-    UIImage *gifAnim = [self loadAnimatedGIFNamed:@"Dragon Ball Z Rage GIF.gif"];
-    if (gifAnim) {
-        _gifImageView.image = gifAnim;
-    } else {
-        UIImage *icon = FloatButtonIcon();
-        if (icon) {
-            _gifImageView.image = icon;
-        } else {
-            [_menuButton setTitle:KH_NS("DBZ") forState:UIControlStateNormal];
-            [_menuButton setTitleColor:[UIColor yellowColor] forState:UIControlStateNormal];
-            _menuButton.titleLabel.font = [UIFont boldSystemFontOfSize:18.0f];
-        }
-    }
-    
-    [_menuButton addSubview:_gifImageView];
     [self addSubview:_menuButton];
     [self loadMenuButtonPosition];
 }

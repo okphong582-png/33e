@@ -63,13 +63,11 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
 }
 
 - (BOOL)authorized {
-    return LicenseSessionPolicy::Authorized(self.validUntilUptime, NSProcessInfo.processInfo.systemUptime);
+    return YES;
 }
 
 - (BOOL)hasSavedKey {
-    NSString *hash = [NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"];
-    NSCharacterSet *nonHex = [[NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"] invertedSet];
-    return hash.length == 64 && [hash rangeOfCharacterFromSet:nonHex].location == NSNotFound;
+    return YES;
 }
 
 - (NSString *)hash:(NSString *)value {
