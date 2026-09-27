@@ -22,8 +22,13 @@
         {
             int outToken;
             notify_register_dispatch(NOTIFY_DESTROY_HUD, &outToken, dispatch_get_main_queue(), ^(int token) {
-                notify_cancel(token);
-                RequestExitHUD();
+                uint64_t state = 0;
+                notify_get_state(token, &state);
+                if (state == 1) {
+                    notify_set_state(token, 0);
+                    notify_cancel(token);
+                    RequestExitHUD();
+                }
             });
         }
 

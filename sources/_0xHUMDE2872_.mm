@@ -354,9 +354,13 @@ self.window.bounds = targetFrame;
 - (void)restoreWindowHosting {
     if (!self.window || ![LicenseSession shared].authorized) return;
     self.window.hidden = NO;
-    [self.window.rootViewController.view bringSubviewToFront:_menuView];
+    [self.window makeKeyAndVisible];
+    if (self.window.rootViewController && self.window.rootViewController.view) {
+        [self.window.rootViewController.view bringSubviewToFront:_menuView];
+    }
     [_menuView setNeedsLayout];
     [_menuView layoutIfNeeded];
+    
     _windowHostingController = [[objc_getClass("SBSAccessibilityWindowHostingController") alloc] init];
     SEL registration = NSSelectorFromString(@"registerWindowWithContextID:atLevel:");
     if (![_windowHostingController respondsToSelector:registration]) {
@@ -364,14 +368,20 @@ self.window.bounds = targetFrame;
         return;
     }
     unsigned int _contextId = [self.window _contextId];
+    if (_contextId == 0) {
+        [self.window layoutIfNeeded];
+        _contextId = [self.window _contextId];
+    }
     double windowLevel = [self.window windowLevel];
     NSMethodSignature *signature = [NSMethodSignature signatureWithObjCTypes:"v@:Id"];
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-    [invocation setTarget:_windowHostingController];
-    [invocation setSelector:registration];
-    [invocation setArgument:&_contextId atIndex:2];
-    [invocation setArgument:&windowLevel atIndex:3];
-    [invocation invoke];
+    if (signature) {
+        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+        [invocation setTarget:_windowHostingController];
+        [invocation setSelector:registration];
+        [invocation setArgument:&_contextId atIndex:2];
+        [invocation setArgument:&windowLevel atIndex:3];
+        [invocation invoke];
+    }
     HUDMarkReady();
 }
 

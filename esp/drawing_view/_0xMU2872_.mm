@@ -110,7 +110,9 @@ static const CGFloat kMenuButtonSize = 64.0f;
         _menuButton.frame = frame;
         _gifImageView.frame = _menuButton.bounds;
     }
-    _presentedModMenu.view.frame = self.bounds;
+    if (_presentedModMenu && _presentedModMenu.view) {
+        _presentedModMenu.view.frame = self.bounds;
+    }
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -203,6 +205,7 @@ static const CGFloat kMenuButtonSize = 64.0f;
 }
 
 - (void)presentModMenu {
+    if (self->_presentedModMenu) return;
     dispatch_async(dispatch_get_main_queue(), ^{
         if (self->_presentedModMenu) return;
         
@@ -212,7 +215,11 @@ static const CGFloat kMenuButtonSize = 64.0f;
         [self resetTouchState];
         
         _0xDEADBEEE *vc = [[_0xDEADBEEE alloc] init];
-        vc.view.frame = self.bounds;
+        CGRect b = self.bounds;
+        if (b.size.width <= 0 || b.size.height <= 0) {
+            b = [UIScreen mainScreen].bounds;
+        }
+        vc.view.frame = b;
         vc.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         vc.view.alpha = 1.0f;
         vc.view.transform = CGAffineTransformIdentity;
@@ -233,7 +240,6 @@ static const CGFloat kMenuButtonSize = 64.0f;
         [vc didMoveToParentViewController:parentVC];
         [self bringSubviewToFront:vc.view];
         
-        // Dùng hidden = YES thay vì scale 0.01 để giữ nguyên vẹn toạ độ frame
         self.menuButton.hidden = YES;
     });
 }

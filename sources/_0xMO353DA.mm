@@ -65,24 +65,35 @@
 }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
-    CGFloat w = MIN(310, self.view.bounds.size.width - 16);
-    CGFloat h = MIN(500, self.view.bounds.size.height - 16);
+    CGFloat screenW = self.view.bounds.size.width;
+    CGFloat screenH = self.view.bounds.size.height;
+    if (screenW <= 0) screenW = 320.0f;
+    if (screenH <= 0) screenH = 480.0f;
+
+    CGFloat w = MIN(310.0f, MAX(200.0f, screenW - 16.0f));
+    CGFloat h = MIN(500.0f, MAX(250.0f, screenH - 16.0f));
     CGRect f = self.panel.frame;
     f.size = CGSizeMake(w, h);
-    f.origin.x = MAX(8, MIN(f.origin.x, self.view.bounds.size.width - w - 8));
-    f.origin.y = MAX(8, MIN(f.origin.y, self.view.bounds.size.height - h - 8));
+    f.origin.x = MAX(8.0f, MIN(f.origin.x, screenW - w - 8.0f));
+    f.origin.y = MAX(8.0f, MIN(f.origin.y, screenH - h - 8.0f));
     self.panel.frame = f;
     self.header.frame = CGRectMake(0, 0, w, 58);
-    [self.header viewWithTag:12].frame = CGRectMake(w - 42, 10, 32, 36);
-    self.tabs.frame = CGRectMake(12, 62, w - 24, 30);
-    self.scroll.frame = CGRectMake(0, 104, w, h - 112);
+    
+    UIView *closeBtn = [self.header viewWithTag:12];
+    if (closeBtn) closeBtn.frame = CGRectMake(MAX(0.0f, w - 42.0f), 10, 32, 36);
+    self.tabs.frame = CGRectMake(12, 62, MAX(10.0f, w - 24.0f), 30);
+    self.scroll.frame = CGRectMake(0, 104, w, MAX(10.0f, h - 112.0f));
 }
 - (void)closeMenu { if (self.onCloseBlock) self.onCloseBlock(); }
 - (void)changeTab:(UISegmentedControl *)sender {
     self.page = sender.selectedSegmentIndex;
     [self buildPage];
 }
-- (NSString *)colorPrefix { return @[@"BoxColor", @"LineColor", @"FovColor"][self.colorTarget]; }
+- (NSString *)colorPrefix {
+    NSArray *prefixes = @[@"BoxColor", @"LineColor", @"FovColor"];
+    NSInteger idx = MAX(0, MIN((NSInteger)prefixes.count - 1, self.colorTarget));
+    return prefixes[idx];
+}
 - (UILabel *)label:(NSString *)text frame:(CGRect)frame size:(CGFloat)size {
     UILabel *label = [[UILabel alloc] initWithFrame:frame];
     label.text = text; label.textColor = [self textColor];
@@ -203,11 +214,16 @@
 }
 - (void)updateSwatch {
     if (!self.swatch) return;
-    UIColor *color = ESPColor([self colorPrefix], self.colorTarget == 2 ? 1 : 0.72, self.colorTarget == 2 ? 1 : 0.91, 1);
-    CGFloat r, g, b, a; [color getRed:&r green:&g blue:&b alpha:&a];
-    self.swatch.backgroundColor = color;
-    self.swatch.textColor = (r * 0.299 + g * 0.587 + b * 0.114) > 0.6 ? UIColor.blackColor : UIColor.whiteColor;
-    self.swatch.text = [NSString stringWithFormat:@"#%02X%02X%02X", (int)round(r * 255), (int)round(g * 255), (int)round(b * 255)];
+    NSString *prefix = [self colorPrefix];
+    if (!prefix) return;
+    UIColor *color = ESPColor(prefix, self.colorTarget == 2 ? 1 : 0.72, self.colorTarget == 2 ? 1 : 0.91, 1);
+    if (!color) return;
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if ([color getRed:&r green:&g blue:&b alpha:&a]) {
+        self.swatch.backgroundColor = color;
+        self.swatch.textColor = (r * 0.299 + g * 0.587 + b * 0.114) > 0.6 ? UIColor.blackColor : UIColor.whiteColor;
+        self.swatch.text = [NSString stringWithFormat:@"#%02X%02X%02X", (int)round(r * 255), (int)round(g * 255), (int)round(b * 255)];
+    }
 }
 - (void)setSlider:(UISlider *)slider point:(CGPoint)point {
     CGPoint p = [slider convertPoint:point fromView:self.view];
@@ -225,7 +241,10 @@
         CGPoint local = [self.panel convertPoint:point fromView:self.view];
         self.dragging = local.y < 58 && local.x < self.panel.bounds.size.width - 46;
         if (self.dragging) return YES;
-        NSArray *fixed = @[self.tabs, [self.header viewWithTag:12]];
+        NSMutableArray *fixed = [NSMutableArray array];
+        if (self.tabs) [fixed addObject:self.tabs];
+        UIView *closeBtn = [self.header viewWithTag:12];
+        if ([closeBtn isKindOfClass:[UIControl class]]) [fixed addObject:closeBtn];
         for (UIControl *c in fixed) if (CGRectContainsPoint(c.bounds, [c convertPoint:point fromView:self.view])) self.activeControl = c;
         if (CGRectContainsPoint(self.scroll.bounds, [self.scroll convertPoint:point fromView:self.view])) {
             for (UIControl *c in self.controls) {

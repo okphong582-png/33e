@@ -96,6 +96,12 @@ BOOL StartHUD(NSError **error) {
     NSString *executable = NSBundle.mainBundle.executablePath;
     if (!executable.length) return StartError(error, 3, @"Không tìm thấy file chạy của ứng dụng.");
 
+    int destroyToken = 0;
+    if (notify_register_check(NOTIFY_DESTROY_HUD, &destroyToken) == NOTIFY_STATUS_OK) {
+        notify_set_state(destroyToken, 0);
+        notify_cancel(destroyToken);
+    }
+
     posix_spawnattr_t attr;
     int result = posix_spawnattr_init(&attr);
     if (result != 0) return StartError(error, result, @"Không tạo được cấu hình tiến trình menu.");
@@ -119,10 +125,18 @@ BOOL StartHUD(NSError **error) {
 }
 void StopHUDWithMessage(NSString *message) {
     pid_t pid = ReadPID();
-    notify_post(NOTIFY_DESTROY_HUD);
+    int destroyToken = 0;
+    if (notify_register_check(NOTIFY_DESTROY_HUD, &destroyToken) == NOTIFY_STATUS_OK) {
+        notify_set_state(destroyToken, 1);
+        notify_post(NOTIFY_DESTROY_HUD);
+        notify_cancel(destroyToken);
+    } else {
+        notify_post(NOTIFY_DESTROY_HUD);
+    }
     if (IsOurHUD(pid)) kill(pid, SIGTERM);
     if (spawnedHUD != pid && IsOurHUD(spawnedHUD)) kill(spawnedHUD, SIGTERM);
     if (spawnedHUD > 1) { int status; waitpid(spawnedHUD, &status, WNOHANG); }
+    spawnedHUD = 0;
     unlink([ROOT_PATH_NS(PID_PATH) fileSystemRepresentation]);
     WriteStatus(@"stopped", message ?: @"Menu đã dừng.", 0);
 }
