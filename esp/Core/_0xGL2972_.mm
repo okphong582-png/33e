@@ -136,8 +136,10 @@ uint64_t getRoot(uint64_t player) {
 
 
 bool get_IsFiring(uint64_t playerPawn) {
-    
-    return isVaildPtr(playerPawn) && AimSelection::BooleanState(ReadAddr<uint8_t>(playerPawn + kIsFiring));
+    if (!isVaildPtr(playerPawn)) return false;
+    uint8_t firingByte = 0;
+    if (!_read((long)(playerPawn + (uint64_t)kIsFiring), &firingByte, sizeof(firingByte))) return false;
+    return firingByte != 0;
 }
 
 

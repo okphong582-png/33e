@@ -132,15 +132,19 @@ static BOOL NickClusterIsIconOrEmoji(NSString *cluster) {
 
 static NSString *NickStringByStrippingIcons(NSString *s) {
     if (s.length == 0) return s;
-    NSMutableString *out = [NSMutableString stringWithCapacity:s.length];
-    [s enumerateSubstringsInRange:NSMakeRange(0, s.length)
-                          options:NSStringEnumerationByComposedCharacterSequences
-                       usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
-        if (!NickClusterIsIconOrEmoji(substring))
-            [out appendString:substring];
-    }];
-    NSString *t = [out stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    return t.length ? t : @"";
+    @try {
+        NSMutableString *out = [NSMutableString stringWithCapacity:s.length];
+        [s enumerateSubstringsInRange:NSMakeRange(0, s.length)
+                              options:NSStringEnumerationByComposedCharacterSequences
+                           usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+            if (substring && !NickClusterIsIconOrEmoji(substring))
+                [out appendString:substring];
+        }];
+        NSString *t = [out stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        return t.length ? t : @"";
+    } @catch (id exception) {
+        return @"Player";
+    }
 }
 
 #import <QuartzCore/QuartzCore.h>
@@ -160,21 +164,25 @@ NSString *GetNickName(uint64_t PawnObject) {
         return it->second.nick;
     }
 
-    uint64_t name = ReadAddr<uint64_t>(PawnObject + (uint64_t)kNickname);
-    if (!isVaildPtr(name)) return @"";
+    @try {
+        uint64_t name = ReadAddr<uint64_t>(PawnObject + (uint64_t)kNickname);
+        if (!isVaildPtr(name)) return @"";
 
-    const size_t kMaxChars = 32;
-    UTF16 buf16[kMaxChars];
-    memset(buf16, 0, sizeof(buf16));
-    if (!_read((long)(name + (uint64_t)kStringFirstChar), buf16, (int)(kMaxChars * sizeof(UTF16))))
-        return @"";
+        const size_t kMaxChars = 32;
+        UTF16 buf16[kMaxChars];
+        memset(buf16, 0, sizeof(buf16));
+        if (!_read((long)(name + (uint64_t)kStringFirstChar), buf16, (int)(kMaxChars * sizeof(UTF16))))
+            return @"";
 
-    size_t len = 0;
-    while (len < kMaxChars && buf16[len] != 0) len++;
-    if (len == 0) return @"";
-    NSString *s = [NSString stringWithCharacters:(const unichar *)buf16 length:len];
-    if (!s) return @"";
-    NSString *result = NickStringByStrippingIcons(s);
-    gNickCache[PawnObject] = {result, now + 3.0};
-    return result;
+        size_t len = 0;
+        while (len < kMaxChars && buf16[len] != 0) len++;
+        if (len == 0) return @"";
+        NSString *s = [NSString stringWithCharacters:(const unichar *)buf16 length:len];
+        if (!s) return @"";
+        NSString *result = NickStringByStrippingIcons(s);
+        gNickCache[PawnObject] = {result, now + 3.0};
+        return result;
+    } @catch (id exception) {
+        return @"Player";
+    }
 }

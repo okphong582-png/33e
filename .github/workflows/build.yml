@@ -1,4 +1,4 @@
-name: Build TIPA Automatically
+name: Build Stealth Dylib & Injected IPA
 
 on:
   push:
@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
+    inputs:
+      ipa_url:
+        description: 'Optional URL to download decrypted IPA to inject'
+        required: false
+        default: ''
 
 jobs:
   network-responsiveness:
@@ -23,7 +28,7 @@ jobs:
           clang++ -std=c++17 -fobjc-arc -Wno-deprecated-declarations -I. -framework Foundation tests/license_restore_test.mm sources/LicenseSession.mm -o /tmp/license-restore-test
           /tmp/license-restore-test
   build:
-    name: Build .tipa package
+    name: Build Stealth Dylib & Injected Package
     runs-on: ubuntu-latest
 
     steps:
@@ -31,6 +36,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Test license lease and retry policy
         run: |
@@ -62,21 +72,39 @@ jobs:
           g++ -std=c++17 -I. tests/offset_constants_test.cpp -o /tmp/offset-constants-test
           /tmp/offset-constants-test
 
-      - name: Build TIPA Package
+      - name: Build Stealth Dylib
         run: |
           make clean package FINALPACKAGE=1 FOR_RELEASE=1
 
-      - name: Upload TIPA Artifact
+      - name: Inject Dylib into IPA (If Available)
+        run: |
+          if [ -n "${{ github.event.inputs.ipa_url }}" ]; then
+            echo "[*] Downloading IPA from URL..."
+            curl -L "${{ github.event.inputs.ipa_url }}" -o /tmp/input_game.ipa
+            python3 tools/inject_dylib.py /tmp/input_game.ipa packages/libsubsystem.dylib packages/com.dts.freefireth-1.132.1-Injected.ipa
+          elif [ -f "com.dts.freefireth-1.132.1-Decrypted.ipa" ]; then
+            python3 tools/inject_dylib.py com.dts.freefireth-1.132.1-Decrypted.ipa packages/libsubsystem.dylib packages/com.dts.freefireth-1.132.1-Injected.ipa
+          else
+            echo "[!] No IPA file provided in repository or workflow dispatch inputs; dylib output available in packages/"
+          fi
+
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Bugchi-TIPA
-          path: packages/*.tipa
-          if-no-files-found: error
+          name: iOSViet-Stealth-Builds
+          path: |
+            packages/*.dylib
+            packages/*.ipa
+            packages/*.tipa
+          if-no-files-found: warn
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: packages/*.tipa
+          files: |
+            packages/*.dylib
+            packages/*.ipa
+            packages/*.tipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
