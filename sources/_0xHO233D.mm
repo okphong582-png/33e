@@ -182,9 +182,25 @@
     self.keyField.hidden = self.fieldLabel.hidden = self.submit.hidden = self.loggedIn;
     self.start.hidden = self.logoutButton.hidden = !self.loggedIn;
     self.start.enabled = !self.starting;
-    self.subtitle.text = self.loggedIn ? @"Key đã xác thực. Mở menu khi bạn sẵn sàng." : @"Nhập key để mở bảng điều khiển của bạn.";
+    self.subtitle.text = self.loggedIn ? [@"Hạn sử dụng: " stringByAppendingString:[self licenseExpiryDescription]] : @"Nhập key để mở bảng điều khiển của bạn.";
     [self.start setTitle:IsHUDEnabled() ? @"Stop menu" : @"Start menu" forState:UIControlStateNormal];
     [self.view setNeedsLayout];
+}
+- (NSString *)licenseExpiryDescription {
+    NSTimeInterval expiry = [LicenseSession shared].expiresAt;
+    if (expiry <= 0) return @"Đang kiểm tra lại…";
+    NSDateFormatter *formatter = [NSDateFormatter new];
+    formatter.locale = [NSLocale localeWithLocaleIdentifier:@"vi_VN"];
+    formatter.timeZone = NSTimeZone.localTimeZone;
+    formatter.dateFormat = @"dd/MM/yyyy 'lúc' HH:mm:ss z";
+    return [formatter stringFromDate:[NSDate dateWithTimeIntervalSince1970:expiry]];
+}
+- (void)showLicenseExpiry {
+    if (!self.loggedIn || !self.view.window || self.presentedViewController) return;
+    NSString *message = [NSString stringWithFormat:@"Key đã được xác thực.\nHạn sử dụng: %@", [self licenseExpiryDescription]];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Key hợp lệ" message:message preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Tiếp tục" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:NO completion:nil];
 }
 - (void)syncHUDState {
     if (!self.loggedIn || self.starting) return;
@@ -206,6 +222,7 @@
         self.submit.enabled = YES; self.keyField.enabled = YES; self.loggedIn = ok; self.status.text = message;
         if (ok) { self.keyField.text = @""; [[LicenseSession shared] monitor]; }
         [self updateControls];
+        if (ok) [self showLicenseExpiry];
     }];
 }
 - (void)startMenu {
