@@ -102,7 +102,7 @@
 }
 - (CGFloat)toggle:(NSString *)title key:(NSString *)key fallback:(BOOL)fallback y:(CGFloat)y {
     UIView *row = [[UIView alloc] initWithFrame:CGRectMake(12, y, 286, 48)];
-    row.backgroundColor = ESPDarkTheme() ? [UIColor colorWithRed:1 alpha:1 green:1 blue:1 alpha:0.06f] : [UIColor colorWithWhite:0 alpha:0.03f];
+    row.backgroundColor = ESPDarkTheme() ? [UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:0.06f] : [UIColor colorWithWhite:0 alpha:0.03f];
     row.layer.cornerRadius = 12;
     row.layer.borderWidth = 0.5f;
     row.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.08f].CGColor;
