@@ -221,7 +221,7 @@ bool isLocalTeamMate(uint64_t localPlayer, uint64_t Player) {
 }
 
 int GetDataUInt16(uint64_t player, int varID) {
-    if (!isVaildPtr(player)) return 0;
+    if (!isVaildPtr(player) || varID < 0 || varID > 32) return 0;
     uint64_t IPRIDataPool = ReadAddr<uint64_t>(player + kDataPool);
     if (!isVaildPtr(IPRIDataPool)) return 0;
     uint64_t v2 = ReadAddr<uint64_t>(IPRIDataPool + kDataPoolInner);
@@ -232,7 +232,7 @@ int GetDataUInt16(uint64_t player, int varID) {
 }
 
 void SetDataUInt16(uint64_t player, int varID, uint16_t value) {
-    if (!isVaildPtr(player)) return;
+    if (!isVaildPtr(player) || varID < 0 || varID > 32) return;
     uint64_t IPRIDataPool = ReadAddr<uint64_t>(player + kDataPool);
     if (!isVaildPtr(IPRIDataPool)) return;
     uint64_t v2 = ReadAddr<uint64_t>(IPRIDataPool + kDataPoolInner);

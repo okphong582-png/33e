@@ -143,12 +143,27 @@ static NSString *NickStringByStrippingIcons(NSString *s) {
     return t.length ? t : @"";
 }
 
+#import <QuartzCore/QuartzCore.h>
+#include <unordered_map>
+
+struct CachedPlayerNick {
+    NSString *nick;
+    CFTimeInterval expiresAt;
+};
+static std::unordered_map<uint64_t, CachedPlayerNick> gNickCache;
+
 NSString *GetNickName(uint64_t PawnObject) {
     if (!isVaildPtr(PawnObject)) return @"";
+    CFTimeInterval now = CACurrentMediaTime();
+    auto it = gNickCache.find(PawnObject);
+    if (it != gNickCache.end() && now < it->second.expiresAt && it->second.nick) {
+        return it->second.nick;
+    }
+
     uint64_t name = ReadAddr<uint64_t>(PawnObject + (uint64_t)kNickname);
     if (!isVaildPtr(name)) return @"";
 
-    const size_t kMaxChars = 16;
+    const size_t kMaxChars = 32;
     UTF16 buf16[kMaxChars];
     memset(buf16, 0, sizeof(buf16));
     if (!_read((long)(name + (uint64_t)kStringFirstChar), buf16, (int)(kMaxChars * sizeof(UTF16))))
@@ -159,5 +174,7 @@ NSString *GetNickName(uint64_t PawnObject) {
     if (len == 0) return @"";
     NSString *s = [NSString stringWithCharacters:(const unichar *)buf16 length:len];
     if (!s) return @"";
-    return NickStringByStrippingIcons(s);
+    NSString *result = NickStringByStrippingIcons(s);
+    gNickCache[PawnObject] = {result, now + 3.0};
+    return result;
 }

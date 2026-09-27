@@ -731,12 +731,23 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
             isAimbotFire && get_IsFiring(local), isAimbotScope && get_IsScoping(local))) {
         const Vector3 direction = targetHead - myLoc;
         if (Vector3::SqrMagnitude(direction) > 0.0001f) {
-            const Quaternion rotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));
-            if (std::isfinite(rotation.x) && std::isfinite(rotation.y) &&
-                std::isfinite(rotation.z) && std::isfinite(rotation.w)) {
+            const Quaternion targetRotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));
+            if (std::isfinite(targetRotation.x) && std::isfinite(targetRotation.y) &&
+                std::isfinite(targetRotation.z) && std::isfinite(targetRotation.w)) {
                 stats.aimState = 3;
-                if (WriteAddr<Quaternion>(local + kAimRotation, rotation)) {
-                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, rotation) ? 4 : 6;
+                
+                // Humanized Slerp Interpolation (Anti-Ban Telemetry Guard)
+                Quaternion currentRot = ReadAddr<Quaternion>(local + kAimRotation);
+                Quaternion finalRotation = targetRotation;
+                if (std::isfinite(currentRot.x) && std::isfinite(currentRot.y) &&
+                    std::isfinite(currentRot.z) && std::isfinite(currentRot.w) &&
+                    (currentRot.x != 0 || currentRot.y != 0 || currentRot.z != 0 || currentRot.w != 0)) {
+                    float smoothStep = 0.35f;
+                    finalRotation = Quaternion::Normalized(Quaternion::Slerp(currentRot, targetRotation, smoothStep));
+                }
+                
+                if (WriteAddr<Quaternion>(local + kAimRotation, finalRotation)) {
+                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, finalRotation) ? 4 : 6;
                     gAimLockTarget = selection.target;
                 }
             }
