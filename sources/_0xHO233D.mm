@@ -269,7 +269,7 @@
         return;
     }
     ++self.requestGeneration; self.starting = NO; self.hadRunningHUD = NO;
-    StopHUD(); self.loggedIn = NO;
+    StopHUDWithMessage(notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage); self.loggedIn = NO;
     self.submit.enabled = self.keyField.enabled = YES;
     self.status.text = notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage ?: @"Phiên truy cập đã kết thúc. Vui lòng nhập lại key.";
     [self updateControls];

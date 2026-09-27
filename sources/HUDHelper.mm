@@ -18,6 +18,7 @@ extern "C" int posix_spawnattr_set_persona_uid_np(const posix_spawnattr_t *, uid
 extern "C" int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t *, uid_t);
 
 static pid_t spawnedHUD = 0;
+static void WriteStatus(NSString *state, NSString *message, pid_t pid);
 static NSString *StatusPath(void) { return [ROOT_PATH_NS(PID_PATH) stringByAppendingString:@".state.plist"]; }
 static NSDictionary *ReadStatus(void) { return [NSDictionary dictionaryWithContentsOfFile:StatusPath()] ?: @{}; }
 static pid_t ReadPID(void) {
@@ -31,7 +32,20 @@ static BOOL ProcessAlive(pid_t pid) {
     if (pid <= 1) return NO;
     if (pid == spawnedHUD) {
         int status = 0;
-        if (waitpid(pid, &status, WNOHANG) == pid) { spawnedHUD = 0; return NO; }
+        if (waitpid(pid, &status, WNOHANG) == pid) {
+            spawnedHUD = 0;
+            NSDictionary *saved = ReadStatus();
+            if ([saved[@"state"] isEqual:@"ready"] || [saved[@"state"] isEqual:@"starting"]) {
+                NSString *message;
+                if (WIFSIGNALED(status)) {
+                    message = [NSString stringWithFormat:@"Tiến trình menu bị dừng bởi signal %d. Gửi mã này để kiểm tra lỗi.", WTERMSIG(status)];
+                } else {
+                    message = [NSString stringWithFormat:@"Tiến trình menu kết thúc (exit %d).", WIFEXITED(status) ? WEXITSTATUS(status) : -1];
+                }
+                WriteStatus(@"failed", message, 0);
+            }
+            return NO;
+        }
     }
     return kill(pid, 0) == 0 || errno == EPERM;
 }
@@ -52,9 +66,10 @@ BOOL IsHUDEnabled(void) {
     return [status[@"state"] isEqual:@"ready"] && [status[@"pid"] intValue] == pid && IsOurHUD(pid);
 }
 NSString *HUDLastStatusMessage(void) {
+    BOOL running = IsOurHUD(ReadPID());
     NSDictionary *status = ReadStatus();
     if (([status[@"state"] isEqual:@"ready"] || [status[@"state"] isEqual:@"starting"]) &&
-        !IsOurHUD(ReadPID())) return @"Tiến trình menu đã dừng. Bấm Start để mở lại.";
+        !running) return @"Tiến trình menu đã dừng. Bấm Start để mở lại.";
     return [status[@"message"] isKindOfClass:NSString.class] ? status[@"message"] : @"Menu chưa khởi động.";
 }
 static BOOL StartError(NSError **error, int code, NSString *message) {
@@ -93,16 +108,21 @@ BOOL StartHUD(NSError **error) {
     }
     return YES;
 }
-void StopHUD(void) {
+void StopHUDWithMessage(NSString *message) {
     pid_t pid = ReadPID();
     notify_post(NOTIFY_DESTROY_HUD);
     if (IsOurHUD(pid)) kill(pid, SIGTERM);
     if (spawnedHUD != pid && IsOurHUD(spawnedHUD)) kill(spawnedHUD, SIGTERM);
     if (spawnedHUD > 1) { int status; waitpid(spawnedHUD, &status, WNOHANG); }
     unlink([ROOT_PATH_NS(PID_PATH) fileSystemRepresentation]);
-    WriteStatus(@"stopped", @"Menu đã dừng.", 0);
+    WriteStatus(@"stopped", message ?: @"Menu đã dừng.", 0);
+}
+void StopHUD(void) { StopHUDWithMessage(@"Menu đã dừng."); }
+static void HUDUncaughtException(NSException *exception) {
+    WriteStatus(@"failed", [NSString stringWithFormat:@"Menu gặp lỗi %@. Gửi tên lỗi này để kiểm tra.", exception.name], 0);
 }
 void HUDMarkStarting(void) {
+    NSSetUncaughtExceptionHandler(HUDUncaughtException);
     [[NSString stringWithFormat:@"%d", getpid()] writeToFile:ROOT_PATH_NS(PID_PATH) atomically:YES encoding:NSUTF8StringEncoding error:nil];
     WriteStatus(@"starting", @"Đang xác thực phiên menu…", getpid());
 }

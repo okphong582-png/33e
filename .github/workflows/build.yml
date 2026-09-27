@@ -8,6 +8,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  network-responsiveness:
+    name: Test main-loop responsiveness
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Delayed and failed offset responses must not block the UI
+        run: |
+          clang++ -std=c++17 -fobjc-arc -I. -framework Foundation tests/offset_responsiveness_test.mm esp/Core/_0xNW2872_.mm -o /tmp/offset-responsiveness-test
+          /tmp/offset-responsiveness-test
   build:
     name: Build .tipa package
     runs-on: ubuntu-latest
@@ -32,6 +42,11 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror tests/overlay_geometry_test.cpp -o /tmp/overlay-geometry-test
           /tmp/overlay-geometry-test
+
+      - name: Test nonblocking offset requests
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror tests/async_offset_state_test.cpp -o /tmp/async-offset-test
+          /tmp/async-offset-test
 
       - name: Setup Theos & Toolchain
         uses: Randomblock1/theos-action@v1

@@ -20,12 +20,9 @@ uint64_t getMatchGame(uint64_t Moudule_Base) {
 
     uint64_t typeInfoAddr = Moudule_Base + (uint64_t)kGameFacadeTypeInfo;
     uint64_t GameFacade_TypeInfo = ReadAddr<uint64_t>(typeInfoAddr);
-
-static uintptr_t _0xFFFFAF = 0;
-    if (_0xFFFFAF == 0) {
-        // Lấy offset "match" từ server – chạy đồng bộ, block trong giây lát
-        _0xFFFFAF = [_0xFFFA282 _0xFFFFFFF:KH_NS("_0xFFFFAFD")];
-    }
+    if (!isVaildPtr(GameFacade_TypeInfo)) return 0;
+    const uintptr_t _0xFFFFAF = [_0xFFFA282 _0xFFFFFFF:KH_NS("_0xFFFFAFD")];
+    if (_0xFFFFAF == 0) return 0;
 
 
     uint64_t GameFacade_Static = ReadAddr<uint64_t>(GameFacade_TypeInfo + _0xFFFFAF);
@@ -91,11 +88,8 @@ bool IsAtLobby(uint64_t Moudule_Base) {
     if (!isVaildPtr(GameFacade_TypeInfo))
         return true;
 
-static uintptr_t _0xFFFFAF = 0;
-    if (_0xFFFFAF == 0) {
-        // Lấy offset "match" từ server – chạy đồng bộ, block trong giây lát
-        _0xFFFFAF = [_0xFFFA282 _0xFFFFFFF:KH_NS("_0xFFFFAFD")];
-    }
+    const uintptr_t _0xFFFFAF = [_0xFFFA282 _0xFFFFFFF:KH_NS("_0xFFFFAFD")];
+    if (_0xFFFFAF == 0) return true;
 
 
     uint64_t GameFacade_Static = ReadAddr<uint64_t>(GameFacade_TypeInfo + _0xFFFFAF);

@@ -5,6 +5,7 @@
 BOOL IsHUDEnabled(void);
 BOOL StartHUD(NSError **error);
 void StopHUD(void);
+void StopHUDWithMessage(NSString *message);
 NSString *HUDLastStatusMessage(void);
 void HUDMarkStarting(void);
 void HUDMarkReady(void);
