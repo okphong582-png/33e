@@ -22,6 +22,7 @@ static void AddLine(CGMutablePathRef path, CGPoint a, CGPoint b, float width, fl
     CGPathAddLineToPoint(path, nullptr, x1, y1);
 }
 static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
+    if (!path || rect.size.width <= 0 || rect.size.height <= 0) return;
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
@@ -37,7 +38,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
                float width, float height, float vpWidth, float vpHeight) {
     if (!buffers || !matrix || !isVaildPtr(pawn) || hp <= 0 ||
         !std::isfinite(distance) || distance > 150 || width <= 0 || height <= 0 ||
-        (!isBox && !isHeadRedDot && !isLine && !isHealth && !isDis)) return;
+        (!isBox && !isHeadRedDot && !isLine && !isHealth && !isDis && !isName)) return;
 
     const Vector3 head = getPositionExt(getHead(pawn));
     if (!ValidPosition(head) || !ValidPosition(hip)) return;
@@ -47,9 +48,9 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     const Vector3 headScreen = project(head);
     if (!ValidPosition(headScreen) || headScreen.z <= 0.001f) return;
     // Head markers and lines do not need ankle transforms or a projected box.
-    if (!isBox && !isHealth && !isDis) {
+    if (!isBox && !isHealth && !isDis && !isName) {
         if (isHeadRedDot && headScreen.x >= 0 && headScreen.x <= width &&
-            headScreen.y >= 0 && headScreen.y <= height) {
+            headScreen.y >= 0 && headScreen.y <= height && buffers->boxKnockPath) {
             CGPathAddEllipseInRect(buffers->boxKnockPath, nullptr,
                 CGRectMake(headScreen.x - 3, headScreen.y - 3, 6, 6));
             buffers->boxKnockDirty = true;
@@ -57,11 +58,13 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         if (isLine) {
             CGMutablePathRef path = knocked ? buffers->lineKnockPath :
                 (bot ? buffers->lineBotPath : buffers->linePlayerPath);
-            AddLine(path, CGPointMake(width * 0.5f, 48),
-                    CGPointMake(headScreen.x, headScreen.y - 4), width, height);
-            if (knocked) buffers->lineKnockDirty = true;
-            else if (bot) buffers->lineBotDirty = true;
-            else buffers->linePlayerDirty = true;
+            if (path) {
+                AddLine(path, CGPointMake(width * 0.5f, 40),
+                        CGPointMake(headScreen.x, headScreen.y - 4), width, height);
+                if (knocked) buffers->lineKnockDirty = true;
+                else if (bot) buffers->lineBotDirty = true;
+                else buffers->linePlayerDirty = true;
+            }
         }
         return;
     }
@@ -99,8 +102,21 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     if (!std::isfinite(boxHeight) || !std::isfinite(boxWidth) ||
         boxHeight < 2 || boxHeight > height * 3 || boxWidth < 1 || boxWidth > width * 3) return;
 
+    // Render Player Name above head
+    if (isName && textCallback) {
+        NSString *nick = GetNickName(pawn);
+        if (!nick || nick.length == 0) {
+            nick = bot ? @"[BOT]" : @"Player";
+        }
+        UIColor *nameColor = knocked ? [UIColor colorWithRed:1.0f green:0.25f blue:0.3f alpha:1.0f]
+                                      : (bot ? [UIColor colorWithRed:1.0f green:0.84f blue:0.0f alpha:1.0f]
+                                             : [UIColor colorWithRed:0.2f green:0.9f blue:1.0f alpha:1.0f]);
+        textCallback(context, nick, CGRectMake((minX + maxX) / 2.0f - 60.0f, minY - 18.0f, 120.0f, 14.0f),
+                     nameColor, 10.0f, NO);
+    }
+
     CGMutablePathRef boxPath = knocked ? buffers->boxKnockPath : (bot ? buffers->boxBotPath : buffers->boxPlayerPath);
-    if (isBox) {
+    if (isBox && boxPath) {
         if (isBox3D) {
             for (int i = 0; i < 8; ++i) {
                 for (int bit = 1; bit <= 4; bit <<= 1) {
@@ -110,7 +126,6 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
                 }
             }
         } else {
-            // Lightly rounded corners remain legible without glow or extra layers.
             AddRoundedRect(boxPath, CGRectMake(minX, minY, boxWidth, boxHeight),
                            std::min(3.0, (double)boxWidth * 0.08));
         }
@@ -118,7 +133,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         else if (bot) buffers->boxBotDirty = true;
         else buffers->boxPlayerDirty = true;
     }
-    if (isHeadRedDot) {
+    if (isHeadRedDot && buffers->boxKnockPath) {
         const CGFloat radius = std::max(2.0, std::min(4.0, (double)boxHeight * 0.025));
         CGPathAddEllipseInRect(buffers->boxKnockPath, nullptr,
             CGRectMake(headScreen.x - radius, headScreen.y - radius, radius * 2, radius * 2));
@@ -126,27 +141,31 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     }
     if (isLine) {
         CGMutablePathRef linePath = knocked ? buffers->lineKnockPath : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
-        const CGPoint end = CGPointMake(headScreen.x, minY - 4);
-        AddLine(linePath, CGPointMake(width * 0.5f, 48), end, width, height);
-        if (knocked) buffers->lineKnockDirty = true;
-        else if (bot) buffers->lineBotDirty = true;
-        else buffers->linePlayerDirty = true;
+        if (linePath) {
+            const CGPoint end = CGPointMake(headScreen.x, minY - 4);
+            AddLine(linePath, CGPointMake(width * 0.5f, 40), end, width, height);
+            if (knocked) buffers->lineKnockDirty = true;
+            else if (bot) buffers->lineBotDirty = true;
+            else buffers->linePlayerDirty = true;
+        }
     }
-    if (isHealth) {
+    if (isHealth && buffers->hpBackgroundPath) {
         const int maxHP = get_MaxHP(pawn);
         if (maxHP > 0) {
             const float ratio = std::max(0.0f, std::min(1.0f, (float)hp / maxHP));
-            const CGFloat barX = maxX + 4, barWidth = 3;
+            const CGFloat barX = maxX + 4, barWidth = 3.5f;
             const CGFloat filled = boxHeight * ratio;
-            AddRoundedRect(buffers->hpBackgroundPath, CGRectMake(barX - 1, minY - 1, barWidth + 2, boxHeight + 2), 2);
+            AddRoundedRect(buffers->hpBackgroundPath, CGRectMake(barX - 1, minY - 1, barWidth + 2, boxHeight + 2), 2.0f);
             buffers->hpBackgroundDirty = true;
             if (filled >= 0.5f) {
                 CGMutablePathRef fill = ratio > 0.5f ? buffers->hpFillPath :
                     (ratio > 0.25f ? buffers->hpWarningPath : buffers->hpCriticalPath);
-                AddRoundedRect(fill, CGRectMake(barX, maxY - filled, barWidth, filled), 1);
-                if (ratio > 0.5f) buffers->hpFillDirty = true;
-                else if (ratio > 0.25f) buffers->hpWarningDirty = true;
-                else buffers->hpCriticalDirty = true;
+                if (fill) {
+                    AddRoundedRect(fill, CGRectMake(barX, maxY - filled, barWidth, filled), 1.5f);
+                    if (ratio > 0.5f) buffers->hpFillDirty = true;
+                    else if (ratio > 0.25f) buffers->hpWarningDirty = true;
+                    else buffers->hpCriticalDirty = true;
+                }
             }
         }
     }

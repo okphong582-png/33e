@@ -29,31 +29,31 @@
     self.view.backgroundColor = UIColor.clearColor;
     self.pointer = -1;
     self.controls = [NSMutableArray array];
-    self.panel = [[UIView alloc] initWithFrame:CGRectMake(24, 20, 310, 340)];
+    self.panel = [[UIView alloc] initWithFrame:CGRectMake(24, 20, 310, 360)];
     self.panel.layer.cornerRadius = 20;
-    self.panel.layer.borderWidth = 0.5;
+    self.panel.layer.borderWidth = 1.2f;
     self.panel.clipsToBounds = YES;
     [self.view addSubview:self.panel];
     self.header = [[UIView alloc] initWithFrame:CGRectZero];
     [self.panel addSubview:self.header];
     UILabel *brand = [[UILabel alloc] initWithFrame:CGRectMake(18, 11, 220, 23)];
-    brand.text = @"HOANGHA";
-    brand.font = [UIFont systemFontOfSize:18 weight:UIFontWeightSemibold];
+    brand.text = @"HOANGHA VIP";
+    brand.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
     brand.tag = 10;
     [self.header addSubview:brand];
     UILabel *caption = [[UILabel alloc] initWithFrame:CGRectMake(18, 35, 220, 14)];
-    caption.text = @"BẢNG ĐIỀU KHIỂN";
-    caption.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
+    caption.text = @"BẢNG ĐIỀU KHIỂN ESP & AIMBOT";
+    caption.font = [UIFont systemFontOfSize:10 weight:UIFontWeightSemibold];
     caption.tag = 11;
     [self.header addSubview:caption];
     UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
     close.frame = CGRectMake(268, 10, 32, 36);
     close.tag = 12;
     [close setTitle:@"×" forState:UIControlStateNormal];
-    close.titleLabel.font = [UIFont systemFontOfSize:25 weight:UIFontWeightLight];
+    close.titleLabel.font = [UIFont systemFontOfSize:26 weight:UIFontWeightMedium];
     [close addTarget:self action:@selector(closeMenu) forControlEvents:UIControlEventTouchUpInside];
     [self.header addSubview:close];
-    self.tabs = [[UISegmentedControl alloc] initWithItems:@[@"Aim", @"ESP", @"Màu", @"Giao diện"]];
+    self.tabs = [[UISegmentedControl alloc] initWithItems:@[@"🎯 Aim", @"👁️ ESP", @"🎨 Màu", @"⚙️ Khác"]];
     self.tabs.selectedSegmentIndex = 0;
     [self.tabs addTarget:self action:@selector(changeTab:) forControlEvents:UIControlEventValueChanged];
     [self.panel addSubview:self.tabs];
@@ -102,12 +102,14 @@
 }
 - (CGFloat)toggle:(NSString *)title key:(NSString *)key fallback:(BOOL)fallback y:(CGFloat)y {
     UIView *row = [[UIView alloc] initWithFrame:CGRectMake(12, y, 286, 48)];
-    row.backgroundColor = ESPDarkTheme() ? [UIColor colorWithWhite:1 alpha:0.035] : [UIColor colorWithWhite:0 alpha:0.025];
-    row.layer.cornerRadius = 10;
-    [row addSubview:[self label:title frame:CGRectMake(12, 0, 215, 48) size:13]];
-    UISwitch *sw = [[UISwitch alloc] initWithFrame:CGRectMake(229, 9, 51, 31)];
+    row.backgroundColor = ESPDarkTheme() ? [UIColor colorWithRed:1 alpha:1 green:1 blue:1 alpha:0.06f] : [UIColor colorWithWhite:0 alpha:0.03f];
+    row.layer.cornerRadius = 12;
+    row.layer.borderWidth = 0.5f;
+    row.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.08f].CGColor;
+    [row addSubview:[self label:title frame:CGRectMake(14, 0, 210, 48) size:13]];
+    UISwitch *sw = [[UISwitch alloc] initWithFrame:CGRectMake(226, 9, 51, 31)];
     sw.transform = CGAffineTransformMakeScale(0.82, 0.82);
-    sw.onTintColor = [UIColor colorWithRed:0.22 green:0.52 blue:0.91 alpha:1];
+    sw.onTintColor = [UIColor colorWithRed:0.0f green:0.75f blue:1.0f alpha:1.0f];
     sw.on = ESPPrefsBool(key, fallback);
     objc_setAssociatedObject(sw, "key", key, OBJC_ASSOCIATION_COPY_NONATOMIC);
     [sw addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
@@ -121,7 +123,7 @@
     UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(0, 25, 274, 30)];
     slider.minimumValue = minimum; slider.maximumValue = maximum;
     slider.value = ESPPrefsFloat(key, fallback);
-    slider.minimumTrackTintColor = [UIColor colorWithRed:0.22 green:0.52 blue:0.91 alpha:1];
+    slider.minimumTrackTintColor = [UIColor colorWithRed:0.0f green:0.75f blue:1.0f alpha:1.0f];
     objc_setAssociatedObject(slider, "key", key, OBJC_ASSOCIATION_COPY_NONATOMIC);
     objc_setAssociatedObject(slider, "label", label, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(slider, "title", title, OBJC_ASSOCIATION_COPY_NONATOMIC);
@@ -138,9 +140,9 @@
 - (void)buildPage {
     for (UIView *v in self.scroll.subviews) [v removeFromSuperview];
     [self.controls removeAllObjects]; self.swatch = nil;
-    self.panel.backgroundColor = ESPDarkTheme() ? [UIColor colorWithWhite:0.045 alpha:0.98] : [UIColor colorWithWhite:0.98 alpha:0.98];
-    self.panel.layer.borderColor = [UIColor colorWithWhite:0.5 alpha:0.24].CGColor;
-    ((UILabel *)[self.header viewWithTag:10]).textColor = [self textColor];
+    self.panel.backgroundColor = ESPDarkTheme() ? [UIColor colorWithRed:0.07f green:0.09f blue:0.15f alpha:0.96f] : [UIColor colorWithWhite:0.98 alpha:0.98];
+    self.panel.layer.borderColor = [UIColor colorWithRed:0.0f green:0.85f blue:1.0f alpha:0.35f].CGColor;
+    ((UILabel *)[self.header viewWithTag:10]).textColor = ESPDarkTheme() ? [UIColor colorWithRed:0.0f green:0.95f blue:1.0f alpha:1.0f] : [self textColor];
     ((UILabel *)[self.header viewWithTag:11]).textColor = [self mutedColor];
     [(UIButton *)[self.header viewWithTag:12] setTitleColor:[self mutedColor] forState:UIControlStateNormal];
     if (@available(iOS 13.0, *)) self.panel.overrideUserInterfaceStyle = ESPDarkTheme() ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
@@ -155,11 +157,12 @@
         y = [self note:@"Aim cổ dùng vị trí ước tính giữa đầu và vai. Tắt để aim đầu." y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
     } else if (self.page == 1) {
+        y = [self toggle:@"Tên người chơi" key:@"Name" fallback:YES y:y];
+        y = [self toggle:@"Thanh máu" key:@"Health" fallback:YES y:y];
         y = [self toggle:@"Đường nối" key:@"Line" fallback:NO y:y];
-        y = [self toggle:@"Khung người chơi" key:@"Box" fallback:NO y:y];
-        y = [self toggle:@"Thanh máu" key:@"Health" fallback:NO y:y];
+        y = [self toggle:@"Khung người chơi" key:@"Box" fallback:YES y:y];
         y = [self toggle:@"Điểm đánh dấu đầu" key:@"HeadRedDot" fallback:YES y:y];
-        y = [self toggle:@"Khoảng cách" key:@"Dis" fallback:NO y:y];
+        y = [self toggle:@"Khoảng cách" key:@"Dis" fallback:YES y:y];
         UILabel *boxLabel = [self label:@"Kiểu khung" frame:CGRectMake(18, y + 4, 274, 20) size:12];
         [self.scroll addSubview:boxLabel];
         UISegmentedControl *boxStyle = [[UISegmentedControl alloc] initWithItems:@[@"2D", @"3D"]];
