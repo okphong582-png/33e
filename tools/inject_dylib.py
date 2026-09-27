@@ -130,6 +130,17 @@ def inject_ipa(ipa_path, dylib_file_path, output_ipa_path, dylib_install_name="@
     shutil.copyfile(dylib_file_path, target_dylib_path)
     print(f"[+] Copied dylib to {target_dylib_path}")
 
+    # Copy resources (GIF, icons, Plists) into App bundle
+    resources_source = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "layout", "Resources")
+    if os.path.exists(resources_source):
+        for res in os.listdir(resources_source):
+            src_res = os.path.join(resources_source, res)
+            dst_res = os.path.join(app_dir, res)
+            if os.path.isfile(src_res):
+                shutil.copyfile(src_res, dst_res)
+                print(f"[+] Bundled resource: {res}")
+
+
     # Patch binary
     with open(exec_path, "rb") as f:
         binary_data = f.read()
