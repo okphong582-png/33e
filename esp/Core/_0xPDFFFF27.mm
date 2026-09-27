@@ -17,18 +17,55 @@
 #import <errno.h>
 #import "pid.h"
 #include "KabraxHide.h"
+#include <vector>
+#include <algorithm>
 
 #pragma mark - Global task (được thiết lập bởi GetGameModule_Base)
 mach_port_t get_task = MACH_PORT_NULL;
+static pid_t cachedTaskPID = -1;
+static uintptr_t cachedModuleBase = 0;
+
+static void ResetGameTask(void) {
+    if (get_task != MACH_PORT_NULL) mach_port_deallocate(mach_task_self(), get_task);
+    get_task = MACH_PORT_NULL;
+    cachedTaskPID = -1;
+    cachedModuleBase = 0;
+}
+
+static bool GameTaskIsAlive(void) {
+    int actualPID = -1;
+    return get_task != MACH_PORT_NULL &&
+        pid_for_task(get_task, &actualPID) == KERN_SUCCESS && actualPID == cachedTaskPID;
+}
+
+static bool ReadImagePath(mach_port_t task, mach_vm_address_t address,
+                          char *buffer, size_t capacity) {
+    if (!buffer || capacity < 2 || !isVaildPtr(address)) return false;
+    size_t offset = 0;
+    while (offset < capacity - 1) {
+        // Avoid crossing even a 4 KB page boundary while looking for the NUL.
+        const size_t pageRemaining = 4096 - ((address + offset) & 4095);
+        const size_t amount = std::min((size_t)128, std::min(capacity - 1 - offset, pageRemaining));
+        mach_vm_size_t actual = 0;
+        kern_return_t kr = mach_vm_read_overwrite(task, address + offset, amount,
+                                                (mach_vm_address_t)(buffer + offset), &actual);
+        if (kr != KERN_SUCCESS || actual != amount) return false;
+        if (memchr(buffer + offset, '\0', amount)) return true;
+        offset += amount;
+    }
+    buffer[capacity - 1] = '\0';
+    return false;
+}
 
 #pragma mark - PID (sysctl, nhanh - không dùng libproc)
 
 pid_t GetGameProcesspid(char *GameProcessName) {
+    if (!GameProcessName || !GameProcessName[0]) return -1;
     size_t length = 0;
     static const int name[] = { CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0 };
     int err = sysctl((int *)name, (sizeof(name) / sizeof(*name)) - 1, NULL, &length, NULL, 0);
     if (err == -1) err = errno;
-    if (err != 0) return -1;
+    if (err != 0 || length == 0 || length > 32 * 1024 * 1024) return -1;
 
     struct kinfo_proc *procBuffer = (struct kinfo_proc *)malloc(length);
     if (!procBuffer) return -1;
@@ -56,10 +93,19 @@ pid_t GetGameProcesspid(char *GameProcessName) {
 
 uintptr_t GetGameModule_Base(char *GameProcessName) {
     pid_t pid = GetGameProcesspid(GameProcessName);
-    if (pid == -1) return 0;
-
-    get_task = get_task_for_PID(pid);
-    if (get_task == MACH_PORT_NULL) return 0;
+    if (pid == -1) {
+        // A transient process-list failure must not discard a live task.
+        if (GameTaskIsAlive()) return cachedModuleBase;
+        ResetGameTask();
+        return 0;
+    }
+    if (pid != cachedTaskPID || !GameTaskIsAlive()) {
+        ResetGameTask();
+        get_task = get_task_for_PID(pid);
+        if (get_task == MACH_PORT_NULL) return 0;
+        cachedTaskPID = pid;
+    }
+    if (cachedModuleBase != 0) return cachedModuleBase;
 
     const char *imageTry[] = {
         KH_STR("UnityFramework"),
@@ -75,16 +121,17 @@ uintptr_t GetGameModule_Base(char *GameProcessName) {
             break;
         }
     }
-    if (base == 0) return 0;
+    if (!isVaildPtr(base)) return 0;
 
     (void)picked; // tránh warning
+    cachedModuleBase = base;
     return base;
 }
 
 #pragma mark - Read (giữ nguyên)
 
 bool _read(long addr, void *buffer, int len) {
-    if (!isVaildPtr(static_cast<uintptr_t>(addr)) || get_task == MACH_PORT_NULL) return false;
+    if (!buffer || len <= 0 || !isVaildPtr(static_cast<uintptr_t>(addr)) || get_task == MACH_PORT_NULL) return false;
     mach_vm_size_t out_size = 0;
     kern_return_t kr = mach_vm_read_overwrite(get_task, (mach_vm_address_t)addr,
                                               (mach_vm_size_t)len,
@@ -162,54 +209,38 @@ mach_vm_address_t get_image_base_address(mach_port_t task, const char *image_nam
         return 0;
     }
 
-    struct dyld_all_image_infos64 infos;
-    vm_size_t size = sizeof(infos);
-    mach_msg_type_number_t read_size = 0;
-    vm_offset_t read_mem = 0;
-
-    kr = vm_read(task, (vm_address_t)dyld_info.all_image_info_addr, size, &read_mem, &read_size);
-    if (kr != KERN_SUCCESS || read_size < sizeof(infos)) {
-        fprintf(stderr, KH_STR("vm_read for dyld_all_image_infos64 failed: %s\n"), mach_error_string(kr));
+    struct dyld_all_image_infos64 infos{};
+    mach_vm_size_t read_size = 0;
+    kr = mach_vm_read_overwrite(task, dyld_info.all_image_info_addr, sizeof(infos),
+                               (mach_vm_address_t)&infos, &read_size);
+    if (kr != KERN_SUCCESS || read_size != sizeof(infos)) {
         return 0;
     }
-    memcpy(&infos, (void *)read_mem, sizeof(infos));
-    vm_deallocate(mach_task_self(), read_mem, read_size);
 
     uint32_t image_count = infos.infoArrayCount;
     mach_vm_address_t info_array_addr = infos.infoArray;
+    // dyld may be rebuilding this table during app launch. Retry later instead
+    // of allocating an unbounded size or interpreting a partial table.
+    if (!image_name || !image_name[0] || image_count == 0 || image_count > 4096 ||
+        !isVaildPtr(info_array_addr)) return 0;
     vm_size_t image_info_size = image_count * sizeof(struct dyld_image_info64);
-    struct dyld_image_info64 *image_infos = (struct dyld_image_info64 *)malloc(image_info_size);
-    if (!image_infos) return 0;
+    std::vector<dyld_image_info64> image_infos(image_count);
 
-    read_mem = 0;
     read_size = 0;
-    kr = vm_read(task, (vm_address_t)info_array_addr, image_info_size, &read_mem, &read_size);
-    if (kr != KERN_SUCCESS || read_size < image_info_size) {
-        fprintf(stderr, KH_STR("vm_read for image infos failed: %s\n"), mach_error_string(kr));
-        free(image_infos);
+    kr = mach_vm_read_overwrite(task, info_array_addr, image_info_size,
+                               (mach_vm_address_t)image_infos.data(), &read_size);
+    if (kr != KERN_SUCCESS || read_size != image_info_size) {
         return 0;
     }
-    memcpy(image_infos, (void *)read_mem, image_info_size);
-    vm_deallocate(mach_task_self(), read_mem, read_size);
 
     for (uint32_t i = 0; i < image_count; ++i) {
         char path_buffer[PATH_MAX] = {0};
-        read_mem = 0;
-        read_size = 0;
-        kr = vm_read(task, (vm_address_t)image_infos[i].imageFilePath, PATH_MAX, &read_mem, &read_size);
-        if (kr == KERN_SUCCESS) {
-            size_t to_copy = read_size > PATH_MAX ? PATH_MAX : read_size;
-            memcpy(path_buffer, (void *)read_mem, to_copy);
-            vm_deallocate(mach_task_self(), read_mem, read_size);
-        }
-
-        if (kr == KERN_SUCCESS && strstr(path_buffer, image_name)) {
+        if (ReadImagePath(task, image_infos[i].imageFilePath, path_buffer, sizeof(path_buffer)) &&
+            strstr(path_buffer, image_name)) {
             mach_vm_address_t base = image_infos[i].imageLoadAddress;
-            free(image_infos);
             return base;
         }
     }
 
-    free(image_infos);
     return 0;
 }

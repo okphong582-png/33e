@@ -17,6 +17,7 @@
 #include "KabraxHide.h"
 
 #import "HUDHelper.h"
+#import "HUDMainApplicationDelegate.h"
 #import "TSEventFetcher.h"
 #import "BackboardServices.h"
 #import "AXEventRepresentation.h"
@@ -101,11 +102,9 @@ void _HUDEventCallback(void *target, void *refcon, IOHIDServiceRef service, IOHI
 
         {
             void (^handleTouch)(void) = ^(void) {
-                static UIWindow *keyWindow = nil;
-                static dispatch_once_t onceToken;
-                dispatch_once(&onceToken, ^{
-                    keyWindow = [[app windows] firstObject];
-                });
+                // The HUD window is created after online verification completes.
+                UIWindow *keyWindow = [[app windows] firstObject];
+                if (!keyWindow) return;
 
                 UITouchPhase phase = UITouchPhaseEnded;
                 if ([rep isTouchDown])
@@ -230,13 +229,7 @@ int main(int argc, char *argv[])
                     [[NSUserDefaults standardUserDefaults] synchronize];
                 }
             }
-            pid_t pid = getpid();
-
-            NSString *pidString = [NSString stringWithFormat:@"%d", pid];
-            [pidString writeToFile:ROOT_PATH_NS(PID_PATH)
-                        atomically:YES
-                          encoding:NSUTF8StringEncoding
-                             error:nil];
+            HUDMarkStarting();
 
             [UIScreen initialize];
             CFRunLoopGetCurrent();
@@ -265,10 +258,8 @@ int main(int argc, char *argv[])
                                      &_springboardBootToken,
                                      dispatch_get_main_queue(),
                                      ^(int token) {
-                notify_cancel(token);
-                notify_post(NOTIFY_DESTROY_HUD);
-                _0xFFFADK2(YES);
-                kill(pid, SIGKILL);
+                (void)token;
+                [(HUDMainApplicationDelegate *)appDelegate restoreWindowHosting];
             });
 
             CFRunLoopRun();

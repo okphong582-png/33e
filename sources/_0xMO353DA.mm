@@ -42,7 +42,7 @@
     brand.tag = 10;
     [self.header addSubview:brand];
     UILabel *caption = [[UILabel alloc] initWithFrame:CGRectMake(18, 35, 220, 14)];
-    caption.text = @"Điều khiển";
+    caption.text = @"BẢNG ĐIỀU KHIỂN";
     caption.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
     caption.tag = 11;
     [self.header addSubview:caption];
@@ -144,7 +144,7 @@
         y = [self note:@"Aim cổ dùng vị trí ước tính giữa đầu và vai. Tắt để aim đầu." y:y];
     } else if (self.page == 1) {
         y = [self toggle:@"Đường nối" key:@"Line" fallback:NO y:y];
-        y = [self toggle:@"Khung 3D" key:@"Box" fallback:NO y:y];
+        y = [self toggle:@"Khung người chơi" key:@"Box" fallback:NO y:y];
         y = [self toggle:@"Thanh máu" key:@"Health" fallback:NO y:y];
         y = [self toggle:@"Điểm đánh dấu đầu" key:@"HeadRedDot" fallback:YES y:y];
         y = [self toggle:@"Khoảng cách" key:@"Dis" fallback:NO y:y];
@@ -172,6 +172,8 @@
         [self updateSwatch];
     } else {
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
+        y = [self toggle:@"ESP ổn định (30 FPS)" key:@"BalancedRender" fallback:YES y:y];
+        y = [self note:@"Bật để giảm tải khi chơi lâu. Tắt để vẽ ESP ở 60 FPS." y:y];
         y = [self note:@"Kéo thanh tiêu đề để di chuyển menu. Các lựa chọn được lưu tự động." y:y];
     }
     self.scroll.contentSize = CGSizeMake(310, y + 8);

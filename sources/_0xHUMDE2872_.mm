@@ -83,7 +83,6 @@ BOOL HUDFloatButtonHandleTouch(CGPoint screenPoint, UITouchPhase phase, NSIntege
 
 @interface HUDMainApplicationDelegate () {
     SBSAccessibilityWindowHostingController *_windowHostingController;
-    dispatch_source_t _gameCheckTimer;
     _0xB1872A2 *_menuView;
     FBSOrientationObserver *_orientationObserver;
     UIInterfaceOrientation _currentOrientation;
@@ -254,10 +253,15 @@ self.window.bounds = targetFrame;
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary <UIApplicationLaunchOptionsKey, id> *)launchOptions {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(licenseBecameInvalid:) name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
     [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
-        if (!ok) { RequestExitHUD(); return; }
+        if (!ok) { RequestExitHUDWithMessage(message); return; }
+        [self buildHUDWindow];
         [[LicenseSession shared] monitor];
     }];
-    
+    return YES;
+}
+
+- (void)buildHUDWindow {
+    if (self.window) return;
     // KHÔNG dùng setValue:forKey:
     
     // BẮT BUỘC: Cho phép UIDevice gửi notification xoay
@@ -297,10 +301,8 @@ self.window.bounds = targetFrame;
     [menuView hideViewFromCapture:ESPPrefsBool(@"AnLive", NO)];
     menuView.translatesAutoresizingMaskIntoConstraints = NO;
     menuView.userInteractionEnabled = YES;
-    __weak __typeof__(self) wself = self;
     menuView.onExitHUDRequested = ^{
         RequestExitHUD();
-        (void)wself;
     };
     [containerView addSubview:menuView];
     _menuView = menuView;
@@ -346,37 +348,40 @@ self.window.bounds = targetFrame;
     espView.frame = containerView.bounds;
     menuView.frame = containerView.bounds;
     
-    // Register context
+    [self restoreWindowHosting];
+}
+
+- (void)restoreWindowHosting {
+    if (!self.window || ![LicenseSession shared].authorized) return;
+    self.window.hidden = NO;
+    [self.window.rootViewController.view bringSubviewToFront:_menuView];
+    [_menuView setNeedsLayout];
+    [_menuView layoutIfNeeded];
     _windowHostingController = [[objc_getClass("SBSAccessibilityWindowHostingController") alloc] init];
+    SEL registration = NSSelectorFromString(@"registerWindowWithContextID:atLevel:");
+    if (![_windowHostingController respondsToSelector:registration]) {
+        RequestExitHUDWithMessage(@"iOS này không hỗ trợ hiển thị cửa sổ menu.");
+        return;
+    }
     unsigned int _contextId = [self.window _contextId];
     double windowLevel = [self.window windowLevel];
     NSMethodSignature *signature = [NSMethodSignature signatureWithObjCTypes:"v@:Id"];
     NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
     [invocation setTarget:_windowHostingController];
-    [invocation setSelector:NSSelectorFromString(@"registerWindowWithContextID:atLevel:")];
+    [invocation setSelector:registration];
     [invocation setArgument:&_contextId atIndex:2];
     [invocation setArgument:&windowLevel atIndex:3];
     [invocation invoke];
-    
-    // Không tự dừng HUD theo timer kiểm tra process game. Việc dừng chỉ do
-    // người dùng bấm Dừng menu hoặc phiên license bị thu hồi.
-
-
-// [NSTimer scheduledTimerWithTimeInterval:0.5 
-                                     //target:self 
-                                   ////selector:@selector(checkAndRotate) 
-                                   ///userInfo:nil 
-                                    //repeats:YES];
-    
-    return YES;
-
-    
-    
+    HUDMarkReady();
 }
 
 - (void)licenseBecameInvalid:(NSNotification *)notification {
-    (void)notification;
-    RequestExitHUD();
+    RequestExitHUDWithMessage(notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage);
+}
+
+- (void)dealloc {
+    [_orientationObserver invalidate];
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 // HÀM FORCE ROTATE - GỌI KHI CẦN XOAY

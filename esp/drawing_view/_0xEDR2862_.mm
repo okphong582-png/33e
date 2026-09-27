@@ -1,5 +1,6 @@
 #import "esp.h"
 #import "ESPPrefs.h"
+#include "OverlayGeometry.h"
 #include "KabraxHide.h"
 #include <algorithm>
 #include <cmath>
@@ -13,9 +14,12 @@ static bool ValidPosition(const Vector3 &v) {
     return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z) &&
            (v.x != 0 || v.y != 0 || v.z != 0);
 }
-static void AddLine(CGMutablePathRef path, CGPoint a, CGPoint b) {
-    CGPathMoveToPoint(path, nullptr, a.x, a.y);
-    CGPathAddLineToPoint(path, nullptr, b.x, b.y);
+static void AddLine(CGMutablePathRef path, CGPoint a, CGPoint b, float width, float height) {
+    if (!path) return;
+    double x0 = a.x, y0 = a.y, x1 = b.x, y1 = b.y;
+    if (!OverlayGeometry::ClipSegment(x0, y0, x1, y1, width, height)) return;
+    CGPathMoveToPoint(path, nullptr, x0, y0);
+    CGPathAddLineToPoint(path, nullptr, x1, y1);
 }
 static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
@@ -28,13 +32,14 @@ BOOL RenderFOVCirclePath(CGMutablePathRef path, float w, float h, BOOL enabled, 
 }
 
 void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
-               void *context, uint64_t pawn, int hp, float distance, float *matrix,
+               void *context, uint64_t pawn, int hp, float distance, const Vector3 &hip,
+               bool knocked, bool bot, float *matrix,
                float width, float height, float vpWidth, float vpHeight) {
     if (!buffers || !matrix || !isVaildPtr(pawn) || hp <= 0 ||
-        !std::isfinite(distance) || distance > 150 || width <= 0 || height <= 0) return;
+        !std::isfinite(distance) || distance > 150 || width <= 0 || height <= 0 ||
+        (!isBox && !isHeadRedDot && !isLine && !isHealth && !isDis)) return;
 
     const Vector3 head = getPositionExt(getHead(pawn));
-    const Vector3 hip = getPositionExt(getHip(pawn));
     if (!ValidPosition(head) || !ValidPosition(hip)) return;
     const Vector3 left = getPositionExt(getLeftAnkle(pawn));
     const Vector3 right = getPositionExt(getRightAnkle(pawn));
@@ -50,8 +55,6 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     };
     const Vector3 headScreen = project(head);
     if (!ValidPosition(headScreen) || headScreen.z <= 0.001f) return;
-    const bool knocked = get_IsKnockedDown(pawn);
-    const bool bot = get_IsBot(pawn);
 
     // Project all eight world-space corners, rather than offsetting a 2D rectangle.
     const float lowY = std::min(feet.y, head.y - 0.20f);
@@ -74,7 +77,9 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     }
     if (maxX < 0 || minX > width || maxY < 0 || minY > height) return;
     const CGFloat boxHeight = maxY - minY;
-    if (boxHeight < 2 || boxHeight > height * 3) return;
+    const CGFloat boxWidth = maxX - minX;
+    if (!std::isfinite(boxHeight) || !std::isfinite(boxWidth) ||
+        boxHeight < 2 || boxHeight > height * 3 || boxWidth < 1 || boxWidth > width * 3) return;
 
     CGMutablePathRef boxPath = knocked ? buffers->boxKnockPath : (bot ? buffers->boxBotPath : buffers->boxPlayerPath);
     if (isBox) {
@@ -83,11 +88,13 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
                 for (int bit = 1; bit <= 4; bit <<= 1) {
                     if (i & bit) continue;
                     const Vector3 a = corners[i], b = corners[i | bit];
-                    AddLine(boxPath, CGPointMake(a.x, a.y), CGPointMake(b.x, b.y));
+                    AddLine(boxPath, CGPointMake(a.x, a.y), CGPointMake(b.x, b.y), width, height);
                 }
             }
         } else {
-            CGPathAddRect(boxPath, nullptr, CGRectMake(minX, minY, maxX - minX, maxY - minY));
+            // Lightly rounded corners remain legible without glow or extra layers.
+            AddRoundedRect(boxPath, CGRectMake(minX, minY, boxWidth, boxHeight),
+                           std::min(3.0, (double)boxWidth * 0.08));
         }
         if (knocked) buffers->boxKnockDirty = true;
         else if (bot) buffers->boxBotDirty = true;
@@ -102,8 +109,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     if (isLine) {
         CGMutablePathRef linePath = knocked ? buffers->lineKnockPath : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
         const CGPoint end = CGPointMake(headScreen.x, minY - 4);
-        AddLine(linePath, CGPointMake(width * 0.5f, 48), end);
-        CGPathAddEllipseInRect(linePath, nullptr, CGRectMake(end.x - 1.5f, end.y - 1.5f, 3, 3));
+        AddLine(linePath, CGPointMake(width * 0.5f, 48), end, width, height);
         if (knocked) buffers->lineKnockDirty = true;
         else if (bot) buffers->lineBotDirty = true;
         else buffers->linePlayerDirty = true;
@@ -112,7 +118,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         const int maxHP = get_MaxHP(pawn);
         if (maxHP > 0) {
             const float ratio = std::max(0.0f, std::min(1.0f, (float)hp / maxHP));
-            const CGFloat barX = maxX + 5, barWidth = 4;
+            const CGFloat barX = maxX + 4, barWidth = 3;
             const CGFloat filled = boxHeight * ratio;
             AddRoundedRect(buffers->hpBackgroundPath, CGRectMake(barX - 1, minY - 1, barWidth + 2, boxHeight + 2), 2);
             buffers->hpBackgroundDirty = true;
@@ -123,8 +129,6 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
                 if (ratio > 0.5f) buffers->hpFillDirty = true;
                 else if (ratio > 0.25f) buffers->hpWarningDirty = true;
                 else buffers->hpCriticalDirty = true;
-                AddRoundedRect(buffers->hpHighlightPath, CGRectMake(barX + 0.5f, maxY - filled, 1, filled), 0.5f);
-                buffers->hpHighlightDirty = true;
             }
         }
     }

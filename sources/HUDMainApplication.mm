@@ -10,6 +10,7 @@
 #import "UIEventDispatcher.h"
 #include "KabraxHide.h"
 #import "HUDMainApplication.h"
+#import "HUDHelper.h"
 #import "UIApplication+Private.h"
 
 @implementation HUDMainApplication
@@ -22,7 +23,7 @@
             int outToken;
             notify_register_dispatch(NOTIFY_DESTROY_HUD, &outToken, dispatch_get_main_queue(), ^(int token) {
                 notify_cancel(token);
-                [self terminateWithSuccess];
+                RequestExitHUD();
             });
         }
 

@@ -9,7 +9,6 @@
 #include "KabraxHide.h"
 
 static const CGFloat kMenuButtonSize = 64.0f;
-static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
 
 @interface _0xB1872A2 ()
 @property (nonatomic, strong) UIButton *menuButton;
@@ -39,25 +38,36 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
     NSData *data = [NSData dataWithContentsOfFile:path];
     if (!data) return nil;
     
-    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef)data, NULL);
+    NSDictionary *sourceOptions = @{(__bridge NSString *)kCGImageSourceShouldCache: @NO};
+    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef)data, (__bridge CFDictionaryRef)sourceOptions);
     if (!source) return nil;
     
     size_t count = CGImageSourceGetCount(source);
-    if (count <= 1) {
+    if (count == 0) {
         CFRelease(source);
-        return [UIImage imageWithData:data];
+        return nil;
     }
     
     NSMutableArray<UIImage *> *images = [NSMutableArray array];
     NSTimeInterval totalDuration = 0.0;
     
+    // A 64-point button does not need every full-resolution GIF frame resident.
+    const size_t stride = MAX((size_t)1, (count + 47) / 48);
+    CGFloat scale = MIN(UIScreen.mainScreen.scale, 3.0);
+    NSDictionary *thumbnailOptions = @{
+        (__bridge NSString *)kCGImageSourceCreateThumbnailFromImageAlways: @YES,
+        (__bridge NSString *)kCGImageSourceThumbnailMaxPixelSize: @(kMenuButtonSize * scale),
+        (__bridge NSString *)kCGImageSourceShouldCacheImmediately: @YES,
+        (__bridge NSString *)kCGImageSourceCreateThumbnailWithTransform: @YES
+    };
     for (size_t i = 0; i < count; i++) {
-        CGImageRef imageRef = CGImageSourceCreateImageAtIndex(source, i, NULL);
-        if (imageRef) {
-            [images addObject:[UIImage imageWithCGImage:imageRef]];
-            CGImageRelease(imageRef);
+        if (i % stride == 0) {
+            CGImageRef imageRef = CGImageSourceCreateThumbnailAtIndex(source, i, (__bridge CFDictionaryRef)thumbnailOptions);
+            if (imageRef) {
+                [images addObject:[UIImage imageWithCGImage:imageRef scale:scale orientation:UIImageOrientationUp]];
+                CGImageRelease(imageRef);
+            }
         }
-        
         float frameDuration = 0.08f;
         CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(source, i, NULL);
         if (properties) {
@@ -76,7 +86,8 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
         totalDuration += frameDuration;
     }
     CFRelease(source);
-    
+    if (images.count == 0) return nil;
+    if (images.count == 1) return images.firstObject;
     return [UIImage animatedImageWithImages:images duration:totalDuration > 0 ? totalDuration : (count * 0.08f)];
 }
 
@@ -84,7 +95,8 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
     [super layoutSubviews];
     
     if (self.superview && _menuButton) {
-        CGSize size = self.superview.bounds.size;
+        CGSize size = self.bounds.size;
+        if (size.width < kMenuButtonSize || size.height < kMenuButtonSize) return;
         CGRect frame = _menuButton.frame;
         
         frame.size.width = kMenuButtonSize;
@@ -98,6 +110,7 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
         _menuButton.frame = frame;
         _gifImageView.frame = _menuButton.bounds;
     }
+    _presentedModMenu.view.frame = self.bounds;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -111,6 +124,9 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
                                                  selector:@selector(resetTouchState)
                                                      name:UIApplicationWillResignActiveNotification
                                                    object:nil];
+
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(releaseAnimationFrames)
+                                                     name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(resetTouchState)
@@ -127,12 +143,9 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
     _menuButton.frame = CGRectMake(20, 100, kMenuButtonSize, kMenuButtonSize);
     _menuButton.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.4];
     _menuButton.layer.cornerRadius = kMenuButtonSize / 2.0f;
-    _menuButton.layer.borderWidth = 2.0f;
-    _menuButton.layer.borderColor = [UIColor colorWithRed:1.0f green:0.8f blue:0.0f alpha:1.0f].CGColor;
-    _menuButton.layer.shadowColor = [UIColor colorWithRed:1.0f green:0.6f blue:0.0f alpha:1.0f].CGColor;
-    _menuButton.layer.shadowOffset = CGSizeZero;
-    _menuButton.layer.shadowRadius = 10.0f;
-    _menuButton.layer.shadowOpacity = 0.9f;
+    _menuButton.layer.borderWidth = 1.5f;
+    _menuButton.layer.borderColor = [UIColor colorWithRed:0.48f green:0.65f blue:1.0f alpha:0.9f].CGColor;
+    _menuButton.layer.shadowOpacity = 0;
     _menuButton.layer.zPosition = 999.0f;
     _menuButton.clipsToBounds = YES;
     
@@ -184,6 +197,11 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
     _trackingPointerId = -1;
 }
 
+- (void)releaseAnimationFrames {
+    UIImage *first = _gifImageView.image.images.firstObject;
+    if (first) _gifImageView.image = first;
+}
+
 - (void)presentModMenu {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (self->_presentedModMenu) return;
@@ -195,6 +213,7 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
         
         _0xDEADBEEE *vc = [[_0xDEADBEEE alloc] init];
         vc.view.frame = self.bounds;
+        vc.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         vc.view.alpha = 1.0f;
         vc.view.transform = CGAffineTransformIdentity;
         
@@ -306,6 +325,8 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
                 
                 if (_buttonDragging) {
                     _menuButton.center = CGPointMake(_buttonDragStartCenter.x + dx, _buttonDragStartCenter.y + dy);
+                    [self setNeedsLayout];
+                    [self layoutIfNeeded];
                     _buttonDragStartCenter = _menuButton.center;
                     _buttonDragStartPoint = local;
                 }
@@ -319,7 +340,7 @@ static const CGFloat kAccentR = 1.0f, kAccentG = 0.35f, kAccentB = 0.2f;
                 BOOL wasDrag = _buttonDragging;
                 [self resetTouchState];
 
-                if (!wasDrag) {
+                if (!wasDrag && phase == UITouchPhaseEnded) {
                     [self togglePanel];
                 } else {
                     // CHỈ LƯU TỌA ĐỘ KHI ĐÃ KÉO THẢ XONG (tránh lưu đè khi bấm mở menu)

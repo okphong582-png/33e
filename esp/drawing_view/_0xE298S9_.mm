@@ -46,6 +46,8 @@ static uint64_t gAimLockTarget = 0;
 static uint64_t gAimLocalPlayer = 0;
 
 static bool gESPPrefsLoadedOnce = false;
+static NSUInteger gRenderPrefsRevision = 0;
+static bool gBalancedRender = true;
 
 // ============================================================
 // ✅ SYNC PREFS - ESP & AIMBOT
@@ -63,6 +65,9 @@ void ESPSyncFromPrefs(void) {
     showFov = ESPPrefsBool(@"ShowFov", YES);
     fovPercent = ESPPrefsFloat(@"FovSize", 40);
     isBox3D = ESPPrefsBool(@"Box3D", YES);
+    gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
+    gESPPrefsLoadedOnce = true;
+    ++gRenderPrefsRevision;
 
     // ESP Count logic
     if (isLine || isBox || isHealth) {
@@ -109,23 +114,22 @@ static inline void ESPReleasePath(CGMutablePathRef p) { if (p) CGPathRelease(p);
 
 static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
     ESPGeometryBuffers b{};
-    b.boxBotPath       = CGPathCreateMutable();
-    b.boxPlayerPath    = CGPathCreateMutable();
-    b.boxKnockPath     = CGPathCreateMutable();
-
-    b.lineKnockPath    = CGPathCreateMutable();
-    b.lineBotPath      = CGPathCreateMutable();
-    b.linePlayerPath   = CGPathCreateMutable();
-
-    b.bonePath         = CGPathCreateMutable();
-    b.snaplinePath     = CGPathCreateMutable();
-    b.hpBackgroundPath = CGPathCreateMutable();
-    b.hpFillPath       = CGPathCreateMutable();
-    b.hpWarningPath = CGPathCreateMutable();
-    b.hpCriticalPath = CGPathCreateMutable();
-    b.hpHighlightPath = CGPathCreateMutable();
-    b.aimAssistPath    = CGPathCreateMutable();
-    b.alertPath        = CGPathCreateMutable();
+    if (isBox) {
+        b.boxBotPath = CGPathCreateMutable();
+        b.boxPlayerPath = CGPathCreateMutable();
+    }
+    if (isBox || isHeadRedDot) b.boxKnockPath = CGPathCreateMutable();
+    if (isLine) {
+        b.lineKnockPath = CGPathCreateMutable();
+        b.lineBotPath = CGPathCreateMutable();
+        b.linePlayerPath = CGPathCreateMutable();
+    }
+    if (isHealth) {
+        b.hpBackgroundPath = CGPathCreateMutable();
+        b.hpFillPath = CGPathCreateMutable();
+        b.hpWarningPath = CGPathCreateMutable();
+        b.hpCriticalPath = CGPathCreateMutable();
+    }
 
     b.boxBotDirty = b.boneDirty = b.lineBotDirty = NO;
     b.hpBackgroundDirty = b.hpFillDirty          = NO;
@@ -229,6 +233,11 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 @property (nonatomic, strong) CAShapeLayer *linePlayerLayer;
 @property (nonatomic, strong) CAShapeLayer *boxKnockLayer;
 @property (nonatomic, strong) CAShapeLayer *lineKnockLayer;
+@property (nonatomic, assign) CFTimeInterval nextProcessCheck;
+@property (nonatomic, assign) NSUInteger appliedRenderRevision;
+@property (nonatomic, assign) CGSize lastFovSize;
+@property (nonatomic, assign) float lastFovRadius;
+@property (nonatomic, assign) NSInteger lastEnemyCount;
 @end
 
 // ─────────────────────────────────────────────
@@ -265,19 +274,28 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 
     self.userInteractionEnabled = NO;
     self.backgroundColor        = UIColor.clearColor;
+    self.clipsToBounds = YES;
     self.textLayerPool          = [NSMutableArray array];
+    self.lastEnemyCount = -1;
 
     [self configureRenderingLayers];
-    [self setupModuleBase];
-
-    self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:KH_SEL("updateFrame")];
-    if (@available(iOS 15.0, *))
-        self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(30.0, 60.0, 60.0);
-    else if (@available(iOS 10.0, *))
-        self.displayLink.preferredFramesPerSecond = 60;
-    [self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
-
     return self;
+}
+
+- (void)didMoveToWindow {
+    [super didMoveToWindow];
+    if (!self.window) {
+        [self.displayLink invalidate];
+        self.displayLink = nil;
+        [self clearAllContent];
+        return;
+    }
+    if (!self.displayLink) {
+        self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:KH_SEL("updateFrame")];
+        self.appliedRenderRevision = 0;
+        self.nextProcessCheck = 0;
+        [self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+    }
 }
 
 - (void)layoutSubviews {
@@ -288,13 +306,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 
 
 - (void)setupModuleBase {
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        Moudule_Base = (uint64_t)GetGameModule_Base((char *)KH_STR("FreeFire"));
-        // ❌ ĐÃ XÓA: Tạo thread silent aim
-        // _0x2872TH2 = std::thread(_0xASI2872D);
-        // _0x2872TH2.detach();
-    });
+    // Lookup returns zero on failure. Retry while waiting for the game and after
+    // a restart; never terminate the floating menu because the game is absent.
+    Moudule_Base = (uint64_t)GetGameModule_Base((char *)KH_STR("FreeFire"));
 }
 
 // ─── Layer Factory ────────────────────────────
@@ -309,10 +323,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     l.contentsScale   = UIScreen.mainScreen.scale;
     l.zPosition       = z;
     l.allowsEdgeAntialiasing = YES;
-    l.shadowColor = UIColor.blackColor.CGColor;
-    l.shadowOffset = CGSizeMake(0, 1);
-    l.shadowOpacity = 0.65f;
-    l.shadowRadius = 1.0f;
+    // No blurred shadows on paths that change every frame: this avoids an
+    // offscreen blur pass per layer and keeps small strokes crisp.
+    l.shadowOpacity = 0;
     l.actions = @{ KH_NS("path"): NSNull.null };
     return l;
 }
@@ -363,7 +376,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.statusLayer.shadowColor = UIColor.blackColor.CGColor;
     self.statusLayer.shadowOffset = CGSizeMake(0, 1);
     self.statusLayer.shadowOpacity = 0.85f;
-    self.statusLayer.shadowRadius = 1.5f;
+    self.statusLayer.shadowRadius = 0;
     self.statusLayer.contentsScale   = UIScreen.mainScreen.scale;
     self.statusLayer.zPosition       = 8;
     self.statusLayer.actions = @{ @"string":NSNull.null, @"frame":NSNull.null, @"hidden":NSNull.null };
@@ -391,7 +404,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         [self.textLayerPool addObject:layer];
         [self.layer addSublayer:layer];
     } else {
-        layer = self.textLayerPool.lastObject;
+        return nil;
     }
     layer.hidden = NO;
     self.activeTextLayerCount++;
@@ -403,40 +416,52 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (!text.length) return;
     CGFloat fs        = (fontSize > 0) ? fontSize : 9.0f;
     CATextLayer *l    = [self dequeueTextLayer];
-    l.string          = text;
+    if (!l) return;
+    if (![l.string isEqual:text]) l.string = text;
     l.frame           = frame;
     l.foregroundColor = color.CGColor;
-    l.fontSize        = fs;
-    l.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:fs weight:UIFontWeightBold];
+    if (l.fontSize != fs || !l.font) {
+        l.fontSize = fs;
+        l.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:fs weight:UIFontWeightSemibold];
+    }
     l.alignmentMode   = leftAligned ? kCAAlignmentLeft : kCAAlignmentCenter;
-    l.shadowColor     = UIColor.blackColor.CGColor;
-    l.shadowOffset    = CGSizeMake(0.5f, 0.5f);
-    l.shadowOpacity   = 1.0f;
-    l.shadowRadius    = 0.0f;
+}
+
+- (void)applyRenderPreferences {
+    if (self.appliedRenderRevision == gRenderPrefsRevision) return;
+    self.appliedRenderRevision = gRenderPrefsRevision;
+    UIColor *boxColor = ESPColor(@"BoxColor", 0.72, 0.91, 1.0);
+    UIColor *lineColor = ESPColor(@"LineColor", 0.72, 0.91, 1.0);
+    self.boxBotLayer.strokeColor = self.boxPlayerLayer.strokeColor = self.boxKnockLayer.strokeColor = boxColor.CGColor;
+    self.lineBotLayer.strokeColor = self.linePlayerLayer.strokeColor = self.lineKnockLayer.strokeColor = lineColor.CGColor;
+    self.fovLayer.strokeColor = ESPColor(@"FovColor", 1, 1, 1).CGColor;
+    const float fps = gBalancedRender ? 30.0f : 60.0f;
+    if (@available(iOS 15.0, *)) self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(fps, fps, fps);
+    else self.displayLink.preferredFramesPerSecond = (NSInteger)fps;
 }
 
 - (void)updateFrame {
     if (!self.window) return;
     if (![LicenseSession shared].authorized) { [self clearAllContent]; return; }
     @autoreleasepool {
-#ifdef NOTIFY_DESTROY_HUD
-        if (GetGameProcesspid((char *)KH_STR("FreeFire")) == -1) {
-            Moudule_Base = (uint64_t)-1;
-            [self clearAllContent];
-            return;
+        const CFTimeInterval now = CACurrentMediaTime();
+        if (now >= self.nextProcessCheck) {
+            self.nextProcessCheck = now + 1.0;
+            [self setupModuleBase];
         }
-#endif
-        if (Moudule_Base == (uint64_t)-1)
-            Moudule_Base = (uint64_t)GetGameModule_Base((char *)KH_STR("FreeFire"));
 
         if (!gESPPrefsLoadedOnce) {
             ESPSyncFromPrefs();
-            gESPPrefsLoadedOnce = true;
         }
-
         [CATransaction begin];
         [CATransaction setDisableActions:YES];
-        [self resetTextLayers];
+        [self applyRenderPreferences];
+        if (!isVaildPtr(Moudule_Base)) {
+            [self clearAllContent];
+            [CATransaction commit];
+            return;
+        }
+        self.activeTextLayerCount = 0;
 
         CGFloat vw    = self.bounds.size.width;
         CGFloat vh    = self.bounds.size.height;
@@ -466,29 +491,28 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         ApplyPath(self.hpHighlightLayer, buffers.hpHighlightPath, buffers.hpHighlightDirty);
         ESPGeometryBuffersRelease(&buffers);
 
-        UIColor *boxColor = ESPColor(@"BoxColor", 0.72, 0.91, 1.0);
-        UIColor *lineColor = ESPColor(@"LineColor", 0.72, 0.91, 1.0);
-        self.boxBotLayer.strokeColor = self.boxPlayerLayer.strokeColor = self.boxKnockLayer.strokeColor = boxColor.CGColor;
-        self.lineBotLayer.strokeColor = self.linePlayerLayer.strokeColor = self.lineKnockLayer.strokeColor = lineColor.CGColor;
-        self.fovLayer.strokeColor = ESPColor(@"FovColor", 1, 1, 1).CGColor;
-        CGMutablePathRef fovPath = CGPathCreateMutable();
         const float radius = AimSelection::Radius(vw, vh, fovPercent);
-        BOOL hasFov = RenderFOVCirclePath(fovPath, vw, vh, showFov && stats.inMatch, radius);
-        self.fovLayer.path = hasFov ? fovPath : nil;
-        CGPathRelease(fovPath);
+        if (showFov && stats.inMatch) {
+            if (!self.fovLayer.path || !CGSizeEqualToSize(self.lastFovSize, self.bounds.size) || self.lastFovRadius != radius) {
+                CGMutablePathRef fovPath = CGPathCreateMutable();
+                RenderFOVCirclePath(fovPath, vw, vh, YES, radius);
+                self.fovLayer.path = fovPath;
+                CGPathRelease(fovPath);
+                self.lastFovSize = self.bounds.size;
+                self.lastFovRadius = radius;
+            }
+        } else self.fovLayer.path = nil;
+        for (NSUInteger i = self.activeTextLayerCount; i < self.textLayerPool.count; ++i)
+            self.textLayerPool[i].hidden = YES;
 
         // Plain enemy count, with no icon or background.
         if (stats.inMatch && (isCount || isLine || isBox)) {
             int totalEnemies = stats.playerCount + stats.botCount;
 
-            UIFont *fontBasic = [UIFont systemFontOfSize:16.0f weight:UIFontWeightHeavy];
-            NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
-            attributes[NSFontAttributeName] = fontBasic;
-            attributes[NSForegroundColorAttributeName] = [UIColor colorWithRed:0.0f green:1.0f blue:0.4f alpha:1.0f];
-
-            NSString *countStr = [NSString stringWithFormat:@"ĐỊCH: %d", totalEnemies];
-            NSAttributedString *attrStr = [[NSAttributedString alloc] initWithString:countStr attributes:attributes];
-            self.statusLayer.string = attrStr;
+            if (self.lastEnemyCount != totalEnemies) {
+                self.statusLayer.string = [NSString stringWithFormat:@"ĐỊCH: %d", totalEnemies];
+                self.lastEnemyCount = totalEnemies;
+            }
 
             CGFloat bannerWidth = 120.0f;
             self.statusLayer.frame = CGRectMake(vw / 2.0f - (bannerWidth / 2.0f), 22.0f, bannerWidth, 22.0f);
@@ -626,10 +650,11 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && GetDataUInt16(p, 12) !
             }
         }
         if (visible || knocked) {
-            if (get_IsBot(pawn)) ++stats.botCount;
+            const bool bot = get_IsBot(pawn);
+            if (bot) ++stats.botCount;
             else ++stats.playerCount;
             _0x35572DA(buffers, ESPTextCallback, (__bridge void *)self,
-                       pawn, hp, distance, matrix, vw, vh, vpW, vpH);
+                       pawn, hp, distance, hip, knocked, bot, matrix, vw, vh, vpW, vpH);
         }
     }
     if (aiming && selection.target) {
