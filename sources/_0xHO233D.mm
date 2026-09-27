@@ -95,7 +95,7 @@
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     [self syncHUDState];
-    __weak typeof(self) weakSelf = self;
+    __weak _0xHOMEVC *weakSelf = self;
     self.stateTimer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer) {
         (void)timer; [weakSelf syncHUDState];
     }];
