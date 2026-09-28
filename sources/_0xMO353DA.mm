@@ -199,9 +199,9 @@
     self.builtWidth = [self contentWidth];
     self.panel.backgroundColor = UIColor.clearColor;
     self.glass.effect = [UIBlurEffect effectWithStyle:ESPDarkTheme() ? UIBlurEffectStyleSystemThinMaterialDark : UIBlurEffectStyleSystemThinMaterialLight];
-    self.shine.colors = @[(id)[UIColor colorWithWhite:1 alpha:0.16].CGColor,
-                         (id)[UIColor colorWithRed:0.15 green:0.12 blue:0.23 alpha:0.10].CGColor,
-                         (id)[UIColor colorWithWhite:1 alpha:0.05].CGColor];
+    self.shine.colors = @[(__bridge id)[UIColor colorWithWhite:1 alpha:0.16].CGColor,
+                         (__bridge id)[UIColor colorWithRed:0.15 green:0.12 blue:0.23 alpha:0.10].CGColor,
+                         (__bridge id)[UIColor colorWithWhite:1 alpha:0.05].CGColor];
     self.panel.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.42].CGColor;
     ((UILabel *)[self.header viewWithTag:10]).textColor = [self textColor];
     ((UILabel *)[self.header viewWithTag:11]).textColor = [self mutedColor];
@@ -335,7 +335,7 @@
         if (CGRectContainsPoint(self.scroll.bounds, [self.scroll convertPoint:point fromView:self.view])) {
             for (UIControl *c in self.controls) {
                 CGRect hit = c.bounds;
-                if ([c isKindOfClass:UISwitch.class]) hit = CGRectMake(-220, -8, 280, 48);
+                if ([c isKindOfClass:UISwitch.class]) hit = CGRectMake(-MAX(0, [self contentWidth] - 65), -8, [self contentWidth], 48);
                 if (CGRectContainsPoint(hit, [c convertPoint:point fromView:self.view])) { self.activeControl = c; break; }
             }
         }
