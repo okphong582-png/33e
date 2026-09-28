@@ -54,7 +54,7 @@
     self.card = [UIView new]; self.card.layer.cornerRadius = 24; self.card.layer.borderWidth = 1;
     [self.scroll addSubview:self.card];
     self.eyebrow = [self label:@"P E R S O N A L   A C C E S S" size:10 weight:UIFontWeightSemibold];
-    self.titleLabel = [self label:@"HOANGHA" size:32 weight:UIFontWeightBold];
+    self.titleLabel = [self label:@"Mizze" size:32 weight:UIFontWeightBold];
     self.subtitle = [self label:@"Nhập key để mở bảng điều khiển của bạn." size:13 weight:UIFontWeightRegular];
     self.subtitle.numberOfLines = 2;
     self.divider = [UIView new]; [self.card addSubview:self.divider];
@@ -75,7 +75,7 @@
     self.logoutButton = [self button:@"Đăng xuất" action:@selector(logout)];
     self.status = [self label:@"Kết nối mạng để xác thực key." size:12 weight:UIFontWeightRegular];
     self.status.numberOfLines = 0;
-    self.footer = [UILabel new]; self.footer.text = @"HOANGHA  /  CONTROL CENTER";
+    self.footer = [UILabel new]; self.footer.text = @"MIZZE  /  FREE FIRE";
     self.footer.font = [UIFont systemFontOfSize:9 weight:UIFontWeightMedium]; self.footer.textAlignment = NSTextAlignmentCenter;
     [self.scroll addSubview:self.footer];
     self.theme = [UISwitch new]; self.theme.on = ESPDarkTheme();
@@ -283,7 +283,7 @@
     if (generation != self.requestGeneration || !self.loggedIn || !self.starting) return;
     if (IsHUDEnabled()) {
         self.starting = NO; self.hadRunningHUD = YES;
-        self.status.text = @"Menu đang chạy. Chạm nút GIF nổi để mở.";
+        self.status.text = @"Menu đang chạy. Chạm nút Mizze để mở.";
         [self updateControls]; return;
     }
     if (attempt >= 200) {

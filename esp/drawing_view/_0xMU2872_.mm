@@ -8,7 +8,7 @@
 #import <ImageIO/ImageIO.h>
 #include "KabraxHide.h"
 
-static const CGFloat kMenuButtonSize = 48.0f;
+static const CGFloat kMenuButtonSize = 44.0f;
 
 @interface _0xB1872A2 ()
 @property (nonatomic, strong) UIButton *menuButton;
@@ -70,21 +70,24 @@ static const CGFloat kMenuButtonSize = 48.0f;
 - (void)setupMenuButton {
     _menuButton = [UIButton buttonWithType:UIButtonTypeCustom];
     _menuButton.frame = CGRectMake(20, 100, kMenuButtonSize, kMenuButtonSize);
-    _menuButton.backgroundColor = [UIColor colorWithRed:0.08f green:0.08f blue:0.16f alpha:0.85f];
+    _menuButton.backgroundColor = [UIColor colorWithRed:0.12 green:0.78 blue:0.36 alpha:0.95];
     _menuButton.layer.cornerRadius = kMenuButtonSize / 2.0f;
-    _menuButton.layer.borderWidth = 2.0f;
-    _menuButton.layer.borderColor = [UIColor colorWithRed:0.2f green:0.75f blue:1.0f alpha:0.9f].CGColor;
+    _menuButton.layer.borderWidth = 1.0f;
+    _menuButton.layer.borderColor = [UIColor colorWithRed:0.7 green:1 blue:0.78 alpha:0.75].CGColor;
     _menuButton.layer.shadowColor = [UIColor blackColor].CGColor;
     _menuButton.layer.shadowOffset = CGSizeMake(0, 2);
-    _menuButton.layer.shadowOpacity = 0.5f;
+    _menuButton.layer.shadowOpacity = 0;
     _menuButton.layer.shadowRadius = 4.0f;
     _menuButton.layer.zPosition = 999.0f;
     _menuButton.clipsToBounds = YES;
     
-    [_menuButton setTitle:KH_NS("hi") forState:UIControlStateNormal];
+    [_menuButton setTitle:@"Mizze" forState:UIControlStateNormal];
     [_menuButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    _menuButton.titleLabel.font = [UIFont systemFontOfSize:18.0f weight:UIFontWeightBold];
+    _menuButton.titleLabel.font = [UIFont systemFontOfSize:11.0f weight:UIFontWeightBold];
     _menuButton.titleLabel.textAlignment = NSTextAlignmentCenter;
+    [_menuButton addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dragNativeButton:)];
+    [_menuButton addGestureRecognizer:pan];
     
     [self addSubview:_menuButton];
     [self loadMenuButtonPosition];
@@ -98,6 +101,22 @@ static const CGFloat kMenuButtonSize = 48.0f;
         _menuButton.frame = CGRectMake(x, y, kMenuButtonSize, kMenuButtonSize);
     } else {
         _menuButton.frame = CGRectMake(20, 100, kMenuButtonSize, kMenuButtonSize);
+    }
+}
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *hit = [super hitTest:point withEvent:event];
+    if (hit == self || (_presentedModMenu && hit == _presentedModMenu.view)) return nil;
+    return hit;
+}
+- (void)dragNativeButton:(UIPanGestureRecognizer *)pan {
+    if (pan.state == UIGestureRecognizerStateBegan) _buttonDragStartCenter = _menuButton.center;
+    CGPoint delta = [pan translationInView:self];
+    _menuButton.center = CGPointMake(_buttonDragStartCenter.x + delta.x, _buttonDragStartCenter.y + delta.y);
+    [self setNeedsLayout]; [self layoutIfNeeded];
+    if (pan.state == UIGestureRecognizerStateEnded || pan.state == UIGestureRecognizerStateCancelled) {
+        [NSUserDefaults.standardUserDefaults setFloat:_menuButton.frame.origin.x forKey:@"FloatingMenuBtnX"];
+        [NSUserDefaults.standardUserDefaults setFloat:_menuButton.frame.origin.y forKey:@"FloatingMenuBtnY"];
     }
 }
 

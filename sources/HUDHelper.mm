@@ -149,7 +149,7 @@ void HUDMarkStarting(void) {
     [[NSString stringWithFormat:@"%d", getpid()] writeToFile:ROOT_PATH_NS(PID_PATH) atomically:YES encoding:NSUTF8StringEncoding error:nil];
     WriteStatus(@"starting", @"Đang xác thực phiên menu…", getpid());
 }
-void HUDMarkReady(void) { WriteStatus(@"ready", @"Nút GIF đang chạy. Chạm để mở menu.", getpid()); }
+void HUDMarkReady(void) { WriteStatus(@"ready", @"Nút Mizze đang chạy. Chạm để mở menu.", getpid()); }
 void HUDRecordFrame(double milliseconds, int players, NSString *aimState) {
     static NSTimeInterval nextSample = 0;
     const NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;

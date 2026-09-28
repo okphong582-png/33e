@@ -1,4 +1,5 @@
 #include "../Core/AimSelection.h"
+#include "../Core/AimPoint.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -702,13 +703,7 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         if (aiming && visible && !knocked) {
             Vector3 head = getPositionExt(getHead(pawn));
             if (isAimNeck) {
-                // Estimated neck from available bones; no unverified neck offset is used.
-                const Vector3 left = getPositionExt(getLeftShoulder(pawn));
-                const Vector3 right = getPositionExt(getRightShoulder(pawn));
-                if (!IsZeroVec(left) && !IsZeroVec(right) && !IsZeroVec(head) &&
-                    std::isfinite(left.x) && std::isfinite(left.y) && std::isfinite(left.z) &&
-                    std::isfinite(right.x) && std::isfinite(right.y) && std::isfinite(right.z))
-                    head = Vector3::Lerp((left + right) * 0.5f, head, 0.30f);
+                head = AimPoint::Neck(head, hip);
             }
             if (!IsZeroVec(head) && std::isfinite(head.x) && std::isfinite(head.y) && std::isfinite(head.z)) {
                 const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);

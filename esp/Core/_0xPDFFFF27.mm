@@ -9,6 +9,7 @@
 #import <mach/mach.h>
 #import <mach/task_info.h>
 #import <mach-o/dyld_images.h>
+#import <mach-o/dyld.h>
 #import <stdio.h>
 #import <stdlib.h>
 #import <string.h>
@@ -92,6 +93,27 @@ pid_t GetGameProcesspid(char *GameProcessName) {
 #pragma mark - Module Base (tự động tìm UnityFramework hoặc tên game)
 
 uintptr_t GetGameModule_Base(char *GameProcessName) {
+#ifdef MIZZE_INJECTED
+    // In-process builds must not depend on privileged process enumeration or
+    // task_for_pid. Own a send-right reference just like the external cache.
+    if (get_task == MACH_PORT_NULL) {
+        task_t ownTask = mach_task_self();
+        if (mach_port_mod_refs(ownTask, ownTask, MACH_PORT_RIGHT_SEND, 1) != KERN_SUCCESS) return 0;
+        get_task = ownTask;
+        cachedTaskPID = getpid();
+    }
+    if (cachedModuleBase) return cachedModuleBase;
+    const uint32_t imageCount = _dyld_image_count();
+    for (uint32_t index = 0; index < imageCount; ++index) {
+        const char *path = _dyld_get_image_name(index);
+        if (path && strstr(path, "/UnityFramework.framework/UnityFramework")) {
+            cachedModuleBase = (uintptr_t)_dyld_get_image_header(index);
+            return cachedModuleBase;
+        }
+    }
+    cachedModuleBase = (uintptr_t)_dyld_get_image_header(0);
+    return cachedModuleBase;
+#else
     pid_t pid = GetGameProcesspid(GameProcessName);
     if (pid == -1) {
         // A transient process-list failure must not discard a live task.
@@ -126,6 +148,7 @@ uintptr_t GetGameModule_Base(char *GameProcessName) {
     (void)picked; // tránh warning
     cachedModuleBase = base;
     return base;
+#endif
 }
 
 #pragma mark - Read (giữ nguyên)

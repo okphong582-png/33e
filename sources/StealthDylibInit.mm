@@ -12,6 +12,16 @@
 #import "../esp/drawing_view/menu.h"
 #import "../esp/drawing_view/ESPPrefs.h"
 #import "KabraxHide.h"
+#import "UIView+SecureView.h"
+
+@interface MizzeOverlayWindow : UIWindow
+@end
+@implementation MizzeOverlayWindow
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *hit = [super hitTest:point withEvent:event];
+    return (hit == self || hit == self.rootViewController.view) ? nil : hit;
+}
+@end
 
 namespace StealthAntiCheat {
 
@@ -66,9 +76,9 @@ static BOOL gMenuInitialized = NO;
 
 static void SetupInjectedOverlayMenu() {
     if (gMenuInitialized) return;
-    gMenuInitialized = YES;
 
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (gMenuInitialized) return;
         @try {
             UIWindow *targetKeyWindow = nil;
             if (@available(iOS 13.0, *)) {
@@ -86,25 +96,44 @@ static void SetupInjectedOverlayMenu() {
             if (!targetKeyWindow) {
                 targetKeyWindow = [UIApplication sharedApplication].keyWindow;
             }
+            if (!targetKeyWindow) {
+                static NSUInteger retries = 0;
+                if (++retries <= 15) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ SetupInjectedOverlayMenu(); });
+                return;
+            }
 
             gInjectedHUDDelegate = [[HUDMainApplicationDelegate alloc] init];
             
-            CGRect screenFrame = [UIScreen mainScreen].bounds;
-            HUDMainWindow *hudWindow = [[HUDMainWindow alloc] initWithFrame:screenFrame];
+            CGRect screenFrame = targetKeyWindow.bounds;
+            MizzeOverlayWindow *hudWindow;
+            if (@available(iOS 13.0, *)) {
+                hudWindow = targetKeyWindow.windowScene ? [[MizzeOverlayWindow alloc] initWithWindowScene:targetKeyWindow.windowScene] : [[MizzeOverlayWindow alloc] initWithFrame:screenFrame];
+            } else hudWindow = [[MizzeOverlayWindow alloc] initWithFrame:screenFrame];
+            hudWindow.frame = targetKeyWindow.frame;
             hudWindow.windowLevel = UIWindowLevelStatusBar + 100.0;
-            hudWindow.hidden = NO;
             hudWindow.userInteractionEnabled = YES;
             hudWindow.backgroundColor = [UIColor clearColor];
 
+            UIViewController *root = [UIViewController new];
+            root.view.backgroundColor = UIColor.clearColor;
+            hudWindow.rootViewController = root;
+            root.view.frame = hudWindow.bounds;
+            ESPSyncFromPrefs();
+            _0xDAB2826 *espView = [[_0xDAB2826 alloc] initWithFrame:root.view.bounds];
+            espView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            [espView hideViewFromCapture:ESPPrefsBool(@"AnLive", NO)];
+            [root.view addSubview:espView];
+
             _0xB1872A2 *menuOverlayView = [[_0xB1872A2 alloc] initWithFrame:screenFrame];
             menuOverlayView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            [hudWindow addSubview:menuOverlayView];
+            [menuOverlayView hideViewFromCapture:ESPPrefsBool(@"AnLive", NO)];
+            [root.view addSubview:menuOverlayView];
 
             [gInjectedHUDDelegate setValue:hudWindow forKey:@"window"];
             [gInjectedHUDDelegate setValue:menuOverlayView forKey:@"_menuView"];
 
-            // Load & sync ESP preferences
-            ESPSyncFromPrefs();
+            gMenuInitialized = YES;
+            hudWindow.hidden = NO;
         } @catch (NSException *ex) {
             // Silently handle exceptions in stealth mode
         }

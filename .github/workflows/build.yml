@@ -1,4 +1,4 @@
-name: Build Stealth Dylib & Injected IPA
+name: Build Mizze Dylib and TIPA
 
 on:
   push:
@@ -28,8 +28,12 @@ jobs:
           clang++ -std=c++17 -fobjc-arc -Wno-deprecated-declarations -I. -framework Foundation tests/license_restore_test.mm sources/LicenseSession.mm -o /tmp/license-restore-test
           /tmp/license-restore-test
   build:
-    name: Build Stealth Dylib & Injected Package
+    name: Build Mizze ${{ matrix.kind }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [dylib, tipa]
 
     steps:
       - name: Checkout Repository
@@ -51,6 +55,8 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror tests/aim_selection_test.cpp -o /tmp/aim-selection-test
           /tmp/aim-selection-test
+          g++ -std=c++17 -I. tests/aim_point_test.cpp -o /tmp/aim-point-test
+          /tmp/aim-point-test
 
       - name: Test overlay clipping
         run: |
@@ -72,15 +78,18 @@ jobs:
           g++ -std=c++17 -I. tests/offset_constants_test.cpp -o /tmp/offset-constants-test
           /tmp/offset-constants-test
 
-      - name: Build Stealth Dylib
+      - name: Build selected package
         run: |
-          make clean package FINALPACKAGE=1 FOR_RELEASE=1
+          make clean package BUILD_KIND=${{ matrix.kind }} FINALPACKAGE=1 FOR_RELEASE=1
 
       - name: Inject Dylib into IPA (If Available)
+        if: matrix.kind == 'dylib'
+        env:
+          IPA_URL: ${{ github.event.inputs.ipa_url }}
         run: |
-          if [ -n "${{ github.event.inputs.ipa_url }}" ]; then
+          if [ -n "$IPA_URL" ]; then
             echo "[*] Downloading IPA from URL..."
-            curl -L "${{ github.event.inputs.ipa_url }}" -o /tmp/input_game.ipa
+            curl --fail -L "$IPA_URL" -o /tmp/input_game.ipa
             python3 tools/inject_dylib.py /tmp/input_game.ipa packages/libsubsystem.dylib packages/com.dts.freefireth-1.132.1-Injected.ipa
           elif [ -f "com.dts.freefireth-1.132.1-Decrypted.ipa" ]; then
             python3 tools/inject_dylib.py com.dts.freefireth-1.132.1-Decrypted.ipa packages/libsubsystem.dylib packages/com.dts.freefireth-1.132.1-Injected.ipa
@@ -91,12 +100,12 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: iOSViet-Stealth-Builds
+          name: Mizze-${{ matrix.kind }}
           path: |
             packages/*.dylib
             packages/*.ipa
             packages/*.tipa
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
