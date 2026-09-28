@@ -42,6 +42,7 @@ bool isLine       = YES;
 bool isHeadRedDot = YES;
 bool isAimbotFire = YES;
 static bool isAimbotScope = YES;
+static bool isHipAlways = NO;
 static bool isAimNeck = NO;
 static bool showFov = YES;
 static float fovPercent = 40.0f;
@@ -66,6 +67,7 @@ void ESPSyncFromPrefs(void) {
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
     isAimbotFire = ESPPrefsBool(KH_NS("AimbotFire"), YES);
     isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
+    isHipAlways = ESPPrefsBool(@"AimHipAlways", NO);
     isAimNeck = ESPPrefsBool(@"AimNeck", NO);
     showFov = ESPPrefsBool(@"ShowFov", YES);
     fovPercent = ESPPrefsFloat(@"FovSize", 40);
@@ -674,11 +676,11 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     if (!matrix) return stats;
     stats.inMatch = true;
 
-    stats.firing = isAimbotFire && get_IsFiring(local);
-    stats.scoping = isAimbotScope && get_IsScoping(local);
+    stats.firing = get_IsFiring(local);
+    stats.scoping = get_IsScoping(local);
     const bool aiming = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
-        stats.firing, stats.scoping);
+        stats.firing, stats.scoping, isHipAlways);
     stats.aimState = aiming ? 2 : 1;
     AimSelection::Selection selection;
     selection.previous = sameMatch && sameLocal && aiming ? previousTarget : 0;
@@ -723,7 +725,7 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     if (aiming && selection.target && getAimVisibility(selection.target) &&
         get_CurHP(selection.target) > 0 && !get_IsKnockedDown(selection.target) &&
         AimSelection::Triggered(isAimbotFire, isAimbotScope,
-            isAimbotFire && get_IsFiring(local), isAimbotScope && get_IsScoping(local))) {
+            get_IsFiring(local), get_IsScoping(local), isHipAlways)) {
         const Vector3 direction = targetHead - myLoc;
         if (Vector3::SqrMagnitude(direction) > 0.0001f) {
             const Quaternion targetRotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));

@@ -223,7 +223,14 @@
     summary.textColor = [self mutedColor]; [section addSubview:summary]; [self.scroll addSubview:section];
     CGFloat y = 74;
     if (self.page == 0) {
-        y = [self toggle:@"Aim khi bắn" key:@"AimbotFire" fallback:YES y:y];
+        y = [self toggle:@"Aim không mở ngắm" key:@"AimbotFire" fallback:YES y:y];
+        UISegmentedControl *mode = [[UISegmentedControl alloc] initWithItems:@[@"Chỉ khi bắn", @"Luôn trong FOV"]];
+        mode.frame = CGRectMake(8, y, [self contentWidth] - 16, 34);
+        mode.tag = 102;
+        mode.selectedSegmentIndex = ESPPrefsBool(@"AimHipAlways", NO) ? 1 : 0;
+        [mode addTarget:self action:@selector(aimModeChanged:) forControlEvents:UIControlEventValueChanged];
+        [self.scroll addSubview:mode]; [self.controls addObject:mode]; y += 44;
+        y = [self note:@"Chỉ khi bắn: bắt đầu ghim khi bắn, ngừng khi nhả bắn. Luôn: ghim khi mục tiêu trong FOV." y:y];
         y = [self toggle:@"Aim khi mở ngắm" key:@"AimbotScope" fallback:YES y:y];
         y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:NO y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
@@ -287,6 +294,10 @@
 }
 - (void)boxStyleChanged:(UISegmentedControl *)sender {
     ESPPrefsSetBool(@"Box3D", sender.selectedSegmentIndex == 1);
+    ESPSyncFromPrefs();
+}
+- (void)aimModeChanged:(UISegmentedControl *)sender {
+    ESPPrefsSetBool(@"AimHipAlways", sender.selectedSegmentIndex == 1);
     ESPSyncFromPrefs();
 }
 - (void)updateSliderLabel:(UISlider *)sender {
@@ -368,6 +379,7 @@
             CGPoint p = [seg convertPoint:point fromView:self.view];
             seg.selectedSegmentIndex = MAX(0, MIN(seg.numberOfSegments - 1, (NSInteger)(p.x / (seg.bounds.size.width / seg.numberOfSegments))));
             if (seg.tag == 101) [self boxStyleChanged:seg];
+            else if (seg.tag == 102) [self aimModeChanged:seg];
             else [self colorTargetChanged:seg];
         } else if (activate && [control isKindOfClass:UIButton.class]) {
             if (control.tag >= 200 && control.tag < 204) [self changePage:(UIButton *)control];

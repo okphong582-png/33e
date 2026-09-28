@@ -139,7 +139,7 @@ bool get_IsFiring(uint64_t playerPawn) {
     if (!isVaildPtr(playerPawn)) return false;
     uint8_t firingByte = 0;
     if (!_read((long)(playerPawn + (uint64_t)kIsFiring), &firingByte, sizeof(firingByte))) return false;
-    return firingByte != 0;
+    return AimSelection::BooleanState(firingByte);
 }
 
 

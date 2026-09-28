@@ -12,6 +12,9 @@ inline float Radius(float width, float height, float percent) {
 inline bool Triggered(bool fireEnabled, bool scopeEnabled, bool firing, bool scoping) {
     return (fireEnabled && firing) || (scopeEnabled && scoping);
 }
+inline bool Triggered(bool enabled, bool scopeEnabled, bool firing, bool scoping, bool alwaysHip) {
+    return scoping ? scopeEnabled : (enabled && (alwaysHip || firing));
+}
 inline bool BooleanState(uint32_t raw) { return raw == 1; }
 // The existing data-pool scope value is a state, not a verified boolean field.
 inline bool ScopeState(uint32_t raw) { return raw != 0; }

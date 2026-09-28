@@ -5,6 +5,17 @@
 using AimSelection::Selection;
 int main() {
     using AimSelection::Triggered;
+    for (int enabled = 0; enabled < 2; ++enabled)
+    for (int scope = 0; scope < 2; ++scope)
+    for (int always = 0; always < 2; ++always) {
+        assert(Triggered(enabled, scope, false, false, always) == (enabled && always));
+        assert(Triggered(enabled, scope, true, false, always) == bool(enabled));
+        assert(Triggered(enabled, scope, false, true, always) == bool(scope));
+        assert(Triggered(enabled, scope, true, true, always) == bool(scope));
+    }
+    // Releasing fire must stop immediately; the next shot activates again.
+    for (bool firing : {false, true, true, false, true, false})
+        assert(Triggered(true, false, firing, false, false) == firing);
     assert(!AimSelection::BooleanState(0));
     assert(AimSelection::BooleanState(1));
     assert(!AimSelection::BooleanState(2));
