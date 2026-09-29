@@ -22,6 +22,7 @@ uint64_t getRoot(uint64_t player);
 uint64_t getLeftAnkle(uint64_t player);
 uint64_t getRightAnkle(uint64_t player);
 uint64_t getRightToeNode(uint64_t player);
+uint64_t getLeftToeNode(uint64_t player);
 uint64_t getLeftShoulder(uint64_t player);
 uint64_t getRightShoulder(uint64_t player);
 uint64_t getLeftElbow(uint64_t player);

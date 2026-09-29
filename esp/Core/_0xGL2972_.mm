@@ -160,6 +160,9 @@ uint64_t getRightAnkle(uint64_t player) {
 uint64_t getRightToeNode(uint64_t player) {
     return getBoneTrans(player, kRightToeNode);
 }
+uint64_t getLeftToeNode(uint64_t player) {
+    return getBoneTrans(player, kLeftToeNode);
+}
 
 uint64_t getLeftToeNode(uint64_t player) {
     return getBoneTrans(player, kLeftToeNode);

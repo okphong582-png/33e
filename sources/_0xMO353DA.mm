@@ -243,6 +243,7 @@
         y = [self toggle:@"Thanh máu" key:@"Health" fallback:YES y:y];
         y = [self toggle:@"Đường nối" key:@"Line" fallback:NO y:y];
         y = [self toggle:@"Khung người chơi" key:@"Box" fallback:YES y:y];
+        y = [self toggle:@"Xương người chơi" key:@"Skeleton" fallback:NO y:y];
         y = [self toggle:@"Điểm đánh dấu đầu" key:@"HeadRedDot" fallback:YES y:y];
         y = [self toggle:@"Khoảng cách" key:@"Dis" fallback:YES y:y];
         UILabel *boxLabel = [self label:@"Kiểu khung" frame:CGRectMake(8, y + 4, [self contentWidth] - 16, 20) size:12];

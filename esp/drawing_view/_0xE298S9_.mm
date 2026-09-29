@@ -34,6 +34,7 @@ float percent = 0.0f;
 // ✅ BIẾN ESP (GIỮ LẠI)
 // ============================================================
 bool isBox        = YES;
+bool isBone       = NO;
 bool isCount      = NO;
 bool isHealth     = YES;
 bool isName       = YES;
@@ -60,6 +61,7 @@ static bool gAimDiagnostics = false;
 // ============================================================
 void ESPSyncFromPrefs(void) {
     isBox        = ESPPrefsBool(KH_NS("Box"),        NO);
+    isBone       = ESPPrefsBool(@"Skeleton", NO);
     isHealth     = ESPPrefsBool(KH_NS("Health"),     NO);
     isName       = ESPPrefsBool(KH_NS("Name"),       NO);
     isDis        = ESPPrefsBool(KH_NS("Dis"),        NO);
@@ -78,7 +80,7 @@ void ESPSyncFromPrefs(void) {
     ++gRenderPrefsRevision;
 
     // ESP Count logic
-    if (isLine || isBox || isHealth) {
+    if (isLine || isBox || isHealth || isBone) {
         isCount = YES;
     } else {
         isCount = NO;
@@ -137,6 +139,7 @@ static inline void ESPReleasePath(CGMutablePathRef p) { if (p) CGPathRelease(p);
 
 static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
     ESPGeometryBuffers b{};
+    if (isBone) b.bonePath = CGPathCreateMutable();
     if (isBox) {
         b.boxBotPath = CGPathCreateMutable();
         b.boxPlayerPath = CGPathCreateMutable();
@@ -377,7 +380,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.fovLayer        = [self makeShapeLayer:[UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f] fill:nil lineWidth:1.0f zPos:0];
 
     self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.8f zPos:1];
-    self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:0.5f zPos:2];
+    self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:1.0f zPos:2];
     self.boxLayer          = [self makeShapeLayer:white   fill:nil     lineWidth:0.5f zPos:3];
     self.hpBackgroundLayer = [self makeShapeLayer:nil     fill:[UIColor colorWithWhite:0.02 alpha:0.9] lineWidth:0 zPos:4];
     self.hpFillLayer       = [self makeShapeLayer:nil     fill:hpGreen lineWidth:0    zPos:5];
@@ -733,15 +736,9 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
                 std::isfinite(targetRotation.z) && std::isfinite(targetRotation.w)) {
                 stats.aimState = 3;
                 
-                // Humanized Slerp Interpolation (Anti-Ban Telemetry Guard)
-                Quaternion currentRot = ReadAddr<Quaternion>(local + kAimRotation);
+                // Both trigger modes use the same target rotation. The trigger
+                // is checked again above so releasing fire stops further writes.
                 Quaternion finalRotation = targetRotation;
-                if (std::isfinite(currentRot.x) && std::isfinite(currentRot.y) &&
-                    std::isfinite(currentRot.z) && std::isfinite(currentRot.w) &&
-                    (currentRot.x != 0 || currentRot.y != 0 || currentRot.z != 0 || currentRot.w != 0)) {
-                    float smoothStep = 0.35f;
-                    finalRotation = Quaternion::Normalized(Quaternion::Slerp(currentRot, targetRotation, smoothStep));
-                }
                 
                 if (WriteAddr<Quaternion>(local + kAimRotation, finalRotation)) {
                     stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, finalRotation) ? 4 : 6;

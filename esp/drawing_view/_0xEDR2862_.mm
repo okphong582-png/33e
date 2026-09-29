@@ -26,6 +26,44 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
+static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,
+                        const Vector3 &head, const Vector3 &hip, float *matrix,
+                        float width, float height, float vpWidth, float vpHeight) {
+    if (!isBone || !buffers->bonePath) return;
+    // One bounded set of joint reads and one shared path for all players.
+    // Reuse the existing per-frame transform cache; no per-joint UI layers.
+    using Reader = uint64_t (*)(uint64_t);
+    const Reader readers[] = {getLeftShoulder, getRightShoulder,
+        getLeftElbow, getRightElbow, getLeftHand, getRightHand,
+        getLeftAnkle, getRightAnkle, getLeftToeNode, getRightToeNode};
+    Vector3 world[13] = {head, hip};
+    Vector3 screen[13]{};
+    bool valid[13]{};
+    for (int i = 0; i < 10; ++i) world[i + 2] = getPositionExt(readers[i](pawn));
+    // No verified neck/spine/knee nodes were supplied. Use the shoulder
+    // midpoint for the torso and direct hip-to-ankle segments for the legs.
+    for (int i = 0; i < 12; ++i)
+        valid[i] = ValidPosition(world[i]) && Vector3::Distance(world[i], hip) <= 3.0f;
+    if (valid[2] && valid[3]) {
+        world[12] = (world[2] + world[3]) * 0.5f;
+        valid[12] = true;
+    }
+    for (int i = 0; i < 13; ++i) {
+        if (!valid[i]) continue;
+        screen[i] = WorldToScreenLayer(world[i], matrix, vpWidth, vpHeight, width, height);
+        valid[i] = ValidPosition(screen[i]) && screen[i].z > 0.001f;
+    }
+    const int edges[][2] = {{0,12}, {12,1}, {2,3}, {2,4}, {4,6},
+        {3,5}, {5,7}, {1,8}, {1,9}, {8,10}, {9,11}};
+    for (const auto &edge : edges) {
+        const int a = edge[0], b = edge[1];
+        if (!valid[a] || !valid[b]) continue;
+        AddLine(buffers->bonePath, CGPointMake(screen[a].x, screen[a].y),
+                CGPointMake(screen[b].x, screen[b].y), width, height);
+        buffers->boneDirty = true;
+    }
+}
+
 BOOL RenderFOVCirclePath(CGMutablePathRef path, float w, float h, BOOL enabled, float radius) {
     if (!path || !enabled || radius <= 0 || w <= 0 || h <= 0) return NO;
     CGPathAddEllipseInRect(path, nullptr, CGRectMake(w / 2 - radius, h / 2 - radius, radius * 2, radius * 2));
@@ -38,7 +76,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
                float width, float height, float vpWidth, float vpHeight) {
     if (!buffers || !matrix || !isVaildPtr(pawn) || hp <= 0 ||
         !std::isfinite(distance) || distance > 150 || width <= 0 || height <= 0 ||
-        (!isBox && !isHeadRedDot && !isLine && !isHealth && !isDis && !isName)) return;
+        (!isBox && !isBone && !isHeadRedDot && !isLine && !isHealth && !isDis && !isName)) return;
 
     const Vector3 head = getPositionExt(getHead(pawn));
     if (!ValidPosition(head) || !ValidPosition(hip)) return;
@@ -47,6 +85,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     };
     const Vector3 headScreen = project(head);
     if (!ValidPosition(headScreen) || headScreen.z <= 0.001f) return;
+    AddSkeleton(buffers, pawn, head, hip, matrix, width, height, vpWidth, vpHeight);
     // Head markers and lines do not need ankle transforms or a projected box.
     if (!isBox && !isHealth && !isDis && !isName) {
         if (isHeadRedDot && headScreen.x >= 0 && headScreen.x <= width &&
