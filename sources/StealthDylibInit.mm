@@ -13,6 +13,7 @@
 #import "../esp/drawing_view/ESPPrefs.h"
 #import "KabraxHide.h"
 #import "UIView+SecureView.h"
+#import "InjectedLicenseController.h"
 
 @interface MizzeOverlayWindow : UIWindow
 @end
@@ -114,23 +115,13 @@ static void SetupInjectedOverlayMenu() {
             hudWindow.userInteractionEnabled = YES;
             hudWindow.backgroundColor = [UIColor clearColor];
 
-            UIViewController *root = [UIViewController new];
+            InjectedLicenseController *root = [InjectedLicenseController new];
+            root.gameWindow = targetKeyWindow;
             root.view.backgroundColor = UIColor.clearColor;
             hudWindow.rootViewController = root;
             root.view.frame = hudWindow.bounds;
-            ESPSyncFromPrefs();
-            _0xDAB2826 *espView = [[_0xDAB2826 alloc] initWithFrame:root.view.bounds];
-            espView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            [espView hideViewFromCapture:ESPPrefsBool(@"AnLive", NO)];
-            [root.view addSubview:espView];
-
-            _0xB1872A2 *menuOverlayView = [[_0xB1872A2 alloc] initWithFrame:screenFrame];
-            menuOverlayView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            [menuOverlayView hideViewFromCapture:ESPPrefsBool(@"AnLive", NO)];
-            [root.view addSubview:menuOverlayView];
 
             [gInjectedHUDDelegate setValue:hudWindow forKey:@"window"];
-            [gInjectedHUDDelegate setValue:menuOverlayView forKey:@"_menuView"];
 
             gMenuInitialized = YES;
             hudWindow.hidden = NO;

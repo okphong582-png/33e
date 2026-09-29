@@ -13,7 +13,8 @@ inline bool Triggered(bool fireEnabled, bool scopeEnabled, bool firing, bool sco
     return (fireEnabled && firing) || (scopeEnabled && scoping);
 }
 inline bool Triggered(bool enabled, bool scopeEnabled, bool firing, bool scoping, bool alwaysHip) {
-    return scoping ? scopeEnabled : (enabled && (alwaysHip || firing));
+    return (enabled && firing) || (scopeEnabled && scoping) ||
+           (enabled && alwaysHip && !scoping);
 }
 inline bool BooleanState(uint32_t raw) { return raw == 1; }
 // The existing data-pool scope value is a state, not a verified boolean field.

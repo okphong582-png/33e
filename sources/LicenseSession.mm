@@ -36,6 +36,10 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     if ((self = [super init])) {
         NSString *path = [NSBundle.mainBundle pathForResource:@"AuthConfig" ofType:@"plist"];
         self.config = (path ? [NSDictionary dictionaryWithContentsOfFile:path] : nil) ?: @{};
+#ifdef MIZZE_INJECTED
+        // The game bundle need not contain the companion app's resources.
+        self.config = @{@"DatabaseURL":@"https://appchatai-313e3-default-rtdb.firebaseio.com"};
+#endif
         self.completions = [NSMutableArray new];
         self.lastMessage = @"Vui lòng nhập key.";
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
@@ -63,11 +67,7 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
 }
 
 - (BOOL)authorized {
-#ifdef MIZZE_INJECTED
-    return YES;
-#else
     return LicenseSessionPolicy::Authorized(self.validUntilUptime, NSProcessInfo.processInfo.systemUptime);
-#endif
 }
 
 - (BOOL)hasSavedKey {

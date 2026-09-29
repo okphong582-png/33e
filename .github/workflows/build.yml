@@ -27,6 +27,8 @@ jobs:
         run: |
           clang++ -std=c++17 -fobjc-arc -Wno-deprecated-declarations -I. -framework Foundation tests/license_restore_test.mm sources/LicenseSession.mm -o /tmp/license-restore-test
           /tmp/license-restore-test
+          clang++ -std=c++17 -fobjc-arc -DMIZZE_INJECTED=1 -Wno-deprecated-declarations -I. -framework Foundation tests/license_restore_test.mm sources/LicenseSession.mm -o /tmp/license-injected-test
+          /tmp/license-injected-test
   build:
     name: Build Mizze ${{ matrix.kind }}
     runs-on: ubuntu-latest
@@ -48,6 +50,7 @@ jobs:
 
       - name: Test license lease and retry policy
         run: |
+          python3 tests/ipa_replacement_test.py
           g++ -std=c++17 -Wall -Wextra -Werror tests/license_session_policy_test.cpp -o /tmp/license-session-policy-test
           /tmp/license-session-policy-test
 

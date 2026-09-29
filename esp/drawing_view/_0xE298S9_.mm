@@ -114,6 +114,7 @@ typedef struct {
     int botCount;
     bool inMatch;
     bool firing;
+    int firingRaw;
     bool scoping;
     int aimState;
 } ESPFrameStats;
@@ -585,8 +586,8 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (!gAimDiagnostics || now < self.nextAimDiagnosticUpdate) return;
     self.nextAimDiagnosticUpdate = now + 0.5;
     self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
-    self.aimDiagnosticLayer.string = [NSString stringWithFormat:@"Bắn:%d  Ngắm:%d · %@",
-        stats.firing, stats.scoping, AimStateDescription(stats.aimState)];
+    self.aimDiagnosticLayer.string = [NSString stringWithFormat:@"Bắn:%d [0x770:%d]  Ngắm:%d · %@",
+        stats.firing, stats.firingRaw, stats.scoping, AimStateDescription(stats.aimState)];
 }
 
 - (void)clearAllContent {
@@ -679,7 +680,8 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     if (!matrix) return stats;
     stats.inMatch = true;
 
-    stats.firing = get_IsFiring(local);
+    stats.firingRaw = get_FiringByte(local);
+    stats.firing = stats.firingRaw == 1;
     stats.scoping = get_IsScoping(local);
     const bool aiming = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
