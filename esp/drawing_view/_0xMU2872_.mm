@@ -63,6 +63,8 @@ static const CGFloat kMenuButtonSize = 44.0f;
                                                    object:nil];
 
         [self setupMenuButton];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(matchReadyChanged) name:ESPMatchReadyChangedNotification object:nil];
+        [self matchReadyChanged];
     }
     return self;
 }
@@ -91,6 +93,10 @@ static const CGFloat kMenuButtonSize = 44.0f;
     
     [self addSubview:_menuButton];
     [self loadMenuButtonPosition];
+}
+- (void)matchReadyChanged {
+    self.hidden = !ESPMatchReady();
+    if (self.hidden) { [self hideMenu]; [self resetTouchState]; }
 }
 
 - (void)loadMenuButtonPosition {
@@ -133,8 +139,10 @@ static const CGFloat kMenuButtonSize = 44.0f;
 }
 
 - (void)presentModMenu {
+    if (!ESPMatchReady()) return;
     if (self->_presentedModMenu) return;
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!ESPMatchReady()) return;
         if (self->_presentedModMenu) return;
         
         UIViewController *parentVC = [self viewControllerForView:self];
@@ -215,6 +223,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
 }
 
 - (BOOL)handleTouchAtWindowPoint:(CGPoint)windowPoint phase:(UITouchPhase)phase pointerId:(NSInteger)pointerId {
+    if (!ESPMatchReady() || self.hidden) return NO;
     CGPoint local = [self convertPoint:windowPoint fromView:self.window];
     const CGFloat kInset = 12.0f;
     CGRect btnHit = CGRectInset(_menuButton.frame, -kInset, -kInset);

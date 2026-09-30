@@ -142,7 +142,7 @@ int get_FiringByte(uint64_t playerPawn) {
     return firingByte;
 }
 bool get_IsFiring(uint64_t playerPawn) {
-    return get_FiringByte(playerPawn) == 1;
+    return AimSelection::FiringState(get_FiringByte(playerPawn));
 }
 
 

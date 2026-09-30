@@ -113,6 +113,8 @@ void _0x35572DA(
 );
 
 void ESPSyncFromPrefs(void);
+BOOL ESPMatchReady(void);
+FOUNDATION_EXPORT NSNotificationName const ESPMatchReadyChangedNotification;
 
 @interface _0xDAB2826 : UIView
 - (instancetype)initWithFrame:(CGRect)frame;

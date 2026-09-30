@@ -17,6 +17,8 @@ inline bool Triggered(bool enabled, bool scopeEnabled, bool firing, bool scoping
            (enabled && alwaysHip && !scoping);
 }
 inline bool BooleanState(uint32_t raw) { return raw == 1; }
+// Caller reads a byte; -1 represents a failed read, not an active flag.
+inline bool FiringState(int raw) { return raw > 0 && raw <= 255; }
 // The existing data-pool scope value is a state, not a verified boolean field.
 inline bool ScopeState(uint32_t raw) { return raw != 0; }
 

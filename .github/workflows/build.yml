@@ -56,6 +56,8 @@ jobs:
 
       - name: Test aim selection
         run: |
+          g++ -std=c++17 -Wall -Wextra -Werror tests/match_delay_test.cpp -o /tmp/match-delay-test
+          /tmp/match-delay-test
           g++ -std=c++17 -Wall -Wextra -Werror tests/aim_selection_test.cpp -o /tmp/aim-selection-test
           /tmp/aim-selection-test
           g++ -std=c++17 -I. tests/aim_point_test.cpp -o /tmp/aim-point-test

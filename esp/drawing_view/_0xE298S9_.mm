@@ -1,5 +1,6 @@
 #include "../Core/AimSelection.h"
 #include "../Core/AimPoint.h"
+#include "../Core/MatchDelay.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -28,6 +29,15 @@
 
 
 uint64_t Moudule_Base = -1;
+static MatchDelay gMatchDelay;
+static BOOL gMatchReady = NO;
+NSNotificationName const ESPMatchReadyChangedNotification = @"ESPMatchReadyChanged";
+BOOL ESPMatchReady(void) { return gMatchReady; }
+static void SetMatchReady(BOOL ready) {
+    if (gMatchReady == ready) return;
+    gMatchReady = ready;
+    [NSNotificationCenter.defaultCenter postNotificationName:ESPMatchReadyChangedNotification object:nil];
+}
 float percent = 0.0f;
 
 // ============================================================
@@ -534,7 +544,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         ESPGeometryBuffersRelease(&buffers);
 
         const float radius = AimSelection::Radius(vw, vh, fovPercent);
-        if (showFov && stats.inMatch) {
+        if (showFov && stats.inMatch && ESPMatchReady()) {
             if (!self.fovLayer.path || !CGSizeEqualToSize(self.lastFovSize, self.bounds.size) || self.lastFovRadius != radius) {
                 CGMutablePathRef fovPath = CGPathCreateMutable();
                 RenderFOVCirclePath(fovPath, vw, vh, YES, radius);
@@ -548,7 +558,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             self.textLayerPool[i].hidden = YES;
 
         // Plain enemy count, with no icon or background.
-        if (stats.inMatch && (isCount || isLine || isBox)) {
+        if (stats.inMatch && ESPMatchReady() && (isCount || isLine || isBox)) {
             int totalEnemies = stats.playerCount + stats.botCount;
 
             if (self.lastEnemyCount != totalEnemies) {
@@ -582,8 +592,8 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)updateAimDiagnostic:(ESPFrameStats)stats now:(CFTimeInterval)now {
-    self.aimDiagnosticLayer.hidden = !gAimDiagnostics;
-    if (!gAimDiagnostics || now < self.nextAimDiagnosticUpdate) return;
+    self.aimDiagnosticLayer.hidden = !gAimDiagnostics || !ESPMatchReady();
+    if (!gAimDiagnostics || !ESPMatchReady() || now < self.nextAimDiagnosticUpdate) return;
     self.nextAimDiagnosticUpdate = now + 0.5;
     self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
     self.aimDiagnosticLayer.string = [NSString stringWithFormat:@"Bắn:%d [0x770:%d]  Ngắm:%d · %@",
@@ -591,6 +601,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)clearAllContent {
+    gMatchDelay.reset(); SetMatchReady(NO);
     gAimLockTarget = 0;
     self.statusLayer.hidden = YES;
     self.aimDiagnosticLayer.hidden = YES;
@@ -679,9 +690,11 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     float *matrix = GetViewMatrix(cachedCamera);
     if (!matrix) return stats;
     stats.inMatch = true;
+    SetMatchReady(gMatchDelay.update(match, CACurrentMediaTime()));
+    if (!ESPMatchReady()) return stats;
 
     stats.firingRaw = get_FiringByte(local);
-    stats.firing = stats.firingRaw == 1;
+    stats.firing = AimSelection::FiringState(stats.firingRaw);
     stats.scoping = get_IsScoping(local);
     const bool aiming = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
