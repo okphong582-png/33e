@@ -223,18 +223,18 @@
     summary.textColor = [self mutedColor]; [section addSubview:summary]; [self.scroll addSubview:section];
     CGFloat y = 74;
     if (self.page == 0) {
-        y = [self toggle:@"Aim không mở ngắm" key:@"AimbotFire" fallback:YES y:y];
+        y = [self toggle:@"Aim thường" key:@"AimbotFire" fallback:YES y:y];
         UISegmentedControl *mode = [[UISegmentedControl alloc] initWithItems:@[@"Chỉ khi bắn", @"Luôn trong FOV"]];
         mode.frame = CGRectMake(8, y, [self contentWidth] - 16, 34);
         mode.tag = 102;
         mode.selectedSegmentIndex = ESPPrefsBool(@"AimHipAlways", NO) ? 1 : 0;
         [mode addTarget:self action:@selector(aimModeChanged:) forControlEvents:UIControlEventValueChanged];
         [self.scroll addSubview:mode]; [self.controls addObject:mode]; y += 44;
-        y = [self note:@"Chỉ khi bắn: bắt đầu ghim khi bắn, ngừng khi nhả bắn. Luôn: ghim khi mục tiêu trong FOV." y:y];
+        y = [self note:@"Chỉ khi bắn: nhả bắn là dừng, kể cả đang mở ngắm. Luôn: ghim trong FOV. Tắt Aim thường để dùng riêng Aim khi mở ngắm." y:y];
         y = [self toggle:@"Aim khi mở ngắm" key:@"AimbotScope" fallback:YES y:y];
         y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:NO y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
-        y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:150 fallback:40 y:y + 6];
+        y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:48 fallback:40 y:y + 6];
         y = [self note:@"Chỉ aim khi điểm ngắm nằm trong vòng. Ẩn vòng vẫn giữ giới hạn FOV." y:y];
         y = [self note:@"Aim cổ lấy điểm sát dưới đầu. Tắt để aim đầu." y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];

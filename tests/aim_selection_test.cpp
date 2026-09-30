@@ -7,7 +7,7 @@ int main() {
     using AimSelection::Triggered;
     for (int raw : {0, 1, 2, 255, 0, -1, 0, 1, 0}) {
         bool firing = AimSelection::FiringState(raw);
-        assert(firing == (raw > 0));
+        assert(firing == (raw == 1));
         assert(Triggered(true, false, firing, false, false) == firing);
     }
     for (int enabled = 0; enabled < 2; ++enabled)
@@ -15,7 +15,7 @@ int main() {
     for (int always = 0; always < 2; ++always) {
         assert(Triggered(enabled, scope, false, false, always) == (enabled && always));
         assert(Triggered(enabled, scope, true, false, always) == bool(enabled));
-        assert(Triggered(enabled, scope, false, true, always) == bool(scope));
+        assert(Triggered(enabled, scope, false, true, always) == bool(enabled ? always : scope));
         assert(Triggered(enabled, scope, true, true, always) == bool(enabled || scope));
     }
     // Releasing fire must stop immediately; the next shot activates again.
@@ -24,6 +24,10 @@ int main() {
     // Scope state must not suppress fire activation when scope aim is disabled.
     for (bool firing : {false, true, true, false, true, false})
         assert(Triggered(true, false, firing, true, false) == firing);
+    // Default scope toggle and even a stuck scope state cannot turn Only Shot into Always.
+    for (bool scoping : {false, true})
+    for (int raw : {-1, 0, 1, 2, 255, 1, 0})
+        assert(Triggered(true, true, AimSelection::FiringState(raw), scoping, false) == (raw == 1));
     assert(!AimSelection::BooleanState(0));
     assert(AimSelection::BooleanState(1));
     assert(!AimSelection::BooleanState(2));
@@ -64,7 +68,9 @@ int main() {
     assert(shrink.target == 0);
     assert(AimSelection::Radius(1000, 500, 40) == 200);
     assert(AimSelection::Radius(500, 1000, 40) == 200);
-    assert(AimSelection::Radius(1000, 500, 150) == 750);
+    assert(AimSelection::Radius(1000, 500, 150) == 240);
+    assert(AimSelection::Radius(500, 1000, 150) == 240);
+    assert(AimSelection::Radius(500, 500, INFINITY) == 200);
     Selection outOfRange; outOfRange.previous = 1;
     add(outOfRange, 1, 651); add(outOfRange, 2, 620);
     assert(outOfRange.target == 0);

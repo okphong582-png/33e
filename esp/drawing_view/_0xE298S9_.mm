@@ -386,7 +386,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.boxBotLayer     = [self makeShapeLayer:yellow fill:nil lineWidth:1.0f zPos:3];
     self.boxPlayerLayer  = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:3];
 
-    self.fovLayer        = [self makeShapeLayer:[UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f] fill:nil lineWidth:1.0f zPos:0];
+    self.fovLayer        = [self makeShapeLayer:[UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f] fill:nil lineWidth:1.5f zPos:7];
 
     self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.8f zPos:1];
     self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:1.0f zPos:2];
@@ -487,6 +487,19 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     else self.displayLink.preferredFramesPerSecond = (NSInteger)fps;
 }
 
+- (void)updateFovCircle {
+    const CGFloat vw = self.bounds.size.width, vh = self.bounds.size.height;
+    if (!showFov || vw <= 0 || vh <= 0) { self.fovLayer.path = nil; return; }
+    const float radius = AimSelection::Radius(vw, vh, fovPercent);
+    if (self.fovLayer.path && CGSizeEqualToSize(self.lastFovSize, self.bounds.size) && self.lastFovRadius == radius) return;
+    CGMutablePathRef path = CGPathCreateMutable();
+    RenderFOVCirclePath(path, vw, vh, YES, radius);
+    self.fovLayer.path = path;
+    CGPathRelease(path);
+    self.lastFovSize = self.bounds.size;
+    self.lastFovRadius = radius;
+}
+
 - (void)updateFrame {
     if (!self.window) return;
     if (![LicenseSession shared].authorized) { [self clearAllContent]; return; }
@@ -507,6 +520,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         [self applyRenderPreferences];
         if (!isVaildPtr(Moudule_Base)) {
             [self clearAllContent];
+            [self updateFovCircle];
             [self updateAimDiagnostic:(ESPFrameStats){} now:now];
             [CATransaction commit];
             return;
@@ -541,17 +555,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         ApplyPath(self.hpHighlightLayer, buffers.hpHighlightPath, buffers.hpHighlightDirty);
         ESPGeometryBuffersRelease(&buffers);
 
-        const float radius = AimSelection::Radius(vw, vh, fovPercent);
-        if (showFov && stats.inMatch && ESPMatchReady()) {
-            if (!self.fovLayer.path || !CGSizeEqualToSize(self.lastFovSize, self.bounds.size) || self.lastFovRadius != radius) {
-                CGMutablePathRef fovPath = CGPathCreateMutable();
-                RenderFOVCirclePath(fovPath, vw, vh, YES, radius);
-                self.fovLayer.path = fovPath;
-                CGPathRelease(fovPath);
-                self.lastFovSize = self.bounds.size;
-                self.lastFovRadius = radius;
-            }
-        } else self.fovLayer.path = nil;
         for (NSUInteger i = self.activeTextLayerCount; i < self.textLayerPool.count; ++i)
             self.textLayerPool[i].hidden = YES;
 
@@ -578,6 +581,8 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             [self clearAllContent];
         }
 
+        // FOV is a screen-space setting and does not depend on successful game reads.
+        [self updateFovCircle];
         [self updateAimDiagnostic:stats now:now];
         [CATransaction commit];
         // Leave time for touch handling and license callbacks after expensive

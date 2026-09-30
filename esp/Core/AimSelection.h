@@ -6,19 +6,21 @@
 namespace AimSelection {
 inline float Radius(float width, float height, float percent) {
     if (!std::isfinite(percent)) percent = 40;
-    percent = std::fmax(5.0f, std::fmin(150.0f, percent));
+    // Keep the complete circle visible, including after loading oversized old settings.
+    percent = std::fmax(5.0f, std::fmin(48.0f, percent));
     return std::fmin(width, height) * percent / 100.0f;
 }
 inline bool Triggered(bool fireEnabled, bool scopeEnabled, bool firing, bool scoping) {
     return (fireEnabled && firing) || (scopeEnabled && scoping);
 }
 inline bool Triggered(bool enabled, bool scopeEnabled, bool firing, bool scoping, bool alwaysHip) {
-    return (enabled && firing) || (scopeEnabled && scoping) ||
-           (enabled && alwaysHip && !scoping);
+    // An explicitly selected fire-only mode must never be bypassed by scope state.
+    if (enabled) return alwaysHip || firing;
+    return scopeEnabled && scoping;
 }
 inline bool BooleanState(uint32_t raw) { return raw == 1; }
 // Caller reads a byte; -1 represents a failed read, not an active flag.
-inline bool FiringState(int raw) { return raw > 0 && raw <= 255; }
+inline bool FiringState(int raw) { return raw == 1; }
 // The existing data-pool scope value is a state, not a verified boolean field.
 inline bool ScopeState(uint32_t raw) { return raw != 0; }
 
