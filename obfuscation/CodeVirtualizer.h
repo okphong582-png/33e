@@ -25,17 +25,17 @@
 #include "KabraxHide.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define CV_SECTION    __attribute__((section("__CV,__cv_text")))
-  #define CV_NOINLINE   __attribute__((noinline))
-  #define CV_HIDDEN     __attribute__((visibility("hidden")))
-  #define CV_USED       __attribute__((used))
-  #define CV_INLINE     inline __attribute__((always_inline))
+  #define CVIRT_SECTION    __attribute__((section("__CV,__cv_text")))
+  #define CVIRT_NOINLINE   __attribute__((noinline))
+  #define CVIRT_HIDDEN     __attribute__((visibility("hidden")))
+  #define CVIRT_USED       __attribute__((used))
+  #define CVIRT_INLINE     inline __attribute__((always_inline))
 #else
-  #define CV_SECTION
-  #define CV_NOINLINE
-  #define CV_HIDDEN
-  #define CV_USED
-  #define CV_INLINE     inline
+  #define CVIRT_SECTION
+  #define CVIRT_NOINLINE
+  #define CVIRT_HIDDEN
+  #define CVIRT_USED
+  #define CVIRT_INLINE     inline
 #endif
 
 namespace _cv_ {
@@ -48,7 +48,7 @@ static constexpr uint64_t _cv_seed() {
            ((__TIME__[6]-'0')*10ULL)    + (__TIME__[7]-'0');
 }
 
-static constexpr uint64_t CV_SEED = _cv_seed();
+static constexpr uint64_t CVIRT_SEED = _cv_seed();
 
 constexpr uint64_t _cv_mix(uint64_t a, uint64_t b) {
     uint64_t h = a ^ (b * 0x9E3779B97F4A7C15ULL);
@@ -61,27 +61,27 @@ constexpr uint64_t _cv_mix(uint64_t a, uint64_t b) {
 
 // Opcode table – remapped per build
 enum CVOpcode : uint8_t {
-    CV_NOP      = (uint8_t)(_cv_mix(CV_SEED, 0)  & 0xFF),
-    CV_LOAD     = (uint8_t)(_cv_mix(CV_SEED, 1)  & 0xFF),
-    CV_STORE    = (uint8_t)(_cv_mix(CV_SEED, 2)  & 0xFF),
-    CV_XOR      = (uint8_t)(_cv_mix(CV_SEED, 3)  & 0xFF),
-    CV_ADD      = (uint8_t)(_cv_mix(CV_SEED, 4)  & 0xFF),
-    CV_SUB      = (uint8_t)(_cv_mix(CV_SEED, 5)  & 0xFF),
-    CV_ROT      = (uint8_t)(_cv_mix(CV_SEED, 6)  & 0xFF),
-    CV_JMP      = (uint8_t)(_cv_mix(CV_SEED, 7)  & 0xFF),
-    CV_JZ       = (uint8_t)(_cv_mix(CV_SEED, 8)  & 0xFF),
-    CV_CMP      = (uint8_t)(_cv_mix(CV_SEED, 9)  & 0xFF),
-    CV_CALL     = (uint8_t)(_cv_mix(CV_SEED, 10) & 0xFF),
-    CV_RET      = (uint8_t)(_cv_mix(CV_SEED, 11) & 0xFF),
-    CV_MUL      = (uint8_t)(_cv_mix(CV_SEED, 12) & 0xFF),
-    CV_NOT      = (uint8_t)(_cv_mix(CV_SEED, 13) & 0xFF),
-    CV_AND      = (uint8_t)(_cv_mix(CV_SEED, 14) & 0xFF),
-    CV_OR       = (uint8_t)(_cv_mix(CV_SEED, 15) & 0xFF),
-    CV_SHL      = (uint8_t)(_cv_mix(CV_SEED, 16) & 0xFF),
-    CV_SHR      = (uint8_t)(_cv_mix(CV_SEED, 17) & 0xFF),
-    CV_PUSH     = (uint8_t)(_cv_mix(CV_SEED, 18) & 0xFF),
-    CV_POP      = (uint8_t)(_cv_mix(CV_SEED, 19) & 0xFF),
-    CV_HALT     = (uint8_t)(_cv_mix(CV_SEED, 20) & 0xFF),
+    CVIRT_NOP      = (uint8_t)(_cv_mix(CVIRT_SEED, 0)  & 0xFF),
+    CVIRT_LOAD     = (uint8_t)(_cv_mix(CVIRT_SEED, 1)  & 0xFF),
+    CVIRT_STORE    = (uint8_t)(_cv_mix(CVIRT_SEED, 2)  & 0xFF),
+    CVIRT_XOR      = (uint8_t)(_cv_mix(CVIRT_SEED, 3)  & 0xFF),
+    CVIRT_ADD      = (uint8_t)(_cv_mix(CVIRT_SEED, 4)  & 0xFF),
+    CVIRT_SUB      = (uint8_t)(_cv_mix(CVIRT_SEED, 5)  & 0xFF),
+    CVIRT_ROT      = (uint8_t)(_cv_mix(CVIRT_SEED, 6)  & 0xFF),
+    CVIRT_JMP      = (uint8_t)(_cv_mix(CVIRT_SEED, 7)  & 0xFF),
+    CVIRT_JZ       = (uint8_t)(_cv_mix(CVIRT_SEED, 8)  & 0xFF),
+    CVIRT_CMP      = (uint8_t)(_cv_mix(CVIRT_SEED, 9)  & 0xFF),
+    CVIRT_CALL     = (uint8_t)(_cv_mix(CVIRT_SEED, 10) & 0xFF),
+    CVIRT_RET      = (uint8_t)(_cv_mix(CVIRT_SEED, 11) & 0xFF),
+    CVIRT_MUL      = (uint8_t)(_cv_mix(CVIRT_SEED, 12) & 0xFF),
+    CVIRT_NOT      = (uint8_t)(_cv_mix(CVIRT_SEED, 13) & 0xFF),
+    CVIRT_AND      = (uint8_t)(_cv_mix(CVIRT_SEED, 14) & 0xFF),
+    CVIRT_OR       = (uint8_t)(_cv_mix(CVIRT_SEED, 15) & 0xFF),
+    CVIRT_SHL      = (uint8_t)(_cv_mix(CVIRT_SEED, 16) & 0xFF),
+    CVIRT_SHR      = (uint8_t)(_cv_mix(CVIRT_SEED, 17) & 0xFF),
+    CVIRT_PUSH     = (uint8_t)(_cv_mix(CVIRT_SEED, 18) & 0xFF),
+    CVIRT_POP      = (uint8_t)(_cv_mix(CVIRT_SEED, 19) & 0xFF),
+    CVIRT_HALT     = (uint8_t)(_cv_mix(CVIRT_SEED, 20) & 0xFF),
 };
 
 // ─── Virtual Machine State ────────────────────────────────────
@@ -95,33 +95,33 @@ struct CVMState {
 };
 
 // ─── Bytecode encryption key (per-build) ──────────────────────
-static constexpr uint8_t CV_BYTECODE_KEY  = (uint8_t)(_cv_mix(CV_SEED, 100) & 0xFF);
-static constexpr uint8_t CV_BYTECODE_KEY2 = (uint8_t)(_cv_mix(CV_SEED, 101) & 0xFF);
-static constexpr uint8_t CV_BYTECODE_ROT  = (uint8_t)((_cv_mix(CV_SEED, 102) % 7) + 1);
+static constexpr uint8_t CVIRT_BYTECODE_KEY  = (uint8_t)(_cv_mix(CVIRT_SEED, 100) & 0xFF);
+static constexpr uint8_t CVIRT_BYTECODE_KEY2 = (uint8_t)(_cv_mix(CVIRT_SEED, 101) & 0xFF);
+static constexpr uint8_t CVIRT_BYTECODE_ROT  = (uint8_t)((_cv_mix(CVIRT_SEED, 102) % 7) + 1);
 
 // ─── Bytecode Encryptor (compile-time) ────────────────────────
 constexpr uint8_t cv_encrypt_byte(uint8_t b, size_t idx) {
     uint8_t t = b;
-    t ^= CV_BYTECODE_KEY;
+    t ^= CVIRT_BYTECODE_KEY;
     t = (uint8_t)(t + (uint8_t)(idx * 7));
-    t ^= CV_BYTECODE_KEY2;
-    t = (uint8_t)((t << CV_BYTECODE_ROT) | (t >> (8 - CV_BYTECODE_ROT)));
+    t ^= CVIRT_BYTECODE_KEY2;
+    t = (uint8_t)((t << CVIRT_BYTECODE_ROT) | (t >> (8 - CVIRT_BYTECODE_ROT)));
     return t;
 }
 
 // ─── Bytecode Decryptor (runtime) ─────────────────────────────
-CV_NOINLINE CV_HIDDEN CV_SECTION
+CVIRT_NOINLINE CVIRT_HIDDEN CVIRT_SECTION
 static uint8_t cv_decrypt_byte(uint8_t b, size_t idx) {
     volatile uint8_t t = b;
-    t = (uint8_t)((t >> CV_BYTECODE_ROT) | (t << (8 - CV_BYTECODE_ROT)));
-    t ^= CV_BYTECODE_KEY2;
+    t = (uint8_t)((t >> CVIRT_BYTECODE_ROT) | (t << (8 - CVIRT_BYTECODE_ROT)));
+    t ^= CVIRT_BYTECODE_KEY2;
     t = (uint8_t)(t - (uint8_t)(idx * 7));
-    t ^= CV_BYTECODE_KEY;
+    t ^= CVIRT_BYTECODE_KEY;
     return t;
 }
 
 // ─── VM Interpreter (placed in __CV segment) ──────────────────
-CV_NOINLINE CV_HIDDEN CV_SECTION
+CVIRT_NOINLINE CVIRT_HIDDEN CVIRT_SECTION
 static uint64_t cv_execute(const uint8_t* bytecode, size_t len,
                            uint64_t arg0 = 0, uint64_t arg1 = 0,
                            uint64_t arg2 = 0, uint64_t arg3 = 0) {
@@ -149,121 +149,121 @@ static uint64_t cv_execute(const uint8_t* bytecode, size_t len,
         // Junk computation to confuse pattern matching
         vm.junk = (vm.junk * 0x5DEECE66DULL + 0xBULL) ^ raw;
 
-        if (raw == CV_NOP) {
+        if (raw == CVIRT_NOP) {
             vm.junk ^= vm.regs[0];
             continue;
         }
-        else if (raw == CV_LOAD && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_LOAD && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t val = cv_decrypt_byte(bytecode[vm.ip], vm.ip);
             vm.ip++;
             vm.regs[dst] = val;
         }
-        else if (raw == CV_STORE && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_STORE && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] = vm.regs[src];
         }
-        else if (raw == CV_XOR && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_XOR && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] ^= vm.regs[src];
         }
-        else if (raw == CV_ADD && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_ADD && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] += vm.regs[src];
         }
-        else if (raw == CV_SUB && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_SUB && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] -= vm.regs[src];
         }
-        else if (raw == CV_ROT && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_ROT && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t bits = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x3F;
             vm.ip++;
             vm.regs[dst] = (vm.regs[dst] << bits) | (vm.regs[dst] >> (64 - bits));
         }
-        else if (raw == CV_MUL && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_MUL && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] *= vm.regs[src];
         }
-        else if (raw == CV_NOT && vm.ip + 1 <= len) {
+        else if (raw == CVIRT_NOT && vm.ip + 1 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] = ~vm.regs[dst];
         }
-        else if (raw == CV_AND && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_AND && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] &= vm.regs[src];
         }
-        else if (raw == CV_OR && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_OR && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.regs[dst] |= vm.regs[src];
         }
-        else if (raw == CV_SHL && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_SHL && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t bits = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x3F;
             vm.ip++;
             vm.regs[dst] <<= bits;
         }
-        else if (raw == CV_SHR && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_SHR && vm.ip + 2 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t bits = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x3F;
             vm.ip++;
             vm.regs[dst] >>= bits;
         }
-        else if (raw == CV_PUSH && vm.ip + 1 <= len) {
+        else if (raw == CVIRT_PUSH && vm.ip + 1 <= len) {
             uint8_t src = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             if (vm.sp < 256) vm.stack[vm.sp++] = vm.regs[src];
         }
-        else if (raw == CV_POP && vm.ip + 1 <= len) {
+        else if (raw == CVIRT_POP && vm.ip + 1 <= len) {
             uint8_t dst = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             if (vm.sp > 0) vm.regs[dst] = vm.stack[--vm.sp];
         }
-        else if (raw == CV_JMP && vm.ip + 1 <= len) {
+        else if (raw == CVIRT_JMP && vm.ip + 1 <= len) {
             uint8_t target = cv_decrypt_byte(bytecode[vm.ip], vm.ip);
             vm.ip = target;
         }
-        else if (raw == CV_JZ && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_JZ && vm.ip + 2 <= len) {
             uint8_t reg = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t target = cv_decrypt_byte(bytecode[vm.ip], vm.ip);
             vm.ip++;
             if (vm.regs[reg] == 0) vm.ip = target;
         }
-        else if (raw == CV_CMP && vm.ip + 2 <= len) {
+        else if (raw == CVIRT_CMP && vm.ip + 2 <= len) {
             uint8_t a = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             uint8_t b = cv_decrypt_byte(bytecode[vm.ip], vm.ip) & 0x0F;
             vm.ip++;
             vm.flags = (vm.regs[a] == vm.regs[b]) ? 1 : 0;
         }
-        else if (raw == CV_HALT) {
+        else if (raw == CVIRT_HALT) {
             break;
         }
 
@@ -284,15 +284,15 @@ struct CVBytecode {
     constexpr CVBytecode(const uint8_t (&src)[N], _kh_::Seq<I...>)
         : data{ cv_encrypt_byte(src[I], I)... } {}
 
-    CV_INLINE uint64_t run(uint64_t a0 = 0, uint64_t a1 = 0,
-                           uint64_t a2 = 0, uint64_t a3 = 0) const {
+    CVIRT_INLINE uint64_t run(uint64_t a0 = 0, uint64_t a1 = 0,
+                              uint64_t a2 = 0, uint64_t a3 = 0) const {
         return cv_execute(data, N, a0, a1, a2, a3);
     }
 };
 
 // ─── Macro to virtualize an integrity-check value ─────────────
-// Usage: CV_PROTECT_VALUE(my_check, { CV_LOAD, 0, 42, CV_XOR, 0, 1, CV_HALT })
-#define CV_PROTECT_VALUE(name, ...) \
+// Usage: CVIRT_PROTECT_VALUE(my_check, { CVIRT_LOAD, 0, 42, CVIRT_XOR, 0, 1, CVIRT_HALT })
+#define CVIRT_PROTECT_VALUE(name, ...) \
     static const uint8_t _cv_raw_##name[] = __VA_ARGS__; \
     static const auto name = _cv_::CVBytecode<sizeof(_cv_raw_##name)>( \
         _cv_raw_##name, typename _kh_::MakeSeq<sizeof(_cv_raw_##name)>::type())
@@ -300,7 +300,7 @@ struct CVBytecode {
 } // namespace _cv_
 
 // ─── Convenience macros ───────────────────────────────────────
-#define CV_VIRTUALIZE_BEGIN   /* marker for virtualizer pass */
-#define CV_VIRTUALIZE_END     /* marker for virtualizer pass */
+#define CVIRT_VIRTUALIZE_BEGIN   /* marker for virtualizer pass */
+#define CVIRT_VIRTUALIZE_END     /* marker for virtualizer pass */
 
 #endif // CODE_VIRTUALIZER_H

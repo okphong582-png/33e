@@ -37,17 +37,17 @@
 #endif
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define MT_SECTION     __attribute__((section("__MONITE,__mt_text")))
-  #define MT_NOINLINE    __attribute__((noinline))
-  #define MT_HIDDEN      __attribute__((visibility("hidden")))
-  #define MT_USED        __attribute__((used))
-  #define MT_INLINE      inline __attribute__((always_inline))
+  #define MONITE_SECTION     __attribute__((section("__MONITE,__mt_text")))
+  #define MONITE_NOINLINE    __attribute__((noinline))
+  #define MONITE_HIDDEN      __attribute__((visibility("hidden")))
+  #define MONITE_USED        __attribute__((used))
+  #define MONITE_INLINE      inline __attribute__((always_inline))
 #else
-  #define MT_SECTION
-  #define MT_NOINLINE
-  #define MT_HIDDEN
-  #define MT_USED
-  #define MT_INLINE      inline
+  #define MONITE_SECTION
+  #define MONITE_NOINLINE
+  #define MONITE_HIDDEN
+  #define MONITE_USED
+  #define MONITE_INLINE      inline
 #endif
 
 namespace _monite_ {
@@ -58,7 +58,7 @@ static constexpr uint64_t _mt_seed() {
            ((__TIME__[3]-'0')*600ULL)   + ((__TIME__[4]-'0')*60ULL) +
            ((__TIME__[6]-'0')*10ULL)    + (__TIME__[7]-'0');
 }
-static constexpr uint64_t MT_SEED = _mt_seed();
+static constexpr uint64_t MONITE_SEED = _mt_seed();
 
 constexpr uint64_t _mt_hash(uint64_t x) {
     x ^= x >> 33;
@@ -69,12 +69,12 @@ constexpr uint64_t _mt_hash(uint64_t x) {
     return x;
 }
 
-static constexpr uint64_t MT_CANARY     = _mt_hash(MT_SEED ^ 0xDEAD1337ULL);
-static constexpr uint64_t MT_TRAP_MAGIC = _mt_hash(MT_SEED ^ 0xCAFE0001ULL);
-static constexpr uint64_t MT_CHECK_KEY  = _mt_hash(MT_SEED ^ 0xBEEF0002ULL);
+static constexpr uint64_t MONITE_CANARY     = _mt_hash(MONITE_SEED ^ 0xDEAD1337ULL);
+static constexpr uint64_t MONITE_TRAP_MAGIC = _mt_hash(MONITE_SEED ^ 0xCAFE0001ULL);
+static constexpr uint64_t MONITE_CHECK_KEY  = _mt_hash(MONITE_SEED ^ 0xBEEF0002ULL);
 
 // ─── Anti-debug detection ─────────────────────────────────────
-MT_NOINLINE MT_HIDDEN MT_SECTION
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION
 static bool mt_detect_debugger() {
 #ifdef __APPLE__
     // Method 1: sysctl P_TRACED check
@@ -115,7 +115,7 @@ static bool mt_detect_debugger() {
 }
 
 // ─── Code integrity checksum ──────────────────────────────────
-MT_NOINLINE MT_HIDDEN MT_SECTION
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION
 static uint64_t mt_compute_checksum(const void* start, size_t len) {
     const uint8_t* data = (const uint8_t*)start;
     volatile uint64_t hash = 0xCBF29CE484222325ULL;
@@ -143,19 +143,19 @@ struct MTSectionMonitor {
     volatile uint64_t canary;
     volatile bool     initialized;
 
-    MT_NOINLINE MT_HIDDEN MT_SECTION
+    MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION
     void initialize(const void* section_start, size_t section_size) {
-        canary = MT_CANARY;
+        canary = MONITE_CANARY;
         stored_checksum = mt_compute_checksum(section_start, section_size);
         initialized = true;
     }
 
-    MT_NOINLINE MT_HIDDEN MT_SECTION
+    MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION
     bool verify(const void* section_start, size_t section_size) {
         if (!initialized) return true; // not yet initialized
 
         // Verify canary
-        if (canary != MT_CANARY) return false;
+        if (canary != MONITE_CANARY) return false;
 
         // Recompute and compare
         uint64_t current = mt_compute_checksum(section_start, section_size);
@@ -164,10 +164,10 @@ struct MTSectionMonitor {
 };
 
 // ─── Decoy functions (confuse disassemblers) ──────────────────
-MT_NOINLINE MT_HIDDEN MT_SECTION MT_USED
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION MONITE_USED
 static void _mt_decoy_func_1() {
-    volatile uint64_t a = MT_CANARY;
-    volatile uint64_t b = MT_TRAP_MAGIC;
+    volatile uint64_t a = MONITE_CANARY;
+    volatile uint64_t b = MONITE_TRAP_MAGIC;
     volatile uint64_t c = a ^ b;
     c *= 0x9E3779B97F4A7C15ULL;
     c ^= (c >> 30);
@@ -179,7 +179,7 @@ static void _mt_decoy_func_1() {
     }
 }
 
-MT_NOINLINE MT_HIDDEN MT_SECTION MT_USED
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION MONITE_USED
 static void _mt_decoy_func_2() {
     volatile uint32_t state = 0xDEADBEEF;
     for (volatile int i = 0; i < 10; ++i) {
@@ -188,11 +188,11 @@ static void _mt_decoy_func_2() {
     }
 }
 
-MT_NOINLINE MT_HIDDEN MT_SECTION MT_USED
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION MONITE_USED
 static void _mt_decoy_func_3() {
     volatile uint8_t buf[32];
     for (int i = 0; i < 32; ++i) {
-        buf[i] = _kh_::sbox[(uint8_t)(i * 7 + MT_SEED)];
+        buf[i] = _kh_::sbox[(uint8_t)(i * 7 + MONITE_SEED)];
     }
     volatile uint64_t acc = 0;
     for (int i = 0; i < 32; ++i) {
@@ -201,7 +201,7 @@ static void _mt_decoy_func_3() {
 }
 
 // ─── Anti-hook detection ──────────────────────────────────────
-MT_NOINLINE MT_HIDDEN MT_SECTION
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION
 static bool mt_detect_hook(const void* func_ptr) {
 #ifdef __aarch64__
     const uint32_t* insn = (const uint32_t*)func_ptr;
@@ -234,19 +234,19 @@ static bool mt_detect_hook(const void* func_ptr) {
 // ─── Tamper response: subtle corruption ───────────────────────
 // Instead of crashing immediately (which tips off reverse engineers),
 // subtly corrupt game data to make the cheat unreliable
-MT_NOINLINE MT_HIDDEN MT_SECTION
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION
 static void mt_subtle_tamper_response(volatile uint64_t* junk_accumulator) {
     // Flip random bits in the junk accumulator
     // This propagates to affect game calculations subtly
-    *junk_accumulator ^= MT_TRAP_MAGIC;
+    *junk_accumulator ^= MONITE_TRAP_MAGIC;
     *junk_accumulator = (*junk_accumulator << 7) | (*junk_accumulator >> 57);
-    *junk_accumulator ^= MT_CHECK_KEY;
+    *junk_accumulator ^= MONITE_CHECK_KEY;
 }
 
 // ─── Comprehensive integrity check ───────────────────────────
-MT_NOINLINE MT_HIDDEN MT_SECTION
+MONITE_NOINLINE MONITE_HIDDEN MONITE_SECTION
 static bool mt_full_integrity_check() {
-    volatile uint64_t junk = MT_CANARY;
+    volatile uint64_t junk = MONITE_CANARY;
 
     // Check 1: Debugger detection
     if (mt_detect_debugger()) {
@@ -264,7 +264,7 @@ static bool mt_full_integrity_check() {
     }
 
     // Check 3: Canary verification
-    volatile uint64_t expected_canary = MT_CANARY;
+    volatile uint64_t expected_canary = MONITE_CANARY;
     if (junk == expected_canary) {
         // All checks passed (no tampering detected)
         return true;
@@ -275,17 +275,17 @@ static bool mt_full_integrity_check() {
 }
 
 // ─── Guard macro for critical code sections ───────────────────
-static volatile uint64_t _mt_global_junk = MT_CANARY;
+static volatile uint64_t _mt_global_junk = MONITE_CANARY;
 
 } // namespace _monite_
 
 // ─── Public macros ────────────────────────────────────────────
 
 // Place a function in the MONITE_TEXT section
-#define MT_PROTECT __attribute__((section("__MONITE,__mt_text"))) __attribute__((noinline)) __attribute__((visibility("hidden")))
+#define MONITE_PROTECT __attribute__((section("__MONITE,__mt_text"))) __attribute__((noinline)) __attribute__((visibility("hidden")))
 
 // Run integrity check before executing critical code
-#define MT_GUARD() \
+#define MONITE_GUARD() \
     do { \
         if (!_monite_::mt_full_integrity_check()) { \
             _monite_::mt_subtle_tamper_response(&_monite_::_mt_global_junk); \
@@ -293,7 +293,7 @@ static volatile uint64_t _mt_global_junk = MT_CANARY;
     } while(0)
 
 // Check if a specific function has been hooked
-#define MT_CHECK_HOOK(func) \
+#define MONITE_CHECK_HOOK(func) \
     _monite_::mt_detect_hook((const void*)(func))
 
 #endif // MONITE_TEXT_H

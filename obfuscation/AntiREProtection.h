@@ -64,7 +64,7 @@ static ProtectionState _global_state = {};
 __attribute__((noinline)) __attribute__((visibility("hidden")))
 static void InitializeProtections() {
     // 1. Initialize VDATA rolling key
-    _global_state.rolling_key.init(_vdata_::VD_SEED);
+    _global_state.rolling_key.init(_vdata_::VDATA_SEED);
     _global_state.vd_ready = true;
 
     // 2. Verify VTizer engine integrity
@@ -77,10 +77,10 @@ static void InitializeProtections() {
     _global_state.mt_ready = _monite_::mt_full_integrity_check();
 
     // 5. Generate integrity token from all components
-    volatile uint64_t token = _vdata_::VD_KEY1;
-    token ^= _vtizer_::VT_INTEGRITY_MAGIC;
-    token ^= _monite_::MT_CANARY;
-    token ^= _cv_::CV_SEED;
+    volatile uint64_t token = _vdata_::VDATA_KEY1;
+    token ^= _vtizer_::VTIZER_INTEGRITY_MAGIC;
+    token ^= _monite_::MONITE_CANARY;
+    token ^= _cv_::CVIRT_SEED;
     _global_state.integrity_token = token;
     _global_state.check_count = 0;
 }
@@ -124,7 +124,7 @@ __attribute__((noinline)) __attribute__((visibility("hidden")))
 __attribute__((section("__VDATA,__vdata")))
 static uint64_t ProtectedRead64(uint64_t encrypted_value, uint64_t slot_id) {
     // Verify integrity before reading
-    MT_GUARD();
+    MONITE_GUARD();
 
     // Decrypt through VDATA pipeline
     return _vdata_::vd_decrypt_u64(encrypted_value, slot_id);
@@ -140,7 +140,7 @@ static uintptr_t ProtectedEncryptPtr(uintptr_t ptr) {
 __attribute__((noinline)) __attribute__((visibility("hidden")))
 __attribute__((section("__VDATA,__vdata")))
 static uintptr_t ProtectedDecryptPtr(uintptr_t enc) {
-    MT_GUARD();
+    MONITE_GUARD();
     return _vdata_::vd_decrypt_ptr(enc);
 }
 
@@ -160,23 +160,23 @@ static uintptr_t ProtectedDecryptPtr(uintptr_t enc) {
 
 // Protected constant (compile-time encrypted, runtime decrypted)
 #define ANTI_RE_CONST(value) \
-    VD_CONST(value)
+    VDATA_CONST(value)
 
 // Protected pointer
-#define ANTI_RE_ENC_PTR(ptr)       VD_ENC_PTR(ptr)
-#define ANTI_RE_DEC_PTR(type, enc) VD_DEC_PTR(type, enc)
+#define ANTI_RE_ENC_PTR(ptr)       VDATA_ENC_PTR(ptr)
+#define ANTI_RE_DEC_PTR(type, enc) VDATA_DEC_PTR(type, enc)
 
 // Virtualize a code block (wraps in CV bytecode VM)
-#define ANTI_RE_VIRTUALIZE_BEGIN   CV_VIRTUALIZE_BEGIN
-#define ANTI_RE_VIRTUALIZE_END     CV_VIRTUALIZE_END
+#define ANTI_RE_VIRTUALIZE_BEGIN   CVIRT_VIRTUALIZE_BEGIN
+#define ANTI_RE_VIRTUALIZE_END     CVIRT_VIRTUALIZE_END
 
 // Place function in protected MONITE_TEXT section
-#define ANTI_RE_PROTECT            MT_PROTECT
+#define ANTI_RE_PROTECT            MONITE_PROTECT
 
 // Check if function has been hooked
-#define ANTI_RE_CHECK_HOOK(func)   MT_CHECK_HOOK(func)
+#define ANTI_RE_CHECK_HOOK(func)   MONITE_CHECK_HOOK(func)
 
 // Full integrity guard
-#define ANTI_RE_GUARD()            MT_GUARD()
+#define ANTI_RE_GUARD()            MONITE_GUARD()
 
 #endif // ANTI_RE_PROTECTION_H

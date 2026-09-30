@@ -27,17 +27,17 @@
 #include "KabraxHide.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define VT_SECTION     __attribute__((section("__VTIZER,__vtizer")))
-  #define VT_NOINLINE    __attribute__((noinline))
-  #define VT_HIDDEN      __attribute__((visibility("hidden")))
-  #define VT_USED        __attribute__((used))
-  #define VT_INLINE      inline __attribute__((always_inline))
+  #define VTIZER_SECTION     __attribute__((section("__VTIZER,__vtizer")))
+  #define VTIZER_NOINLINE    __attribute__((noinline))
+  #define VTIZER_HIDDEN      __attribute__((visibility("hidden")))
+  #define VTIZER_USED        __attribute__((used))
+  #define VTIZER_INLINE      inline __attribute__((always_inline))
 #else
-  #define VT_SECTION
-  #define VT_NOINLINE
-  #define VT_HIDDEN
-  #define VT_USED
-  #define VT_INLINE      inline
+  #define VTIZER_SECTION
+  #define VTIZER_NOINLINE
+  #define VTIZER_HIDDEN
+  #define VTIZER_USED
+  #define VTIZER_INLINE      inline
 #endif
 
 namespace _vtizer_ {
@@ -48,7 +48,7 @@ static constexpr uint64_t _vt_seed() {
            ((__TIME__[3]-'0')*600ULL)   + ((__TIME__[4]-'0')*60ULL) +
            ((__TIME__[6]-'0')*10ULL)    + (__TIME__[7]-'0');
 }
-static constexpr uint64_t VT_SEED = _vt_seed();
+static constexpr uint64_t VTIZER_SEED = _vt_seed();
 
 constexpr uint64_t _vt_hash(uint64_t x) {
     x ^= x >> 33;
@@ -60,24 +60,24 @@ constexpr uint64_t _vt_hash(uint64_t x) {
 }
 
 // ─── Handler dispatch key (shuffled per build) ────────────────
-static constexpr uint64_t VT_DISPATCH_KEY    = _vt_hash(VT_SEED ^ 0xCAFEBABEULL);
-static constexpr uint64_t VT_HANDLER_MASK    = _vt_hash(VT_SEED ^ 0xDEADBEEFULL);
-static constexpr uint8_t  VT_XOR_LAYER1      = (uint8_t)(VT_DISPATCH_KEY & 0xFF);
-static constexpr uint8_t  VT_XOR_LAYER2      = (uint8_t)((VT_DISPATCH_KEY >> 8) & 0xFF);
-static constexpr uint8_t  VT_ADD_LAYER       = (uint8_t)((VT_DISPATCH_KEY >> 16) & 0xFF);
-static constexpr uint8_t  VT_ROT_BITS        = (uint8_t)(((VT_DISPATCH_KEY >> 24) % 7) + 1);
-static constexpr uint64_t VT_INTEGRITY_MAGIC = _vt_hash(VT_SEED ^ 0x1337C0DEULL);
+static constexpr uint64_t VTIZER_DISPATCH_KEY    = _vt_hash(VTIZER_SEED ^ 0xCAFEBABEULL);
+static constexpr uint64_t VTIZER_HANDLER_MASK    = _vt_hash(VTIZER_SEED ^ 0xDEADBEEFULL);
+static constexpr uint8_t  VTIZER_XOR_LAYER1      = (uint8_t)(VTIZER_DISPATCH_KEY & 0xFF);
+static constexpr uint8_t  VTIZER_XOR_LAYER2      = (uint8_t)((VTIZER_DISPATCH_KEY >> 8) & 0xFF);
+static constexpr uint8_t  VTIZER_ADD_LAYER       = (uint8_t)((VTIZER_DISPATCH_KEY >> 16) & 0xFF);
+static constexpr uint8_t  VTIZER_ROT_BITS        = (uint8_t)(((VTIZER_DISPATCH_KEY >> 24) % 7) + 1);
+static constexpr uint64_t VTIZER_INTEGRITY_MAGIC = _vt_hash(VTIZER_SEED ^ 0x1337C0DEULL);
 
 // ─── Anti-tamper: Opaque predicate generators ─────────────────
 // These always evaluate to a known value but are hard to resolve statically
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static bool _vt_opaque_true() {
     volatile uint32_t a = 7, b = 3;
     volatile uint32_t c = (a * a - b * b);
     return (c == 40); // always true: 49 - 9 = 40
 }
 
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static bool _vt_opaque_false() {
     volatile uint32_t x = 5, y = 5;
     volatile uint32_t z = (x * y);
@@ -85,7 +85,7 @@ static bool _vt_opaque_false() {
 }
 
 // ─── Stream cipher for handler table ──────────────────────────
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t _vt_stream_cipher(uint64_t input, uint64_t key, uint32_t round) {
     volatile uint64_t state = input ^ key;
     for (uint32_t i = 0; i < (round & 0x0F) + 4; ++i) {
@@ -109,7 +109,7 @@ struct VTHandlerEntry {
 };
 
 // ─── Built-in VM handlers ─────────────────────────────────────
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t _vt_handler_xor_cascade(uint64_t* regs, uint64_t arg, volatile uint64_t* junk) {
     uint8_t dst = (arg >> 8) & 0x0F;
     uint8_t src = arg & 0x0F;
@@ -125,7 +125,7 @@ static uint64_t _vt_handler_xor_cascade(uint64_t* regs, uint64_t arg, volatile u
     return regs[dst];
 }
 
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t _vt_handler_add_chain(uint64_t* regs, uint64_t arg, volatile uint64_t* junk) {
     uint8_t dst = (arg >> 8) & 0x0F;
     uint8_t src = arg & 0x0F;
@@ -141,7 +141,7 @@ static uint64_t _vt_handler_add_chain(uint64_t* regs, uint64_t arg, volatile uin
     return regs[dst];
 }
 
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t _vt_handler_sub_rot(uint64_t* regs, uint64_t arg, volatile uint64_t* junk) {
     uint8_t dst = (arg >> 8) & 0x0F;
     uint8_t src = arg & 0x0F;
@@ -158,7 +158,7 @@ static uint64_t _vt_handler_sub_rot(uint64_t* regs, uint64_t arg, volatile uint6
     return regs[dst];
 }
 
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t _vt_handler_mul_mix(uint64_t* regs, uint64_t arg, volatile uint64_t* junk) {
     uint8_t dst = (arg >> 8) & 0x0F;
     uint8_t src = arg & 0x0F;
@@ -167,7 +167,7 @@ static uint64_t _vt_handler_mul_mix(uint64_t* regs, uint64_t arg, volatile uint6
     return regs[dst];
 }
 
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t _vt_handler_not_inv(uint64_t* regs, uint64_t arg, volatile uint64_t* junk) {
     uint8_t dst = (arg >> 8) & 0x0F;
     regs[dst] = ~regs[dst];
@@ -177,7 +177,7 @@ static uint64_t _vt_handler_not_inv(uint64_t* regs, uint64_t arg, volatile uint6
     return regs[dst];
 }
 
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t _vt_handler_sbox_transform(uint64_t* regs, uint64_t arg, volatile uint64_t* junk) {
     uint8_t dst = (arg >> 8) & 0x0F;
     // Apply S-box byte-by-byte to register value
@@ -194,11 +194,11 @@ static uint64_t _vt_handler_sbox_transform(uint64_t* regs, uint64_t arg, volatil
 }
 
 // ─── Virtualizer Engine: Main Dispatch ────────────────────────
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t vt_dispatch(uint8_t handler_id, uint64_t* regs,
                             uint64_t arg, volatile uint64_t* junk) {
     // Decrypt handler_id through stream cipher
-    volatile uint64_t decrypted = _vt_stream_cipher(handler_id, VT_DISPATCH_KEY, handler_id & 0x0F);
+    volatile uint64_t decrypted = _vt_stream_cipher(handler_id, VTIZER_DISPATCH_KEY, handler_id & 0x0F);
     uint8_t resolved = (uint8_t)(decrypted & 0x07);
 
     // Anti-debug timing check
@@ -219,22 +219,22 @@ static uint64_t vt_dispatch(uint8_t handler_id, uint64_t* regs,
 }
 
 // ─── Integrity verification of vtizer segment ─────────────────
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static bool vt_verify_integrity() {
-    volatile uint64_t check = VT_INTEGRITY_MAGIC;
-    check ^= VT_DISPATCH_KEY;
-    check += VT_HANDLER_MASK;
+    volatile uint64_t check = VTIZER_INTEGRITY_MAGIC;
+    check ^= VTIZER_DISPATCH_KEY;
+    check += VTIZER_HANDLER_MASK;
     // This check always passes in unmodified binary
     return (check != 0);
 }
 
 // ─── Convenience: Run a sequence of handler operations ────────
-VT_NOINLINE VT_HIDDEN VT_SECTION
+VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t vt_run_sequence(const uint8_t* ops, const uint64_t* args,
                                 size_t count, uint64_t initial_value) {
     uint64_t regs[16] = {};
     regs[0] = initial_value;
-    volatile uint64_t junk = VT_INTEGRITY_MAGIC ^ initial_value;
+    volatile uint64_t junk = VTIZER_INTEGRITY_MAGIC ^ initial_value;
 
     for (size_t i = 0; i < count; ++i) {
         vt_dispatch(ops[i], regs, args[i], &junk);
@@ -246,7 +246,7 @@ static uint64_t vt_run_sequence(const uint8_t* ops, const uint64_t* args,
 } // namespace _vtizer_
 
 // ─── High-level macros ────────────────────────────────────────
-#define VT_PROTECT(expr) \
+#define VTIZER_PROTECT(expr) \
     ([&]() -> decltype(expr) { \
         if (!_vtizer_::vt_verify_integrity()) { \
             volatile int trap = 0; \
@@ -255,7 +255,7 @@ static uint64_t vt_run_sequence(const uint8_t* ops, const uint64_t* args,
         return (expr); \
     }())
 
-#define VT_DISPATCH(handler_id, regs, arg, junk) \
+#define VTIZER_DISPATCH(handler_id, regs, arg, junk) \
     _vtizer_::vt_dispatch((handler_id), (regs), (arg), (junk))
 
 #endif // VTIZER_ENGINE_H
