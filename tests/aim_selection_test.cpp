@@ -5,6 +5,11 @@
 using AimSelection::Selection;
 int main() {
     using AimSelection::Triggered;
+    for (int raw : {0, 1, 2, 255, 0, -1, 0, 1, 0}) {
+        bool firing = AimSelection::FiringState(raw);
+        assert(firing == (raw > 0));
+        assert(Triggered(true, false, firing, false, false) == firing);
+    }
     for (int enabled = 0; enabled < 2; ++enabled)
     for (int scope = 0; scope < 2; ++scope)
     for (int always = 0; always < 2; ++always) {

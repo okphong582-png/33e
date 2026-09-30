@@ -275,7 +275,7 @@
         y = [self toggle:@"ESP ổn định (30 FPS)" key:@"BalancedRender" fallback:YES y:y];
         y = [self note:@"Bật để giảm tải khi chơi lâu. Tắt để vẽ ESP ở 60 FPS." y:y];
         y = [self note:@"Kéo thanh tiêu đề để di chuyển menu. Các lựa chọn được lưu tự động." y:y];
-        y = [self note:@"Menu, ESP và aim chỉ hoạt động sau 60 giây nhận diện trận. Ra trận sẽ đặt lại thời gian chờ." y:y];
+        y = [self note:@"Menu hiện ngay sau xác thực. ESP và aim hoạt động khi có dữ liệu trận." y:y];
     }
     self.scroll.contentSize = CGSizeMake([self contentWidth], y + 8);
     self.scroll.contentOffset = CGPointZero;

@@ -1,6 +1,5 @@
 #include "../Core/AimSelection.h"
 #include "../Core/AimPoint.h"
-#include "../Core/MatchDelay.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -29,7 +28,6 @@
 
 
 uint64_t Moudule_Base = -1;
-static MatchDelay gMatchDelay;
 static BOOL gMatchReady = NO;
 NSNotificationName const ESPMatchReadyChangedNotification = @"ESPMatchReadyChanged";
 BOOL ESPMatchReady(void) { return gMatchReady; }
@@ -601,7 +599,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)clearAllContent {
-    gMatchDelay.reset(); SetMatchReady(NO);
+    SetMatchReady(NO);
     gAimLockTarget = 0;
     self.statusLayer.hidden = YES;
     self.aimDiagnosticLayer.hidden = YES;
@@ -690,8 +688,7 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     float *matrix = GetViewMatrix(cachedCamera);
     if (!matrix) return stats;
     stats.inMatch = true;
-    SetMatchReady(gMatchDelay.update(match, CACurrentMediaTime()));
-    if (!ESPMatchReady()) return stats;
+    SetMatchReady(YES);
 
     stats.firingRaw = get_FiringByte(local);
     stats.firing = AimSelection::FiringState(stats.firingRaw);
