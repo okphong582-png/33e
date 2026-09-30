@@ -1,6 +1,5 @@
 #include "../Core/AimSelection.h"
 #include "../Core/AimPoint.h"
-#include "../Core/RiskWeaponMods.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -64,7 +63,6 @@ static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
 static bool gBalancedRender = true;
 static bool gAimDiagnostics = false;
-static bool gNoReloadRisk = false, gFastFireRisk = false;
 
 // ============================================================
 // ✅ SYNC PREFS - ESP & AIMBOT
@@ -86,8 +84,6 @@ void ESPSyncFromPrefs(void) {
     isBox3D = ESPPrefsBool(@"Box3D", YES);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
-    gNoReloadRisk = ESPPrefsBool(@"NoReloadRisk", NO);
-    gFastFireRisk = ESPPrefsBool(@"FastFireRisk", NO);
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -603,7 +599,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)clearAllContent {
-    RiskWeaponStop();
     SetMatchReady(NO);
     gAimLockTarget = 0;
     self.statusLayer.hidden = YES;
@@ -673,8 +668,6 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
 
     const uint64_t local = getLocalPlayer(match);
     if (!isVaildPtr(local) || get_CurHP(local) <= 0) return stats;
-    const bool canUseWeapon = !get_IsKnockedDown(local);
-    RiskWeaponUpdate(match, local, canUseWeapon && gNoReloadRisk, canUseWeapon && gFastFireRisk);
     const bool sameLocal = local == gAimLocalPlayer;
     gAimLocalPlayer = local;
     const uint64_t camTransform = ReadAddr<uint64_t>(local + kMainCameraTransform);
@@ -746,8 +739,10 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     if (aiming && selection.target) stats.aimState = 5;
     if (aiming && selection.target && getAimVisibility(selection.target) &&
         get_CurHP(selection.target) > 0 && !get_IsKnockedDown(selection.target) &&
-        AimSelection::Triggered(isAimbotFire, isAimbotScope,
-            get_IsFiring(local), get_IsScoping(local), isHipAlways)) {
+        getLocalPlayer(match) == local && get_CurHP(local) > 0 && !get_IsKnockedDown(local)) {
+        // Use the same trigger sample for selection and writing in this frame.
+        // Reading a short firing pulse twice could discard an acquired target.
+        // The next frame samples again; no latch keeps fire aim active on release.
         const Vector3 direction = targetHead - myLoc;
         if (Vector3::SqrMagnitude(direction) > 0.0001f) {
             const Quaternion targetRotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));
@@ -755,8 +750,8 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
                 std::isfinite(targetRotation.z) && std::isfinite(targetRotation.w)) {
                 stats.aimState = 3;
                 
-                // Both trigger modes use the same target rotation. The trigger
-                // is checked again above so releasing fire stops further writes.
+                // All trigger modes use the same target rotation. Each frame
+                // takes a fresh trigger sample, so fire aim is never latched.
                 Quaternion finalRotation = targetRotation;
                 
                 if (WriteAddr<Quaternion>(local + kAimRotation, finalRotation)) {
