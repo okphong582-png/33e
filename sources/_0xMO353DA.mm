@@ -238,6 +238,9 @@
         y = [self note:@"Chỉ aim khi điểm ngắm nằm trong vòng. Ẩn vòng vẫn giữ giới hạn FOV." y:y];
         y = [self note:@"Aim cổ lấy điểm sát dưới đầu. Tắt để aim đầu." y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
+        y = [self toggle:@"Không reload (Risk)" key:@"NoReloadRisk" fallback:NO y:y];
+        y = [self toggle:@"Bắn nhanh (Risk)" key:@"FastFireRisk" fallback:NO y:y];
+        y = [self note:@"Thử nghiệm: chưa xác minh layout. Có thể không tác dụng hoặc gây crash. Mặc định tắt." y:y];
     } else if (self.page == 1) {
         y = [self toggle:@"Tên người chơi" key:@"Name" fallback:YES y:y];
         y = [self toggle:@"Thanh máu" key:@"Health" fallback:YES y:y];

@@ -1,5 +1,6 @@
 #include "../Core/AimSelection.h"
 #include "../Core/AimPoint.h"
+#include "../Core/RiskWeaponMods.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -63,6 +64,7 @@ static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
 static bool gBalancedRender = true;
 static bool gAimDiagnostics = false;
+static bool gNoReloadRisk = false, gFastFireRisk = false;
 
 // ============================================================
 // ✅ SYNC PREFS - ESP & AIMBOT
@@ -84,6 +86,8 @@ void ESPSyncFromPrefs(void) {
     isBox3D = ESPPrefsBool(@"Box3D", YES);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
+    gNoReloadRisk = ESPPrefsBool(@"NoReloadRisk", NO);
+    gFastFireRisk = ESPPrefsBool(@"FastFireRisk", NO);
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -599,6 +603,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)clearAllContent {
+    RiskWeaponStop();
     SetMatchReady(NO);
     gAimLockTarget = 0;
     self.statusLayer.hidden = YES;
@@ -668,6 +673,8 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
 
     const uint64_t local = getLocalPlayer(match);
     if (!isVaildPtr(local) || get_CurHP(local) <= 0) return stats;
+    const bool canUseWeapon = !get_IsKnockedDown(local);
+    RiskWeaponUpdate(match, local, canUseWeapon && gNoReloadRisk, canUseWeapon && gFastFireRisk);
     const bool sameLocal = local == gAimLocalPlayer;
     gAimLocalPlayer = local;
     const uint64_t camTransform = ReadAddr<uint64_t>(local + kMainCameraTransform);
