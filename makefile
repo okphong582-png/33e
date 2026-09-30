@@ -42,7 +42,7 @@ endif
 sources/KIF/UITouch-KIFAdditions.m_CFLAGS := $(filter-out -mllvm -enable-fco,$(TESTTIPA_CFLAGS))
 
 $(MIZZE_PRODUCT)_CFLAGS += -fobjc-arc -Wno-deprecated-declarations -Wno-unused-function -Wno-unused-variable -Wno-unused-value -Wno-module-import-in-extern-c -Wno-unknown-warning-option -Wno-unused-but-set-variable -fvisibility=hidden -fno-rtti -Os
-$(MIZZE_PRODUCT)_CFLAGS += -I. -Iheaders -Isources -Isources/KIF -Ioxorany
+$(MIZZE_PRODUCT)_CFLAGS += -I. -Iheaders -Isources -Isources/KIF -Ioxorany -Iobfuscation
 
 $(MIZZE_PRODUCT)_CFLAGS += -DNOTIFY_DESTROY_HUD="\"com.dts.bugchi.hud.destroy\""
 $(MIZZE_PRODUCT)_CFLAGS += -DPID_PATH="@\"/var/mobile/Library/Caches/com.dts.bugchi.pid\""

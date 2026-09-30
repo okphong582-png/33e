@@ -12,6 +12,7 @@
 #import "../esp/drawing_view/menu.h"
 #import "../esp/drawing_view/ESPPrefs.h"
 #import "KabraxHide.h"
+#import "AntiREProtection.h"
 #import "UIView+SecureView.h"
 #import "InjectedLicenseController.h"
 
@@ -132,7 +133,16 @@ static void SetupInjectedOverlayMenu() {
 }
 
 static void __attribute__((constructor)) StealthDylibEntryPoint() {
+    // Initialize all obfuscation pipeline protections
+    // __CV + .vtizer + __VDATA/__vdata + __MONITE_TEXT → Anti-RE
+    ANTI_RE_INIT();
+
     StealthAntiCheat::ApplyStealthProtections();
+
+    // Schedule periodic integrity checks
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+        ANTI_RE_CHECK();
+    });
 
     [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidFinishLaunchingNotification
                                                       object:nil
