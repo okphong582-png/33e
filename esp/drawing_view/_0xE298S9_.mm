@@ -694,6 +694,9 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     std::array<uint8_t, 256 * kDictEntryStrideBytePlayer> snapshot{};
     if (count && !_read((long)(entries + kIl2CppArrayItems), snapshot.data(),
                        count * kDictEntryStrideBytePlayer)) return stats;
+    // Luôn đọc matrix mới nhất từ camera mỗi frame để ESP theo đúng góc màn hình
+    // Không cache matrix — nếu camera xoay, ESP phải cập nhật ngay
+    cachedCamera = CameraMain(matchGame);
     float *matrix = GetViewMatrix(cachedCamera);
     if (!matrix) return stats;
     stats.inMatch = true;
@@ -704,15 +707,19 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     stats.scoping = get_IsScoping(local);
 
     // triggerActive: player is actively pressing fire / aiming down sights
+    // Cần đúng điều kiện: AimbotFire bật → phải đang bắn; AimbotScope bật → phải đang ngắm
     const bool triggerActive = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
         stats.firing, stats.scoping, isHipAlways);
 
-    // hasPrevLock: we had a valid lock last frame — keep ghim alive
+    // hasPrevLock: giữ lock CHÍNH XÁC theo trigger đang active
+    // - Nếu AimbotFire ON: chỉ giữ lock khi đang BẮN (firing)
+    // - Nếu AimbotScope ON (và Fire OFF): chỉ giữ lock khi đang NGẮM (scoping)
+    // - Khi người dùng thả ngón tay (không bắn/không ngắm) → xóa lock ngay
     const bool hasPrevLock = sameMatch && sameLocal &&
         previousTarget != 0 && isVaildPtr(previousTarget) &&
         !get_IsKnockedDown(local) &&
-        (isAimbotFire || isAimbotScope);
+        triggerActive; // ← phải đang trigger thì mới giữ lock
 
     // aiming: selection pass runs when trigger OR persistent lock is active
     const bool aiming = triggerActive || hasPrevLock;
