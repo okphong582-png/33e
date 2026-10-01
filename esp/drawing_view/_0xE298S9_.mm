@@ -58,6 +58,7 @@ static float fovPercent = 40.0f;
 bool isBox3D = YES;
 static uint64_t gAimLockTarget = 0;
 static uint64_t gAimLocalPlayer = 0;
+static Vector3  gAimLockedHead = {}; // world-space head position of the locked target
 
 static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
@@ -606,6 +607,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 - (void)clearAllContent {
     SetMatchReady(NO);
     gAimLockTarget = 0;
+    gAimLockedHead = {};
     self.statusLayer.hidden = YES;
     self.aimDiagnosticLayer.hidden = YES;
     self.boxKnockLayer.path = self.lineKnockLayer.path = self.fovLayer.path = nil;
@@ -653,7 +655,9 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
     ESPFrameStats stats = {};
     const uint64_t previousTarget = gAimLockTarget;
+    const Vector3  previousLockedHead = gAimLockedHead;
     gAimLockTarget = 0; // Every early return releases stale targets.
+    gAimLockedHead = {};
     if (!buffers || !isVaildPtr(Moudule_Base)) {
         cachedMatchGame = cachedMatch = cachedCamera = gAimLocalPlayer = 0;
         return stats;
@@ -698,12 +702,23 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     stats.firingRaw = get_FiringByte(local);
     stats.firing = AimSelection::FiringState(stats.firingRaw);
     stats.scoping = get_IsScoping(local);
-    const bool aiming = !get_IsKnockedDown(local) && AimSelection::Triggered(
+    // Aim is "active" when trigger condition is met (firing/scoping).
+    // We also consider aim "active" when we have a persistent lock target (ghim).
+    const bool triggerActive = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
         stats.firing, stats.scoping, isHipAlways);
-    stats.aimState = aiming ? 2 : 1;
+    // Persistent lock: keep the previous target if it was valid last frame and
+    // the player is not knocked. The lock is cleared when the target dies,
+    // is knocked, or leaves the FOV radius (re-checked below).
+    const bool hasPrevLock = sameMatch && sameLocal &&
+        previousTarget != 0 && isVaildPtr(previousTarget) &&
+        !get_IsKnockedDown(local) &&
+        (isAimbotFire || isAimbotScope); // at least one aim mode must be enabled
+    const bool aiming = triggerActive || hasPrevLock;
+    stats.aimState = (triggerActive || hasPrevLock) ? 2 : 1;
     AimSelection::Selection selection;
-    selection.previous = sameMatch && sameLocal && aiming ? previousTarget : 0;
+    // Carry forward the lock target into selection so retention logic reuses it.
+    selection.previous = aiming ? previousTarget : 0;
     Vector3 targetHead;
     const float radius = AimSelection::Radius(vw, vh, fovPercent);
     for (int i = 0; i < count; ++i) {
@@ -729,7 +744,11 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
             }
             if (!IsZeroVec(head) && std::isfinite(head.x) && std::isfinite(head.y) && std::isfinite(head.z)) {
                 const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
-                selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
+                // For the locked target, allow it to stay even outside the FOV
+                // radius so the aim keeps tracking until it truly leaves range.
+                // For new targets, enforce the FOV radius normally.
+                const bool eligible = triggerActive || (pawn == previousTarget);
+                selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, eligible);
                 if (selection.target == pawn) targetHead = head;
             }
         }
@@ -742,26 +761,23 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         }
     }
     if (aiming && selection.target) stats.aimState = 5;
+    // Write aim rotation whenever we have a valid selected target — regardless
+    // of whether the trigger is currently pressed. This is what makes the aim
+    // "ghim" (stick/lock) onto the target between fire pulses.
     if (aiming && selection.target && getAimVisibility(selection.target) &&
         get_CurHP(selection.target) > 0 && !get_IsKnockedDown(selection.target) &&
         getLocalPlayer(match) == local && get_CurHP(local) > 0 && !get_IsKnockedDown(local)) {
-        // Use the same trigger sample for selection and writing in this frame.
-        // Reading a short firing pulse twice could discard an acquired target.
-        // The next frame samples again; no latch keeps fire aim active on release.
         const Vector3 direction = targetHead - myLoc;
         if (Vector3::SqrMagnitude(direction) > 0.0001f) {
             const Quaternion targetRotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));
             if (std::isfinite(targetRotation.x) && std::isfinite(targetRotation.y) &&
                 std::isfinite(targetRotation.z) && std::isfinite(targetRotation.w)) {
                 stats.aimState = 3;
-                
-                // All trigger modes use the same target rotation. Each frame
-                // takes a fresh trigger sample, so fire aim is never latched.
                 Quaternion finalRotation = targetRotation;
-                
                 if (WriteAddr<Quaternion>(local + kAimRotation, finalRotation)) {
                     stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, finalRotation) ? 4 : 6;
                     gAimLockTarget = selection.target;
+                    gAimLockedHead = targetHead;
                 }
             }
         }
