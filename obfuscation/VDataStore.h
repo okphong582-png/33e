@@ -27,7 +27,7 @@
 #include "KabraxHide.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define VDATA_SECTION    __attribute__((section("__VDATA,__vdata")))
+  #define VDATA_SECTION    __attribute__((section("__DATA,__vdata")))
   #define VDATA_NOINLINE   __attribute__((noinline))
   #define VDATA_HIDDEN     __attribute__((visibility("hidden")))
   #define VDATA_USED       __attribute__((used))

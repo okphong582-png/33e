@@ -87,7 +87,7 @@ static void InitializeProtections() {
 
 // ─── Periodic integrity verification ──────────────────────────
 __attribute__((noinline)) __attribute__((visibility("hidden")))
-__attribute__((section("__MONITE,__mt_text")))
+__attribute__((section("__TEXT,__mt_text")))
 static bool PeriodicIntegrityCheck() {
     _global_state.check_count++;
 
@@ -121,7 +121,7 @@ static bool PeriodicIntegrityCheck() {
 
 // ─── Protected memory read (for offsets) ──────────────────────
 __attribute__((noinline)) __attribute__((visibility("hidden")))
-__attribute__((section("__VDATA,__vdata")))
+__attribute__((section("__DATA,__vdata")))
 static uint64_t ProtectedRead64(uint64_t encrypted_value, uint64_t slot_id) {
     // Verify integrity before reading
     MONITE_GUARD();
@@ -132,7 +132,7 @@ static uint64_t ProtectedRead64(uint64_t encrypted_value, uint64_t slot_id) {
 
 // ─── Protected pointer obfuscation ───────────────────────────
 __attribute__((noinline)) __attribute__((visibility("hidden")))
-__attribute__((section("__VDATA,__vdata")))
+__attribute__((section("__DATA,__vdata")))
 static uintptr_t ProtectedEncryptPtr(uintptr_t ptr) {
     return _vdata_::vd_encrypt_ptr(ptr);
 }

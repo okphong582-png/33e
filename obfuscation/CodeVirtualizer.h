@@ -25,7 +25,7 @@
 #include "KabraxHide.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define CVIRT_SECTION    __attribute__((section("__CV,__cv_text")))
+  #define CVIRT_SECTION    __attribute__((section("__TEXT,__cv_text")))
   #define CVIRT_NOINLINE   __attribute__((noinline))
   #define CVIRT_HIDDEN     __attribute__((visibility("hidden")))
   #define CVIRT_USED       __attribute__((used))

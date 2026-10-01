@@ -37,7 +37,7 @@
 #endif
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define MONITE_SECTION     __attribute__((section("__MONITE,__mt_text")))
+  #define MONITE_SECTION     __attribute__((section("__TEXT,__mt_text")))
   #define MONITE_NOINLINE    __attribute__((noinline))
   #define MONITE_HIDDEN      __attribute__((visibility("hidden")))
   #define MONITE_USED        __attribute__((used))
@@ -282,7 +282,7 @@ static volatile uint64_t _mt_global_junk = MONITE_CANARY;
 // ─── Public macros ────────────────────────────────────────────
 
 // Place a function in the MONITE_TEXT section
-#define MONITE_PROTECT __attribute__((section("__MONITE,__mt_text"))) __attribute__((noinline)) __attribute__((visibility("hidden")))
+#define MONITE_PROTECT __attribute__((section("__TEXT,__mt_text"))) __attribute__((noinline)) __attribute__((visibility("hidden")))
 
 // Run integrity check before executing critical code
 #define MONITE_GUARD() \

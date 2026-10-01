@@ -27,7 +27,7 @@
 #include "KabraxHide.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define VTIZER_SECTION     __attribute__((section("__VTIZER,__vtizer")))
+  #define VTIZER_SECTION     __attribute__((section("__TEXT,__vtizer")))
   #define VTIZER_NOINLINE    __attribute__((noinline))
   #define VTIZER_HIDDEN      __attribute__((visibility("hidden")))
   #define VTIZER_USED        __attribute__((used))
