@@ -699,9 +699,9 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     stats.firingRaw = get_FiringByte(local);
     stats.firing    = AimSelection::FiringState(stats.firingRaw);
     stats.scoping   = get_IsScoping(local);
-    // triggerActive: chỉ scope (không có aim khi bắn)
+    // triggerActive: scope hoặc HipAlways (không có aim khi bắn)
     const bool triggerActive = !get_IsKnockedDown(local) &&
-        (isAimbotScope && stats.scoping);
+        isAimbotScope && (isHipAlways || stats.scoping);
     stats.aimState = triggerActive ? 2 : 1;
 
     const bool sameLocal = (local == gAimLocalPlayer);
@@ -767,7 +767,9 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
                 if (std::isfinite(targetRot.x) && std::isfinite(targetRot.y) &&
                     std::isfinite(targetRot.z) && std::isfinite(targetRot.w)) {
                     stats.aimState = 3;
-                    if (!gAimSmoothedValid || gAimLockTarget != finalTarget) {
+                    // So sánh với previousTarget (trước khi reset)
+                    // gAimLockTarget đã bị reset = 0 ở trên nên không dùng được
+                    if (!gAimSmoothedValid || previousTarget != finalTarget) {
                         gAimSmoothed = ReadAddr<Quaternion>(local + kAimRotation);
                         if (!std::isfinite(gAimSmoothed.x) || !std::isfinite(gAimSmoothed.y) ||
                             !std::isfinite(gAimSmoothed.z) || !std::isfinite(gAimSmoothed.w))
