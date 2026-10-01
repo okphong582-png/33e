@@ -702,31 +702,38 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     stats.firingRaw = get_FiringByte(local);
     stats.firing = AimSelection::FiringState(stats.firingRaw);
     stats.scoping = get_IsScoping(local);
-    // Aim is "active" when trigger condition is met (firing/scoping).
-    // We also consider aim "active" when we have a persistent lock target (ghim).
+
+    // triggerActive: player is actively pressing fire / aiming down sights
     const bool triggerActive = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
         stats.firing, stats.scoping, isHipAlways);
-    // Persistent lock: keep the previous target if it was valid last frame and
-    // the player is not knocked. The lock is cleared when the target dies,
-    // is knocked, or leaves the FOV radius (re-checked below).
+
+    // hasPrevLock: we had a valid lock last frame — keep ghim alive
     const bool hasPrevLock = sameMatch && sameLocal &&
         previousTarget != 0 && isVaildPtr(previousTarget) &&
         !get_IsKnockedDown(local) &&
-        (isAimbotFire || isAimbotScope); // at least one aim mode must be enabled
+        (isAimbotFire || isAimbotScope);
+
+    // aiming: selection pass runs when trigger OR persistent lock is active
     const bool aiming = triggerActive || hasPrevLock;
-    stats.aimState = (triggerActive || hasPrevLock) ? 2 : 1;
+    stats.aimState = aiming ? 2 : 1;
+
+    // FOV selection — only for active-trigger new-target acquisition
     AimSelection::Selection selection;
-    // Carry forward the lock target into selection so retention logic reuses it.
-    selection.previous = aiming ? previousTarget : 0;
-    Vector3 targetHead;
+    selection.previous = triggerActive ? previousTarget : 0;
+    Vector3 targetHead; // head chosen by FOV selection
+
+    // Persistent lock — tracked directly, bypasses FOV radius constraint
+    uint64_t lockedTarget = 0;
+    Vector3  lockedHead;   // head of the previously-locked target
+
     const float radius = AimSelection::Radius(vw, vh, fovPercent);
     for (int i = 0; i < count; ++i) {
         const uint8_t *entry = snapshot.data() + kDictEntryStrideBytePlayer * i;
         int hash = -1;
         uint64_t pawn = 0;
         std::memcpy(&hash, entry, sizeof(hash));
-        if (hash < 0) continue; // Removed dictionary entries have a negative hash.
+        if (hash < 0) continue;
         std::memcpy(&pawn, entry + kDictEntryValueOffByte, sizeof(pawn));
         if (!isVaildPtr(pawn) || pawn == local || isLocalTeamMate(local, pawn)) continue;
         const int hp = get_CurHP(pawn);
@@ -737,21 +744,29 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         if (!std::isfinite(distance) || distance > 150.0f) continue;
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
-        if (aiming && visible && !knocked) {
+
+        if (visible && !knocked) {
             Vector3 head = getPositionExt(getHead(pawn));
-            if (isAimNeck) {
-                head = AimPoint::Neck(head, hip);
-            }
-            if (!IsZeroVec(head) && std::isfinite(head.x) && std::isfinite(head.y) && std::isfinite(head.z)) {
-                const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
-                // For the locked target, allow it to stay even outside the FOV
-                // radius so the aim keeps tracking until it truly leaves range.
-                // For new targets, enforce the FOV radius normally.
-                const bool eligible = triggerActive || (pawn == previousTarget);
-                selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, eligible);
-                if (selection.target == pawn) targetHead = head;
+            if (isAimNeck) head = AimPoint::Neck(head, hip);
+            if (!IsZeroVec(head) && std::isfinite(head.x) &&
+                std::isfinite(head.y) && std::isfinite(head.z)) {
+
+                // --- FOV selection (active trigger only) ---
+                if (triggerActive) {
+                    const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
+                    selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
+                    if (selection.target == pawn) targetHead = head;
+                }
+
+                // --- Persistent lock: capture locked target directly ---
+                // bypass consider() so the FOV radius limit never drops it
+                if (hasPrevLock && pawn == previousTarget) {
+                    lockedTarget = pawn;
+                    lockedHead   = head;
+                }
             }
         }
+
         if (visible || knocked) {
             const bool bot = get_IsBot(pawn);
             if (bot) ++stats.botCount;
@@ -760,24 +775,39 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
                        pawn, hp, distance, hip, knocked, bot, matrix, vw, vh, vpW, vpH);
         }
     }
-    if (aiming && selection.target) stats.aimState = 5;
-    // Write aim rotation whenever we have a valid selected target — regardless
-    // of whether the trigger is currently pressed. This is what makes the aim
-    // "ghim" (stick/lock) onto the target between fire pulses.
-    if (aiming && selection.target && getAimVisibility(selection.target) &&
-        get_CurHP(selection.target) > 0 && !get_IsKnockedDown(selection.target) &&
-        getLocalPlayer(match) == local && get_CurHP(local) > 0 && !get_IsKnockedDown(local)) {
-        const Vector3 direction = targetHead - myLoc;
+
+    // --- Decide final aim target and head position ---
+    // Priority: active-trigger FOV selection > persistent lock
+    uint64_t finalTarget = 0;
+    Vector3  finalHead;
+    if (triggerActive && selection.target) {
+        // Normal trigger-based selection won this frame
+        finalTarget = selection.target;
+        finalHead   = targetHead;
+        stats.aimState = 5;
+    } else if (hasPrevLock && lockedTarget) {
+        // No active trigger (or no target in FOV), but lock is still valid
+        finalTarget = lockedTarget;
+        finalHead   = lockedHead;
+        stats.aimState = 5;
+    }
+
+    // --- Write rotation ---
+    if (finalTarget && getAimVisibility(finalTarget) &&
+        get_CurHP(finalTarget) > 0 && !get_IsKnockedDown(finalTarget) &&
+        getLocalPlayer(match) == local &&
+        get_CurHP(local) > 0 && !get_IsKnockedDown(local)) {
+        const Vector3 direction = finalHead - myLoc;
         if (Vector3::SqrMagnitude(direction) > 0.0001f) {
-            const Quaternion targetRotation = Quaternion::Normalized(Quaternion::LookRotation(direction, Vector3::Up()));
-            if (std::isfinite(targetRotation.x) && std::isfinite(targetRotation.y) &&
-                std::isfinite(targetRotation.z) && std::isfinite(targetRotation.w)) {
+            const Quaternion rot = Quaternion::Normalized(
+                Quaternion::LookRotation(direction, Vector3::Up()));
+            if (std::isfinite(rot.x) && std::isfinite(rot.y) &&
+                std::isfinite(rot.z) && std::isfinite(rot.w)) {
                 stats.aimState = 3;
-                Quaternion finalRotation = targetRotation;
-                if (WriteAddr<Quaternion>(local + kAimRotation, finalRotation)) {
-                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, finalRotation) ? 4 : 6;
-                    gAimLockTarget = selection.target;
-                    gAimLockedHead = targetHead;
+                if (WriteAddr<Quaternion>(local + kAimRotation, rot)) {
+                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, rot) ? 4 : 6;
+                    gAimLockTarget = finalTarget;
+                    gAimLockedHead = finalHead;
                 }
             }
         }
