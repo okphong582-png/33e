@@ -26,6 +26,30 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
+// Tính clip-space thuần (x_c, y_c, w_c) từ VP matrix (column-major 4x4)
+// Không chia w — giữ nguyên dấu để phát hiện behind-camera (w_c < 0)
+static void WorldToClip(const Vector3 &world, const float *m,
+                        float &xc, float &yc, float &wc) {
+    xc = m[0]*world.x + m[4]*world.y + m[8]*world.z  + m[12];
+    yc = m[1]*world.x + m[5]*world.y + m[9]*world.z  + m[13];
+    wc = m[3]*world.x + m[7]*world.y + m[11]*world.z + m[15];
+}
+
+// Chiếu line từ tâm màn hình ra mép theo hướng (dirX,dirY) screen-space
+static CGPoint ClipToEdge(CGFloat ox, CGFloat oy,
+                          CGFloat dirX, CGFloat dirY,
+                          CGFloat w,   CGFloat h) {
+    if (dirX == 0 && dirY == 0) return CGPointMake(ox, oy);
+    const CGFloat margin = 14.0f;
+    CGFloat t = std::numeric_limits<CGFloat>::max();
+    if (dirX > 0) t = std::min(t, (w - margin - ox) / dirX);
+    else if (dirX < 0) t = std::min(t, (margin - ox) / dirX);
+    if (dirY > 0) t = std::min(t, (h - margin - oy) / dirY);
+    else if (dirY < 0) t = std::min(t, (margin - oy) / dirY);
+    if (t <= 0 || !std::isfinite(t)) return CGPointMake(ox, oy);
+    return CGPointMake(ox + dirX * t, oy + dirY * t);
+}
+
 
 static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,
                         const Vector3 &head, const Vector3 &hip, float *matrix,
@@ -85,27 +109,59 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         return WorldToScreenLayer(v, matrix, vpWidth, vpHeight, width, height);
     };
     const Vector3 headScreen = project(head);
-    if (!ValidPosition(headScreen) || headScreen.z <= 0.001f) return;
+    const bool headOnScreen  = ValidPosition(headScreen) && headScreen.z > 0.001f &&
+                               headScreen.x >= 0 && headScreen.x <= width &&
+                               headScreen.y >= 0 && headScreen.y <= height;
+    const bool headInFront   = ValidPosition(headScreen) && headScreen.z > 0.001f;
+
+    // --- Snapline: luôn vẽ, kể cả khi địch sau lưng ---
+    if (isLine) {
+        CGMutablePathRef linePath = knocked
+            ? buffers->lineKnockPath
+            : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
+        if (linePath) {
+            const CGFloat cx = width * 0.5f;
+            const CGFloat cy = 40.0f;
+            CGPoint endPt;
+            bool drawLine = false;
+
+            if (headInFront) {
+                // Địch phía trước: line thẳng đến đầu
+                endPt   = CGPointMake(headScreen.x, headScreen.y - 4);
+                drawLine = true;
+            } else {
+                // Địch sau lưng: dùng clip-space thật để lấy hướng
+                // w_c < 0 → negate (xc,yc) để đảo hướng về đúng phía
+                float xc, yc, wc;
+                WorldToClip(head, matrix, xc, yc, wc);
+                if (std::isfinite(xc) && std::isfinite(yc) && std::isfinite(wc) && wc != 0) {
+                    // NDC direction: xc/wc, -yc/wc (Y flip vì screen Y ngược)
+                    // Khi wc < 0, cả hai tự đảo dấu → đúng hướng
+                    const CGFloat ndx =  (CGFloat)(xc / wc); // [-1..1] sang phải
+                    const CGFloat ndy = -(CGFloat)(yc / wc); // [-1..1] xuống dưới
+                    endPt   = ClipToEdge(cx, cy, ndx * width, ndy * height, width, height);
+                    drawLine = true;
+                }
+            }
+
+            if (drawLine) {
+                AddLine(linePath, CGPointMake(cx, cy), endPt, width, height);
+                if (knocked) buffers->lineKnockDirty = true;
+                else if (bot) buffers->lineBotDirty  = true;
+                else          buffers->linePlayerDirty = true;
+            }
+        }
+    }
+
+    // Phần còn lại chỉ vẽ khi đầu địch thực sự trong FOV
+    if (!headInFront) return;
 
     AddSkeleton(buffers, pawn, head, hip, matrix, width, height, vpWidth, vpHeight);
-    // Head markers and lines do not need ankle transforms or a projected box.
     if (!isBox && !isHealth && !isDis && !isName) {
-        if (isHeadRedDot && headScreen.x >= 0 && headScreen.x <= width &&
-            headScreen.y >= 0 && headScreen.y <= height && buffers->boxKnockPath) {
+        if (isHeadRedDot && headOnScreen && buffers->boxKnockPath) {
             CGPathAddEllipseInRect(buffers->boxKnockPath, nullptr,
                 CGRectMake(headScreen.x - 3, headScreen.y - 3, 6, 6));
             buffers->boxKnockDirty = true;
-        }
-        if (isLine) {
-            CGMutablePathRef path = knocked ? buffers->lineKnockPath :
-                (bot ? buffers->lineBotPath : buffers->linePlayerPath);
-            if (path) {
-                AddLine(path, CGPointMake(width * 0.5f, 40),
-                        CGPointMake(headScreen.x, headScreen.y - 4), width, height);
-                if (knocked) buffers->lineKnockDirty = true;
-                else if (bot) buffers->lineBotDirty = true;
-                else buffers->linePlayerDirty = true;
-            }
         }
         return;
     }
@@ -181,13 +237,14 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         buffers->boxKnockDirty = true;
     }
     if (isLine) {
-        CGMutablePathRef linePath = knocked ? buffers->lineKnockPath : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
+        CGMutablePathRef linePath = knocked
+            ? buffers->lineKnockPath
+            : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
         if (linePath) {
-            const CGPoint end = CGPointMake(headScreen.x, minY - 4);
-            AddLine(linePath, CGPointMake(width * 0.5f, 40), end, width, height);
-            if (knocked) buffers->lineKnockDirty = true;
-            else if (bot) buffers->lineBotDirty = true;
-            else buffers->linePlayerDirty = true;
+            // Line đã vẽ ở trên (kể cả off-screen), chỉ mark dirty nếu chưa
+            if (!knocked && !bot && !buffers->linePlayerDirty) buffers->linePlayerDirty = true;
+            else if (bot && !buffers->lineBotDirty) buffers->lineBotDirty = true;
+            else if (knocked && !buffers->lineKnockDirty) buffers->lineKnockDirty = true;
         }
     }
     if (isHealth && buffers->hpBackgroundPath) {

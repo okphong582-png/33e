@@ -1,4 +1,7 @@
 
+#include "../Core/AimSelection.h"
+#include "../Core/AimPoint.h"
+
 #import "esp.h"
 #import "ESPPrefs.h"
 #import "ESPStyle.h"
@@ -50,6 +53,15 @@ bool isHeadRedDot = YES;
 bool isBox3D = YES;
 static bool showFov    = YES;
 static float fovPercent = 40.0f;
+static bool isAimbotScope = YES;
+static bool isHipAlways  = NO;
+static bool isAimNeck    = NO;
+static uint64_t gAimLockTarget  = 0;
+static uint64_t gAimLocalPlayer = 0;
+static Vector3  gAimLockedHead  = {};
+static Quaternion gAimSmoothed      = {0,0,0,1};
+static bool       gAimSmoothedValid = false;
+static float      gAimSpeed         = 180.0f;
 
 
 static bool gESPPrefsLoadedOnce = false;
@@ -68,11 +80,15 @@ void ESPSyncFromPrefs(void) {
     isDis        = ESPPrefsBool(KH_NS("Dis"),        NO);
     isLine       = ESPPrefsBool(KH_NS("Line"),       NO);
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
-    showFov      = ESPPrefsBool(@"ShowFov", YES);
-    fovPercent   = ESPPrefsFloat(@"FovSize", 40);
-    isBox3D      = ESPPrefsBool(@"Box3D", YES);
+    isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
+    isHipAlways   = ESPPrefsBool(@"AimHipAlways", NO);
+    isAimNeck     = ESPPrefsBool(@"AimNeck", NO);
+    showFov       = ESPPrefsBool(@"ShowFov", YES);
+    fovPercent    = ESPPrefsFloat(@"FovSize", 40);
+    isBox3D       = ESPPrefsBool(@"Box3D", YES);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
+    gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -110,6 +126,9 @@ typedef struct {
     int playerCount;
     int botCount;
     bool inMatch;
+    bool firing;
+    int  firingRaw;
+    bool scoping;
     int aimState;
 } ESPFrameStats;
 
@@ -586,6 +605,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 
 - (void)clearAllContent {
     SetMatchReady(NO);
+    gAimLockTarget      = 0;
+    gAimLockedHead      = {};
+    gAimSmoothedValid   = false;
     self.statusLayer.hidden = YES;
     self.aimDiagnosticLayer.hidden = YES;
     self.boxKnockLayer.path = self.lineKnockLayer.path = self.fovLayer.path = nil;
@@ -625,6 +647,8 @@ bool get_IsKnockedDown(uint64_t player) {
     }
     return ReadAddr<uint8_t>(player + kKnocked) != 0;
 }
+
+bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeState(GetDataUInt16(p, 12)); }
 
 
 - (ESPFrameStats)renderESPWithBuffers:(ESPGeometryBuffers *)buffers
@@ -672,8 +696,25 @@ bool get_IsKnockedDown(uint64_t player) {
     stats.inMatch = true;
     SetMatchReady(YES);
 
-    stats.aimState = 1;
+    stats.firingRaw = get_FiringByte(local);
+    stats.firing    = AimSelection::FiringState(stats.firingRaw);
+    stats.scoping   = get_IsScoping(local);
+    // triggerActive: chỉ scope (không có aim khi bắn)
+    const bool triggerActive = !get_IsKnockedDown(local) &&
+        (isAimbotScope && stats.scoping);
+    stats.aimState = triggerActive ? 2 : 1;
 
+    const bool sameLocal = (local == gAimLocalPlayer);
+    gAimLocalPlayer = local;
+    const uint64_t previousTarget = gAimLockTarget;
+    gAimLockTarget = 0;
+    gAimLockedHead = {};
+
+    AimSelection::Selection selection;
+    selection.previous = triggerActive ? previousTarget : 0;
+    Vector3 targetHead;
+
+    const float radius = AimSelection::Radius(vw, vh, fovPercent);
     for (int i = 0; i < count; ++i) {
         const uint8_t *entry = snapshot.data() + kDictEntryStrideBytePlayer * i;
         int hash = -1;
@@ -691,6 +732,17 @@ bool get_IsKnockedDown(uint64_t player) {
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
 
+        if (triggerActive && visible && !knocked) {
+            Vector3 head = getPositionExt(getHead(pawn));
+            if (isAimNeck) head = AimPoint::Neck(head, hip);
+            if (!IsZeroVec(head) && std::isfinite(head.x) &&
+                std::isfinite(head.y) && std::isfinite(head.z)) {
+                const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
+                selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
+                if (selection.target == pawn) targetHead = head;
+            }
+        }
+
         if (visible || knocked) {
             const bool bot = get_IsBot(pawn);
             if (bot) ++stats.botCount;
@@ -698,6 +750,43 @@ bool get_IsKnockedDown(uint64_t player) {
             _0x35572DA(buffers, ESPTextCallback, (__bridge void *)self,
                        pawn, hp, distance, hip, knocked, bot, matrix, vw, vh, vpW, vpH);
         }
+    }
+
+    // --- Aim scope: chỉ ghi rotation khi scope, trong FOV ---
+    if (triggerActive && selection.target) {
+        const uint64_t finalTarget = selection.target;
+        const Vector3  finalHead   = targetHead;
+        stats.aimState = 5;
+        if (getAimVisibility(finalTarget) &&
+            get_CurHP(finalTarget) > 0 && !get_IsKnockedDown(finalTarget) &&
+            get_CurHP(local) > 0 && !get_IsKnockedDown(local)) {
+            const Vector3 direction = finalHead - myLoc;
+            if (Vector3::SqrMagnitude(direction) > 0.0001f) {
+                const Quaternion targetRot = Quaternion::Normalized(
+                    Quaternion::LookRotation(direction, Vector3::Up()));
+                if (std::isfinite(targetRot.x) && std::isfinite(targetRot.y) &&
+                    std::isfinite(targetRot.z) && std::isfinite(targetRot.w)) {
+                    stats.aimState = 3;
+                    if (!gAimSmoothedValid || gAimLockTarget != finalTarget) {
+                        gAimSmoothed = ReadAddr<Quaternion>(local + kAimRotation);
+                        if (!std::isfinite(gAimSmoothed.x) || !std::isfinite(gAimSmoothed.y) ||
+                            !std::isfinite(gAimSmoothed.z) || !std::isfinite(gAimSmoothed.w))
+                            gAimSmoothed = targetRot;
+                        gAimSmoothedValid = true;
+                    }
+                    const float dt     = gBalancedRender ? (1.0f/30.0f) : (1.0f/60.0f);
+                    const float maxRad = gAimSpeed * Deg2Rad * dt;
+                    gAimSmoothed = Quaternion::RotateTowards(gAimSmoothed, targetRot, maxRad);
+                    if (WriteAddr<Quaternion>(local + kAimRotation, gAimSmoothed)) {
+                        stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, gAimSmoothed) ? 4 : 6;
+                        gAimLockTarget = finalTarget;
+                        gAimLockedHead = finalHead;
+                    }
+                }
+            }
+        }
+    } else {
+        gAimSmoothedValid = false;
     }
 
     return stats;
