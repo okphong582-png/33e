@@ -1,5 +1,3 @@
-#include "../Core/AimSelection.h"
-#include "../Core/AimPoint.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -49,19 +47,10 @@ bool isName       = YES;
 bool isDis        = YES;
 bool isLine       = YES;
 bool isHeadRedDot = YES;
-bool isAimbotFire = YES;
-static bool isAimbotScope = YES;
-static bool isHipAlways = NO;
-static bool isAimNeck = NO;
-static bool showFov = YES;
-static float fovPercent = 40.0f;
 bool isBox3D = YES;
-static uint64_t gAimLockTarget = 0;
-static uint64_t gAimLocalPlayer = 0;
-static Vector3  gAimLockedHead = {}; // world-space head position of the locked target
-static Quaternion gAimSmoothed = {0,0,0,1}; // quaternion đang được smooth mỗi frame
-static bool      gAimSmoothedValid = false;  // true khi gAimSmoothed đã được khởi tạo
-static float     gAimSpeed = 180.0f;         // tốc độ xoay aim (degree/giây)
+static bool showFov    = YES;
+static float fovPercent = 40.0f;
+
 
 static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
@@ -79,18 +68,11 @@ void ESPSyncFromPrefs(void) {
     isDis        = ESPPrefsBool(KH_NS("Dis"),        NO);
     isLine       = ESPPrefsBool(KH_NS("Line"),       NO);
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
-    isAimbotFire = ESPPrefsBool(KH_NS("AimbotFire"), YES);
-    isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
-    isHipAlways = ESPPrefsBool(@"AimHipAlways", NO);
-    isAimNeck = ESPPrefsBool(@"AimNeck", NO);
-    showFov = ESPPrefsBool(@"ShowFov", YES);
-    fovPercent = ESPPrefsFloat(@"FovSize", 40);
-    isBox3D = ESPPrefsBool(@"Box3D", YES);
+    showFov      = ESPPrefsBool(@"ShowFov", YES);
+    fovPercent   = ESPPrefsFloat(@"FovSize", 40);
+    isBox3D      = ESPPrefsBool(@"Box3D", YES);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
-    // AimSpeed: tốc độ smooth aim, đơn vị degree/giây
-    // 180 = mượt vừa phải, 360 = nhanh hơn, 90 = rất mượt/chậm
-    gAimSpeed = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -128,9 +110,6 @@ typedef struct {
     int playerCount;
     int botCount;
     bool inMatch;
-    bool firing;
-    int firingRaw;
-    bool scoping;
     int aimState;
 } ESPFrameStats;
 
@@ -602,19 +581,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)updateAimDiagnostic:(ESPFrameStats)stats now:(CFTimeInterval)now {
-    self.aimDiagnosticLayer.hidden = !gAimDiagnostics || !ESPMatchReady();
-    if (!gAimDiagnostics || !ESPMatchReady() || now < self.nextAimDiagnosticUpdate) return;
-    self.nextAimDiagnosticUpdate = now + 0.5;
-    self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
-    self.aimDiagnosticLayer.string = [NSString stringWithFormat:@"Bắn:%d [0x770:%d]  Ngắm:%d · %@",
-        stats.firing, stats.firingRaw, stats.scoping, AimStateDescription(stats.aimState)];
+    self.aimDiagnosticLayer.hidden = YES; // aim đã xóa, ẩn hoàn toàn
 }
 
 - (void)clearAllContent {
     SetMatchReady(NO);
-    gAimLockTarget = 0;
-    gAimLockedHead = {};
-    gAimSmoothedValid = false; // reset smooth state khi ra trận
     self.statusLayer.hidden = YES;
     self.aimDiagnosticLayer.hidden = YES;
     self.boxKnockLayer.path = self.lineKnockLayer.path = self.fovLayer.path = nil;
@@ -655,28 +626,22 @@ bool get_IsKnockedDown(uint64_t player) {
     return ReadAddr<uint8_t>(player + kKnocked) != 0;
 }
 
-bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeState(GetDataUInt16(p, 12)); }
 
 - (ESPFrameStats)renderESPWithBuffers:(ESPGeometryBuffers *)buffers
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
     ESPFrameStats stats = {};
-    const uint64_t previousTarget = gAimLockTarget;
-    const Vector3  previousLockedHead = gAimLockedHead;
-    gAimLockTarget = 0; // Every early return releases stale targets.
-    gAimLockedHead = {};
     if (!buffers || !isVaildPtr(Moudule_Base)) {
-        cachedMatchGame = cachedMatch = cachedCamera = gAimLocalPlayer = 0;
+        cachedMatchGame = cachedMatch = cachedCamera = 0;
         return stats;
     }
     // Refresh the match identity each frame so a new match cannot reuse a stale lock.
     const uint64_t matchGame = getMatchGame(Moudule_Base);
     if (!isVaildPtr(matchGame)) {
-        cachedMatchGame = cachedMatch = cachedCamera = gAimLocalPlayer = 0;
+        cachedMatchGame = cachedMatch = cachedCamera = 0;
         return stats;
     }
     const uint64_t match = getMatch(matchGame);
-    const bool sameMatch = match == cachedMatch;
     cachedMatchGame = matchGame;
     cachedMatch = match;
     cachedCamera = CameraMain(matchGame);
@@ -684,8 +649,6 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
 
     const uint64_t local = getLocalPlayer(match);
     if (!isVaildPtr(local) || get_CurHP(local) <= 0) return stats;
-    const bool sameLocal = local == gAimLocalPlayer;
-    gAimLocalPlayer = local;
     const uint64_t camTransform = ReadAddr<uint64_t>(local + kMainCameraTransform);
     if (!isVaildPtr(camTransform)) return stats;
     const Vector3 myLoc = getPositionExt(camTransform);
@@ -709,24 +672,8 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     stats.inMatch = true;
     SetMatchReady(YES);
 
-    stats.firingRaw = get_FiringByte(local);
-    stats.firing = AimSelection::FiringState(stats.firingRaw);
-    stats.scoping = get_IsScoping(local);
+    stats.aimState = 1;
 
-    // triggerActive: player is actively pressing fire / aiming down sights
-    const bool triggerActive = !get_IsKnockedDown(local) && AimSelection::Triggered(
-        isAimbotFire, isAimbotScope,
-        stats.firing, stats.scoping, isHipAlways);
-
-    stats.aimState = triggerActive ? 2 : 1;
-
-    // FOV selection — chỉ chạy khi đang trigger
-    // selection.previous giữ ưu tiên target cũ nếu nó vẫn trong FOV circle
-    AimSelection::Selection selection;
-    selection.previous = triggerActive ? previousTarget : 0;
-    Vector3 targetHead;
-
-    const float radius = AimSelection::Radius(vw, vh, fovPercent);
     for (int i = 0; i < count; ++i) {
         const uint8_t *entry = snapshot.data() + kDictEntryStrideBytePlayer * i;
         int hash = -1;
@@ -744,18 +691,6 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
 
-        if (triggerActive && visible && !knocked) {
-            Vector3 head = getPositionExt(getHead(pawn));
-            if (isAimNeck) head = AimPoint::Neck(head, hip);
-            if (!IsZeroVec(head) && std::isfinite(head.x) &&
-                std::isfinite(head.y) && std::isfinite(head.z)) {
-                const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
-                // Chỉ consider nếu trong FOV — khi screen.z > 0 và trong radius
-                selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
-                if (selection.target == pawn) targetHead = head;
-            }
-        }
-
         if (visible || knocked) {
             const bool bot = get_IsBot(pawn);
             if (bot) ++stats.botCount;
@@ -765,62 +700,6 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         }
     }
 
-    // --- Decide final aim target ---
-    // CHỈ dùng FOV selection: nếu target ra khỏi FOV circle hoặc không còn trigger
-    // → không ghi rotation, aim DỮNG ngay, không kéo ngược
-    uint64_t finalTarget = 0;
-    Vector3  finalHead;
-    if (triggerActive && selection.target) {
-        finalTarget = selection.target;
-        finalHead   = targetHead;
-        stats.aimState = 5;
-    }
-
-    // --- Write rotation (smooth aim) ---
-    // Thay vì snap ngay vào đầu địch, xoay dần với tốc độ gAimSpeed deg/s
-    // → người chơi vẫn có thể xoay màn hình vượt qua target, không bị dính cứng
-    if (finalTarget && getAimVisibility(finalTarget) &&
-        get_CurHP(finalTarget) > 0 && !get_IsKnockedDown(finalTarget) &&
-        getLocalPlayer(match) == local &&
-        get_CurHP(local) > 0 && !get_IsKnockedDown(local)) {
-        const Vector3 direction = finalHead - myLoc;
-        if (Vector3::SqrMagnitude(direction) > 0.0001f) {
-            const Quaternion targetRot = Quaternion::Normalized(
-                Quaternion::LookRotation(direction, Vector3::Up()));
-            if (std::isfinite(targetRot.x) && std::isfinite(targetRot.y) &&
-                std::isfinite(targetRot.z) && std::isfinite(targetRot.w)) {
-                stats.aimState = 3;
-
-                // Lấy rotation hiện tại của nhân vật làm điểm bắt đầu smooth
-                // Nếu target vừa đổi hoặc chưa có smooth state → khởi tạo từ current
-                if (!gAimSmoothedValid || gAimLockTarget != finalTarget) {
-                    gAimSmoothed = ReadAddr<Quaternion>(local + kAimRotation);
-                    // Nếu đọc về zero/invalid, dùng targetRot để tránh giật mạnh
-                    if (!std::isfinite(gAimSmoothed.x) || !std::isfinite(gAimSmoothed.y) ||
-                        !std::isfinite(gAimSmoothed.z) || !std::isfinite(gAimSmoothed.w))
-                        gAimSmoothed = targetRot;
-                    gAimSmoothedValid = true;
-                }
-
-                // deltaTime cố định theo FPS hiện tại (30 hoặc 60)
-                const float dt = gBalancedRender ? (1.0f / 30.0f) : (1.0f / 60.0f);
-                // maxRadians = tốc độ (deg/s) → rad, tính theo dt
-                const float maxRad = gAimSpeed * Deg2Rad * dt;
-
-                // RotateTowards: xoay tối đa maxRad radian về phía target mỗi frame
-                gAimSmoothed = Quaternion::RotateTowards(gAimSmoothed, targetRot, maxRad);
-
-                if (WriteAddr<Quaternion>(local + kAimRotation, gAimSmoothed)) {
-                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, gAimSmoothed) ? 4 : 6;
-                    gAimLockTarget = finalTarget;
-                    gAimLockedHead = finalHead;
-                }
-            }
-        }
-    } else {
-        // Không có target hợp lệ → reset smooth state để frame sau bắt đầu mượt từ đầu
-        gAimSmoothedValid = false;
-    }
     return stats;
 }
 
