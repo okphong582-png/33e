@@ -15,6 +15,7 @@
 #import "AntiREProtection.h"
 #import "UIView+SecureView.h"
 #import "InjectedLicenseController.h"
+#import "InjectedOverlayOwnership.h"
 
 @interface MizzeOverlayWindow : UIWindow
 @end
@@ -73,14 +74,11 @@ namespace StealthAntiCheat {
     }
 }
 
-static HUDMainApplicationDelegate *gInjectedHUDDelegate = nil;
-static BOOL gMenuInitialized = NO;
-
 static void SetupInjectedOverlayMenu() {
-    if (gMenuInitialized) return;
-
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (gMenuInitialized) return;
+        UIApplication *app = UIApplication.sharedApplication;
+        if (MizzeOverlayOwner(app)) return;
+        MizzeOverlayWindow *hudWindow = nil;
         @try {
             UIWindow *targetKeyWindow = nil;
             if (@available(iOS 13.0, *)) {
@@ -104,10 +102,7 @@ static void SetupInjectedOverlayMenu() {
                 return;
             }
 
-            gInjectedHUDDelegate = [[HUDMainApplicationDelegate alloc] init];
-            
             CGRect screenFrame = targetKeyWindow.bounds;
-            MizzeOverlayWindow *hudWindow;
             if (@available(iOS 13.0, *)) {
                 hudWindow = targetKeyWindow.windowScene ? [[MizzeOverlayWindow alloc] initWithWindowScene:targetKeyWindow.windowScene] : [[MizzeOverlayWindow alloc] initWithFrame:screenFrame];
             } else hudWindow = [[MizzeOverlayWindow alloc] initWithFrame:screenFrame];
@@ -116,17 +111,20 @@ static void SetupInjectedOverlayMenu() {
             hudWindow.userInteractionEnabled = YES;
             hudWindow.backgroundColor = [UIColor clearColor];
 
+            // Claim before loading the controller's view or making the window
+            // visible: both may trigger UIKit lifecycle callbacks reentrantly.
+            if (!MizzeClaimOverlay(app, hudWindow)) return;
+
             InjectedLicenseController *root = [InjectedLicenseController new];
             root.gameWindow = targetKeyWindow;
             root.view.backgroundColor = UIColor.clearColor;
             hudWindow.rootViewController = root;
             root.view.frame = hudWindow.bounds;
 
-            [gInjectedHUDDelegate setValue:hudWindow forKey:@"window"];
-
-            gMenuInitialized = YES;
             hudWindow.hidden = NO;
         } @catch (NSException *ex) {
+            hudWindow.hidden = YES;
+            MizzeReleaseOverlay(app, hudWindow);
             // Silently handle exceptions in stealth mode
         }
     });

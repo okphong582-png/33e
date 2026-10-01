@@ -1,209 +1,183 @@
 #!/usr/bin/env python3
+"""Inject one overlay image; normalize legacy aliases without changing ordinals."""
+import argparse
+import copy
 import os
-import sys
-import struct
-import zipfile
+from pathlib import Path, PurePosixPath
+import plistlib
 import shutil
+import struct
+import tempfile
+import zipfile
 
 MH_MAGIC_64 = 0xFEEDFACF
-MH_CIGAM_64 = 0xCFFAEDFE
 FAT_MAGIC = 0xCAFEBABE
 FAT_CIGAM = 0xBEBAFECA
+LOAD_COMMANDS = (0x0C, 0x80000018, 0x8000001F, 0x80000023)
+DEFAULT_INSTALL_NAME = '@executable_path/Frameworks/libsubsystem.dylib'
+OVERLAY_ALIASES = {'Monite.dylib', 'libsubsystem.dylib', 'iOSViet.dylib'}
 
-LC_LOAD_DYLIB = 0x0C
-LC_LOAD_WEAK_DYLIB = 0x80000018
-LC_REQ_DYLD = 0x80000000
+
+def commands(data):
+    if len(data) < 32 or struct.unpack_from('<I', data)[0] != MH_MAGIC_64:
+        raise ValueError('Expected a thin 64-bit Mach-O')
+    count, size = struct.unpack_from('<II', data, 16)
+    end, pos = 32 + size, 32
+    if end > len(data):
+        raise ValueError('Truncated load command table')
+    result = []
+    for _ in range(count):
+        if pos + 8 > end:
+            raise ValueError('Truncated load command')
+        cmd, length = struct.unpack_from('<II', data, pos)
+        if length < 8 or length % 8 or pos + length > end:
+            raise ValueError('Invalid load command size')
+        command = data[pos:pos + length]
+        name = None
+        if cmd in LOAD_COMMANDS:
+            if length < 24:
+                raise ValueError('Truncated dylib command')
+            offset = struct.unpack_from('<I', command, 8)[0]
+            if not 24 <= offset < length or b'\0' not in command[offset:]:
+                raise ValueError('Invalid dylib name')
+            name = command[offset:].split(b'\0', 1)[0].decode('utf-8')
+        result.append((cmd, command, name))
+        pos += length
+    if pos != end:
+        raise ValueError('Invalid load command table size')
+    return result
+
+
+def is_overlay(name, install_name):
+    if name == install_name:
+        return True
+    return (PurePosixPath(install_name).name == 'libsubsystem.dylib'
+            and name.startswith(('@executable_path/', '@loader_path/', '@rpath/'))
+            and PurePosixPath(name).name in OVERLAY_ALIASES)
+
+
+def dylib_command(cmd, name, original=None):
+    encoded = name.encode('utf-8') + b'\0'
+    size = (24 + len(encoded) + 7) // 8 * 8
+    versions = struct.unpack_from('<III', original, 12) if original else (2, 0x10000, 0x10000)
+    return (struct.pack('<6I', cmd, size, 24, *versions) + encoded).ljust(size, b'\0')
+
 
 def patch_macho_64(data, dylib_path):
-    if len(data) < 32:
-        raise ValueError("File too small to be Mach-O 64-bit")
-
-    magic, cputype, cpusubtype, filetype, ncmds, sizeofcmds, flags, reserved = struct.unpack("<IIIIIIII", data[:32])
-
-    if magic != MH_MAGIC_64:
-        raise ValueError(f"Not a Mach-O 64-bit binary (magic: {hex(magic)})")
-
-    # Check if dylib is already injected
-    dylib_bytes = dylib_path.encode('utf-8') + b'\x00'
-    if dylib_bytes in data[:32 + sizeofcmds]:
-        print(f"[*] Dylib {dylib_path} is already injected.")
-        return data
-
-    # Construct LC_LOAD_DYLIB command
-    # struct dylib_command {
-    #     uint32_t cmd;
-    #     uint32_t cmdsize;
-    #     struct dylib {
-    #         union lc_str name; // offset 24
-    #         uint32_t timestamp;
-    #         uint32_t current_version;
-    #         uint32_t compatibility_version;
-    #     } dylib;
-    # };
-    header_size = 24
-    raw_size = header_size + len(dylib_bytes)
-    cmdsize = ((raw_size + 7) // 8) * 8 # Pad to 8 bytes boundary
-    padding = b'\x00' * (cmdsize - raw_size)
-
-    lc_data = struct.pack("<IIIIII", LC_LOAD_DYLIB, cmdsize, 24, 2, 0x00010000, 0x00010000) + dylib_bytes + padding
-
-    lc_end = 32 + sizeofcmds
-
-    # Check if space is available before section/data begins
-    free_space = data[lc_end:lc_end + cmdsize]
-    if any(b != 0 for b in free_space):
-        print("[!] Warning: Load command space contains non-zero bytes. Searching for zero padding...")
-        # Check padding length
-        pad_len = 0
-        for b in data[lc_end:]:
-            if b == 0:
-                pad_len += 1
-            else:
-                break
-        if pad_len < cmdsize:
-            raise RuntimeError(f"Not enough header space to insert load command ({pad_len} < {cmdsize})")
-
-    # Insert load command
-    new_data = bytearray(data)
-    new_data[lc_end:lc_end + cmdsize] = lc_data
-
-    # Update header: ncmds += 1, sizeofcmds += cmdsize
-    new_ncmds = ncmds + 1
-    new_sizeofcmds = sizeofcmds + cmdsize
-    struct.pack_into("<II", new_data, 16, new_ncmds, new_sizeofcmds)
-
-    print(f"[+] Successfully injected LC_LOAD_DYLIB command for {dylib_path} (ncmds: {ncmds} -> {new_ncmds})")
-    return bytes(new_data)
-
-def inject_ipa(ipa_path, dylib_file_path, output_ipa_path, dylib_install_name="@executable_path/Frameworks/libsubsystem.dylib"):
-    print(f"[*] Extracting IPA: {ipa_path}")
-    work_dir = "temp_ipa_extract"
-    if os.path.exists(work_dir):
-        shutil.rmtree(work_dir)
-
-    os.makedirs(work_dir)
-
-    with zipfile.ZipFile(ipa_path, 'r') as zip_ref:
-        zip_ref.extractall(work_dir)
-
-    payload_dir = os.path.join(work_dir, "Payload")
-    if not os.path.exists(payload_dir):
-        raise FileNotFoundError("Payload directory not found in IPA")
-
-    app_name = None
-    for item in os.listdir(payload_dir):
-        if item.endswith(".app"):
-            app_name = item
-            break
-
-    if not app_name:
-        raise FileNotFoundError("No .app directory found in Payload")
-
-    app_dir = os.path.join(payload_dir, app_name)
-    exec_name = os.path.splitext(app_name)[0]
-    exec_path = os.path.join(app_dir, exec_name)
-
-    if not os.path.exists(exec_path):
-        # Read Info.plist to find executable name if it differs from app name
-        info_plist_path = os.path.join(app_dir, "Info.plist")
-        if os.path.exists(info_plist_path):
-            with open(info_plist_path, 'rb') as f:
-                content = f.read()
-                # Basic string search for CFBundleExecutable
-                idx = content.find(b'CFBundleExecutable')
-                if idx != -1:
-                    # extract string value
-                    sub = content[idx:idx+200]
-                    parts = sub.split(b'<string>')
-                    if len(parts) > 1:
-                        val = parts[1].split(b'</string>')[0].decode('utf-8', errors='ignore')
-                        exec_path = os.path.join(app_dir, val)
-
-    print(f"[*] App executable found at: {exec_path}")
-
-    # Copy dylib into App Frameworks folder
-    frameworks_dir = os.path.join(app_dir, "Frameworks")
-    os.makedirs(frameworks_dir, exist_ok=True)
-
-    dylib_filename = os.path.basename(dylib_install_name)
-    target_dylib_path = os.path.join(frameworks_dir, dylib_filename)
-    shutil.copyfile(dylib_file_path, target_dylib_path)
-    print(f"[+] Copied dylib to {target_dylib_path}")
-
-    # Copy resources (GIF, icons, Plists) into App bundle
-    resources_source = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "layout", "Resources")
-    if os.path.exists(resources_source):
-        for res in os.listdir(resources_source):
-            src_res = os.path.join(resources_source, res)
-            dst_res = os.path.join(app_dir, res)
-            if os.path.isfile(src_res):
-                shutil.copyfile(src_res, dst_res)
-                print(f"[+] Bundled resource: {res}")
+    table = commands(data)
+    old_end = 32 + struct.unpack_from('<I', data, 20)[0]
+    updated = []
+    found = False
+    for cmd, command, name in table:
+        if name is not None and is_overlay(name, dylib_path):
+            # Keep every dependency slot: removing one would shift Mach-O
+            # library ordinals used by existing symbol bindings. dyld loads
+            # the same canonical image once even if multiple slots name it.
+            command = dylib_command(cmd, dylib_path, command)
+            found = True
+        updated.append(command)
+    if not found:
+        updated.append(dylib_command(0x0C, dylib_path))
+    payload = b''.join(updated)
+    new_end = 32 + len(payload)
+    if new_end > len(data) or (new_end > old_end and any(data[old_end:new_end])):
+        raise ValueError('Not enough zero header padding for injection')
+    result = bytearray(data)
+    result[32:max(old_end, new_end)] = payload.ljust(max(old_end, new_end) - 32, b'\0')
+    struct.pack_into('<II', result, 16, len(updated), len(payload))
+    return bytes(result)
 
 
-    # Patch binary
-    with open(exec_path, "rb") as f:
-        binary_data = f.read()
-
-    # Check for Fat binary magic
-    magic = struct.unpack("<I", binary_data[:4])[0]
-    if magic in (FAT_MAGIC, FAT_CIGAM):
-        print("[*] Universal/Fat binary detected. Patching 64-bit slice...")
-        nfat = struct.unpack(">I", binary_data[4:8])[0]
-        offset_64 = 0
-        size_64 = 0
-        for i in range(nfat):
-            cputype, cpusub, off, sz, align = struct.unpack(">IIIII", binary_data[12 + i*20 : 32 + i*20])
-            if cputype == 0x0100000C: # CPU_TYPE_ARM64
-                offset_64 = off
-                size_64 = sz
-                break
-        if offset_64 > 0:
-            slice_data = binary_data[offset_64 : offset_64 + size_64]
-            patched_slice = patch_macho_64(slice_data, dylib_install_name)
-            binary_data = binary_data[:offset_64] + patched_slice + binary_data[offset_64 + len(patched_slice):]
-        else:
-            raise ValueError("Could not find ARM64 slice in Fat binary")
-    else:
-        binary_data = patch_macho_64(binary_data, dylib_install_name)
-
-    with open(exec_path, "wb") as f:
-        f.write(binary_data)
-
-    print(f"[+] Patched executable binary: {exec_path}")
-
-    # Re-zip IPA
-    print(f"[*] Creating injected IPA at: {output_ipa_path}")
-    zip_base = output_ipa_path[:-4] if output_ipa_path.lower().endswith(".ipa") else output_ipa_path
-    zip_out = zip_base + ".zip"
-    if os.path.exists(output_ipa_path):
-        os.remove(output_ipa_path)
-    if os.path.exists(zip_out):
-        os.remove(zip_out)
-
-    shutil.make_archive(zip_base, 'zip', work_dir)
-    os.replace(zip_out, output_ipa_path)
-
-    # Clean up temp
-    shutil.rmtree(work_dir)
-    print(f"[SUCCESS] Injected IPA created: {output_ipa_path}")
+def patch_binary(data, install_name):
+    if len(data) < 8:
+        raise ValueError('Truncated executable')
+    magic = struct.unpack_from('>I', data)[0]
+    if magic not in (FAT_MAGIC, FAT_CIGAM):
+        return patch_macho_64(data, install_name)
+    endian = '>' if magic == FAT_MAGIC else '<'
+    count = struct.unpack_from(endian + 'I', data, 4)[0]
+    if 8 + count * 20 > len(data):
+        raise ValueError('Truncated universal architecture table')
+    result = bytearray(data)
+    patched = False
+    for index in range(count):
+        cpu, subtype, offset, size, align = struct.unpack_from(endian + '5I', data, 8 + index * 20)
+        if cpu != 0x0100000C:
+            continue
+        if offset < 8 + count * 20 or offset + size > len(data):
+            raise ValueError('Invalid arm64 slice bounds')
+        result[offset:offset + size] = patch_macho_64(data[offset:offset + size], install_name)
+        patched = True
+    if not patched:
+        raise ValueError('No arm64 slice found')
+    return bytes(result)
 
 
-if __name__ == "__main__":
-    import traceback
-    if len(sys.argv) < 4:
-        print("Usage: python inject_dylib.py <input.ipa> <library.dylib> <output.ipa> [dylib_install_path]")
-        sys.exit(1)
-
-    ipa_in = sys.argv[1]
-    dylib_in = sys.argv[2]
-    ipa_out = sys.argv[3]
-    install_path = sys.argv[4] if len(sys.argv) > 4 else "@executable_path/Frameworks/libsubsystem.dylib"
-
+def inject_ipa(ipa_path, dylib_file_path, output_ipa_path, dylib_install_name=DEFAULT_INSTALL_NAME):
+    prefix = '@executable_path/'
+    if not dylib_install_name.startswith(prefix):
+        raise ValueError('IPA install path must use @executable_path/')
+    relative = PurePosixPath(dylib_install_name[len(prefix):])
+    if relative.is_absolute() or '..' in relative.parts or len(relative.parts) != 2 or relative.parts[0] != 'Frameworks':
+        raise ValueError('Install path must be a file directly in Frameworks/')
+    library = Path(dylib_file_path).read_bytes()
+    commands(library)
+    if struct.unpack_from('<I', library, 4)[0] != 0x0100000C or struct.unpack_from('<I', library, 12)[0] != 6:
+        raise ValueError('Library must be an arm64 MH_DYLIB')
+    output_path = Path(output_ipa_path).resolve()
+    if output_path == Path(ipa_path).resolve():
+        raise ValueError('Use a separate output IPA to preserve the original')
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    resources = Path(__file__).resolve().parents[1] / 'layout' / 'Resources'
+    temp_name = None
     try:
-        inject_ipa(ipa_in, dylib_in, ipa_out, install_path)
-    except Exception as e:
-        print(f"[ERROR] Injection failed: {e}")
-        traceback.print_exc()
-        sys.exit(1)
+        with zipfile.ZipFile(ipa_path) as source:
+            names = source.namelist()
+            if len(names) != len(set(names)):
+                raise ValueError('Duplicate entries in input IPA')
+            roots = [n[:-len('Info.plist')] for n in names
+                     if n.startswith('Payload/') and n.endswith('.app/Info.plist') and n.count('/') == 2]
+            if len(roots) != 1:
+                raise ValueError('Expected one app in Payload')
+            root = roots[0]
+            info = plistlib.loads(source.read(root + 'Info.plist'))
+            executable = root + info['CFBundleExecutable']
+            main = patch_binary(source.read(executable), dylib_install_name)
+            target = root + str(relative)
+            replacements = {executable: main, target: library}
+            if resources.is_dir():
+                replacements.update({root + p.name: p.read_bytes() for p in resources.iterdir()
+                                     if p.is_file() and p.name != 'Info.plist' and root + p.name != executable})
+            obsolete = ({root + 'Frameworks/' + n for n in OVERLAY_ALIASES} - {target}
+                        if relative.name == 'libsubsystem.dylib' else set())
+            fd, temp_name = tempfile.mkstemp(prefix='mizze-inject-', suffix='.ipa', dir=output_path.parent)
+            os.close(fd)
+            with zipfile.ZipFile(temp_name, 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as output:
+                output.comment = source.comment
+                for item in source.infolist():
+                    if item.filename in obsolete:
+                        continue
+                    with output.open(copy.copy(item), 'w', force_zip64=True) as dst:
+                        if item.filename in replacements:
+                            dst.write(replacements.pop(item.filename))
+                        else:
+                            with source.open(item) as src:
+                                shutil.copyfileobj(src, dst, 1024 * 1024)
+                for name, content in replacements.items():
+                    output.writestr(name, content)
+        os.replace(temp_name, output_path)
+        temp_name = None
+    finally:
+        if temp_name:
+            Path(temp_name).unlink(missing_ok=True)
+    print(f'[SUCCESS] One overlay image injected: {output_path}')
 
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('input_ipa')
+    parser.add_argument('library')
+    parser.add_argument('output_ipa')
+    parser.add_argument('install_name', nargs='?', default=DEFAULT_INSTALL_NAME)
+    args = parser.parse_args()
+    inject_ipa(args.input_ipa, args.library, args.output_ipa, args.install_name)
