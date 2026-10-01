@@ -59,6 +59,9 @@ bool isBox3D = YES;
 static uint64_t gAimLockTarget = 0;
 static uint64_t gAimLocalPlayer = 0;
 static Vector3  gAimLockedHead = {}; // world-space head position of the locked target
+static Quaternion gAimSmoothed = {0,0,0,1}; // quaternion đang được smooth mỗi frame
+static bool      gAimSmoothedValid = false;  // true khi gAimSmoothed đã được khởi tạo
+static float     gAimSpeed = 180.0f;         // tốc độ xoay aim (degree/giây)
 
 static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
@@ -85,6 +88,9 @@ void ESPSyncFromPrefs(void) {
     isBox3D = ESPPrefsBool(@"Box3D", YES);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
+    // AimSpeed: tốc độ smooth aim, đơn vị degree/giây
+    // 180 = mượt vừa phải, 360 = nhanh hơn, 90 = rất mượt/chậm
+    gAimSpeed = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -608,6 +614,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     SetMatchReady(NO);
     gAimLockTarget = 0;
     gAimLockedHead = {};
+    gAimSmoothedValid = false; // reset smooth state khi ra trận
     self.statusLayer.hidden = YES;
     self.aimDiagnosticLayer.hidden = YES;
     self.boxKnockLayer.path = self.lineKnockLayer.path = self.fovLayer.path = nil;
@@ -799,25 +806,50 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         stats.aimState = 5;
     }
 
-    // --- Write rotation ---
+    // --- Write rotation (smooth aim) ---
+    // Thay vì snap ngay vào đầu địch, xoay dần với tốc độ gAimSpeed deg/s
+    // → người chơi vẫn có thể xoay màn hình vượt qua target, không bị dính cứng
     if (finalTarget && getAimVisibility(finalTarget) &&
         get_CurHP(finalTarget) > 0 && !get_IsKnockedDown(finalTarget) &&
         getLocalPlayer(match) == local &&
         get_CurHP(local) > 0 && !get_IsKnockedDown(local)) {
         const Vector3 direction = finalHead - myLoc;
         if (Vector3::SqrMagnitude(direction) > 0.0001f) {
-            const Quaternion rot = Quaternion::Normalized(
+            const Quaternion targetRot = Quaternion::Normalized(
                 Quaternion::LookRotation(direction, Vector3::Up()));
-            if (std::isfinite(rot.x) && std::isfinite(rot.y) &&
-                std::isfinite(rot.z) && std::isfinite(rot.w)) {
+            if (std::isfinite(targetRot.x) && std::isfinite(targetRot.y) &&
+                std::isfinite(targetRot.z) && std::isfinite(targetRot.w)) {
                 stats.aimState = 3;
-                if (WriteAddr<Quaternion>(local + kAimRotation, rot)) {
-                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, rot) ? 4 : 6;
+
+                // Lấy rotation hiện tại của nhân vật làm điểm bắt đầu smooth
+                // Nếu target vừa đổi hoặc chưa có smooth state → khởi tạo từ current
+                if (!gAimSmoothedValid || gAimLockTarget != finalTarget) {
+                    gAimSmoothed = ReadAddr<Quaternion>(local + kAimRotation);
+                    // Nếu đọc về zero/invalid, dùng targetRot để tránh giật mạnh
+                    if (!std::isfinite(gAimSmoothed.x) || !std::isfinite(gAimSmoothed.y) ||
+                        !std::isfinite(gAimSmoothed.z) || !std::isfinite(gAimSmoothed.w))
+                        gAimSmoothed = targetRot;
+                    gAimSmoothedValid = true;
+                }
+
+                // deltaTime cố định theo FPS hiện tại (30 hoặc 60)
+                const float dt = gBalancedRender ? (1.0f / 30.0f) : (1.0f / 60.0f);
+                // maxRadians = tốc độ (deg/s) → rad, tính theo dt
+                const float maxRad = gAimSpeed * Deg2Rad * dt;
+
+                // RotateTowards: xoay tối đa maxRad radian về phía target mỗi frame
+                gAimSmoothed = Quaternion::RotateTowards(gAimSmoothed, targetRot, maxRad);
+
+                if (WriteAddr<Quaternion>(local + kAimRotation, gAimSmoothed)) {
+                    stats.aimState = WriteAddr<Quaternion>(local + kAimRotationAux, gAimSmoothed) ? 4 : 6;
                     gAimLockTarget = finalTarget;
                     gAimLockedHead = finalHead;
                 }
             }
         }
+    } else {
+        // Không có target hợp lệ → reset smooth state để frame sau bắt đầu mượt từ đầu
+        gAimSmoothedValid = false;
     }
     return stats;
 }
