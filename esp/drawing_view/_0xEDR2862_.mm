@@ -26,23 +26,6 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
-// Khi địch ở sau lưng camera, chiếu điểm đó ra mép màn hình
-// origin = tâm màn hình, target = điểm muốn chỉ tới
-// trả về điểm giao với biên màn hình [0,w] x [0,h]
-static CGPoint ProjectToEdge(CGFloat ox, CGFloat oy,
-                             CGFloat tx, CGFloat ty,
-                             CGFloat w,  CGFloat h) {
-    const CGFloat dx = tx - ox, dy = ty - oy;
-    if (dx == 0 && dy == 0) return CGPointMake(ox, oy);
-    CGFloat t = std::numeric_limits<CGFloat>::max();
-    const CGFloat margin = 12.0f; // khoảng cách tối thiểu với mép
-    if (dx > 0) t = std::min(t, (w - margin - ox) / dx);
-    else if (dx < 0) t = std::min(t, (margin - ox) / dx);
-    if (dy > 0) t = std::min(t, (h - margin - oy) / dy);
-    else if (dy < 0) t = std::min(t, (margin - oy) / dy);
-    if (t <= 0 || !std::isfinite(t)) return CGPointMake(ox, oy);
-    return CGPointMake(ox + dx * t, oy + dy * t);
-}
 
 static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,
                         const Vector3 &head, const Vector3 &hip, float *matrix,
@@ -102,37 +85,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         return WorldToScreenLayer(v, matrix, vpWidth, vpHeight, width, height);
     };
     const Vector3 headScreen = project(head);
-    const bool headBehind = !ValidPosition(headScreen) || headScreen.z <= 0.001f;
-
-    // --- Snapline: luôn vẽ dù địch ở sau lưng ---
-    // Khi địch trong FOV: vẽ line bình thường đến đầu địch
-    // Khi địch sau lưng: chiếu hướng ra mép màn hình (off-screen indicator)
-    if (isLine) {
-        CGMutablePathRef linePath = knocked
-            ? buffers->lineKnockPath
-            : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
-        if (linePath) {
-            const CGFloat cx = width * 0.5f, cy = 40.0f; // điểm bắt đầu (top-center)
-            CGPoint endPt;
-            if (!headBehind) {
-                // Địch phía trước: line đến đầu
-                endPt = CGPointMake(headScreen.x, headScreen.y - 4);
-            } else {
-                // Địch sau lưng: tính hướng bằng cách flip projected point
-                // WorldToScreen trả về tọa độ bị đảo khi z<0 → đảo ngược để lấy đúng hướng
-                const CGFloat dirX = width  - headScreen.x; // flip X
-                const CGFloat dirY = height - headScreen.y; // flip Y
-                endPt = ProjectToEdge(cx, cy, cx + (dirX - cx), cy + (dirY - cy), width, height);
-            }
-            AddLine(linePath, CGPointMake(cx, cy), endPt, width, height);
-            if (knocked) buffers->lineKnockDirty = true;
-            else if (bot) buffers->lineBotDirty = true;
-            else buffers->linePlayerDirty = true;
-        }
-    }
-
-    // Phần còn lại (box, health, name...) chỉ vẽ khi địch trong FOV
-    if (headBehind) return;
+    if (!ValidPosition(headScreen) || headScreen.z <= 0.001f) return;
 
     AddSkeleton(buffers, pawn, head, hip, matrix, width, height, vpWidth, vpHeight);
     // Head markers and lines do not need ankle transforms or a projected box.
@@ -142,6 +95,17 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
             CGPathAddEllipseInRect(buffers->boxKnockPath, nullptr,
                 CGRectMake(headScreen.x - 3, headScreen.y - 3, 6, 6));
             buffers->boxKnockDirty = true;
+        }
+        if (isLine) {
+            CGMutablePathRef path = knocked ? buffers->lineKnockPath :
+                (bot ? buffers->lineBotPath : buffers->linePlayerPath);
+            if (path) {
+                AddLine(path, CGPointMake(width * 0.5f, 40),
+                        CGPointMake(headScreen.x, headScreen.y - 4), width, height);
+                if (knocked) buffers->lineKnockDirty = true;
+                else if (bot) buffers->lineBotDirty = true;
+                else buffers->linePlayerDirty = true;
+            }
         }
         return;
     }
@@ -219,11 +183,11 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     if (isLine) {
         CGMutablePathRef linePath = knocked ? buffers->lineKnockPath : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
         if (linePath) {
-            // Line đã được vẽ ở trên (kể cả off-screen), không vẽ lại
-            // Chỉ mark dirty nếu chưa được mark (trường hợp có box+line cùng lúc)
-            if (knocked && !buffers->lineKnockDirty) buffers->lineKnockDirty = true;
-            else if (bot && !buffers->lineBotDirty) buffers->lineBotDirty = true;
-            else if (!knocked && !bot && !buffers->linePlayerDirty) buffers->linePlayerDirty = true;
+            const CGPoint end = CGPointMake(headScreen.x, minY - 4);
+            AddLine(linePath, CGPointMake(width * 0.5f, 40), end, width, height);
+            if (knocked) buffers->lineKnockDirty = true;
+            else if (bot) buffers->lineBotDirty = true;
+            else buffers->linePlayerDirty = true;
         }
     }
     if (isHealth && buffers->hpBackgroundPath) {

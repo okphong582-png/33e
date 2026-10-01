@@ -714,32 +714,17 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
     stats.scoping = get_IsScoping(local);
 
     // triggerActive: player is actively pressing fire / aiming down sights
-    // Cần đúng điều kiện: AimbotFire bật → phải đang bắn; AimbotScope bật → phải đang ngắm
     const bool triggerActive = !get_IsKnockedDown(local) && AimSelection::Triggered(
         isAimbotFire, isAimbotScope,
         stats.firing, stats.scoping, isHipAlways);
 
-    // hasPrevLock: giữ lock CHÍNH XÁC theo trigger đang active
-    // - Nếu AimbotFire ON: chỉ giữ lock khi đang BẮN (firing)
-    // - Nếu AimbotScope ON (và Fire OFF): chỉ giữ lock khi đang NGẮM (scoping)
-    // - Khi người dùng thả ngón tay (không bắn/không ngắm) → xóa lock ngay
-    const bool hasPrevLock = sameMatch && sameLocal &&
-        previousTarget != 0 && isVaildPtr(previousTarget) &&
-        !get_IsKnockedDown(local) &&
-        triggerActive; // ← phải đang trigger thì mới giữ lock
+    stats.aimState = triggerActive ? 2 : 1;
 
-    // aiming: selection pass runs when trigger OR persistent lock is active
-    const bool aiming = triggerActive || hasPrevLock;
-    stats.aimState = aiming ? 2 : 1;
-
-    // FOV selection — only for active-trigger new-target acquisition
+    // FOV selection — chỉ chạy khi đang trigger
+    // selection.previous giữ ưu tiên target cũ nếu nó vẫn trong FOV circle
     AimSelection::Selection selection;
     selection.previous = triggerActive ? previousTarget : 0;
-    Vector3 targetHead; // head chosen by FOV selection
-
-    // Persistent lock — tracked directly, bypasses FOV radius constraint
-    uint64_t lockedTarget = 0;
-    Vector3  lockedHead;   // head of the previously-locked target
+    Vector3 targetHead;
 
     const float radius = AimSelection::Radius(vw, vh, fovPercent);
     for (int i = 0; i < count; ++i) {
@@ -759,25 +744,15 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
 
-        if (visible && !knocked) {
+        if (triggerActive && visible && !knocked) {
             Vector3 head = getPositionExt(getHead(pawn));
             if (isAimNeck) head = AimPoint::Neck(head, hip);
             if (!IsZeroVec(head) && std::isfinite(head.x) &&
                 std::isfinite(head.y) && std::isfinite(head.z)) {
-
-                // --- FOV selection (active trigger only) ---
-                if (triggerActive) {
-                    const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
-                    selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
-                    if (selection.target == pawn) targetHead = head;
-                }
-
-                // --- Persistent lock: capture locked target directly ---
-                // bypass consider() so the FOV radius limit never drops it
-                if (hasPrevLock && pawn == previousTarget) {
-                    lockedTarget = pawn;
-                    lockedHead   = head;
-                }
+                const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
+                // Chỉ consider nếu trong FOV — khi screen.z > 0 và trong radius
+                selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
+                if (selection.target == pawn) targetHead = head;
             }
         }
 
@@ -790,19 +765,14 @@ bool get_IsScoping(uint64_t p)  { return isVaildPtr(p) && AimSelection::ScopeSta
         }
     }
 
-    // --- Decide final aim target and head position ---
-    // Priority: active-trigger FOV selection > persistent lock
+    // --- Decide final aim target ---
+    // CHỈ dùng FOV selection: nếu target ra khỏi FOV circle hoặc không còn trigger
+    // → không ghi rotation, aim DỮNG ngay, không kéo ngược
     uint64_t finalTarget = 0;
     Vector3  finalHead;
     if (triggerActive && selection.target) {
-        // Normal trigger-based selection won this frame
         finalTarget = selection.target;
         finalHead   = targetHead;
-        stats.aimState = 5;
-    } else if (hasPrevLock && lockedTarget) {
-        // No active trigger (or no target in FOV), but lock is still valid
-        finalTarget = lockedTarget;
-        finalHead   = lockedHead;
         stats.aimState = 5;
     }
 
