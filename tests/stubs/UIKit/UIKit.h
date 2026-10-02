@@ -2,6 +2,10 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 
+typedef NS_ENUM(NSInteger, UIApplicationState) {
+    UIApplicationStateActive, UIApplicationStateInactive, UIApplicationStateBackground
+};
+
 typedef CGFloat UIWindowLevel;
 static const UIWindowLevel UIWindowLevelNormal = 0;
 typedef NS_ENUM(NSInteger, UISceneActivationState) {
@@ -29,6 +33,8 @@ typedef NS_ENUM(NSInteger, UISceneActivationState) {
 @property(nonatomic, weak) UIWindowScene *windowScene;
 @end
 @interface UIApplication : NSObject
++ (instancetype)sharedApplication;
+@property(nonatomic) UIApplicationState applicationState;
 @property(nonatomic, copy) NSSet<UIScene *> *connectedScenes;
 @property(nonatomic, copy) NSArray<UIWindow *> *windows;
 @end

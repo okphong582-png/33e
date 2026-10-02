@@ -9,6 +9,9 @@ from inject_dylib import commands
 def verify(path):
     data = Path(path).read_bytes()
     table = commands(data)
+    required_sections = {('__TEXT', name) for name in ('__cv_text', '__vtizer', '__vd_text', '__mt_text')}
+    required_sections.add(('__DATA', '__vdata'))
+    found_sections = set()
     if struct.unpack_from('<I', data, 4)[0] != 0x0100000C or struct.unpack_from('<I', data, 12)[0] != 6:
         raise ValueError('Expected an arm64 dylib')
     for cmd, command, name in table:
@@ -26,7 +29,10 @@ def verify(path):
             for index in range(count):
                 section = command[72 + index * 80:152 + index * 80]
                 section_name = section[:16].split(b'\0')[0].decode()
+                segment_name = section[16:32].split(b'\0')[0].decode()
                 size = struct.unpack_from('<Q', section, 40)[0]
+                if size:
+                    found_sections.add((segment_name, section_name))
                 flags = struct.unpack_from('<I', section, 64)[0]
                 if size and section_name in ('__objc_nlclslist', '__objc_nlcatlist'):
                     raise ValueError('Objective-C +load callback remains in injected dylib')
@@ -46,9 +52,14 @@ def verify(path):
                 symbol = strings[string_index:].split(b'\0', 1)[0].decode()
                 if symbol.startswith(forbidden):
                     raise ValueError(f'Private startup/HUD import: {symbol}')
+    missing = required_sections - found_sections
+    if missing:
+        raise ValueError(f'Own-code protection sections missing: {sorted(missing)}')
+    if b'https://appchatai-313e3-default-rtdb.firebaseio.com' in data:
+        raise ValueError('Injected default database URL stored as plain literal')
     if b'TSEventFetcher\0' in data:
         raise ValueError('Synthetic touch loader class remains in injected dylib')
-    print('Injected dylib: arm64, no +load, no private HUD imports, executable code sections')
+    print('Injected dylib: arm64, no +load, no private HUD imports, executable code sections, all five protection sections present')
 
 
 if __name__ == '__main__':

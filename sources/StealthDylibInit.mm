@@ -2,6 +2,7 @@
 #import "InjectedLicenseController.h"
 #import "InjectedOverlayOwnership.h"
 #import "InjectedWindowSelection.h"
+#import "InjectedProtection.h"
 
 @interface MizzeOverlayWindow : UIWindow
 @end
@@ -51,6 +52,7 @@ static void SetupInjectedOverlayMenu() {
         overlay.rootViewController = root;
         root.view.frame = overlay.bounds;
         overlay.hidden = NO;
+        MizzeStartOwnCodeProtection();
         NSLog(@"[Mizze] Overlay ready after host activation");
     } @catch (NSException *exception) {
         overlay.hidden = YES;

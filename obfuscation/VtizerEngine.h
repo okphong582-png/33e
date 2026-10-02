@@ -1,33 +1,16 @@
 #ifndef VTIZER_ENGINE_H
 #define VTIZER_ENGINE_H
 
-/*
- * ═══════════════════════════════════════════════════════════════
- *  .vtizer Segment – Virtualizer Engine
- * ═══════════════════════════════════════════════════════════════
- *
- *  The runtime interpreter engine that processes virtualized
- *  instruction streams. Placed in its own custom Mach-O segment
- *  ".vtizer" to separate the engine from regular code.
- *
- *  Pipeline position:
- *    Source Code → Obfuscation Pipeline → .vtizer Segment
- *
- *  Anti-RE effect:
- *    - Engine code isolated in separate segment
- *    - Handler table obfuscated per-build
- *    - Opaque predicates + dead code injection
- *    - Self-modifying dispatch table at runtime
- * ═══════════════════════════════════════════════════════════════
- */
+/* Reversible opcode dispatch and pure arithmetic handlers.
+ * Uses executable __TEXT sections; never changes memory permissions. */
 
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
-#include "KabraxHide.h"
+#include "ObfuscationPlatform.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define VTIZER_SECTION     __attribute__((section("__TEXT,__vtizer")))
+  #define VTIZER_SECTION OBF_CODE_SECTION("__vtizer")
   #define VTIZER_NOINLINE    __attribute__((noinline))
   #define VTIZER_HIDDEN      __attribute__((visibility("hidden")))
   #define VTIZER_USED        __attribute__((used))
@@ -43,11 +26,7 @@
 namespace _vtizer_ {
 
 // ─── Build-time key generation ────────────────────────────────
-static constexpr uint64_t _vt_seed() {
-    return ((__TIME__[0]-'0')*36000ULL) + ((__TIME__[1]-'0')*3600ULL) +
-           ((__TIME__[3]-'0')*600ULL)   + ((__TIME__[4]-'0')*60ULL) +
-           ((__TIME__[6]-'0')*10ULL)    + (__TIME__[7]-'0');
-}
+static constexpr uint64_t _vt_seed() { return _obf_::BuildSeed; }
 static constexpr uint64_t VTIZER_SEED = _vt_seed();
 
 constexpr uint64_t _vt_hash(uint64_t x) {
@@ -185,7 +164,7 @@ static uint64_t _vt_handler_sbox_transform(uint64_t* regs, uint64_t arg, volatil
     uint64_t result = 0;
     for (int i = 0; i < 8; ++i) {
         uint8_t byte = (uint8_t)(val >> (i * 8));
-        byte = _kh_::sbox[byte];
+        byte = _obf_::sbox[byte];
         result |= ((uint64_t)byte) << (i * 8);
     }
     regs[dst] = result;
@@ -194,50 +173,52 @@ static uint64_t _vt_handler_sbox_transform(uint64_t* regs, uint64_t arg, volatil
 }
 
 // ─── Virtualizer Engine: Main Dispatch ────────────────────────
+enum VTOpcode : uint8_t {
+    VT_XOR = 0 ^ VTIZER_XOR_LAYER1, VT_ADD = 1 ^ VTIZER_XOR_LAYER1,
+    VT_SUB = 2 ^ VTIZER_XOR_LAYER1, VT_MUL = 3 ^ VTIZER_XOR_LAYER1,
+    VT_NOT = 4 ^ VTIZER_XOR_LAYER1, VT_SBOX = 5 ^ VTIZER_XOR_LAYER1,
+};
 VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t vt_dispatch(uint8_t handler_id, uint64_t* regs,
-                            uint64_t arg, volatile uint64_t* junk) {
-    // Decrypt handler_id through stream cipher
-    volatile uint64_t decrypted = _vt_stream_cipher(handler_id, VTIZER_DISPATCH_KEY, handler_id & 0x0F);
-    uint8_t resolved = (uint8_t)(decrypted & 0x07);
-
-    // Anti-debug timing check
-    volatile uint64_t timing_junk = *junk;
-    timing_junk = (timing_junk << 3) | (timing_junk >> 61);
-    *junk = timing_junk;
-
+                            uint64_t arg, volatile uint64_t* junk, bool* valid = nullptr) {
+    if (valid) *valid = false;
+    if (!regs || !junk || (arg >> 16) || ((arg >> 8) & 0xFF) >= 16 || (arg & 0xFF) >= 16) return 0;
+    uint8_t resolved = handler_id ^ VTIZER_XOR_LAYER1;
+    if (resolved >= 6) return 0;
+    if (valid) *valid = true;
     switch (resolved) {
         case 0: return _vt_handler_xor_cascade(regs, arg, junk);
         case 1: return _vt_handler_add_chain(regs, arg, junk);
         case 2: return _vt_handler_sub_rot(regs, arg, junk);
         case 3: return _vt_handler_mul_mix(regs, arg, junk);
         case 4: return _vt_handler_not_inv(regs, arg, junk);
-        case 5: return _vt_handler_sbox_transform(regs, arg, junk);
-        case 6: return _vt_handler_xor_cascade(regs, arg, junk);
-        default: return _vt_handler_add_chain(regs, arg, junk);
+        default: return _vt_handler_sbox_transform(regs, arg, junk);
     }
 }
-
-// ─── Integrity verification of vtizer segment ─────────────────
 VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static bool vt_verify_integrity() {
-    volatile uint64_t check = VTIZER_INTEGRITY_MAGIC;
-    check ^= VTIZER_DISPATCH_KEY;
-    check += VTIZER_HANDLER_MASK;
-    // This check always passes in unmodified binary
-    return (check != 0);
+    uint64_t regs[16] = {0x12345678, 0x5A};
+    volatile uint64_t junk = VTIZER_INTEGRITY_MAGIC;
+    bool valid = false;
+    if (vt_dispatch(VT_ADD, regs, 1, &junk, &valid) != 0x123456D2 || !valid) return false;
+    if (vt_dispatch(VT_SUB, regs, 1, &junk, &valid) != 0x12345678 || !valid) return false;
+    if (vt_dispatch(VT_XOR, regs, 1, &junk, &valid) != (0x12345678 ^ 0x5A) || !valid) return false;
+    return true;
 }
 
-// ─── Convenience: Run a sequence of handler operations ────────
 VTIZER_NOINLINE VTIZER_HIDDEN VTIZER_SECTION
 static uint64_t vt_run_sequence(const uint8_t* ops, const uint64_t* args,
                                 size_t count, uint64_t initial_value) {
+    if ((!ops || !args) && count) return 0;
+    if (count > 4096) return 0;
     uint64_t regs[16] = {};
     regs[0] = initial_value;
     volatile uint64_t junk = VTIZER_INTEGRITY_MAGIC ^ initial_value;
 
     for (size_t i = 0; i < count; ++i) {
-        vt_dispatch(ops[i], regs, args[i], &junk);
+        bool valid = false;
+        vt_dispatch(ops[i], regs, args[i], &junk, &valid);
+        if (!valid) return 0;
     }
 
     return regs[0] ^ (junk & 0);  // junk ANDed with 0 = 0, but compiler can't know

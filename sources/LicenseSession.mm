@@ -2,6 +2,9 @@
 #import "LicenseSessionPolicy.h"
 #import <CommonCrypto/CommonDigest.h>
 #include <cmath>
+#ifdef MIZZE_INJECTED
+#import "InjectedProtection.h"
+#endif
 
 typedef void (^LicenseCompletion)(BOOL, NSString *);
 
@@ -38,7 +41,7 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
         self.config = (path ? [NSDictionary dictionaryWithContentsOfFile:path] : nil) ?: @{};
 #ifdef MIZZE_INJECTED
         // The game bundle need not contain the companion app's resources.
-        self.config = @{@"DatabaseURL":@"https://appchatai-313e3-default-rtdb.firebaseio.com"};
+        self.config = @{@"DatabaseURL":MizzeDefaultLicenseDatabaseURL()};
 #endif
         self.completions = [NSMutableArray new];
         self.lastMessage = @"Vui lòng nhập key.";

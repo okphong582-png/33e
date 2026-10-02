@@ -1,6 +1,9 @@
 #import <Foundation/Foundation.h>
 #import "../sources/LicenseSession.h"
 #include <cassert>
+#ifdef MIZZE_INJECTED
+#import "../sources/InjectedProtection.h"
+#endif
 
 static NSInteger mode = 0; // valid, missing, offline, expired
 @interface LicenseTestProtocol : NSURLProtocol
@@ -47,6 +50,9 @@ static void Verify(LicenseSession *session, BOOL login, BOOL expected) {
 }
 int main() {
     @autoreleasepool {
+#ifdef MIZZE_INJECTED
+        assert([MizzeDefaultLicenseDatabaseURL() isEqualToString:@"https://appchatai-313e3-default-rtdb.firebaseio.com"]);
+#endif
         [NSUserDefaults.standardUserDefaults removeObjectForKey:@"LicenseHash"];
         LicenseSession *first = NewSession();
         assert(!first.hasSavedKey && !first.authorized);

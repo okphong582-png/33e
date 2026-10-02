@@ -19,6 +19,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Native Mach-O protection sections and safe data round trips
+        run: |
+          clang++ -std=c++17 -Os -pthread -fvisibility=hidden -Wno-unused-function -fsanitize=address,undefined -I. tests/obfuscation_test.cpp tests/obfuscation_seed_fixture.cpp -o /tmp/obfuscation-test
+          /tmp/obfuscation-test
+          clang++ -std=c++17 -Os -pthread -fvisibility=hidden -Wno-unused-function -fsanitize=thread -I. tests/obfuscation_test.cpp tests/obfuscation_seed_fixture.cpp -o /tmp/obfuscation-thread-test
+          /tmp/obfuscation-thread-test
       - name: Injected startup tolerates missing and legacy Unity scenes
         run: |
           clang++ -std=c++17 -fobjc-arc -Itests/stubs -framework Foundation -framework CoreGraphics tests/injected_window_test.mm -o /tmp/injected-window-test
@@ -39,7 +45,7 @@ jobs:
         run: |
           clang++ -std=c++17 -fobjc-arc -Wno-deprecated-declarations -I. -framework Foundation tests/license_restore_test.mm sources/LicenseSession.mm -o /tmp/license-restore-test
           /tmp/license-restore-test
-          clang++ -std=c++17 -fobjc-arc -DMIZZE_INJECTED=1 -Wno-deprecated-declarations -I. -framework Foundation tests/license_restore_test.mm sources/LicenseSession.mm -o /tmp/license-injected-test
+          clang++ -std=c++17 -fobjc-arc -DMIZZE_INJECTED=1 -Wno-deprecated-declarations -Wno-unused-function -I. -Itests/stubs -framework Foundation -framework CoreGraphics tests/license_restore_test.mm tests/injected_protection_host.mm sources/LicenseSession.mm sources/InjectedProtection.mm -o /tmp/license-injected-test
           /tmp/license-injected-test
   build:
     name: Build Mizze ${{ matrix.kind }}
@@ -59,6 +65,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Bounded VM, corruption checks and concurrent protection initialization
+        run: |
+          for seed in 1 0x4D495A5A4533; do
+            g++ -std=c++17 -Os -pthread -Wall -Wextra -Werror -Wno-unused-function -DOBFUSCATION_BUILD_SEED=$seed -fsanitize=address,undefined -I. tests/obfuscation_test.cpp tests/obfuscation_seed_fixture.cpp -o /tmp/obfuscation-test
+            /tmp/obfuscation-test
+          done
 
       - name: Test license lease and retry policy
         run: |

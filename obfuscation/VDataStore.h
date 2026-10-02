@@ -1,33 +1,17 @@
 #ifndef VDATA_STORE_H
 #define VDATA_STORE_H
 
-/*
- * ═══════════════════════════════════════════════════════════════
- *  __VDATA/__vdata – Virtualized Data Storage
- * ═══════════════════════════════════════════════════════════════
- *
- *  Stores sensitive runtime data (offsets, keys, configs) in a
- *  dedicated Mach-O section with multi-layer encryption.
- *  Data is only decrypted on-demand and immediately re-encrypted.
- *
- *  Pipeline position:
- *    Source Code → Obfuscation Pipeline → __VDATA/__vdata
- *
- *  Anti-RE effect:
- *    - Sensitive data never appears in plaintext in binary
- *    - Dedicated segment survives strip/otool inspection
- *    - Per-access decryption prevents memory dump attacks
- *    - Rolling encryption key changes each access
- * ═══════════════════════════════════════════════════════════════
- */
+/* Obfuscated constants, buffers, pointers and sequenced runtime values.
+ * Reversible encoding reduces plain literals; it is not cryptographic encryption. */
 
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
-#include "KabraxHide.h"
+#include <mutex>
+#include "ObfuscationPlatform.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define VDATA_SECTION    __attribute__((section("__DATA,__vdata")))
+  #define VDATA_SECTION OBF_CODE_SECTION("__vd_text")
   #define VDATA_NOINLINE   __attribute__((noinline))
   #define VDATA_HIDDEN     __attribute__((visibility("hidden")))
   #define VDATA_USED       __attribute__((used))
@@ -40,14 +24,12 @@
   #define VDATA_INLINE     inline
 #endif
 
+#define VDATA_DATA_SECTION OBF_DATA_SECTION("__vdata")
+
 namespace _vdata_ {
 
 // ─── Compile-time seed ────────────────────────────────────────
-static constexpr uint64_t _vd_seed() {
-    return ((__TIME__[0]-'0')*36000ULL) + ((__TIME__[1]-'0')*3600ULL) +
-           ((__TIME__[3]-'0')*600ULL)   + ((__TIME__[4]-'0')*60ULL) +
-           ((__TIME__[6]-'0')*10ULL)    + (__TIME__[7]-'0');
-}
+static constexpr uint64_t _vd_seed() { return _obf_::BuildSeed; }
 static constexpr uint64_t VDATA_SEED = _vd_seed();
 
 constexpr uint64_t _vd_mix(uint64_t a, uint64_t b) {
@@ -143,50 +125,88 @@ struct VDBuffer {
     uint8_t data[N];
 
     template <size_t... I>
-    constexpr VDBuffer(const uint8_t (&src)[N], _kh_::Seq<I...>)
+    constexpr VDBuffer(const uint8_t (&src)[N], _obf_::Seq<I...>)
         : data{ vd_encrypt_byte(src[I], I, SlotID)... } {}
 
-    VDATA_NOINLINE void decrypt_to(uint8_t* out) const {
+    VDATA_NOINLINE bool decrypt_to(uint8_t* out, size_t capacity = N) const {
+        if (!out || capacity < N) return false;
         for (size_t i = 0; i < N; ++i) {
             out[i] = vd_decrypt_byte(data[i], i, SlotID);
         }
+        return true;
     }
 };
 
 // ─── Rolling key: mutates encryption key each access ──────────
-// Prevents memory snapshots from being useful
-struct VDRollingKey {
-    volatile uint64_t current_key;
-    volatile uint32_t access_count;
+// Each packet retains its matching decode sequence.
+struct VDSealedValue {
+    uint64_t encrypted;
+    uint64_t sequence;
+    uint64_t tag;
+};
 
+class VDRollingKey {
+    std::mutex mutex_;
+    uint64_t master_ = 0;
+    uint64_t sequence_ = 0;
+    bool ready_ = false;
+    VDSealedValue legacy_{};
+    bool has_legacy_ = false;
+
+    uint64_t key(uint64_t sequence) const { return _vd_mix(master_, sequence); }
+    uint64_t tag(const VDSealedValue& value) const {
+        return _vd_mix(key(value.sequence) ^ value.encrypted, VDATA_KEY2);
+    }
+    VDSealedValue seal_locked(uint64_t value) {
+        uint64_t sequence = ++sequence_;
+        uint64_t k = key(sequence);
+        VDSealedValue packet{_obf_::rotate_left(value ^ k, 13) ^ _vd_mix(k, VDATA_KEY2), sequence, 0};
+        packet.tag = tag(packet);
+        return packet;
+    }
+    bool open_locked(const VDSealedValue& packet, uint64_t& value) const {
+        if (!ready_ || !packet.sequence || packet.tag != tag(packet)) return false;
+        uint64_t k = key(packet.sequence);
+        value = _obf_::rotate_left(packet.encrypted ^ _vd_mix(k, VDATA_KEY2), 51) ^ k;
+        return true;
+    }
+public:
     VDATA_NOINLINE void init(uint64_t seed) {
-        current_key = _vd_mix(seed, VDATA_KEY1);
-        access_count = 0;
+        std::lock_guard<std::mutex> lock(mutex_);
+        master_ = _vd_mix(seed, VDATA_KEY1);
+        sequence_ = 0;
+        ready_ = true;
+        has_legacy_ = false;
     }
-
-    VDATA_NOINLINE VDATA_HIDDEN VDATA_SECTION
-    uint64_t next() {
-        access_count++;
-        current_key = _vd_mix(current_key, (uint64_t)access_count * 0x9E3779B97F4A7C15ULL);
-        return current_key;
+    // Thread-safe packets keep their own sequence, so out-of-order reads work.
+    // Tag is a corruption check, not a cryptographic authentication guarantee.
+    VDATA_NOINLINE VDSealedValue seal(uint64_t value) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!ready_ || sequence_ == UINT64_MAX) return {};
+        return seal_locked(value);
     }
-
-    VDATA_NOINLINE VDATA_HIDDEN VDATA_SECTION
-    uint64_t encrypt_with_rolling(uint64_t val) {
-        uint64_t k = next();
-        val ^= k;
-        val = (val << 13) | (val >> 51);
-        val ^= _vd_mix(k, VDATA_KEY2);
-        return val;
+    VDATA_NOINLINE bool open(const VDSealedValue& packet, uint64_t& value) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return open_locked(packet, value);
     }
-
-    VDATA_NOINLINE VDATA_HIDDEN VDATA_SECTION
-    uint64_t decrypt_with_rolling(uint64_t enc) {
-        uint64_t k = next();
-        enc ^= _vd_mix(k, VDATA_KEY2);
-        enc = (enc >> 13) | (enc << 51);
-        enc ^= k;
-        return enc;
+    VDATA_NOINLINE uint64_t next() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!ready_ || sequence_ == UINT64_MAX) return 0;
+        return key(++sequence_);
+    }
+    // Legacy API supports only the latest value. Prefer seal/open for new code.
+    VDATA_NOINLINE uint64_t encrypt_with_rolling(uint64_t value) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!ready_ || sequence_ == UINT64_MAX) return 0;
+        legacy_ = seal_locked(value);
+        has_legacy_ = true;
+        return legacy_.encrypted;
+    }
+    VDATA_NOINLINE uint64_t decrypt_with_rolling(uint64_t encrypted) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        uint64_t value = 0;
+        if (!has_legacy_ || encrypted != legacy_.encrypted) return 0;
+        return open_locked(legacy_, value) ? value : 0;
     }
 };
 
