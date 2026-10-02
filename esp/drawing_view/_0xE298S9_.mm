@@ -27,6 +27,9 @@
 #include <condition_variable>
 #include <map>
 
+// Forward: render jitter từ SuperStealth
+extern double SuperStealthNextRenderDelay(double baseInterval);
+
 
 uint64_t Moudule_Base = -1;
 static BOOL gMatchReady = NO;
@@ -593,7 +596,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         // Leave time for touch handling and license callbacks after expensive
         // frames. Keep the last complete paths while skipping a display tick.
         const CFTimeInterval finished = CACurrentMediaTime();
-        self.nextRenderTime = finished + std::max(0.0, finished - now - 0.002);
+        // Jitter timing để pattern đọc memory read trông tự nhiên
+        // Không có khoảng cách đều nhờ ±20% random delay
+        const double baseDelay = std::max(0.0, finished - now - 0.002);
+        const double jitteredDelay = SuperStealthNextRenderDelay(baseDelay > 0.001 ? baseDelay : 0.033);
+        self.nextRenderTime = finished + jitteredDelay;
         HUDRecordFrame((finished - now) * 1000, stats.playerCount + stats.botCount,
                        AimStateDescription(stats.aimState));
     }
