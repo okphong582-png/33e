@@ -2,7 +2,7 @@
 
 The five headers remain part of `libsubsystem.dylib`. `InjectedProtection.mm`
 uses them for explicit engine self-tests, encoded license configuration and
-integrity monitoring of its own immutable code/data sections.
+integrity monitoring of its own code sections and exact immutable data objects.
 
 - `CodeVirtualizer.h`: unique per-build opcodes, bounded bytecode/stack/steps,
   reversible byte encoding, CALL/RET and error reporting.

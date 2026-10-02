@@ -50,18 +50,16 @@ inline bool RegisterOwnSections() {
     if (!dladdr(reinterpret_cast<const void*>(&_monite_::mt_compute_checksum), &info) || !info.dli_fbase) return false;
     const auto* header = static_cast<const mach_header_64*>(info.dli_fbase);
     if (header->magic != MH_MAGIC_64) return false;
-    const char* names[] = {"__cv_text", "__vtizer", "__vd_text", "__mt_text", "__vdata"};
-    for (size_t i = 0; i < 5; ++i) {
+    const char* names[] = {"__cv_text", "__vtizer", "__vd_text", "__mt_text"};
+    for (size_t i = 0; i < 4; ++i) {
         unsigned long length = 0;
         // getsectiondata already includes the loaded image's ASLR slide.
-        const uint8_t* bytes = getsectiondata(header, i == 4 ? "__DATA" : "__TEXT", names[i], &length);
+        const uint8_t* bytes = getsectiondata(header, "__TEXT", names[i], &length);
         if (!_monite_::mt_register_section(bytes, length)) return false;
     }
-    return true;
-#else
-    // Portable tests monitor owned, immutable encoded data.
-    return _monite_::mt_register_section(self_test_bytecode.data, self_test_bytecode.size);
 #endif
+    // Exact data-object bounds exclude linker padding and sanitizer redzones.
+    return _monite_::mt_register_section(self_test_bytecode.data, self_test_bytecode.size);
 }
 
 inline bool InitializeProtections() {

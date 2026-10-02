@@ -12,7 +12,7 @@
 #if defined(__clang__) || defined(__GNUC__)
   #define VTIZER_SECTION OBF_CODE_SECTION("__vtizer")
   #define VTIZER_NOINLINE    __attribute__((noinline))
-  #define VTIZER_HIDDEN      __attribute__((visibility("hidden")))
+  #define VTIZER_HIDDEN      OBF_HIDDEN
   #define VTIZER_USED        __attribute__((used))
   #define VTIZER_INLINE      inline __attribute__((always_inline))
 #else

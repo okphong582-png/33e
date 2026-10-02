@@ -12,7 +12,7 @@
 #if defined(__clang__) || defined(__GNUC__)
   #define CVIRT_SECTION OBF_CODE_SECTION("__cv_text")
   #define CVIRT_NOINLINE   __attribute__((noinline))
-  #define CVIRT_HIDDEN     __attribute__((visibility("hidden")))
+  #define CVIRT_HIDDEN     OBF_HIDDEN
   #define CVIRT_USED       __attribute__((used))
   #define CVIRT_INLINE     inline __attribute__((always_inline))
 #else

@@ -13,7 +13,7 @@
 #if defined(__clang__) || defined(__GNUC__)
   #define VDATA_SECTION OBF_CODE_SECTION("__vd_text")
   #define VDATA_NOINLINE   __attribute__((noinline))
-  #define VDATA_HIDDEN     __attribute__((visibility("hidden")))
+  #define VDATA_HIDDEN     OBF_HIDDEN
   #define VDATA_USED       __attribute__((used))
   #define VDATA_INLINE     inline __attribute__((always_inline))
 #else

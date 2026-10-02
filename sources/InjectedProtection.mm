@@ -25,7 +25,7 @@ void MizzeStartOwnCodeProtection(void) {
         dispatch_queue_t queue = dispatch_queue_create("com.mizze.own-code-integrity", DISPATCH_QUEUE_SERIAL);
         dispatch_set_target_queue(queue, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
         dispatch_async(queue, ^{
-            BOOL healthy = ANTI_RE_INIT();
+            BOOL healthy = _monite_::mt_register_section(database.data, sizeof(database.data)) && ANTI_RE_INIT();
             NSLog(@"[Mizze] Own-code protection: %@", healthy ? @"ready" : @"self-check failed");
         });
         static dispatch_source_t timer;

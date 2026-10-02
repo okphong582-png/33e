@@ -10,11 +10,18 @@
 #endif
 
 #ifdef __APPLE__
-#define OBF_CODE_SECTION(name) __attribute__((section("__TEXT," name)))
+#define OBF_CODE_SECTION(name) __attribute__((section("__TEXT," name ",regular,pure_instructions")))
 #define OBF_DATA_SECTION(name) __attribute__((section("__DATA," name)))
 #else
 #define OBF_CODE_SECTION(name)
 #define OBF_DATA_SECTION(name)
+#endif
+
+#ifdef __clang__
+#define OBF_HIDDEN __attribute__((visibility("hidden")))
+#else
+// File-local functions already have internal linkage; GCC warns on visibility.
+#define OBF_HIDDEN
 #endif
 
 namespace _obf_ {

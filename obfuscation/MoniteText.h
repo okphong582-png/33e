@@ -8,7 +8,7 @@
 
 #define MONITE_SECTION OBF_CODE_SECTION("__mt_text")
 #define MONITE_NOINLINE __attribute__((noinline))
-#define MONITE_HIDDEN __attribute__((visibility("hidden")))
+#define MONITE_HIDDEN OBF_HIDDEN
 #define MONITE_PROTECT MONITE_SECTION MONITE_NOINLINE MONITE_HIDDEN
 
 namespace _monite_ {
@@ -61,7 +61,7 @@ public:
 };
 
 struct MonitorSet {
-    MTSectionMonitor sections[5];
+    MTSectionMonitor sections[6];
     std::mutex mutex;
     size_t count = 0;
 };
@@ -70,7 +70,7 @@ inline MonitorSet& monitors() { static MonitorSet value; return value; }
 inline bool mt_register_section(const void* data, size_t length) {
     auto& set = monitors();
     std::lock_guard<std::mutex> lock(set.mutex);
-    if (set.count == 5 || !set.sections[set.count].init(data, length)) return false;
+    if (set.count == 6 || !set.sections[set.count].init(data, length)) return false;
     ++set.count;
     return true;
 }
