@@ -339,23 +339,8 @@ static void Layer5_HideWindowScenes() {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// LAYER 6: MEMORY READ JITTER
-// Thêm random delay vào vòng đọc memory để tránh pattern detection
-// ═══════════════════════════════════════════════════════════════
-static uint32_t _jitterSeed = 0;
+// NOTE: SuperStealthNextRenderDelay được định nghĩa sau namespace (global linkage)
 
-// Gọi từ render loop mỗi frame để tính nextRenderDelay có jitter
-double SuperStealthNextRenderDelay(double baseInterval) {
-    // LCG random: tạo jitter ±20% của base interval
-    _jitterSeed = _jitterSeed * 1664525u + 1013904223u;
-    double jitter = ((double)(_jitterSeed & 0xFFFF) / 65535.0 - 0.5) * 0.4;
-    double delay = baseInterval * (1.0 + jitter);
-    // Clamp: không dưới 50ms, không trên 500ms
-    if (delay < 0.050) delay = 0.050;
-    if (delay > 0.500) delay = 0.500;
-    return delay;
-}
 
 // ═══════════════════════════════════════════════════════════════
 // LAYER 7: OBJECTIVE-C RUNTIME HIDE
@@ -443,6 +428,20 @@ void PeriodicRehide() {
 }
 
 } // namespace SuperStealth
+
+// ─── LAYER 6: Memory Read Jitter (ở global scope để link được từ _0xE298S9_.mm) ───
+// LCG random ±20% jitter trên base render interval
+// Khiến anti-cheat khó phát hiện pattern đọc memory đều đặn
+static uint32_t _jitterSeed = 0;
+
+double SuperStealthNextRenderDelay(double baseInterval) {
+    _jitterSeed = _jitterSeed * 1664525u + 1013904223u;
+    double jitter = ((double)(_jitterSeed & 0xFFFF) / 65535.0 - 0.5) * 0.4;
+    double delay  = baseInterval * (1.0 + jitter);
+    if (delay < 0.050) delay = 0.050; // min 50ms
+    if (delay > 0.500) delay = 0.500; // max 500ms
+    return delay;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // OVERLAY SETUP
