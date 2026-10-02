@@ -25,6 +25,10 @@ jobs:
           /tmp/obfuscation-test
           clang++ -std=c++17 -Os -pthread -fvisibility=hidden -Wno-unused-function -fsanitize=thread -I. tests/obfuscation_test.cpp tests/obfuscation_seed_fixture.cpp -o /tmp/obfuscation-thread-test
           /tmp/obfuscation-thread-test
+      - name: Deferred protection initialization and concurrent configuration decoding
+        run: |
+          clang++ -std=c++17 -Os -fobjc-arc -fvisibility=hidden -DMIZZE_INJECTED=1 -Wno-unused-function -I. -Itests/stubs -framework Foundation -framework CoreGraphics tests/injected_protection_test.mm tests/injected_protection_host.mm sources/InjectedProtection.mm -o /tmp/injected-protection-test
+          /tmp/injected-protection-test
       - name: Injected startup tolerates missing and legacy Unity scenes
         run: |
           clang++ -std=c++17 -fobjc-arc -Itests/stubs -framework Foundation -framework CoreGraphics tests/injected_window_test.mm -o /tmp/injected-window-test
