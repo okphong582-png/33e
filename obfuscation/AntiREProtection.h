@@ -187,8 +187,10 @@ static bool _ar_detect_hook_v2(const void* func_ptr) {
         if (off > 0x1000 || off < -0x1000) return true;
     }
 
-    // Pattern 4: BLR X16 / BR X16 at start (ARM64 trampoline)
-    if ((insn[0] & 0xFFFFFC1F) == 0xD61F0200) return true;
+    // Pattern 4: BR Xn / BLR Xn (ARM64 trampoline với bất kỳ register nào)
+    // BR Xn encoding: 1101_0110_0001_1111_0000_00nn_n000_0000
+    // Mask: 0xFFFFFC1F → base value phải là 0xD61F0000 (bits 5-9 là register, = 0 trong base)
+    if ((insn[0] & 0xFFFFFC1F) == 0xD61F0000) return true;
 
     // Pattern 5: MOVZ + MOVK chain (absolute address load)
     if ((insn[0] & 0xFFE00000) == 0xD2800000 &&
