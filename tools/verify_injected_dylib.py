@@ -12,6 +12,10 @@ def verify(path):
     if struct.unpack_from('<I', data, 4)[0] != 0x0100000C or struct.unpack_from('<I', data, 12)[0] != 6:
         raise ValueError('Expected an arm64 dylib')
     for cmd, command, name in table:
+        if cmd in (0x24, 0x32):  # LC_VERSION_MIN_IPHONEOS / LC_BUILD_VERSION
+            version = struct.unpack_from('<I', command, 8 if cmd == 0x24 else 12)[0]
+            if version > (13 << 16):
+                raise ValueError('Injected dylib unnecessarily requires newer than iOS 13')
         if name and any(framework in name for framework in
                         ('BackBoardServices.framework', 'GraphicsServices.framework', 'SpringBoardServices.framework')):
             raise ValueError(f'Standalone HUD framework in injected image: {name}')

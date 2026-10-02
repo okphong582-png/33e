@@ -1,13 +1,16 @@
 THEOS ?= /home/hoang/theos
 ARCHS := arm64
-TARGET := iphone:clang:16.5
 DEBUG = 0
 FINALPACKAGE = 1
 FOR_RELEASE = 1
 BUILD_KIND ?= dylib
 ifeq ($(BUILD_KIND),tipa)
+TARGET := iphone:clang:16.5
 INSTALL_TARGET_PROCESSES := Bugchi
 else
+# Keep the SDK separate from the runtime minimum. SF Symbols in the menu
+# require iOS 13, while scene and frame-rate APIs are availability-guarded.
+TARGET := iphone:clang:16.5:13.0
 INSTALL_TARGET_PROCESSES := FreeFire
 endif
 
