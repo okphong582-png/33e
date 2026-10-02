@@ -91,7 +91,7 @@ static bool _ar_ptrace_self_guard() {
     // Gọi ptrace(PT_DENY_ATTACH, 0, NULL, 0) trực tiếp
     // Block bất kỳ debugger nào cố attach sau lời gọi này
     // Nếu đã có debugger attach → process nhận SIGSEGV và dừng
-    ptrace(PT_DENY_ATTACH, 0, nullptr, 0);
+    // ptrace(PT_DENY_ATTACH, 0, nullptr, 0);
     return true;
 #endif
     return true;

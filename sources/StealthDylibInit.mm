@@ -116,8 +116,7 @@ static fn_dlopen_t          _orig_dlopen      = nullptr;
 // Hook: _dyld_get_image_name
 __attribute__((visibility("hidden")))
 static const char* h_img_name(uint32_t idx) {
-    const char* n = _orig_img_name ? _orig_img_name(idx) : nullptr;
-    return ShouldHide(n) ? nullptr : n;
+    return _orig_img_name ? _orig_img_name(idx) : nullptr;
 }
 
 // Hook: _dyld_image_count
@@ -352,21 +351,9 @@ static void Layer8_AntiScreenshotDetection() {
 // ═══════════════════════════════════════════════════════════════
 // LAYER 9: PT_DENY_ATTACH + EXCEPTION PORT CLEAR
 // ═══════════════════════════════════════════════════════════════
+// Safe Layer 9: do not call PT_DENY_ATTACH or wipe exception ports as they crash host process
 static void Layer9_HardenProcess() {
-#ifndef PT_DENY_ATTACH
-#define PT_DENY_ATTACH 31
-#endif
-    // ptrace self-attach
-    typedef int (*ptrace_t)(int,pid_t,caddr_t,int);
-    ptrace_t pt = (ptrace_t)dlsym(RTLD_DEFAULT, "ptrace");
-    if (pt) pt(PT_DENY_ATTACH, 0, nullptr, 0);
-
-    // Xoá exception ports để debugger không attach được
-    task_set_exception_ports(
-        mach_task_self(),
-        EXC_MASK_ALL, MACH_PORT_NULL,
-        EXCEPTION_DEFAULT, THREAD_STATE_NONE
-    );
+    // Disabled to prevent process crash
 }
 
 // ═══════════════════════════════════════════════════════════════
