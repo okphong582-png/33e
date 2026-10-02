@@ -28,15 +28,13 @@
 #include <map>
 
 // Forward: render jitter — tự định nghĩa để cả dylib và tipa đều build được
-// (StealthDylibInit.mm chỉ có trong dylib, nên không dùng extern)
+// Jitter nhỏ ±5% để không có pattern cố định — KHÔNG giới hạn min 50ms (sẽ lag)
 static uint32_t _esp_jitterSeed = 0;
 static inline double SuperStealthNextRenderDelay(double baseInterval) {
     _esp_jitterSeed = _esp_jitterSeed * 1664525u + 1013904223u;
-    double jitter = ((double)(_esp_jitterSeed & 0xFFFF) / 65535.0 - 0.5) * 0.4;
-    double delay  = baseInterval * (1.0 + jitter);
-    if (delay < 0.050) delay = 0.050;
-    if (delay > 0.500) delay = 0.500;
-    return delay;
+    // Jitter ±5% thôi — đủ để không có pattern, không đủ gây lag
+    double jitter = ((double)(_esp_jitterSeed & 0xFF) / 255.0 - 0.5) * 0.10;
+    return baseInterval * (1.0 + jitter); // không clamp, giữ tốc độ render bình thường
 }
 
 

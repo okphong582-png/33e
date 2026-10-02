@@ -75,38 +75,19 @@ static bool ShouldHide(const char* s) {
 // LAYER 1: DYLD IMAGE TABLE MANIPULATION
 // ═══════════════════════════════════════════════════════════════
 
-// Xoá entry thật khỏi dyld_all_image_infos
+// Layer 1: an toàn — chỉ đếm image, KHÔNG ghi vào dyld memory (gây crash)
+// Việc ẩn thật sự do Layer 2 hooks xử lý (_dyld_get_image_name trả nullptr)
+static uint32_t _hiddenImageCount = 0; // forward declare ở đây
+
 static void Layer1_HideFromAllImageInfos() {
-    task_dyld_info_data_t dinfo;
-    mach_msg_type_number_t cnt = TASK_DYLD_INFO_COUNT;
-    if (task_info(mach_task_self(), TASK_DYLD_INFO,
-                  (task_info_t)&dinfo, &cnt) != KERN_SUCCESS) return;
-
-    auto* all = (struct dyld_all_image_infos*)(uintptr_t)dinfo.all_image_info_addr;
-    if (!all || !all->infoArray || all->infoArrayCount == 0) return;
-
-    uint32_t N = all->infoArrayCount;
-    size_t bytes = N * sizeof(dyld_image_info);
-    dyld_image_info* tmp = (dyld_image_info*)malloc(bytes);
-    if (!tmp) return;
-    memcpy(tmp, all->infoArray, bytes);
-
-    uint32_t keep = 0;
-    for (uint32_t i = 0; i < N; ++i) {
-        if (!ShouldHide(all->infoArray[i].imageFilePath))
-            tmp[keep++] = all->infoArray[i];
-    }
-
-    if (keep < N) {
-        vm_protect(mach_task_self(), (vm_address_t)all->infoArray,
-                   bytes, false, VM_PROT_READ|VM_PROT_WRITE);
-        memcpy((void*)all->infoArray, tmp, keep * sizeof(dyld_image_info));
-        all->infoArrayCount = keep;
-        vm_protect(mach_task_self(), (vm_address_t)all->infoArray,
-                   bytes, false, VM_PROT_READ);
-    }
-    free(tmp);
+    // Đếm image cần ẩn để hook _dyld_image_count giảm số tương ứng
+    uint32_t total = _dyld_image_count(), h = 0;
+    for (uint32_t i = 0; i < total; ++i)
+        if (ShouldHide(_dyld_get_image_name(i))) ++h;
+    _hiddenImageCount = h;
 }
+
+
 
 // ═══════════════════════════════════════════════════════════════
 // LAYER 2: FUNCTION HOOKS (8 hàm)
@@ -129,7 +110,8 @@ static fn_access_t          _orig_access      = nullptr;
 static fn_opendir_t         _orig_opendir     = nullptr;
 static fn_dlopen_t          _orig_dlopen      = nullptr;
 
-static uint32_t _hiddenImageCount = 0;
+// _hiddenImageCount khai báo ở Layer 1
+
 
 // Hook: _dyld_get_image_name
 __attribute__((visibility("hidden")))
@@ -228,13 +210,8 @@ static void Layer2_ApplyHooks() {
     }
 }
 
-// Đếm image cần ẩn
-static void Layer2_CountHidden() {
-    uint32_t total = _dyld_image_count(), h = 0;
-    for (uint32_t i = 0; i < total; ++i)
-        if (ShouldHide(_dyld_get_image_name(i))) ++h;
-    _hiddenImageCount = h;
-}
+// Layer2_CountHidden đã được inline vào Layer1_HideFromAllImageInfos
+
 
 // ═══════════════════════════════════════════════════════════════
 // LAYER 3: MACH-O HEADER OBFUSCATION
@@ -402,18 +379,18 @@ void Init(UIWindow* overlayWindow = nullptr) {
     _initialized = true;
 
     // Layer thứ tự quan trọng:
-    Layer9_HardenProcess();       // Block debugger trước tiên
-    Layer2_CountHidden();         // Đếm image cần ẩn
-    Layer1_HideFromAllImageInfos(); // Xoá khỏi dyld table
-    Layer3_ObfuscateMachO();      // Fake LC_ID_DYLIB name
-    Layer2_ApplyHooks();          // Hook 8 system functions
-    Layer4_HideThreads();         // Obfuscate thread names
+    Layer9_HardenProcess();           // Block debugger trước tiên
+    Layer1_HideFromAllImageInfos();   // Đếm + chuẩn bị cho hook
+    Layer3_ObfuscateMachO();          // Fake LC_ID_DYLIB name
+    Layer2_ApplyHooks();              // Hook 8 system functions (ẩn khỏi scanner)
+    Layer4_HideThreads();             // Obfuscate thread names
     Layer8_AntiScreenshotDetection(); // Fake isCaptured = NO
 
     if (overlayWindow) {
         Layer5_HideWindowFromUI(overlayWindow);
     }
 }
+
 
 void InitWindow(UIWindow* window) {
     _ourWindow = window;
@@ -422,10 +399,10 @@ void InitWindow(UIWindow* window) {
 
 // Re-hide sau khi game có thể đã re-scan
 void PeriodicRehide() {
-    Layer2_CountHidden();
-    Layer1_HideFromAllImageInfos();
+    Layer1_HideFromAllImageInfos(); // tự đếm + cập nhật _hiddenImageCount
     Layer9_HardenProcess();
 }
+
 
 } // namespace SuperStealth
 

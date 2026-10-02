@@ -50,51 +50,12 @@ static CGPoint ClipToEdge(CGFloat ox, CGFloat oy,
     return CGPointMake(ox + dirX * t, oy + dirY * t);
 }
 
-// ─── Smooth snapline endpoint per pawn ────────────────────────
-// Lerp endpoint giữa frame để line không giật khi xoay 360°
-struct SnaplineSmooth {
-    CGFloat x = 0, y = 0;
-    bool    valid = false;
-};
-// Tối đa 100 địch (Free Fire tối đa 50 + bot)
-static const int kSnaplineMaxPlayers = 100;
-struct SnaplineEntry { uint64_t pawn; SnaplineSmooth pt; };
-static SnaplineEntry gSnaplineCache[kSnaplineMaxPlayers] = {};
-
-static SnaplineSmooth& _GetSnaplineCache(uint64_t pawn) {
-    // Tìm slot bằng hash đơn giản
-    int slot = (int)((pawn >> 4) % kSnaplineMaxPlayers);
-    // Linear probe nếu bị collision
-    for (int i = 0; i < kSnaplineMaxPlayers; ++i) {
-        int idx = (slot + i) % kSnaplineMaxPlayers;
-        if (gSnaplineCache[idx].pawn == pawn || gSnaplineCache[idx].pawn == 0) {
-            gSnaplineCache[idx].pawn = pawn;
-            return gSnaplineCache[idx].pt;
-        }
-    }
-    // Fallback: overwrite slot
-    gSnaplineCache[slot].pawn = pawn;
-    gSnaplineCache[slot].pt   = {};
-    return gSnaplineCache[slot].pt;
+// Snapline: KHÔNG dùng lerp — lerp gây dây trôi xuống đất khi địch biến mất
+// Endpoint được tính trực tiếp mỗi frame → mượt tự nhiên, không delay
+static inline CGPoint SmoothedEndpoint(uint64_t /*pawn*/, CGPoint target) {
+    return target; // instant, không cache
 }
 
-// Lerp factor: 0.0 = không smooth, 1.0 = instant
-// 0.25 = mượt vừa phải (~4 frame để đến đích)
-static constexpr CGFloat kSnaplineLerp = 0.28f;
-
-static CGPoint SmoothedEndpoint(uint64_t pawn, CGPoint target) {
-    SnaplineSmooth& s = _GetSnaplineCache(pawn);
-    if (!s.valid) {
-        s.x = target.x;
-        s.y = target.y;
-        s.valid = true;
-        return target;
-    }
-    // Exponential lerp: nhanh khi gần, chậm khi xa
-    s.x = s.x + (target.x - s.x) * kSnaplineLerp;
-    s.y = s.y + (target.y - s.y) * kSnaplineLerp;
-    return CGPointMake(s.x, s.y);
-}
 
 
 static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,
