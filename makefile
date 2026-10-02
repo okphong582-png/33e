@@ -40,7 +40,7 @@ $(MIZZE_PRODUCT)_RESOURCE_DIRS := ./layout/Resources
 else
 # In-process overlays use UIKit's native touches. Do not link the standalone
 # HUD application, private touch synthesizer (+load), or anti-debug threads.
-$(MIZZE_PRODUCT)_FILES := sources/StealthDylibInit.mm sources/InjectedLicenseController.mm sources/LicenseSession.mm sources/_0xMO353DA.mm sources/_0xViSecureV28.m sources/fix_version.mm $(wildcard esp/drawing_view/*.mm esp/drawing_view/*.cpp esp/Core/*.mm esp/Core/*.cpp)
+$(MIZZE_PRODUCT)_FILES := sources/StealthDylibInit.mm sources/InjectedLicenseController.mm sources/LicenseSession.mm sources/_0xMO353DA.mm sources/_0xViSecureV28.m $(wildcard esp/drawing_view/*.mm esp/drawing_view/*.cpp esp/Core/*.mm esp/Core/*.cpp)
 $(MIZZE_PRODUCT)_CFLAGS += -DMIZZE_INJECTED=1
 endif
 
@@ -59,7 +59,9 @@ ifeq ($(BUILD_KIND),tipa)
 $(MIZZE_PRODUCT)_PRIVATE_FRAMEWORKS += BackBoardServices GraphicsServices SpringBoardServices
 endif
 
+ifeq ($(BUILD_KIND),tipa)
 $(MIZZE_PRODUCT)_LDFLAGS += -Wl,-alias,____isOSVersionAtLeast,___isOSVersionAtLeast
+endif
 
 ifeq ($(BUILD_KIND),tipa)
 include $(THEOS_MAKE_PATH)/application.mk
