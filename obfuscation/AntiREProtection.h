@@ -25,15 +25,21 @@
 #include "../XorString.h"
 
 #ifdef __APPLE__
-  #include <sys/ptrace.h>
+  // sys/ptrace.h không có trong Theos iOS SDK — khai báo thủ công
+  // PT_DENY_ATTACH = 31 là constant chuẩn của Darwin kernel
+  extern "C" int ptrace(int, pid_t, caddr_t, int);
+  #ifndef PT_DENY_ATTACH
+    #define PT_DENY_ATTACH 31
+  #endif
   #include <sys/sysctl.h>
   #include <sys/types.h>
+  #include <sys/stat.h>
   #include <mach/mach.h>
+  #include <mach/mach_time.h>
   #include <mach-o/dyld.h>
   #include <mach-o/getsect.h>
   #include <dlfcn.h>
   #include <unistd.h>
-  #include <mach/mach_time.h>
   #include <sys/mman.h>
   #include <pthread.h>
   #include <signal.h>
@@ -82,24 +88,11 @@ __attribute__((noinline)) __attribute__((visibility("hidden")))
 __attribute__((section("__TEXT,__mt_text")))
 static bool _ar_ptrace_self_guard() {
 #if defined(__APPLE__) && defined(__aarch64__)
-    // Dùng syscall trực tiếp để tránh bị hook qua libsystem
-    // PT_DENY_ATTACH = 31 (tự block attach từ debugger)
-    // Nếu đã có debugger → sẽ raise SIGSEGV → chương trình dừng
-    // Nếu chưa có → thành công, block tất cả attach sau đó
-    typedef int (*ptrace_t)(int, pid_t, caddr_t, int);
-    void* handle = dlopen(nullptr, RTLD_LAZY);
-    if (handle) {
-        // Tìm symbol bằng hash thay vì tên trực tiếp (tránh string scan)
-        // "ptrace" hash = 0x657261 (dùng _ar_mix)
-        volatile auto fn = (ptrace_t)dlsym(handle, "ptrace");
-        if (fn) {
-            // 31 = PT_DENY_ATTACH — không dùng constant để tránh pattern scan
-            volatile int req = (int)(AR_KEY1 & 0xFF) == (AR_KEY1 & 0xFF) ? 31 : 0;
-            fn(req, 0, nullptr, 0);
-        }
-        dlclose(handle);
-        return true;
-    }
+    // Gọi ptrace(PT_DENY_ATTACH, 0, NULL, 0) trực tiếp
+    // Block bất kỳ debugger nào cố attach sau lời gọi này
+    // Nếu đã có debugger attach → process nhận SIGSEGV và dừng
+    ptrace(PT_DENY_ATTACH, 0, nullptr, 0);
+    return true;
 #endif
     return true;
 }
