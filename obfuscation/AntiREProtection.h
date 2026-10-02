@@ -298,20 +298,19 @@ static void InitializeProtections() {
     // 3. CodeVirt always ready
     _global_state.cv_ready = true;
 
-    // 4. MONITE_TEXT
+    // 4. MONITE_TEXT (safe — chỉ tính checksum, không có side-effect nguy hiểm)
     _global_state.mt_ready = _monite_::mt_full_integrity_check();
 
-    // 5. ptrace self-guard (chạy ngay lúc khởi động)
-    _ar_ptrace_self_guard();
-    _global_state.ptrace_attached.store(true);
+    // 5. ptrace self-guard đã disabled (xem _ar_ptrace_self_guard)
+    _global_state.ptrace_attached.store(false);
 
-    // 6. Tạo page canary
+    // 6. Tạo page canary (an toàn)
     _ar_init_page_canary();
 
-    // 7. Timing baseline
+    // 7. Timing baseline (an toàn)
     _ar_timing_check();
 
-    // 8. Integrity token từ tất cả components
+    // 8. Integrity token
     volatile uint64_t token = _vdata_::VDATA_KEY1;
     token ^= _vtizer_::VTIZER_INTEGRITY_MAGIC;
     token ^= _monite_::MONITE_CANARY;
@@ -359,7 +358,8 @@ static bool PeriodicIntegrityCheck() {
             return _vtizer_::vt_verify_integrity();
 
         case 6:
-            return _ar_jailbreak_check();
+            // _ar_jailbreak_check() dùng stat() — bị sandbox game chặn → tắt
+            return true;
 
         case 7:
             // Exception port check — chỉ chạy mỗi 256 lần để tránh overhead

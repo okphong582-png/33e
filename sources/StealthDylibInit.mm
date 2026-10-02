@@ -140,18 +140,19 @@ static int h_sysctl(int* nm, u_int nlen, void* oldp, size_t* olen,
 }
 
 // Hook: fopen — chặn jailbreak path
+// QUAN TRỌNG: không block prefs path của chính mình (com.iosviet)
 static bool _IsBadPath(const char* p) {
     if (!p) return false;
     static const char* bad[] = {
         "/var/jb","/usr/lib/TweakInject","/usr/lib/TweakLoader",
         "/Library/MobileSubstrate","/usr/lib/substitute",
         "/usr/lib/libhooker","/usr/lib/ellekit",
-        "/var/mobile/Library/Preferences/com.iosviet",
         nullptr
     };
     for (int i = 0; bad[i]; ++i)
         if (strstr(p, bad[i])) return true;
-    return ShouldHide(p);
+    // Không gọi ShouldHide() cho path để tránh chặn prefs của mình
+    return false;
 }
 
 __attribute__((visibility("hidden")))
@@ -216,29 +217,10 @@ static void Layer2_ApplyHooks() {
 // LAYER 3: MACH-O HEADER OBFUSCATION
 // ═══════════════════════════════════════════════════════════════
 static void Layer3_ObfuscateMachO() {
-    Dl_info di;
-    if (!dladdr((void*)Layer3_ObfuscateMachO, &di) || !di.dli_fbase) return;
-    const mach_header* mh = (const mach_header*)di.dli_fbase;
-    bool is64 = (mh->magic == MH_MAGIC_64);
-    uint32_t sz = is64 ? sizeof(mach_header_64) : sizeof(mach_header);
-    const uint8_t* p = (const uint8_t*)mh + sz;
-
-    for (uint32_t i = 0; i < mh->ncmds; ++i) {
-        const load_command* lc = (const load_command*)p;
-        if (lc->cmd == LC_ID_DYLIB) {
-            dylib_command* dc = (dylib_command*)p;
-            char* name = (char*)p + dc->dylib.name.offset;
-            uintptr_t pg = (uintptr_t)name & ~(uintptr_t)4095;
-            vm_protect(mach_task_self(), pg, 4096, false,
-                       VM_PROT_READ|VM_PROT_WRITE|VM_PROT_COPY);
-            // Đổi tên thành system dylib vô hại
-            const char* fake = "/usr/lib/libSystem.B.dylib";
-            strlcpy(name, fake, strlen(name)+1);
-            vm_protect(mach_task_self(), pg, 4096, false, VM_PROT_READ);
-            break;
-        }
-        p += lc->cmdsize;
-    }
+    // Disabled: vm_protect() trên __TEXT segment + strlcpy vào read-only memory
+    // gây EXC_BAD_ACCESS / SIGBUS ngay khi inject vào IPA trên thiết bị thật.
+    // Modern iOS kernel (W^X) không cho phép vừa write vừa execute cùng page.
+    (void)0;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -422,11 +404,10 @@ static void SetupInjectedOverlayMenu() {
             if (!targetKeyWindow)
                 targetKeyWindow = [UIApplication sharedApplication].keyWindow;
             if (!targetKeyWindow) {
-                static NSUInteger retries = 0;
-                if (++retries <= 15)
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC),
-                                   dispatch_get_main_queue(),
-                                   ^{ SetupInjectedOverlayMenu(); });
+                // KHÔNG dùng static — phải reset được khi dylib reload
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC),
+                               dispatch_get_main_queue(),
+                               ^{ SetupInjectedOverlayMenu(); });
                 return;
             }
 

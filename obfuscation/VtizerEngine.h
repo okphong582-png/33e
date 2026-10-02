@@ -249,8 +249,8 @@ static uint64_t vt_run_sequence(const uint8_t* ops, const uint64_t* args,
 #define VTIZER_PROTECT(expr) \
     ([&]() -> decltype(expr) { \
         if (!_vtizer_::vt_verify_integrity()) { \
-            volatile int trap = 0; \
-            return (decltype(expr))(1 / trap); \
+            /* Integrity check failed — silently return default, no crash */ \
+            return decltype(expr){}; \
         } \
         return (expr); \
     }())
