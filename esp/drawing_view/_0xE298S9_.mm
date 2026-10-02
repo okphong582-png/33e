@@ -6,7 +6,9 @@
 #import "ESPPrefs.h"
 #import "ESPStyle.h"
 #import "LicenseSession.h"
+#ifndef MIZZE_INJECTED
 #import "HUDHelper.h"
+#endif
 #import "../drawing_view/offset.h"
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
@@ -619,8 +621,10 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         const double baseDelay = std::max(0.0, finished - now - 0.002);
         const double jitteredDelay = SuperStealthNextRenderDelay(baseDelay > 0.001 ? baseDelay : 0.033);
         self.nextRenderTime = finished + jitteredDelay;
+#ifndef MIZZE_INJECTED
         HUDRecordFrame((finished - now) * 1000, stats.playerCount + stats.botCount,
                        AimStateDescription(stats.aimState));
+#endif
     }
 }
 

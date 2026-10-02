@@ -19,6 +19,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Injected startup tolerates missing and legacy Unity scenes
+        run: |
+          clang++ -std=c++17 -fobjc-arc -Itests/stubs -framework Foundation -framework CoreGraphics tests/injected_window_test.mm -o /tmp/injected-window-test
+          /tmp/injected-window-test
+          clang++ -std=c++17 -fobjc-arc -framework Foundation tests/os_version_test.mm sources/fix_version.mm -o /tmp/os-version-test
+          /tmp/os-version-test
       - name: Two loaded dylib copies must share one overlay owner
         run: |
           clang++ -std=c++17 -fobjc-arc -dynamiclib -framework Foundation tests/overlay_ownership_fixture.mm -o /tmp/overlay-first.dylib
@@ -91,6 +97,10 @@ jobs:
       - name: Build selected package
         run: |
           make clean package BUILD_KIND=${{ matrix.kind }} FINALPACKAGE=1 FOR_RELEASE=1
+
+      - name: Injected dylib must have no prelaunch touch callbacks or private HUD dependencies
+        if: matrix.kind == 'dylib'
+        run: python3 tools/verify_injected_dylib.py packages/libsubsystem.dylib
 
       - name: Inject Dylib into IPA (If Available)
         if: matrix.kind == 'dylib'

@@ -35,7 +35,9 @@ $(MIZZE_PRODUCT)_FILES := $(filter-out sources/StealthDylibInit.mm,$(MIZZE_SOURC
 $(MIZZE_PRODUCT)_CODESIGN_FLAGS += -Slayout/entitlements.plist
 $(MIZZE_PRODUCT)_RESOURCE_DIRS := ./layout/Resources
 else
-$(MIZZE_PRODUCT)_FILES := $(filter-out sources/_0xHAPP827.mm,$(MIZZE_SOURCES))
+# In-process overlays use UIKit's native touches. Do not link the standalone
+# HUD application, private touch synthesizer (+load), or anti-debug threads.
+$(MIZZE_PRODUCT)_FILES := sources/StealthDylibInit.mm sources/InjectedLicenseController.mm sources/LicenseSession.mm sources/_0xMO353DA.mm sources/_0xViSecureV28.m sources/fix_version.mm $(wildcard esp/drawing_view/*.mm esp/drawing_view/*.cpp esp/Core/*.mm esp/Core/*.cpp)
 $(MIZZE_PRODUCT)_CFLAGS += -DMIZZE_INJECTED=1
 endif
 
@@ -50,7 +52,9 @@ $(MIZZE_PRODUCT)_CCFLAGS += -std=c++17
 
 $(MIZZE_PRODUCT)_FRAMEWORKS += CoreGraphics CoreServices QuartzCore IOKit UIKit CoreText Security CFNetwork SystemConfiguration ImageIO
 
+ifeq ($(BUILD_KIND),tipa)
 $(MIZZE_PRODUCT)_PRIVATE_FRAMEWORKS += BackBoardServices GraphicsServices SpringBoardServices
+endif
 
 $(MIZZE_PRODUCT)_LDFLAGS += -Wl,-alias,____isOSVersionAtLeast,___isOSVersionAtLeast
 
