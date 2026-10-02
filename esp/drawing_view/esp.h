@@ -113,8 +113,11 @@ void _0x35572DA(
 );
 
 void ESPSyncFromPrefs(void);
+// Nhả aim lock để render frame kế tiếp đánh giá lại theo FOV mới
+void ESPClearAimLock(void);
 BOOL ESPMatchReady(void);
 FOUNDATION_EXPORT NSNotificationName const ESPMatchReadyChangedNotification;
+
 
 @interface _0xDAB2826 : UIView
 - (instancetype)initWithFrame:(CGRect)frame;

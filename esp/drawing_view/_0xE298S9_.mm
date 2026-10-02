@@ -114,6 +114,13 @@ void ESPSyncFromPrefs(void) {
     }
 }
 
+// Nhả aim lock → frame kế tiếp chọn lại target trong FOV mới
+void ESPClearAimLock(void) {
+    gAimLockTarget    = 0;
+    gAimSmoothedValid = false;
+}
+
+
 
 static const NSUInteger kMaxTextLayerPoolSize = 128;
 

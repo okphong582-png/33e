@@ -1,4 +1,4 @@
-#import "ModMenuViewController.h"
+﻿#import "ModMenuViewController.h"
 #import "../esp/drawing_view/esp.h"
 #import "../esp/drawing_view/ESPStyle.h"
 #import <objc/runtime.h>
@@ -332,6 +332,8 @@
             [sender addTarget:self action:@selector(fovSliderTouchUp:)
                 forControlEvents:UIControlEventTouchUpInside|UIControlEventTouchUpOutside];
         }
+        // Keo FOV nho lai: nha aim lock, dich ra ngoai FOV se bi nha frame sau
+        ESPClearAimLock();
     }
     ESPSyncFromPrefs(); [self updateSliderLabel:sender]; [self updateSwatch];
 }
