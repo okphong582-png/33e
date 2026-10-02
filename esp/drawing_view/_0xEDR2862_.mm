@@ -50,6 +50,52 @@ static CGPoint ClipToEdge(CGFloat ox, CGFloat oy,
     return CGPointMake(ox + dirX * t, oy + dirY * t);
 }
 
+// ─── Smooth snapline endpoint per pawn ────────────────────────
+// Lerp endpoint giữa frame để line không giật khi xoay 360°
+struct SnaplineSmooth {
+    CGFloat x = 0, y = 0;
+    bool    valid = false;
+};
+// Tối đa 100 địch (Free Fire tối đa 50 + bot)
+static const int kSnaplineMaxPlayers = 100;
+struct SnaplineEntry { uint64_t pawn; SnaplineSmooth pt; };
+static SnaplineEntry gSnaplineCache[kSnaplineMaxPlayers] = {};
+
+static SnaplineSmooth& _GetSnaplineCache(uint64_t pawn) {
+    // Tìm slot bằng hash đơn giản
+    int slot = (int)((pawn >> 4) % kSnaplineMaxPlayers);
+    // Linear probe nếu bị collision
+    for (int i = 0; i < kSnaplineMaxPlayers; ++i) {
+        int idx = (slot + i) % kSnaplineMaxPlayers;
+        if (gSnaplineCache[idx].pawn == pawn || gSnaplineCache[idx].pawn == 0) {
+            gSnaplineCache[idx].pawn = pawn;
+            return gSnaplineCache[idx].pt;
+        }
+    }
+    // Fallback: overwrite slot
+    gSnaplineCache[slot].pawn = pawn;
+    gSnaplineCache[slot].pt   = {};
+    return gSnaplineCache[slot].pt;
+}
+
+// Lerp factor: 0.0 = không smooth, 1.0 = instant
+// 0.25 = mượt vừa phải (~4 frame để đến đích)
+static constexpr CGFloat kSnaplineLerp = 0.28f;
+
+static CGPoint SmoothedEndpoint(uint64_t pawn, CGPoint target) {
+    SnaplineSmooth& s = _GetSnaplineCache(pawn);
+    if (!s.valid) {
+        s.x = target.x;
+        s.y = target.y;
+        s.valid = true;
+        return target;
+    }
+    // Exponential lerp: nhanh khi gần, chậm khi xa
+    s.x = s.x + (target.x - s.x) * kSnaplineLerp;
+    s.y = s.y + (target.y - s.y) * kSnaplineLerp;
+    return CGPointMake(s.x, s.y);
+}
+
 
 static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,
                         const Vector3 &head, const Vector3 &hip, float *matrix,
@@ -122,29 +168,28 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         if (linePath) {
             const CGFloat cx = width * 0.5f;
             const CGFloat cy = 40.0f;
-            CGPoint endPt;
+            CGPoint rawEnd;
             bool drawLine = false;
 
             if (headInFront) {
-                // Địch phía trước: line thẳng đến đầu
-                endPt   = CGPointMake(headScreen.x, headScreen.y - 4);
+                // Địch phía trước: line đến đầu
+                rawEnd   = CGPointMake(headScreen.x, headScreen.y - 4);
                 drawLine = true;
             } else {
-                // Địch sau lưng: dùng clip-space thật để lấy hướng
-                // w_c < 0 → negate (xc,yc) để đảo hướng về đúng phía
+                // Địch sau lưng: dùng clip-space thật
                 float xc, yc, wc;
                 WorldToClip(head, matrix, xc, yc, wc);
                 if (std::isfinite(xc) && std::isfinite(yc) && std::isfinite(wc) && wc != 0) {
-                    // NDC direction: xc/wc, -yc/wc (Y flip vì screen Y ngược)
-                    // Khi wc < 0, cả hai tự đảo dấu → đúng hướng
-                    const CGFloat ndx =  (CGFloat)(xc / wc); // [-1..1] sang phải
-                    const CGFloat ndy = -(CGFloat)(yc / wc); // [-1..1] xuống dưới
-                    endPt   = ClipToEdge(cx, cy, ndx * width, ndy * height, width, height);
+                    const CGFloat ndx =  (CGFloat)(xc / wc);
+                    const CGFloat ndy = -(CGFloat)(yc / wc);
+                    rawEnd   = ClipToEdge(cx, cy, ndx * width, ndy * height, width, height);
                     drawLine = true;
                 }
             }
 
             if (drawLine) {
+                // Lerp endpoint để line không giật khi xoay 360°
+                CGPoint endPt = SmoothedEndpoint(pawn, rawEnd);
                 AddLine(linePath, CGPointMake(cx, cy), endPt, width, height);
                 if (knocked) buffers->lineKnockDirty = true;
                 else if (bot) buffers->lineBotDirty  = true;
