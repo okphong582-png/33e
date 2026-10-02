@@ -429,19 +429,9 @@ void PeriodicRehide() {
 
 } // namespace SuperStealth
 
-// ─── LAYER 6: Memory Read Jitter (ở global scope để link được từ _0xE298S9_.mm) ───
-// LCG random ±20% jitter trên base render interval
-// Khiến anti-cheat khó phát hiện pattern đọc memory đều đặn
-static uint32_t _jitterSeed = 0;
+// LAYER 6 jitter được định nghĩa static inline trong _0xE298S9_.mm
+// để cả dylib và tipa đều dùng được (StealthDylibInit.mm chỉ có trong dylib)
 
-double SuperStealthNextRenderDelay(double baseInterval) {
-    _jitterSeed = _jitterSeed * 1664525u + 1013904223u;
-    double jitter = ((double)(_jitterSeed & 0xFFFF) / 65535.0 - 0.5) * 0.4;
-    double delay  = baseInterval * (1.0 + jitter);
-    if (delay < 0.050) delay = 0.050; // min 50ms
-    if (delay > 0.500) delay = 0.500; // max 500ms
-    return delay;
-}
 
 // ═══════════════════════════════════════════════════════════════
 // OVERLAY SETUP
