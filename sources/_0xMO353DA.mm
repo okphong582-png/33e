@@ -255,6 +255,9 @@
         [boxStyle addTarget:self action:@selector(boxStyleChanged:) forControlEvents:UIControlEventValueChanged];
         [self.scroll addSubview:boxStyle]; [self.controls addObject:boxStyle];
         y += 70;
+        // Slider khoảng cách tối đa hiển thị ESP
+        y = [self slider:@"📍 Khoảng cách hiển thị tối đa" key:@"ESPMaxDistance" min:50 max:500 fallback:150 y:y + 6];
+        y = [self note:@"Chỉ hiển thị địch trong bán kính này (mét). Mặc định 150m." y:y];
     } else if (self.page == 2) {
         UISegmentedControl *target = [[UISegmentedControl alloc] initWithItems:@[@"Box", @"Line", @"FOV"]];
         target.frame = CGRectMake(8, y, [self contentWidth] - 16, 30); target.selectedSegmentIndex = self.colorTarget;
@@ -305,12 +308,34 @@
 - (void)updateSliderLabel:(UISlider *)sender {
     UILabel *label = objc_getAssociatedObject(sender, "label");
     NSString *key = objc_getAssociatedObject(sender, "key"), *title = objc_getAssociatedObject(sender, "title");
-    label.text = [key isEqualToString:@"FovSize"] ? [NSString stringWithFormat:@"%@   %.0f%%", title, sender.value] : [NSString stringWithFormat:@"%@   %.0f", title, sender.value * 255];
+    if ([key isEqualToString:@"FovSize"]) {
+        label.text = [NSString stringWithFormat:@"%@   %.0f%%", title, sender.value];
+    } else if ([key isEqualToString:@"ESPMaxDistance"]) {
+        label.text = [NSString stringWithFormat:@"%@   %.0fm", title, sender.value];
+    } else {
+        label.text = [NSString stringWithFormat:@"%@   %.0f", title, sender.value * 255];
+    }
 }
 - (void)sliderChanged:(UISlider *)sender {
-    ESPPrefsSetFloat(objc_getAssociatedObject(sender, "key"), sender.value);
+    NSString *key = objc_getAssociatedObject(sender, "key");
+    ESPPrefsSetFloat(key, sender.value);
+    // Khi kéo slider FOV: hiện vòng FOV tạm dù đang tắt
+    if ([key isEqualToString:@"FovSize"]) {
+        NSNumber *savedFov = objc_getAssociatedObject(sender, "origShowFov");
+        if (!savedFov) {
+            // Lưu trạng thái gốc và bật tạm
+            BOOL orig = ESPPrefsBool(@"ShowFov", YES);
+            objc_setAssociatedObject(sender, "origShowFov", @(orig), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            if (!orig) {
+                ESPPrefsSetBool(@"ShowFov", YES);
+            }
+            [sender addTarget:self action:@selector(fovSliderTouchUp:)
+                forControlEvents:UIControlEventTouchUpInside|UIControlEventTouchUpOutside];
+        }
+    }
     ESPSyncFromPrefs(); [self updateSliderLabel:sender]; [self updateSwatch];
 }
+
 - (void)updateSwatch {
     if (!self.swatch) return;
     NSString *prefix = [self colorPrefix];
@@ -330,7 +355,19 @@
     slider.value = slider.minimumValue + ratio * (slider.maximumValue - slider.minimumValue);
     [self sliderChanged:slider];
 }
+- (void)fovSliderTouchUp:(UISlider *)sender {
+    // Khôi phục trạng thái ShowFov như trước khi kéo
+    NSNumber *savedFov = objc_getAssociatedObject(sender, "origShowFov");
+    if (savedFov && ![savedFov boolValue]) {
+        // Trước khi kéo thì ShowFov đang OFF → tắt lại
+        ESPPrefsSetBool(@"ShowFov", NO);
+        ESPSyncFromPrefs();
+    }
+    // Xóa cache để lần kéo tiếp theo có thể cập nhật lại
+    objc_setAssociatedObject(sender, "origShowFov", nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
 // The system-wide HUD receives forwarded touches, so controls also route here.
+
 - (BOOL)_0xF010:(CGPoint)point phase:(NSInteger)phase pointerId:(NSInteger)pointerId {
     if (phase == UITouchPhaseBegan) {
         if (!CGRectContainsPoint(self.panel.frame, point)) return NO;

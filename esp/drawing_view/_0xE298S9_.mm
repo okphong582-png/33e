@@ -72,6 +72,7 @@ static Vector3  gAimLockedHead  = {};
 static Quaternion gAimSmoothed      = {0,0,0,1};
 static bool       gAimSmoothedValid = false;
 static float      gAimSpeed         = 180.0f;
+static float      gESPMaxDistance   = 150.0f; // khoảng cách tối đa hiển thị ESP (mét)
 
 
 static bool gESPPrefsLoadedOnce = false;
@@ -99,6 +100,9 @@ void ESPSyncFromPrefs(void) {
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
+    gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
+    if (gESPMaxDistance < 30.0f)  gESPMaxDistance = 30.0f;
+    if (gESPMaxDistance > 500.0f) gESPMaxDistance = 500.0f;
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -742,7 +746,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         const Vector3 hip = getPositionExt(getHip(pawn));
         if (IsZeroVec(hip)) continue;
         const float distance = Vector3::Distance(myLoc, hip);
-        if (!std::isfinite(distance) || distance > 150.0f) continue;
+        if (!std::isfinite(distance) || distance > gESPMaxDistance) continue;
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
 
