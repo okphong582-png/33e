@@ -28,6 +28,17 @@ int main() {
     for (bool scoping : {false, true})
     for (int raw : {-1, 0, 1, 2, 255, 1, 0})
         assert(Triggered(true, true, AimSelection::FiringState(raw), scoping, false) == (raw == 1));
+    // Opening scope before a burst must neither be required nor keep aim running
+    // after release. A scope-state drop during the burst must not interrupt fire aim.
+    struct ShotFrame { int raw; bool scoping; bool expected; };
+    for (const auto frame : {ShotFrame{0, true, false}, ShotFrame{1, true, true},
+                            ShotFrame{1, false, true}, ShotFrame{0, true, false},
+                            ShotFrame{1, false, true}, ShotFrame{-1, true, false}}) {
+        assert(Triggered(true, true, AimSelection::FiringState(frame.raw),
+                         frame.scoping, false) == frame.expected);
+        assert(!Triggered(false, false, AimSelection::FiringState(frame.raw),
+                          frame.scoping, true));
+    }
     assert(!AimSelection::BooleanState(0));
     assert(AimSelection::BooleanState(1));
     assert(!AimSelection::BooleanState(2));

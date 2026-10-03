@@ -278,7 +278,11 @@
         y = [self toggle:@"ESP ổn định (30 FPS)" key:@"BalancedRender" fallback:YES y:y];
         y = [self note:@"Bật để giảm tải khi chơi lâu. Tắt để vẽ ESP ở 60 FPS." y:y];
         y = [self note:@"Kéo thanh tiêu đề để di chuyển menu. Các lựa chọn được lưu tự động." y:y];
+#ifdef MIZZE_INJECTED
+        y = [self note:@"Nút menu hiện khi có dữ liệu trận và ẩn khi về sảnh." y:y];
+#else
         y = [self note:@"Menu hiện ngay sau xác thực. ESP và aim hoạt động khi có dữ liệu trận." y:y];
+#endif
     }
     self.scroll.contentSize = CGSizeMake([self contentWidth], y + 8);
     self.scroll.contentOffset = CGPointZero;
