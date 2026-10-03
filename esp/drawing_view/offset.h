@@ -37,7 +37,7 @@
 #define kDataPoolValue          0x18
 #define kAimRotation            OFF64(0x614)
 #define kAimRotationAux         OFF64(0x628)
-#define kIsFiring               OFF64(0x770)
+#define kAvatarManager          OFF64(0x770)
 
 #define kVisibleObj             0xA50
 #define kVisibleObjFlags        0x10
@@ -45,7 +45,7 @@
 #define kISVisibleDynamicPVS    0x100000
 #define kISVisibleFPPMask       0xFFFBFFFF
 
-#define _0x27276BC OFF64(0x770)// protected AvatarManager m_AvatarManager; // 0x620 protected AvatarManager FOGJNGDMJKJ; // 0x710
+#define _0x27276BC kAvatarManager
 
 #define _0x28726BD OFF64(0x138)// internal IUmaAvatar m_Avatar; // 0x118 internal IUmaAvatar EEAGBKBMBLD; // 0x128
 

@@ -1,5 +1,6 @@
 #import "GameLogic.h"
 #include "AimSelection.h"
+#include "GamePRI.h"
 #import "../drawing_view/offset.h"
 #import <Foundation/Foundation.h>
 #import <math.h>
@@ -135,14 +136,23 @@ uint64_t getRoot(uint64_t player) {
 }
 
 
+static bool TryDataUInt16(uint64_t player, int index, uint16_t &value) {
+    return GamePRI::TryUInt16(player, index,
+        [](uint64_t address, void *buffer, size_t length) {
+            return _read((long)address, buffer, static_cast<int>(length));
+        },
+        [](uint64_t address) { return isVaildPtr(address); }, value);
+}
+int get_FiringPRIState(uint64_t playerPawn) {
+    uint16_t value = 0;
+    return TryDataUInt16(playerPawn, GamePRI::FiringIndex, value) ? value : -1;
+}
 int get_FiringByte(uint64_t playerPawn) {
-    if (!isVaildPtr(playerPawn)) return -1;
-    uint8_t firingByte = 0;
-    if (!_read((long)(playerPawn + (uint64_t)kIsFiring), &firingByte, sizeof(firingByte))) return -1;
-    return firingByte;
+    const int state = get_FiringPRIState(playerPawn);
+    return state < 0 ? -1 : (GamePRI::Firing(state) ? 1 : 0);
 }
 bool get_IsFiring(uint64_t playerPawn) {
-    return AimSelection::FiringState(get_FiringByte(playerPawn));
+    return GamePRI::Firing(get_FiringPRIState(playerPawn));
 }
 
 
@@ -225,14 +235,8 @@ bool isLocalTeamMate(uint64_t localPlayer, uint64_t Player) {
 }
 
 int GetDataUInt16(uint64_t player, int varID) {
-    if (!isVaildPtr(player) || varID < 0 || varID > 32) return 0;
-    uint64_t IPRIDataPool = ReadAddr<uint64_t>(player + kDataPool);
-    if (!isVaildPtr(IPRIDataPool)) return 0;
-    uint64_t v2 = ReadAddr<uint64_t>(IPRIDataPool + kDataPoolInner);
-    if (!isVaildPtr(v2)) return 0;
-    uint64_t v4 = ReadAddr<uint64_t>(v2 + kDataPoolEntryStride * (uint64_t)varID + kDataPoolEntriesBase);
-    if (!isVaildPtr(v4)) return 0;
-    return ReadAddr<uint16_t>(v4 + kDataPoolValue);
+    uint16_t value = 0;
+    return TryDataUInt16(player, varID, value) ? value : 0;
 }
 
 void SetDataUInt16(uint64_t player, int varID, uint16_t value) {

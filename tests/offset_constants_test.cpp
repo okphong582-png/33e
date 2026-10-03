@@ -11,7 +11,7 @@ int main() {
         assert(kTransformIndex == 0x40);
         assert(kAimRotation == 0x614);
         assert(kAimRotationAux == 0x628);
-        assert(kIsFiring == 0x770);
+        assert(kAvatarManager == 0x770);
         assert(kKnocked == 0x1258);
         assert(OFF64(0xFFFFFFFFFFFFFFFFULL) == 0xFFFFFFFFFFFFFFFFULL);
     }

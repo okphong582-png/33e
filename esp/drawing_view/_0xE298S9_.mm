@@ -1,5 +1,6 @@
 
 #include "../Core/AimSelection.h"
+#include "../Core/GamePRI.h"
 #include "../Core/AimPoint.h"
 
 #import "esp.h"
@@ -638,7 +639,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (self.aimDiagnosticLayer.hidden || now >= self.nextAimDiagnosticUpdate) {
         self.nextAimDiagnosticUpdate = now + 0.2;
         self.aimDiagnosticLayer.string = [NSString stringWithFormat:
-            @"Bắn: %d · Ngắm: %@ · %@", stats.firingRaw,
+            @"Bắn: %d · PRI21: %d · Ngắm: %@ · %@", stats.firing, stats.firingRaw,
             stats.scoping ? @"có" : @"không", AimStateDescription(stats.aimState)];
     }
     self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
@@ -738,8 +739,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     stats.inMatch = true;
     SetMatchReady(YES);
 
-    stats.firingRaw = get_FiringByte(local);
-    stats.firing    = AimSelection::FiringState(stats.firingRaw);
+    stats.firingRaw = get_FiringPRIState(local);
+    stats.firing    = GamePRI::Firing(stats.firingRaw);
     stats.scoping   = get_IsScoping(local);
     // Fire-only mode takes precedence over scope; releasing fire stops immediately.
     const bool triggerActive = !get_IsKnockedDown(local) &&
