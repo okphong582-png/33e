@@ -65,6 +65,7 @@ bool isHeadRedDot = YES;
 bool isBox3D = YES;
 static bool showFov    = YES;
 static float fovPercent = 40.0f;
+static bool isAimbotFire = YES;
 static bool isAimbotScope = YES;
 static bool isHipAlways  = NO;
 static bool isAimNeck    = NO;
@@ -93,6 +94,7 @@ void ESPSyncFromPrefs(void) {
     isDis        = ESPPrefsBool(KH_NS("Dis"),        NO);
     isLine       = ESPPrefsBool(KH_NS("Line"),       NO);
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), YES);
+    isAimbotFire  = ESPPrefsBool(KH_NS("AimbotFire"), YES);
     isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
     isHipAlways   = ESPPrefsBool(@"AimHipAlways", NO);
     isAimNeck     = ESPPrefsBool(@"AimNeck", NO);
@@ -629,7 +631,18 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)updateAimDiagnostic:(ESPFrameStats)stats now:(CFTimeInterval)now {
-    self.aimDiagnosticLayer.hidden = YES; // aim đã xóa, ẩn hoàn toàn
+    if (!gAimDiagnostics || !stats.inMatch) {
+        self.aimDiagnosticLayer.hidden = YES;
+        return;
+    }
+    if (self.aimDiagnosticLayer.hidden || now >= self.nextAimDiagnosticUpdate) {
+        self.nextAimDiagnosticUpdate = now + 0.2;
+        self.aimDiagnosticLayer.string = [NSString stringWithFormat:
+            @"Bắn: %d · Ngắm: %@ · %@", stats.firingRaw,
+            stats.scoping ? @"có" : @"không", AimStateDescription(stats.aimState)];
+    }
+    self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
+    self.aimDiagnosticLayer.hidden = NO;
 }
 
 - (void)clearAllContent {
@@ -728,14 +741,16 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     stats.firingRaw = get_FiringByte(local);
     stats.firing    = AimSelection::FiringState(stats.firingRaw);
     stats.scoping   = get_IsScoping(local);
-    // triggerActive: scope hoặc HipAlways (không có aim khi bắn)
+    // Fire-only mode takes precedence over scope; releasing fire stops immediately.
     const bool triggerActive = !get_IsKnockedDown(local) &&
-        isAimbotScope && (isHipAlways || stats.scoping);
+        AimSelection::Triggered(isAimbotFire, isAimbotScope, stats.firing,
+                                stats.scoping, isHipAlways);
     stats.aimState = triggerActive ? 2 : 1;
 
     const bool sameLocal = (local == gAimLocalPlayer);
     gAimLocalPlayer = local;
-    const uint64_t previousTarget = gAimLockTarget;
+    const uint64_t previousTarget = sameLocal ? gAimLockTarget : 0;
+    if (!sameLocal) gAimSmoothedValid = false;
     gAimLockTarget = 0;
     gAimLockedHead = {};
 
@@ -781,7 +796,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         }
     }
 
-    // --- Aim scope: chỉ ghi rotation khi scope, trong FOV ---
+    // Write rotation only for the selected trigger mode and a target inside FOV.
     if (triggerActive && selection.target) {
         const uint64_t finalTarget = selection.target;
         const Vector3  finalHead   = targetHead;
