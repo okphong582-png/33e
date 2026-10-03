@@ -18,6 +18,9 @@ static const CGFloat kMenuButtonSize = 44.0f;
 @property (nonatomic, assign) CGPoint buttonDragStartCenter;
 @property (nonatomic, assign) CGPoint buttonDragStartPoint;
 @property (nonatomic, strong) _0xDEADBEEE *presentedModMenu;
+#ifdef MIZZE_INJECTED
+@property (nonatomic, assign) NSUInteger menuVisibilityGeneration;
+#endif
 @end
 
 @implementation _0xB1872A2
@@ -51,6 +54,18 @@ static const CGFloat kMenuButtonSize = 44.0f;
         self.backgroundColor = [UIColor clearColor];
         self.userInteractionEnabled = YES;
         _trackingPointerId = -1;
+#ifdef MIZZE_INJECTED
+        self.hidden = YES;
+        NSNotificationCenter *notifications = NSNotificationCenter.defaultCenter;
+        [notifications addObserver:self selector:@selector(refreshInjectedMenuVisibility)
+                              name:ESPMatchReadyChangedNotification object:nil];
+        [notifications addObserver:self selector:@selector(refreshInjectedMenuVisibility)
+                              name:UIApplicationDidBecomeActiveNotification object:nil];
+        [notifications addObserver:self selector:@selector(suspendInjectedMenu)
+                              name:UIApplicationWillResignActiveNotification object:nil];
+        [notifications addObserver:self selector:@selector(suspendInjectedMenu)
+                              name:UIApplicationDidEnterBackgroundNotification object:nil];
+#endif
 
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(resetTouchState)
@@ -63,6 +78,9 @@ static const CGFloat kMenuButtonSize = 44.0f;
                                                    object:nil];
 
         [self setupMenuButton];
+#ifdef MIZZE_INJECTED
+        [self refreshInjectedMenuVisibility];
+#endif
     }
     return self;
 }
@@ -132,10 +150,39 @@ static const CGFloat kMenuButtonSize = 44.0f;
     _trackingPointerId = -1;
 }
 
+#ifdef MIZZE_INJECTED
+- (void)suspendInjectedMenu {
+    // Invalidate an opening queued before leaving the match or backgrounding.
+    ++_menuVisibilityGeneration;
+    self.hidden = YES;
+    [self resetTouchState];
+    [self dismissModMenu];
+}
+
+- (void)refreshInjectedMenuVisibility {
+    if (ESPMatchReady() &&
+        UIApplication.sharedApplication.applicationState == UIApplicationStateActive) {
+        self.hidden = NO;
+    } else {
+        [self suspendInjectedMenu];
+    }
+}
+#endif
+
 - (void)presentModMenu {
     if (self->_presentedModMenu) return;
+#ifdef MIZZE_INJECTED
+    if (self.hidden || !self.window || !ESPMatchReady() ||
+        UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
+    const NSUInteger generation = _menuVisibilityGeneration;
+#endif
     dispatch_async(dispatch_get_main_queue(), ^{
         if (self->_presentedModMenu) return;
+#ifdef MIZZE_INJECTED
+        if (generation != self->_menuVisibilityGeneration || self.hidden ||
+            !self.window || !ESPMatchReady() ||
+            UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
+#endif
         
         UIViewController *parentVC = [self viewControllerForView:self];
         if (!parentVC) return;
@@ -173,8 +220,15 @@ static const CGFloat kMenuButtonSize = 44.0f;
 }
 
 - (void)dismissModMenu {
+#ifdef MIZZE_INJECTED
+    _0xDEADBEEE *closingMenu = self->_presentedModMenu;
+    if (!closingMenu) return;
+#endif
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!self->_presentedModMenu) return;
+#ifdef MIZZE_INJECTED
+        if (self->_presentedModMenu != closingMenu) return;
+#endif
         
         _0xDEADBEEE *vc = self->_presentedModMenu;
         self->_presentedModMenu = nil;
@@ -209,6 +263,9 @@ static const CGFloat kMenuButtonSize = 44.0f;
 }
 
 - (void)hideMenu {
+#ifdef MIZZE_INJECTED
+    ++_menuVisibilityGeneration;
+#endif
     if (_presentedModMenu) {
         [self dismissModMenu];
     }
