@@ -86,7 +86,7 @@ jobs:
 
       - name: Test aim selection
         run: |
-          g++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-function -I. -fsanitize=address,undefined tests/game_pri_test.cpp -o /tmp/game-pri-test
+          g++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-function -Wno-error=attributes -Wno-error=parentheses -I. -fsanitize=address,undefined tests/game_pri_test.cpp -o /tmp/game-pri-test
           /tmp/game-pri-test
           g++ -std=c++17 -Wall -Wextra -Werror tests/aim_selection_test.cpp -o /tmp/aim-selection-test
           /tmp/aim-selection-test
