@@ -2,6 +2,8 @@
 
 clang --target=aarch64-linux-gnu -c esp/Core/SilentAimRemote.S -o /tmp/silent-remote.o
 python3 tests/silent_aim_remote_test.py /tmp/silent-remote.o
+clang --target=arm64-apple-ios16.5 -c esp/Core/SilentAimRemote.S -o /tmp/silent-remote-ios.o
+python3 tests/silent_aim_remote_test.py /tmp/silent-remote-ios.o
 """
 import math
 import struct
@@ -14,8 +16,7 @@ from unicorn.arm64_const import (
     UC_ARM64_REG_X27, UC_ARM64_REG_X28, UC_ARM64_REG_X29, UC_ARM64_REG_X30,
 )
 
-def code_from_elf(path):
-    data = open(path, "rb").read()
+def code_from_elf(data):
     assert data[:6] == b"\x7fELF\x02\x01"
     offset, = struct.unpack_from("<Q", data, 40)
     size, count, strings = struct.unpack_from("<HHH", data, 58)
@@ -30,7 +31,37 @@ def code_from_elf(path):
     assert code is not None and len(code) == 0x4000
     return code
 
-CODE = code_from_elf(sys.argv[1])
+def code_from_macho(data):
+    magic, cpu, _, filetype, commands, _, _, _ = struct.unpack_from("<IiiIIIII", data)
+    assert magic == 0xFEEDFACF and cpu == 0x0100000C and filetype == 1
+    offset, code, symbols = 32, None, {}
+    for _ in range(commands):
+        command, size = struct.unpack_from("<II", data, offset)
+        if command == 0x19:  # LC_SEGMENT_64
+            count, = struct.unpack_from("<I", data, offset + 64)
+            for i in range(count):
+                section = struct.unpack_from("<16s16sQQIIIIIIII", data, offset + 72 + i * 80)
+                if section[0].rstrip(b"\0") != b"__silent":
+                    continue
+                assert section[1].rstrip(b"\0") == b"__TEXT"
+                assert section[2] == 0 and section[3] == 0x4000
+                assert section[5] == 14, "Copied code must be page-aligned"
+                assert section[7] == 0, "Copied code must have no relocations"
+                code = data[section[4]:section[4]+section[3]]
+        elif command == 2:  # LC_SYMTAB
+            table, count, strings, _ = struct.unpack_from("<IIII", data, offset + 8)
+            for i in range(count):
+                name, _, _, _, value = struct.unpack_from("<IBBHQ", data, table + i * 16)
+                name = data[strings+name:].split(b"\0", 1)[0]
+                symbols[name] = value
+        offset += size
+    assert code is not None and len(code) == 0x4000
+    assert symbols[b"_SilentAimRemoteStart"] == 0
+    assert symbols[b"_SilentAimRemoteEnd"] == 0x4000
+    return code
+
+data = open(sys.argv[1], "rb").read()
+CODE = code_from_elf(data) if data[:4] == b"\x7fELF" else code_from_macho(data)
 BASE, STATE, ORIGINAL, CLOCK, STOP = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200
 LOCAL, HANDLER, WEAPON, INFO, INFO_CLASS, MATCH = 0x200000, 0x210000, 0x220000, 0x230000, 0x240000, 0x250000
 POOL, ENTRIES, ENTRY, STACK, METHOD = 0x260000, 0x270000, 0x280000, 0x300000, 0xAABBCC

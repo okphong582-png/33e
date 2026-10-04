@@ -220,6 +220,9 @@ _SilentAimRemoteStart:
 .p2align 3
 .Lminimum:
     .double 0.01
-    .space SILENT_REMOTE_PAGE - (. - _SilentAimRemoteStart), 0
+    // This dedicated section starts at offset zero. Pad to exactly one page
+    // without symbol subtraction, which older Mach-O assemblers cannot resolve.
+    // .org also rejects a handler that grows beyond the copied page.
+    .org SILENT_REMOTE_PAGE, 0
 _SilentAimRemoteEnd:
 .Lstate:
