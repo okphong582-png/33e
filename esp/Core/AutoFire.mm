@@ -123,13 +123,15 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
     std::lock_guard<std::recursive_mutex> guard(mutex);
     if(!target){Clear();return 7;}
     if(!Attach(base)){Clear();return 10;}
+    uint8_t localKnock=1, targetKnock=1;
     if(getMatch(getMatchGame(base))!=match||getLocalPlayer(match)!=local||
-        get_CurHP(local)<=0||get_CurHP(target)<=0||get_IsKnockedDown(local)||get_IsKnockedDown(target)||
+        get_CurHP(local)<=0||get_CurHP(target)<=0||
+        !Read(local+kKnocked,localKnock)||localKnock||!Read(target+kKnocked,targetKnock)||targetKnock||
         isLocalTeamMate(local,target)||!getAimVisibility(target)){Clear();return 7;}
     const double now=CACurrentMediaTime();
+    if(now<retryAt)return retryState;
     if(target!=dwellTarget || local!=dwellLocal){Clear();dwellTarget=target;dwellLocal=local;dwellSince=now;}
     if(now-dwellSince<0.18)return 7;
-    if(now<retryAt)return retryState;
     uint64_t klass=0,update=0,weaponClass=0,start=0,stop=0;
     const uint64_t weapon=SilentAimWeapon::OnHand(local,[](uint64_t a,auto &v){return Read(a,v);},[](uint64_t a){return isVaildPtr(a);});
     if(!Read(local,klass)||!Read(klass+UpdateSlot,update)||!weapon||!Read(weapon,weaponClass)||

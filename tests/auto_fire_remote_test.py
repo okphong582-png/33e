@@ -61,12 +61,14 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         UC_ARM64_REG_X25,UC_ARM64_REG_X26,UC_ARM64_REG_X27,UC_ARM64_REG_X28,UC_ARM64_REG_X29])}
     for r,v in saved.items(): uc.reg_write(r,v)
     calls=[]
+    getter_calls=[]
     def hook(uc,a,size,_):
         if a == ORIGINAL:
             assert uc.reg_read(UC_ARM64_REG_X0)==local and uc.reg_read(UC_ARM64_REG_X1)==0x1234
             assert uc.reg_read(UC_ARM64_REG_D0)==0x3F400000 and uc.reg_read(UC_ARM64_REG_D1)==0x41200000
             calls.append('update')
         elif a in [CLOCK,GETTER,START,END]:
+            if a==GETTER: getter_calls.append(a)
             if a in [START,END]:
                 assert uc.reg_read(UC_ARM64_REG_X0)==WEAPON
                 assert uc.reg_read(UC_ARM64_REG_X1)==(0xABC if a==START else 0xDEF)
@@ -79,6 +81,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     assert uc.reg_read(UC_ARM64_REG_PC)==RETURN and calls.count('update')==1
     assert uc.reg_read(UC_ARM64_REG_SP)==STACK+0x8000
     assert all(uc.reg_read(r)==v for r,v in saved.items())
+    if not enabled and not held: assert not getter_calls
     assert struct.unpack('<I',uc.mem_read(STATE+88,4))[0]==busy
     held_after,=struct.unpack('<Q',uc.mem_read(STATE+80,8))
     starts,=struct.unpack('<Q',uc.mem_read(STATE+96,8))

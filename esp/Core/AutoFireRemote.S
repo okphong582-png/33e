@@ -21,6 +21,10 @@ _AutoFireRemoteStart:
     ldr x8, [x19, #AUTO_LOCAL]
     cmp x8, x20
     b.ne .LautoTail
+    ldr w8, [x19, #AUTO_ENABLED]
+    ldr x9, [x19, #AUTO_HELD]
+    orr x8, x8, x9
+    cbz x8, .LautoTail          // OFF with no owned hold: no native getter work
     add x8, x19, #AUTO_BUSY
     ldaxr w9, [x8]
     cbnz w9, .LautoReserved
