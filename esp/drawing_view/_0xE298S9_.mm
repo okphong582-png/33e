@@ -2,6 +2,8 @@
 #include "../Core/AimSelection.h"
 #include "../Core/GamePRI.h"
 #include "../Core/AimPoint.h"
+#include "../Core/SilentAim.h"
+#include "../Core/SilentAimDirection.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -70,6 +72,7 @@ static bool isAimbotFire = YES;
 static bool isAimbotScope = YES;
 static bool isHipAlways  = NO;
 static bool isAimNeck    = NO;
+static bool isSilentAim  = NO;
 static uint64_t gAimLockTarget  = 0;
 static uint64_t gAimLocalPlayer = 0;
 static Vector3  gAimLockedHead  = {};
@@ -101,6 +104,17 @@ void ESPSyncFromPrefs(void) {
     isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
     isHipAlways   = ESPPrefsBool(@"AimHipAlways", NO);
     isAimNeck     = ESPPrefsBool(@"AimNeck", NO);
+#ifdef MIZZE_INJECTED
+    const bool silentEnabled = ESPPrefsBool(@"SilentAim", NO);
+#else
+    const bool silentEnabled = false;
+#endif
+    if (silentEnabled != isSilentAim) {
+        gAimLockTarget = 0;
+        gAimSmoothedValid = false;
+        SilentAimSetEnabled(silentEnabled);
+    }
+    isSilentAim = silentEnabled;
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     isBox3D       = ESPPrefsBool(@"Box3D", YES);
@@ -171,6 +185,9 @@ static NSString *AimStateDescription(int state) {
         case 4: return @"đã ghi góc";
         case 5: return @"mục tiêu/trạng thái đã đổi";
         case 6: return @"chỉ ghi được góc chính";
+        case 7: return @"silent: chờ địch hiện";
+        case 8: return @"silent thử nghiệm: đã chọn đầu";
+        case 9: return @"silent: bản game/vũ khí chưa hỗ trợ";
         default: return @"chờ dữ liệu trận";
     }
 }
@@ -656,15 +673,18 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     }
     if (self.aimDiagnosticLayer.hidden || now >= self.nextAimDiagnosticUpdate) {
         self.nextAimDiagnosticUpdate = now + 0.2;
-        self.aimDiagnosticLayer.string = [NSString stringWithFormat:
-            @"Bắn: %d · PRI21: %d · Ngắm: %@ · %@", stats.firing, stats.firingRaw,
-            stats.scoping ? @"có" : @"không", AimStateDescription(stats.aimState)];
+        self.aimDiagnosticLayer.string = isSilentAim ? [NSString stringWithFormat:
+            @"Bắn: %d · PRI21: %d · %@ · chuyển hướng: %llu", stats.firing, stats.firingRaw,
+            AimStateDescription(stats.aimState), (unsigned long long)SilentAimRedirectCount()] :
+            [NSString stringWithFormat:@"Bắn: %d · PRI21: %d · Ngắm: %@ · %@", stats.firing,
+                stats.firingRaw, stats.scoping ? @"có" : @"không", AimStateDescription(stats.aimState)];
     }
     self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
     self.aimDiagnosticLayer.hidden = NO;
 }
 
 - (void)clearAllContent {
+    SilentAimSetEnabled(false);
     ResetWeaponFeatures();
     SetMatchReady(NO);
     gAimLockTarget      = 0;
@@ -681,6 +701,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)dealloc {
+    SilentAimSetEnabled(false);
     ResetWeaponFeatures();
     [NSNotificationCenter.defaultCenter removeObserver:self];
     [_displayLink invalidate];
@@ -719,6 +740,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
     ESPFrameStats stats = {};
+    SilentAimClearTarget();
     if (!buffers || !isVaildPtr(Moudule_Base)) {
         cachedMatchGame = cachedMatch = cachedCamera = 0;
         return stats;
@@ -730,6 +752,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         return stats;
     }
     const uint64_t match = getMatch(matchGame);
+    const bool sameMatch = match == cachedMatch;
     cachedMatchGame = matchGame;
     cachedMatch = match;
     cachedCamera = CameraMain(matchGame);
@@ -765,12 +788,12 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     stats.firing    = GamePRI::Firing(stats.firingRaw);
     stats.scoping   = get_IsScoping(local);
     // Fire-only mode takes precedence over scope; releasing fire stops immediately.
-    const bool triggerActive = !get_IsKnockedDown(local) &&
+    const bool triggerActive = !isSilentAim && !get_IsKnockedDown(local) &&
         AimSelection::Triggered(isAimbotFire, isAimbotScope, stats.firing,
                                 stats.scoping, isHipAlways);
     stats.aimState = triggerActive ? 2 : 1;
 
-    const bool sameLocal = (local == gAimLocalPlayer);
+    const bool sameLocal = sameMatch && (local == gAimLocalPlayer);
     gAimLocalPlayer = local;
     const uint64_t previousTarget = sameLocal ? gAimLockTarget : 0;
     if (!sameLocal) gAimSmoothedValid = false;
@@ -778,10 +801,12 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     gAimLockedHead = {};
 
     AimSelection::Selection selection;
-    selection.previous = triggerActive ? previousTarget : 0;
+    selection.previous = (triggerActive || isSilentAim) ? previousTarget : 0;
     Vector3 targetHead;
 
-    const float radius = AimSelection::Radius(vw, vh, fovPercent);
+    // Silent mode considers the complete viewport; normal aim keeps its FOV.
+    const float radius = isSilentAim ? SilentAimDirection::ViewportRadius(vw, vh) :
+        AimSelection::Radius(vw, vh, fovPercent);
     for (int i = 0; i < count; ++i) {
         const uint8_t *entry = snapshot.data() + kDictEntryStrideBytePlayer * i;
         int hash = -1;
@@ -799,9 +824,9 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
 
-        if (triggerActive && visible && !knocked) {
+        if ((triggerActive || isSilentAim) && visible && !knocked) {
             Vector3 head = getPositionExt(getHead(pawn));
-            if (isAimNeck) head = AimPoint::Neck(head, hip);
+            if (isAimNeck && !isSilentAim) head = AimPoint::Neck(head, hip);
             if (!IsZeroVec(head) && std::isfinite(head.x) &&
                 std::isfinite(head.y) && std::isfinite(head.z)) {
                 const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
@@ -817,6 +842,17 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
             _0x35572DA(buffers, ESPTextCallback, (__bridge void *)self,
                        pawn, hp, distance, hip, knocked, bot, matrix, vw, vh, vpW, vpH);
         }
+    }
+
+    if (isSilentAim) {
+        // Re-arm after invalid match/window frames. The adapter rechecks firing
+        // and player/weapon identity at the native handler, not at render time.
+        SilentAimSetEnabled(true);
+        stats.aimState = SilentAimUpdate(Moudule_Base, match, local,
+            get_IsKnockedDown(local) ? 0 : selection.target, targetHead);
+        gAimLockTarget = selection.target;
+        gAimSmoothedValid = false;
+        return stats;
     }
 
     // Write rotation only for the selected trigger mode and a target inside FOV.

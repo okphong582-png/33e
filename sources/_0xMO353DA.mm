@@ -223,6 +223,12 @@
     summary.textColor = [self mutedColor]; [section addSubview:summary]; [self.scroll addSubview:section];
     CGFloat y = 74;
     if (self.page == 0) {
+#ifdef MIZZE_INJECTED
+        y = [self toggle:@"Silent aim (thử nghiệm)" key:@"SilentAim" fallback:NO y:y];
+        y = [self note:@"Ưu tiên đầu địch hiện trên màn hình khi bắn. Bật Silent sẽ thay Aim thường; cần kiểm tra hiệu quả trên thiết bị." y:y];
+#else
+        y = [self note:@"Silent aim thử nghiệm hỗ trợ bản dylib chạy trong game." y:y];
+#endif
         y = [self toggle:@"Aim thường" key:@"AimbotFire" fallback:YES y:y];
         UISegmentedControl *mode = [[UISegmentedControl alloc] initWithItems:@[@"Chỉ khi bắn", @"Luôn trong FOV"]];
         mode.frame = CGRectMake(8, y, [self contentWidth] - 16, 34);
@@ -235,7 +241,7 @@
         y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:NO y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
         y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:48 fallback:40 y:y + 6];
-        y = [self note:@"Chỉ aim khi điểm ngắm nằm trong vòng. Ẩn vòng vẫn giữ giới hạn FOV." y:y];
+        y = [self note:@"Aim thường giữ giới hạn FOV. Silent thử nghiệm chọn trong toàn màn hình, trong khoảng cách hiển thị." y:y];
         y = [self note:@"Aim cổ lấy điểm sát dưới đầu. Tắt để aim đầu." y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
         y = [self toggle:@"Không thay đạn" key:@"ShootNoReload" fallback:NO y:y + 10];
