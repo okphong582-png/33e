@@ -51,13 +51,26 @@ bool Publish(const SilentAimRemote::State &state) {
     const uint32_t odd = (sequence + 1) | 1u;
     if (!Write(StateAddress() + SILENT_REMOTE_SEQUENCE, odd)) return false;
     sequence = odd + 1;
-    constexpr size_t start = SILENT_REMOTE_ENABLED, end = SILENT_REMOTE_REDIRECTS;
+    constexpr size_t start = SILENT_REMOTE_ENABLED;
+    constexpr size_t end = SILENT_REMOTE_REDIRECTS;
     if (!WriteBytes(StateAddress() + start, (const uint8_t *)&state + start, end - start) ||
-        !Write(StateAddress() + SILENT_REMOTE_MATCH, state.match)) return false;
+        !WriteBytes(StateAddress() + SILENT_REMOTE_MATCH, (const uint8_t *)&state + SILENT_REMOTE_MATCH,
+            SILENT_REMOTE_HEAD_PERCENT + sizeof(uint32_t) - SILENT_REMOTE_MATCH)) return false;
     return Write(StateAddress() + SILENT_REMOTE_SEQUENCE, sequence);
 }
 void Clear() {
-    if (allocation) Publish({});
+    if (!allocation) return;
+    SilentAimRemote::State state{};
+    // Dispatch owns the phase; Publish never writes it after initialization.
+    // Keep the user percentage across render-frame invalidation.
+    // Clearing a target must not reset the dispatch distribution to 100% head.
+    Read(StateAddress(), state);
+    state.enabled = 0;
+    state.deadline = 0;
+    state.local = state.handler = state.infoClass = state.match = 0;
+    state.head = {};
+    state.body = {};
+    Publish(state);
 }
 bool WritablePointer(uint64_t address) {
     if (!isVaildPtr(address) || address % 8) return false;
@@ -209,7 +222,8 @@ SilentAimFailure SilentAimLastFailure() {
     std::lock_guard<std::recursive_mutex> guard(controllerMutex);
     return lastFailure;
 }
-int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t target, const Vector3 &head) {
+int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t target, const Vector3 &head,
+                    const Vector3 &body, uint32_t headPercent) {
     std::lock_guard<std::recursive_mutex> guard(controllerMutex);
     if (!enabled) return 1;
     if (!Attach(base)) return 10;
@@ -233,12 +247,14 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t targ
     installFailure = 0;
     lastFailure = {};
     if (!target || !SilentAimDirection::Finite({head.x, head.y, head.z}) ||
+        !SilentAimDirection::Finite({body.x, body.y, body.z}) || headPercent>100 ||
         !Eligible(match, local, target)) { Clear(); return 7; }
     mach_timebase_info_data_t timebase{};
     if (mach_timebase_info(&timebase) != KERN_SUCCESS || !timebase.numer || !timebase.denom) { Clear(); return 9; }
     SilentAimRemote::State state{};
     state.enabled = 1; state.local = local; state.handler = handler; state.infoClass = infoClass;
     state.head = {head.x, head.y, head.z}; state.match = match;
+    state.body = {body.x, body.y, body.z}; state.headPercent = headPercent;
     state.deadline = mach_absolute_time() + 150000000ULL * timebase.denom / timebase.numer;
     return Publish(state) ? 8 : 9;
 }

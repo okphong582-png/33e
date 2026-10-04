@@ -8,38 +8,54 @@
 .globl _AutoFireRemoteStart
 .globl _AutoFireRemoteEnd
 _AutoFireRemoteStart:
-    // OnUpdate(self, float dt, float time, MethodInfo*): preserve both float
-    // arguments while issuing native weapon input, then tail-call OnUpdate.
-    stp x29, x30, [sp, #-96]!
+    // Weapon.MAMFDNEJAPF(self, float dt, float time, MethodInfo*).
+    // Player.PostUpdate calls this virtual slot even while the gun is idle.
+    // Preserve the caller ABI and issue input only for the current local gun.
+    stp x29, x30, [sp, #-112]!
     stp x19, x20, [sp, #16]
     stp x21, x22, [sp, #32]
     stp x23, x24, [sp, #48]
-    stp d0, d1, [sp, #64]
+    stp x25, x26, [sp, #64]
+    stp d0, d1, [sp, #80]
     adr x19, .LautoState
     mov x20, x0
     mov x21, x1
-    ldr x8, [x19, #AUTO_LOCAL]
+    ldr x25, [x19, #AUTO_LOCAL]
+    cbz x25, .LautoTail
+    ldr x8, [x20, #0x60]
+    cmp x8, x25
+    b.ne .LautoTail
+    ldr x8, [x19, #AUTO_WEAPON]
+    cmp x8, x20
+    b.eq .LautoRelevant
+    ldr x8, [x19, #AUTO_HELD]
     cmp x8, x20
     b.ne .LautoTail
+.LautoRelevant:
     ldr w8, [x19, #AUTO_ENABLED]
     ldr x9, [x19, #AUTO_HELD]
     orr x8, x8, x9
     cbz x8, .LautoTail          // OFF with no owned hold: no native getter work
+    ldr x8, [x19, #AUTO_TICKS]
+    add x8, x8, #1
+    str x8, [x19, #AUTO_TICKS]
     add x8, x19, #AUTO_BUSY
     ldaxr w9, [x8]
     cbnz w9, .LautoReserved
     mov w9, #1
     stxr w10, w9, [x8]
     cbnz w10, .LautoTail
-    mov x0, x20
+    mov x0, x25
     mov x1, #0
     ldr x8, [x19, #AUTO_GET_WEAPON]
     blr x8
     mov x22, x0
     // Only use a current weapon. Never dereference a saved weapon after a swap.
     cbz x22, .LautoForget
+    cmp x22, x20
+    b.ne .LautoForget
     ldr x8, [x22, #0x60]
-    cmp x8, x20
+    cmp x8, x25
     b.ne .LautoForget
     ldr x8, [x19, #AUTO_HELD]
     cmp x8, x22
@@ -57,9 +73,9 @@ _AutoFireRemoteStart:
     ldr x8, [x19, #AUTO_MATCH]
     cbz x8, .LautoRelease
     ldr x8, [x8, #0xD8]
-    cmp x8, x20
+    cmp x8, x25
     b.ne .LautoRelease
-    add x8, x20, #0x1000
+    add x8, x25, #0x1000
     ldrb w8, [x8, #0x258]
     cbnz w8, .LautoRelease
     ldr x24, [x19, #AUTO_DEADLINE]
@@ -73,7 +89,7 @@ _AutoFireRemoteStart:
     b.ne .LautoRelease
     // Native firing already active: leave manual fire alone; an owned hold
     // continues through the game's original update and rate-limit handling.
-    ldr x8, [x20, #0x70]
+    ldr x8, [x25, #0x70]
     cbz x8, .LautoRelease
     ldr x8, [x8, #0x10]
     cbz x8, .LautoRelease
@@ -127,11 +143,12 @@ _AutoFireRemoteStart:
     ldr x16, [x19, #AUTO_ORIGINAL]
     mov x0, x20
     mov x1, x21
-    ldp d0, d1, [sp, #64]
+    ldp d0, d1, [sp, #80]
+    ldp x25, x26, [sp, #64]
     ldp x23, x24, [sp, #48]
     ldp x21, x22, [sp, #32]
     ldp x19, x20, [sp, #16]
-    ldp x29, x30, [sp], #96
+    ldp x29, x30, [sp], #112
     br x16
     .org AUTO_PAGE, 0
 _AutoFireRemoteEnd:

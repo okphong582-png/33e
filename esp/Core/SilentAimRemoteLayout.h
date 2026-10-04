@@ -13,13 +13,16 @@
 #define SILENT_REMOTE_BUSY 80
 #define SILENT_REMOTE_MAGIC 88
 #define SILENT_REMOTE_MATCH 96
+#define SILENT_REMOTE_BODY 104
+#define SILENT_REMOTE_HEAD_PERCENT 116
+#define SILENT_REMOTE_PHASE 120
 
 #ifndef __ASSEMBLER__
 #include "SilentAimDirection.h"
 #include <cstddef>
 #include <cstdint>
 namespace SilentAimRemote {
-inline constexpr uint64_t Magic = 0x53494C454E543031ULL; // SILENT01, layout version 1
+inline constexpr uint64_t Magic = 0x53494C454E543032ULL; // SILENT02, layout version 2
 struct alignas(8) State {
     uint64_t original = 0, clock = 0;
     uint32_t sequence = 0, enabled = 0;
@@ -29,6 +32,8 @@ struct alignas(8) State {
     uint64_t redirects = 0;
     uint32_t busy = 0, padding2 = 0;
     uint64_t magic = Magic, match = 0;
+    SilentAimDirection::Point body;
+    uint32_t headPercent = 75, phase = 50;
 };
 static_assert(offsetof(State, original) == SILENT_REMOTE_ORIGINAL);
 static_assert(offsetof(State, clock) == SILENT_REMOTE_CLOCK);
@@ -43,5 +48,8 @@ static_assert(offsetof(State, redirects) == SILENT_REMOTE_REDIRECTS);
 static_assert(offsetof(State, busy) == SILENT_REMOTE_BUSY);
 static_assert(offsetof(State, magic) == SILENT_REMOTE_MAGIC);
 static_assert(offsetof(State, match) == SILENT_REMOTE_MATCH);
+static_assert(offsetof(State, body) == SILENT_REMOTE_BODY);
+static_assert(offsetof(State, headPercent) == SILENT_REMOTE_HEAD_PERCENT);
+static_assert(offsetof(State, phase) == SILENT_REMOTE_PHASE);
 } // namespace SilentAimRemote
 #endif

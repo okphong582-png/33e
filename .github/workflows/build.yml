@@ -91,6 +91,10 @@ jobs:
 
       - name: Test aim selection
         run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-function -I. tests/overlay_health_test.cpp -o /tmp/overlay-health-test
+          /tmp/overlay-health-test
+          g++ -std=c++17 -Wall -Wextra -Werror tests/silent_aim_policy_test.cpp -o /tmp/silent-aim-policy-test
+          /tmp/silent-aim-policy-test
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/silent_aim_selection_test.cpp -o /tmp/silent-aim-selection-test
           /tmp/silent-aim-selection-test
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/silent_aim_external_test.cpp -o /tmp/silent-aim-external-test

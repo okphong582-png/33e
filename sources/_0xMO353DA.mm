@@ -208,13 +208,17 @@
     CGFloat y = 74;
     if (self.page == 0) {
         y = [self toggle:@"Silent aim (thử nghiệm)" key:@"SilentAim" fallback:NO y:y];
-        y = [self note:@"Chỉ chọn địch còn sống, nhìn thấy, trong vòng ngắm. Quay hướng khác để nhả mục tiêu. Silent thay Aim thường." y:y];
-        y = [self slider:@"Vùng chọn Silent" key:@"SilentFovSize" min:5 max:30 fallback:18 y:y];
-        y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
+        y = [self note:@"Sống · thấy rõ · gần tâm." y:y];
+        y = [self toggle:@"Tự cân bằng Silent" key:@"SilentAutoConfig" fallback:YES y:y];
+        if (!ESPPrefsBool(@"SilentAutoConfig", YES)) {
+            y = [self slider:@"Vùng chọn Silent" key:@"SilentFovSize" min:5 max:30 fallback:18 y:y];
+            y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
+        }
+        y = [self slider:@"Tỷ lệ chọn đầu" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
         y = [self toggle:@"Tự bắn (thử nghiệm)" key:@"AutoFire" fallback:NO y:y];
-        y = [self note:@"Tự bắt đầu bắn sau khi chọn cùng địch 0,18 giây. Mất mục tiêu là nhả. Chỉ dùng cùng Silent; bật chẩn đoán để xem hỗ trợ súng." y:y];
+        y = [self note:@"Tỷ lệ đầu là phân bổ điểm ngắm, không phải cam kết số headshot." y:y];
 #ifndef MIZZE_INJECTED
-        y = [self note:@"TIPA cần quyền xử lý phát bắn trong game. Bật Chẩn đoán aim để xem máy có hỗ trợ." y:y];
+        y = [self note:@"TIPA: xem Chẩn đoán aim khi tự bắn không chạy." y:y];
 #endif
         y = [self toggle:@"Aim thường" key:@"AimbotFire" fallback:YES y:y];
         UISegmentedControl *mode = [[UISegmentedControl alloc] initWithItems:@[@"Chỉ khi bắn", @"Luôn trong FOV"]];
@@ -223,17 +227,16 @@
         mode.selectedSegmentIndex = ESPPrefsBool(@"AimHipAlways", NO) ? 1 : 0;
         [mode addTarget:self action:@selector(aimModeChanged:) forControlEvents:UIControlEventValueChanged];
         [self.scroll addSubview:mode]; [self.controls addObject:mode]; y += 44;
-        y = [self note:@"Chỉ khi bắn: nhả bắn là dừng, kể cả đang mở ngắm. Luôn: ghim trong FOV. Tắt Aim thường để dùng riêng Aim khi mở ngắm." y:y];
+        y = [self note:@"Chỉ khi bắn · hoặc luôn trong FOV." y:y];
         y = [self toggle:@"Aim khi mở ngắm" key:@"AimbotScope" fallback:YES y:y];
         y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:NO y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
         y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:48 fallback:40 y:y + 6];
-        y = [self note:@"Vòng hiển thị dùng vùng chọn của chế độ đang bật. Tầm Silent được chỉnh riêng ở trên." y:y];
-        y = [self note:@"Aim cổ lấy điểm sát dưới đầu. Tắt để aim đầu." y:y];
+        y = [self note:@"Aim cổ: điểm thấp hơn đầu." y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
         y = [self toggle:@"Không thay đạn" key:@"ShootNoReload" fallback:NO y:y + 10];
         y = [self toggle:@"Bắn nhanh (2x)" key:@"FastFire" fallback:NO y:y];
-        y = [self note:@"Chỉ áp dụng trong trận. Tắt công tắc để khôi phục giá trị gốc." y:y];
+        y = [self note:@"Áp dụng trong trận." y:y];
     } else if (self.page == 1) {
         UIButton *preset = [UIButton buttonWithType:UIButtonTypeSystem];
         preset.frame = CGRectMake(0, y, [self contentWidth], 42); preset.tag = 300;
@@ -262,7 +265,8 @@
         y += 70;
         // Slider khoảng cách tối đa hiển thị ESP
         y = [self slider:@"Tầm hiển thị ESP" key:@"ESPMaxDistance" min:50 max:500 fallback:150 y:y + 6];
-        y = [self note:@"Chỉ hiển thị địch trong bán kính này (mét). Mặc định 150m." y:y];
+        y = [self slider:@"Vàng khi máu ≤" key:@"HealthYellowPercent" min:10 max:90 fallback:50 y:y];
+        y = [self slider:@"Đỏ khi máu ≤" key:@"HealthRedPercent" min:5 max:80 fallback:25 y:y];
     } else if (self.page == 2) {
         UISegmentedControl *target = [[UISegmentedControl alloc] initWithItems:@[@"Box", @"Line", @"FOV"]];
         target.frame = CGRectMake(8, y, [self contentWidth] - 16, 30); target.selectedSegmentIndex = self.colorTarget;
@@ -278,11 +282,10 @@
         [self updateSwatch];
     } else {
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
-        y = [self note:@"Áp dụng cho menu, nút nổi và ESP. Hãy thử ảnh/video trên iOS của bạn trước khi live." y:y];
+        y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
         y = [self toggle:@"Tiết kiệm pin (30 FPS)" key:@"BalancedRender" fallback:NO y:y];
-        y = [self note:@"Bật để giảm tải khi chơi lâu. Tắt để vẽ ESP ở 60 FPS." y:y];
-        y = [self note:@"Kéo thanh tiêu đề để di chuyển menu. Các lựa chọn được lưu tự động." y:y];
+        y = [self note:@"30 FPS · nhẹ pin." y:y];
 #ifdef MIZZE_INJECTED
         y = [self note:@"Nút menu hiện khi có dữ liệu trận và ẩn khi về sảnh." y:y];
 #else
@@ -304,7 +307,8 @@
         self.scroll.contentSize = CGSizeMake([self contentWidth], self.scroll.contentSize.height + 48);
     }
     if ([key isEqualToString:@"DarkTheme"] || [key isEqualToString:@"CleanESP"] ||
-        [key isEqualToString:@"AutoFire"] || [key isEqualToString:@"SilentAim"]) [self buildPage];
+        [key isEqualToString:@"AutoFire"] || [key isEqualToString:@"SilentAim"] ||
+        [key isEqualToString:@"SilentAutoConfig"]) [self buildPage];
 }
 - (void)applyMinimalESP {
     for (NSString *key in @[@"Box", @"Health", @"Name", @"Dis", @"CleanESP"])
@@ -332,7 +336,9 @@
 - (void)updateSliderLabel:(UISlider *)sender {
     UILabel *label = objc_getAssociatedObject(sender, "label");
     NSString *key = objc_getAssociatedObject(sender, "key"), *title = objc_getAssociatedObject(sender, "title");
-    if ([key isEqualToString:@"FovSize"] || [key isEqualToString:@"SilentFovSize"]) {
+    if ([key isEqualToString:@"FovSize"] || [key isEqualToString:@"SilentFovSize"] ||
+        [key isEqualToString:@"SilentHeadPercent"] || [key isEqualToString:@"HealthYellowPercent"] ||
+        [key isEqualToString:@"HealthRedPercent"]) {
         label.text = [NSString stringWithFormat:@"%@   %.0f%%", title, sender.value];
     } else if ([key isEqualToString:@"ESPMaxDistance"] || [key isEqualToString:@"SilentMaxDistance"]) {
         label.text = [NSString stringWithFormat:@"%@   %.0fm", title, sender.value];
@@ -343,6 +349,20 @@
 - (void)sliderChanged:(UISlider *)sender {
     NSString *key = objc_getAssociatedObject(sender, "key");
     ESPPrefsSetFloat(key, sender.value);
+    if ([key isEqualToString:@"HealthRedPercent"] || [key isEqualToString:@"HealthYellowPercent"]) {
+        float red = ESPPrefsFloat(@"HealthRedPercent", 25), yellow = ESPPrefsFloat(@"HealthYellowPercent", 50);
+        if (red > yellow) {
+            NSString *other = [key isEqualToString:@"HealthRedPercent"] ? @"HealthYellowPercent" : @"HealthRedPercent";
+            const float value = sender.value;
+            ESPPrefsSetFloat(other, value);
+            for (UIControl *control in self.controls) {
+                if (![control isKindOfClass:UISlider.class] ||
+                    ![objc_getAssociatedObject(control, "key") isEqualToString:other]) continue;
+                UISlider *slider = (UISlider *)control; slider.value = value;
+                [self updateSliderLabel:slider];
+            }
+        }
+    }
     // Khi kéo slider FOV: hiện vòng FOV tạm dù đang tắt
     if ([key isEqualToString:@"FovSize"] || [key isEqualToString:@"SilentFovSize"]) {
         NSNumber *savedFov = objc_getAssociatedObject(sender, "origShowFov");

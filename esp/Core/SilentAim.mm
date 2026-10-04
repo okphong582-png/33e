@@ -1,5 +1,6 @@
 #include "SilentAim.h"
 #include "SilentAimDirection.h"
+#include "SilentAimPolicy.h"
 
 #if defined(MIZZE_INJECTED) && (defined(__aarch64__) || defined(__arm64__))
 #include "GameLogic.h"
@@ -28,6 +29,8 @@ using SilentAimDirection::Point;
 struct Snapshot {
     uint64_t module = 0, match = 0, local = 0, target = 0;
     Point head;
+    Point body;
+    uint32_t headPercent = 75;
     double updated = 0;
 };
 std::mutex snapshotMutex;
@@ -38,6 +41,7 @@ std::atomic<uint64_t> redirects{0};
 // The original address stays available after OFF for dispatches already in flight.
 std::atomic<uint64_t> originalHandler{0};
 uint64_t installedSlot = 0;
+uint32_t headPhase = 50;
 
 template <typename T> bool Read(uint64_t address, T &value) {
     return isVaildPtr(address) && _read((long)address, &value, sizeof(value));
@@ -95,12 +99,14 @@ void RedirectHandler(uint64_t handler, const void *method) {
     { std::lock_guard<std::mutex> guard(snapshotMutex); s = snapshot; }
     uint64_t weapon = 0, owner = 0, info = 0;
     Point origin{}, desired{};
+    uint32_t nextPhase = 0;
+    const Point aimPoint = SilentAimPolicy::Head(s.headPercent, headPhase, nextPhase) ? s.head : s.body;
     if (!s.target || !Current(s) || !Read(handler + HandlerWeapon, weapon) ||
         !Read(weapon + WeaponOwner, owner) || owner != s.local ||
         ReadAddr<uint64_t>(weapon + WeaponHandler) != handler ||
         !Read(handler + HandlerInfo, info) || !ClassName(info, "CGKJLKPMGDJ") ||
         !Read(info + InfoOrigin, origin) ||
-        !SilentAimDirection::Toward(origin, s.head, desired)) {
+        !SilentAimDirection::Toward(origin, aimPoint, desired)) {
         original(handler, method);
         return;
     }
@@ -110,7 +116,7 @@ void RedirectHandler(uint64_t handler, const void *method) {
         [&] { return ReadAddr<uint64_t>(handler + HandlerInfo) == info &&
             ReadAddr<uint64_t>(handler + HandlerWeapon) == weapon; },
         [&] { original(handler, method); });
-    if (changed) redirects.fetch_add(1);
+    if (changed) { headPhase = nextPhase; redirects.fetch_add(1); }
 }
 void Uninstall() {
     if (!installedSlot) return;
@@ -135,7 +141,7 @@ void SilentAimSetEnabled(bool value) {
 uint64_t SilentAimRedirectCount() { return redirects.load(); }
 SilentAimFailure SilentAimLastFailure() { return {}; }
 int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local,
-                    uint64_t target, const Vector3 &head) {
+                    uint64_t target, const Vector3 &head, const Vector3 &body, uint32_t headPercent) {
     SilentAimClearTarget();
     if (!enabled.load()) return 1;
     if (!isVaildPtr(base) || !isVaildPtr(match) || !isVaildPtr(local) ||
@@ -161,9 +167,11 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local,
             reinterpret_cast<uint64_t>(&RedirectHandler), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return 9;
         installedSlot = slot;
     }
-    if (!target || !SilentAimDirection::Finite({head.x, head.y, head.z})) return 7;
+    if (!target || !SilentAimDirection::Finite({head.x, head.y, head.z}) ||
+        !SilentAimDirection::Finite({body.x, body.y, body.z}) || headPercent>100) return 7;
     { std::lock_guard<std::mutex> guard(snapshotMutex);
-      snapshot = {base, match, local, target, {head.x, head.y, head.z}, CACurrentMediaTime()}; }
+      snapshot = {base, match, local, target, {head.x, head.y, head.z},
+          {body.x, body.y, body.z}, headPercent, CACurrentMediaTime()}; }
     return 8;
 }
 #elif !defined(__aarch64__) && !defined(__arm64__)
@@ -171,5 +179,5 @@ void SilentAimSetEnabled(bool) {}
 void SilentAimClearTarget() {}
 uint64_t SilentAimRedirectCount() { return 0; }
 SilentAimFailure SilentAimLastFailure() { return {}; }
-int SilentAimUpdate(uint64_t, uint64_t, uint64_t, uint64_t, const Vector3 &) { return 9; }
+int SilentAimUpdate(uint64_t, uint64_t, uint64_t, uint64_t, const Vector3 &, const Vector3 &, uint32_t) { return 9; }
 #endif

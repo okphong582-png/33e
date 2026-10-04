@@ -5,3 +5,4 @@
 int AutoFireUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t target);
 void AutoFireClear();
 uint64_t AutoFireStartCount();
+uint64_t AutoFireTickCount();

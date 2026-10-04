@@ -84,6 +84,23 @@ _SilentAimRemoteStart:
     stxr w10, w9, [x8]
     cbnz w10, .Lnative
     mov x28, #1
+    // Select at shot dispatch, not on each overlay frame. Preserve phase
+    // until a valid direction is committed under the publication check.
+    ldr w26, [x19, #SILENT_REMOTE_PHASE]
+    ldr w8, [x19, #SILENT_REMOTE_HEAD_PERCENT]
+    cmp w8, #100
+    b.hi .Lnative
+    add w26, w26, w8
+    cmp w26, #100
+    b.hs .Lhead
+    ldp w8, w9, [x19, #SILENT_REMOTE_BODY]
+    ldr w10, [x19, #(SILENT_REMOTE_BODY + 8)]
+    stp w8, w9, [sp, #128]
+    str w10, [sp, #136]
+    b .Lselected
+.Lhead:
+    sub w26, w26, #100
+.Lselected:
     // Reject nonfinite head, origin and original direction by exponent bits.
     mov w15, #0x7f800000
     ldp w8, w9, [sp, #128]
@@ -159,6 +176,7 @@ _SilentAimRemoteStart:
     stp s0, s1, [x22, #0x40]
     str s2, [x22, #0x48]
     mov x27, #1
+    str w26, [x19, #SILENT_REMOTE_PHASE]
     ldr x8, [x19, #SILENT_REMOTE_REDIRECTS]
     add x8, x8, #1
     str x8, [x19, #SILENT_REMOTE_REDIRECTS]

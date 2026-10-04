@@ -6,7 +6,7 @@
 void SilentAimSetEnabled(bool enabled);
 void SilentAimClearTarget(void);
 int SilentAimUpdate(uint64_t moduleBase, uint64_t match, uint64_t local,
-                    uint64_t target, const Vector3 &head);
+                    uint64_t target, const Vector3 &head, const Vector3 &body, uint32_t headPercent);
 uint64_t SilentAimRedirectCount(void);
 struct SilentAimFailure {
     const char *operation = "";

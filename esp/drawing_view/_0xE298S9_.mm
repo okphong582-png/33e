@@ -6,6 +6,7 @@
 #include "../Core/AimPoint.h"
 #include "../Core/SilentAim.h"
 #include "../Core/SilentAimDirection.h"
+#include "../Core/SilentAimPolicy.h"
 
 #import "esp.h"
 #import "ESPPrefs.h"
@@ -64,6 +65,9 @@ static bool showFov    = YES;
 static float fovPercent = 40.0f;
 static float silentFovPercent = 18.0f;
 static float silentMaxDistance = 100.0f;
+static bool silentAutoConfig = true;
+static uint32_t silentHeadPercent = 75;
+static float activeSilentFov = 18;
 static bool isAimbotFire = YES;
 static bool isAimbotScope = YES;
 static bool isHipAlways  = NO;
@@ -117,6 +121,9 @@ void ESPSyncFromPrefs(void) {
     isBox3D       = !isCleanESP && ESPPrefsBool(@"Box3D", NO);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
     silentFovPercent = ESPPrefsFloat(@"SilentFovSize", 18);
+    silentAutoConfig = ESPPrefsBool(@"SilentAutoConfig", YES);
+    silentHeadPercent = SilentAimPolicy::HeadPercent(ESPPrefsFloat(@"SilentHeadPercent", 75));
+    activeSilentFov = silentAutoConfig ? 18 : silentFovPercent;
     silentMaxDistance = ESPPrefsFloat(@"SilentMaxDistance", 100);
     if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 100;
     silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
@@ -189,7 +196,7 @@ static NSString *AimStateDescription(int state) {
         case 5: return @"mục tiêu/trạng thái đã đổi";
         case 6: return @"chỉ ghi được góc chính";
         case 7: return @"silent: chờ địch hiện";
-        case 8: return @"silent thử nghiệm: đã chọn đầu";
+        case 8: return @"silent: đã chọn mục tiêu";
         case 9: return @"silent: bản game/vũ khí chưa hỗ trợ";
         case 10: {
             const auto failure = SilentAimLastFailure();
@@ -477,14 +484,14 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.statusLayer = [CATextLayer layer];
     self.statusLayer.foregroundColor = [UIColor colorWithRed:0.65 green:0.85 blue:0.77 alpha:0.85].CGColor;
     self.statusLayer.alignmentMode   = kCAAlignmentCenter;
-    self.statusLayer.fontSize        = 11.0f;
-    self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:11 weight:UIFontWeightMedium];
+    self.statusLayer.fontSize        = 15.0f;
+    self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:15 weight:UIFontWeightBold];
     self.statusLayer.backgroundColor = UIColor.clearColor.CGColor;
     self.statusLayer.borderWidth = 0;
     self.statusLayer.cornerRadius = 0;
     self.statusLayer.shadowColor = UIColor.blackColor.CGColor;
     self.statusLayer.shadowOffset = CGSizeMake(0, 1);
-    self.statusLayer.shadowOpacity = 0.5f;
+    self.statusLayer.shadowOpacity = 0.9f;
     self.statusLayer.shadowRadius = 0;
     self.statusLayer.contentsScale   = UIScreen.mainScreen.scale;
     self.statusLayer.zPosition       = 8;
@@ -515,7 +522,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         layer.alignmentMode = kCAAlignmentCenter;
         layer.shadowColor   = UIColor.blackColor.CGColor;
         layer.shadowOffset  = CGSizeMake(0.5f, 0.5f);
-        layer.shadowOpacity = 0.65f;
+        layer.shadowOpacity = 0.9f;
         layer.shadowRadius  = 0.0f;
         layer.actions = @{ @"position":NSNull.null, @"bounds":NSNull.null, @"string":NSNull.null, @"hidden":NSNull.null };
         [self.textLayerPool addObject:layer];
@@ -539,7 +546,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     l.foregroundColor = color.CGColor;
     if (l.fontSize != fs || !l.font) {
         l.fontSize = fs;
-        l.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:fs weight:UIFontWeightMedium];
+        l.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:fs weight:UIFontWeightSemibold];
     }
     l.alignmentMode   = leftAligned ? kCAAlignmentLeft : kCAAlignmentCenter;
 }
@@ -553,17 +560,17 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.lineBotLayer.strokeColor = self.linePlayerLayer.strokeColor = self.lineKnockLayer.strokeColor = lineColor.CGColor;
     self.fovLayer.strokeColor = ESPColor(@"FovColor", 0.46, 0.86, 0.73).CGColor;
     for (CAShapeLayer *layer in @[self.boxBotLayer, self.boxPlayerLayer, self.boxKnockLayer]) {
-        layer.lineWidth = isCleanESP ? 0.75 : 1;
-        layer.opacity = isCleanESP ? 0.8 : 1;
+        layer.lineWidth = isCleanESP ? 1.35 : 1.5;
+        layer.opacity = 0.95;
     }
     for (CAShapeLayer *layer in @[self.lineBotLayer, self.linePlayerLayer, self.lineKnockLayer]) {
-        layer.lineWidth = 0.5;
-        layer.opacity = isCleanESP ? 0.3 : 0.7;
+        layer.lineWidth = 1.0;
+        layer.opacity = isCleanESP ? 0.65 : 0.85;
     }
-    self.boneLayer.lineWidth = 0.65;
-    self.boneLayer.opacity = 0.65;
-    self.fovLayer.lineWidth = 0.65;
-    self.fovLayer.opacity = 0.35;
+    self.boneLayer.lineWidth = 1.0;
+    self.boneLayer.opacity = 0.85;
+    self.fovLayer.lineWidth = 1.5;
+    self.fovLayer.opacity = 0.8;
     const float fps = gBalancedRender ? 30.0f : 60.0f;
     if (@available(iOS 15.0, *)) self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(fps, fps, fps);
     else self.displayLink.preferredFramesPerSecond = (NSInteger)fps;
@@ -572,7 +579,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 - (void)updateFovCircle {
     const CGFloat vw = self.bounds.size.width, vh = self.bounds.size.height;
     if (!showFov || vw <= 0 || vh <= 0) { self.fovLayer.path = nil; return; }
-    const float radius = isSilentAim ? SilentAimSelection::Radius(vw, vh, silentFovPercent) :
+    const float radius = isSilentAim ? SilentAimSelection::Radius(vw, vh, activeSilentFov) :
         AimSelection::Radius(vw, vh, fovPercent);
     if (self.fovLayer.path && CGSizeEqualToSize(self.lastFovSize, self.bounds.size) && self.lastFovRadius == radius) return;
     CGMutablePathRef path = CGPathCreateMutable();
@@ -689,13 +696,15 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     }
     if (self.aimDiagnosticLayer.hidden || now >= self.nextAimDiagnosticUpdate) {
         self.nextAimDiagnosticUpdate = now + 0.2;
+        const uint64_t fireTicks = AutoFireTickCount(), fireStarts = AutoFireStartCount();
         self.aimDiagnosticLayer.string = isSilentAim ? [NSString stringWithFormat:
-            @"PRI21: %d · %@ · chuyển: %llu\nTự bắn: %@ · lệnh bắt đầu: %llu", stats.firingRaw,
+            @"PRI21: %d · %@ · chuyển: %llu\nTự bắn: %@ · nhịp: %llu · lệnh: %llu", stats.firingRaw,
             AimStateDescription(stats.aimState), (unsigned long long)SilentAimRedirectCount(),
-            !gAutoFire ? @"tắt" : (stats.autoFireState == 8 ? @"đã cài" :
+            !gAutoFire ? @"tắt" : (stats.autoFireState == 8 ?
+                (fireStarts ? @"đã gửi bắn" : (fireTicks ? @"chờ súng" : @"chờ nhịp game")) :
                 (stats.autoFireState == 10 ? @"iOS từ chối cài" :
                     (stats.autoFireState == 9 ? @"súng/bản game chưa hỗ trợ" : @"chờ mục tiêu ổn định"))),
-            (unsigned long long)AutoFireStartCount()] :
+            (unsigned long long)fireTicks, (unsigned long long)fireStarts] :
             [NSString stringWithFormat:@"Bắn: %d · PRI21: %d · Ngắm: %@ · %@", stats.firing,
                 stats.firingRaw, stats.scoping ? @"có" : @"không", AimStateDescription(stats.aimState)];
     }
@@ -816,6 +825,9 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     stats.firingRaw = get_FiringPRIState(local);
     stats.firing    = GamePRI::Firing(stats.firingRaw);
     stats.scoping   = get_IsScoping(local);
+    const auto automatic = SilentAimPolicy::Automatic(stats.scoping);
+    activeSilentFov = silentAutoConfig ? automatic.fov : silentFovPercent;
+    const float activeSilentDistance = silentAutoConfig ? automatic.distance : silentMaxDistance;
     // Fire-only mode takes precedence over scope; releasing fire stops immediately.
     const bool triggerActive = !isSilentAim && !get_IsKnockedDown(local) &&
         AimSelection::Triggered(isAimbotFire, isAimbotScope, stats.firing,
@@ -834,8 +846,9 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     SilentAimSelection::Selection silentSelection;
     silentSelection.previous = previousTarget;
     Vector3 targetHead;
+    Vector3 targetBody;
 
-    const float radius = isSilentAim ? SilentAimSelection::Radius(vw, vh, silentFovPercent) :
+    const float radius = isSilentAim ? SilentAimSelection::Radius(vw, vh, activeSilentFov) :
         AimSelection::Radius(vw, vh, fovPercent);
     for (int i = 0; i < count; ++i) {
         const uint8_t *entry = snapshot.data() + kDictEntryStrideBytePlayer * i;
@@ -851,7 +864,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         if (IsZeroVec(hip)) continue;
         const float distance = Vector3::Distance(myLoc, hip);
         if (!std::isfinite(distance) || distance > std::max(gESPMaxDistance,
-            isSilentAim ? silentMaxDistance : gESPMaxDistance)) continue;
+            isSilentAim ? activeSilentDistance : gESPMaxDistance)) continue;
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
 
@@ -863,8 +876,12 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
                 const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
                 if (isSilentAim) {
                     silentSelection.consider(pawn, screen.x, screen.y, screen.z, vw, vh,
-                        radius, distance, silentMaxDistance, true);
-                    if (silentSelection.target == pawn) targetHead = head;
+                        radius, distance, activeSilentDistance, true);
+                    if (silentSelection.target == pawn) {
+                        targetHead = head;
+                        const auto chest = SilentAimPolicy::Chest({head.x,head.y,head.z},{hip.x,hip.y,hip.z});
+                        targetBody = {chest.x,chest.y,chest.z};
+                    }
                 } else {
                     selection.consider(pawn, screen.x, screen.y, screen.z, vw, vh, radius, true);
                     if (selection.target == pawn) targetHead = head;
@@ -886,7 +903,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         // and player/weapon identity at the native handler, not at render time.
         SilentAimSetEnabled(true);
         stats.aimState = SilentAimUpdate(Moudule_Base, match, local,
-            get_IsKnockedDown(local) ? 0 : silentSelection.target, targetHead);
+            get_IsKnockedDown(local) ? 0 : silentSelection.target, targetHead, targetBody, silentHeadPercent);
         if (gAutoFire && stats.aimState == 8)
             stats.autoFireState = AutoFireUpdate(Moudule_Base, match, local, silentSelection.target);
         else AutoFireClear();

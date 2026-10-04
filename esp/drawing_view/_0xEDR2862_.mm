@@ -1,13 +1,14 @@
 #import "esp.h"
 #import "ESPPrefs.h"
 #include "OverlayGeometry.h"
+#include "../Core/OverlayHealth.h"
 #include "KabraxHide.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
 UIFont *VietnameseFontForLayer(CGFloat size) {
-    return [UIFont systemFontOfSize:size weight:UIFontWeightMedium];
+    return [UIFont systemFontOfSize:size weight:UIFontWeightSemibold];
 }
 
 static bool ValidPosition(const Vector3 &v) {
@@ -22,7 +23,9 @@ static void AddLine(CGMutablePathRef path, CGPoint a, CGPoint b, float width, fl
     CGPathAddLineToPoint(path, nullptr, x1, y1);
 }
 static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
-    if (!path || rect.size.width <= 0 || rect.size.height <= 0) return;
+    if (!path || !std::isfinite(rect.origin.x) || !std::isfinite(rect.origin.y) ||
+        !std::isfinite(rect.size.width) || !std::isfinite(rect.size.height) ||
+        rect.size.width <= 0 || rect.size.height <= 0) return;
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
@@ -226,8 +229,8 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         UIColor *nameColor = knocked ? [UIColor colorWithRed:0.9 green:0.55 blue:0.55 alpha:0.85]
                                       : [UIColor colorWithRed:0.84 green:0.91 blue:0.88 alpha:0.9];
         if (nick.length > 20) nick = [[nick substringToIndex:20] stringByAppendingString:@"…"];
-        textCallback(context, nick, CGRectMake((minX + maxX) / 2.0f - 60.0f, minY - 18.0f, 120.0f, 14.0f),
-                     nameColor, 10.0f, NO);
+        textCallback(context, nick, CGRectMake((minX + maxX) / 2.0f - 85.0f, minY - 23.0f, 170.0f, 19.0f),
+                     nameColor, 12.5f, NO);
     }
 
     CGMutablePathRef boxPath = knocked ? buffers->boxKnockPath : (bot ? buffers->boxBotPath : buffers->boxPlayerPath);
@@ -275,20 +278,29 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         }
     }
     if (isHealth && buffers->hpBackgroundPath) {
-        const int maxHP = get_MaxHP(pawn);
-        if (maxHP > 0) {
-            const float ratio = std::max(0.0f, std::min(1.0f, (float)hp / maxHP));
-            const CGFloat barX = minX - 5, barWidth = 2.0f;
+        float ratio = 0;
+        if (OverlayHealth::Snapshot(pawn, [](uint64_t a, void *p, size_t n) {
+                return _read((long)a, p, static_cast<int>(n));
+            }, [](uint64_t a) { return isVaildPtr(a); }, ratio)) {
+            const CGFloat barX = minX - 7, barWidth = 3.5f;
             const CGFloat filled = boxHeight * ratio;
-            AddRoundedRect(buffers->hpBackgroundPath, CGRectMake(barX - 1, minY - 1, barWidth + 2, boxHeight + 2), 2.0f);
-            buffers->hpBackgroundDirty = true;
+            auto addBar = [&](CGMutablePathRef path, CGRect rect) {
+                if (!path) return false;
+                rect = CGRectIntersection(rect, CGRectMake(0,0,width,height));
+                if (CGRectIsNull(rect) || CGRectIsEmpty(rect)) return false;
+                CGPathAddRect(path, nullptr, rect);
+                return true;
+            };
+            buffers->hpBackgroundDirty |= addBar(buffers->hpBackgroundPath,
+                CGRectMake(barX - 1, minY - 1, barWidth + 2, boxHeight + 2));
             if (filled >= 0.5f) {
-                CGMutablePathRef fill = ratio > 0.5f ? buffers->hpFillPath :
-                    (ratio > 0.25f ? buffers->hpWarningPath : buffers->hpCriticalPath);
-                if (fill) {
-                    AddRoundedRect(fill, CGRectMake(barX, maxY - filled, barWidth, filled), 1.5f);
-                    if (ratio > 0.5f) buffers->hpFillDirty = true;
-                    else if (ratio > 0.25f) buffers->hpWarningDirty = true;
+                const auto band = OverlayHealth::Band(ratio, ESPPrefsFloat(@"HealthRedPercent",25),
+                    ESPPrefsFloat(@"HealthYellowPercent",50));
+                CGMutablePathRef fill = band == OverlayHealth::Color::Mint ? buffers->hpFillPath :
+                    (band == OverlayHealth::Color::Yellow ? buffers->hpWarningPath : buffers->hpCriticalPath);
+                if (addBar(fill, CGRectMake(barX, maxY - filled, barWidth, filled))) {
+                    if (band == OverlayHealth::Color::Mint) buffers->hpFillDirty = true;
+                    else if (band == OverlayHealth::Color::Yellow) buffers->hpWarningDirty = true;
                     else buffers->hpCriticalDirty = true;
                 }
             }
@@ -304,7 +316,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
             labels = [items copy];
         });
         NSString *label = labels[std::max(0, std::min(500, (int)distance))];
-        textCallback(context, label, CGRectMake((minX + maxX) / 2 - 28, maxY + 4, 56, 14),
-                     [UIColor colorWithWhite:0.83 alpha:0.85], 9, NO);
+        textCallback(context, label, CGRectMake((minX + maxX) / 2 - 32, maxY + 4, 64, 17),
+                     [UIColor colorWithWhite:0.95 alpha:1], 11.5, NO);
     }
 }
