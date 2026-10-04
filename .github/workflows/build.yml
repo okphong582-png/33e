@@ -19,6 +19,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Signed executable page mapping without unsigned code or debug flags
+        run: |
+          clang++ -std=c++17 -Wall -Wextra -Werror tests/silent_aim_mapping_test.cpp tests/silent_aim_mapping_fixture.S -o /tmp/silent-aim-mapping-test
+          codesign --force --sign - --options runtime /tmp/silent-aim-mapping-test
+          /tmp/silent-aim-mapping-test
       - name: Native Mach-O protection sections and safe data round trips
         run: |
           clang++ -std=c++17 -Os -pthread -fvisibility=hidden -Wno-unused-function -fsanitize=address,undefined -I. tests/obfuscation_test.cpp tests/obfuscation_seed_fixture.cpp -o /tmp/obfuscation-test

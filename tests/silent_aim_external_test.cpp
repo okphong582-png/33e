@@ -6,12 +6,6 @@
 
 int main() {
     using namespace SilentAimRemote;
-    assert(!AllowsRemoteCode(0));
-    assert(!AllowsRemoteCode(0x4)); // get-task-allow alone does not permit unsigned pages
-    assert(!AllowsRemoteCode(0x10000100));
-    assert(!AllowsRemoteCode(0x10000200));
-    assert(AllowsRemoteCode(0x10000000));
-    assert(AllowsRemoteCode(0x10000004));
     State state{};
     assert(state.magic == Magic && state.enabled == 0 && state.redirects == 0 && state.busy == 0);
     assert(sizeof(State) == 104);

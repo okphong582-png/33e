@@ -1,23 +1,18 @@
 #include "SilentAim.h"
 #if !defined(MIZZE_INJECTED) && (defined(__aarch64__) || defined(__arm64__))
 #include "SilentAimRemoteLayout.h"
+#include "SilentAimRemoteMapping.h"
 #include "SilentAimWeapon.h"
 #include "GameLogic.h"
 #include "../drawing_view/offset.h"
 #include <mach/mach_time.h>
-#include <mach/vm_attributes.h>
 #include <QuartzCore/QuartzCore.h>
 #include <dlfcn.h>
 #include <array>
 #include <cstring>
 #include <mutex>
 
-extern "C" {
-extern const unsigned char SilentAimRemoteStart[], SilentAimRemoteEnd[];
-kern_return_t mach_vm_allocate(vm_map_t, mach_vm_address_t *, mach_vm_size_t, int);
-kern_return_t mach_vm_deallocate(vm_map_t, mach_vm_address_t, mach_vm_size_t);
-kern_return_t mach_vm_protect(vm_map_t, mach_vm_address_t, mach_vm_size_t, boolean_t, vm_prot_t);
-}
+extern "C" const unsigned char SilentAimRemoteStart[], SilentAimRemoteEnd[];
 
 namespace {
 constexpr uint64_t WeaponGetter = 0x5616118, HandlerMethod = 0x5C59B94;
@@ -30,6 +25,11 @@ uint64_t module = 0, allocation = 0, installedSlot = 0;
 uint32_t sequence = 0;
 double nextInstallAttempt = 0;
 int installFailure = 0;
+SilentAimFailure lastFailure;
+int Fail(const char *operation, kern_return_t code) {
+    lastFailure = {operation, code};
+    return 10;
+}
 
 bool ReadBytes(uint64_t address, void *buffer, size_t size) {
     mach_vm_size_t actual = 0;
@@ -73,7 +73,8 @@ bool WritablePointer(uint64_t address) {
 }
 struct Suspended {
     bool active;
-    Suspended() : active(task_suspend(ownedTask) == KERN_SUCCESS) {}
+    kern_return_t error;
+    Suspended() : active(false), error(task_suspend(ownedTask)) { active = error == KERN_SUCCESS; }
     ~Suspended() { if (active) task_resume(ownedTask); }
 };
 void Uninstall() {
@@ -98,10 +99,13 @@ void Detach() {
 }
 bool Attach(uint64_t base) {
     int pid = -1;
-    if (get_task == MACH_PORT_NULL || pid_for_task(get_task, &pid) != KERN_SUCCESS) { Detach(); return false; }
+    if (get_task == MACH_PORT_NULL) { Detach(); Fail("chưa có quyền task game", KERN_INVALID_ARGUMENT); return false; }
+    auto error = pid_for_task(get_task, &pid);
+    if (error != KERN_SUCCESS) { Detach(); Fail("xác định tiến trình game", error); return false; }
     if (ownedTask == get_task && ownedPID == pid && module == base) return true;
     Detach();
-    if (mach_port_mod_refs(mach_task_self(), get_task, MACH_PORT_RIGHT_SEND, 1) != KERN_SUCCESS) return false;
+    error = mach_port_mod_refs(mach_task_self(), get_task, MACH_PORT_RIGHT_SEND, 1);
+    if (error != KERN_SUCCESS) { Fail("giữ quyền task game", error); return false; }
     ownedTask = get_task; ownedPID = pid; module = base;
     return true;
 }
@@ -142,31 +146,19 @@ bool Adopt(uint64_t address) {
     return true;
 }
 int Allocate() {
-    using Status = int (*)(pid_t, unsigned int, void *, size_t);
-    const auto status = reinterpret_cast<Status>(dlsym(RTLD_DEFAULT, "csops"));
-    uint32_t flags = 0;
-    if (!status || status(ownedPID, 0, &flags, sizeof(flags)) != 0 ||
-        !SilentAimRemote::AllowsRemoteCode(flags)) return 10;
-    // Avoid changing the game's code-sign policy to obtain executable memory.
     const uint64_t clock = RemoteClock();
-    if (!clock || SilentAimRemoteEnd - SilentAimRemoteStart != SILENT_REMOTE_PAGE) return 9;
-    using CacheFlush = kern_return_t (*)(vm_map_t, mach_vm_address_t, mach_vm_size_t,
-        vm_machine_attribute_t, vm_machine_attribute_val_t *);
-    const auto flush = reinterpret_cast<CacheFlush>(dlsym(RTLD_DEFAULT, "mach_vm_machine_attribute"));
-    if (!flush) return 10;
-    mach_vm_address_t region = 0;
-    constexpr mach_vm_size_t size = 2 * SILENT_REMOTE_PAGE;
-    if (mach_vm_allocate(ownedTask, &region, size, VM_FLAGS_ANYWHERE) != KERN_SUCCESS) return 10;
+    if (!clock) return 9;
+    const auto mapping = SilentAimMapping::Map(ownedTask, SilentAimRemoteStart, SilentAimRemoteEnd);
+    if (!mapping.address) return Fail(mapping.operation, mapping.error);
     SilentAimRemote::State initial{};
     initial.original = module + HandlerMethod; initial.clock = clock;
-    vm_machine_attribute_val_t cache = MATTR_VAL_CACHE_FLUSH;
-    const bool ready = region % SILENT_REMOTE_PAGE == 0 &&
-        WriteBytes(region, SilentAimRemoteStart, SILENT_REMOTE_PAGE) &&
-        Write(region + SILENT_REMOTE_PAGE, initial) &&
-        flush(ownedTask, region, SILENT_REMOTE_PAGE, MATTR_CACHE, &cache) == KERN_SUCCESS &&
-        mach_vm_protect(ownedTask, region, SILENT_REMOTE_PAGE, false, VM_PROT_READ | VM_PROT_EXECUTE) == KERN_SUCCESS;
-    if (!ready) { mach_vm_deallocate(ownedTask, region, size); return 10; }
-    allocation = region;
+    std::array<uint8_t, SILENT_REMOTE_PAGE> code{};
+    if (!Read(mapping.address, code) || std::memcmp(code.data(), SilentAimRemoteStart, code.size()) ||
+        !Write(mapping.address + SILENT_REMOTE_PAGE, initial)) {
+        mach_vm_deallocate(ownedTask, mapping.address, 2 * SILENT_REMOTE_PAGE);
+        return Fail("kiểm tra mã/ghi trạng thái", KERN_MEMORY_ERROR);
+    }
+    allocation = mapping.address;
     return 8;
 }
 int Install(uint64_t slot) {
@@ -182,9 +174,10 @@ int Install(uint64_t slot) {
     }
     if (!allocation) { const int result = Allocate(); if (result != 8) return result; }
     Suspended suspension;
-    if (!suspension.active || !WritablePointer(slot) || !Read(slot, current) ||
-        current != module + HandlerMethod) return 10;
-    if (!Write(slot, allocation)) return 10;
+    if (!suspension.active) return Fail("tạm dừng game để cài", suspension.error);
+    if (!WritablePointer(slot)) return Fail("slot xử lý không cho ghi", KERN_PROTECTION_FAILURE);
+    if (!Read(slot, current) || current != module + HandlerMethod) return 9;
+    if (!Write(slot, allocation)) return Fail("ghi slot xử lý", KERN_PROTECTION_FAILURE);
     installedSlot = slot;
     return 8;
 }
@@ -212,6 +205,10 @@ uint64_t SilentAimRedirectCount() {
     if (allocation) Read(StateAddress() + SILENT_REMOTE_REDIRECTS, value);
     return value;
 }
+SilentAimFailure SilentAimLastFailure() {
+    std::lock_guard<std::recursive_mutex> guard(controllerMutex);
+    return lastFailure;
+}
 int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t target, const Vector3 &head) {
     std::lock_guard<std::recursive_mutex> guard(controllerMutex);
     if (!enabled) return 1;
@@ -234,6 +231,7 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t targ
         return result;
     }
     installFailure = 0;
+    lastFailure = {};
     if (!target || !SilentAimDirection::Finite({head.x, head.y, head.z}) ||
         !Eligible(match, local, target)) { Clear(); return 7; }
     mach_timebase_info_data_t timebase{};

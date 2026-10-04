@@ -184,7 +184,12 @@ static NSString *AimStateDescription(int state) {
         case 7: return @"silent: chờ địch hiện";
         case 8: return @"silent thử nghiệm: đã chọn đầu";
         case 9: return @"silent: bản game/vũ khí chưa hỗ trợ";
-        case 10: return @"silent: iOS không cho cài xử lý phát bắn";
+        case 10: {
+            const auto failure = SilentAimLastFailure();
+            if (failure.operation && failure.operation[0])
+                return [NSString stringWithFormat:@"silent: %s (Mach %d)", failure.operation, failure.code];
+            return @"silent: iOS không cho cài xử lý phát bắn";
+        }
         default: return @"chờ dữ liệu trận";
     }
 }

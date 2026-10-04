@@ -133,6 +133,7 @@ void SilentAimSetEnabled(bool value) {
     if (!value) Uninstall();
 }
 uint64_t SilentAimRedirectCount() { return redirects.load(); }
+SilentAimFailure SilentAimLastFailure() { return {}; }
 int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local,
                     uint64_t target, const Vector3 &head) {
     SilentAimClearTarget();
@@ -169,5 +170,6 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local,
 void SilentAimSetEnabled(bool) {}
 void SilentAimClearTarget() {}
 uint64_t SilentAimRedirectCount() { return 0; }
+SilentAimFailure SilentAimLastFailure() { return {}; }
 int SilentAimUpdate(uint64_t, uint64_t, uint64_t, uint64_t, const Vector3 &) { return 9; }
 #endif

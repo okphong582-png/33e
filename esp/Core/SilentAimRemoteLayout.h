@@ -43,9 +43,5 @@ static_assert(offsetof(State, redirects) == SILENT_REMOTE_REDIRECTS);
 static_assert(offsetof(State, busy) == SILENT_REMOTE_BUSY);
 static_assert(offsetof(State, magic) == SILENT_REMOTE_MAGIC);
 static_assert(offsetof(State, match) == SILENT_REMOTE_MATCH);
-inline bool AllowsRemoteCode(uint32_t flags) {
-    // Read-only CS_OPS_STATUS. Never attach a debugger or change signing flags.
-    return (flags & 0x10000000u) && !(flags & (0x100u | 0x200u));
-}
 } // namespace SilentAimRemote
 #endif
