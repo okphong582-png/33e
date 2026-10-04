@@ -33,22 +33,25 @@ else:
 assert code is not None and len(code) == 0x4000
 
 BASE, STATE, ORIGINAL, CLOCK, GETTER, START, END, RETURN = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200, 0x120300, 0x120400, 0x120500
+INTERVAL = 0x120600
 LOCAL, WEAPON, CLASS, MATCH, POOL, ENTRIES, ENTRY, STACK = 0x200000, 0x210000, 0x220000, 0x230000, 0x240000, 0x250000, 0x260000, 0x300000
 
 def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          self=WEAPON, owner=LOCAL, weapon=WEAPON, snapshot_weapon=WEAPON,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
-         steps=1, before_step=None):
+         steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
-    for address in [ORIGINAL, CLOCK, GETTER, START, END]: uc.mem_write(address, b'\xc0\x03\x5f\xd6')
+    for address in [ORIGINAL, CLOCK, GETTER, START, END, INTERVAL]: uc.mem_write(address, b'\xc0\x03\x5f\xd6')
     def ptr(a,v): uc.mem_write(a,struct.pack('<Q',v))
     def word(a,v): uc.mem_write(a,struct.pack('<I',v))
     for i,v in enumerate([ORIGINAL,CLOCK,GETTER,START,END]): ptr(STATE+i*8,v)
     word(STATE+40,sequence); word(STATE+44,enabled)
     for a,v in [(48,deadline),(56,LOCAL),(64,MATCH),(72,snapshot_weapon),(80,held)]: ptr(STATE+a,v)
     word(STATE+88,busy)
+    ptr(STATE+120,INTERVAL)
+    uc.mem_write(STATE+128,struct.pack('<f',elapsed))
     ptr(WEAPON+0x60,owner); ptr(WEAPON,CLASS)
     ptr(CLASS+0xc98,start); ptr(CLASS+0xca0,0xABC); ptr(CLASS+0xe88,stop); ptr(CLASS+0xe90,0xDEF)
     ptr(MATCH+0xd8,match_local); uc.mem_write(LOCAL+0x1258,bytes([knocked]))
@@ -56,7 +59,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     uc.mem_write(ENTRY+0x18,struct.pack('<H',firing))
     uc.reg_write(UC_ARM64_REG_X0,self); uc.reg_write(UC_ARM64_REG_X1,0x1234)
     uc.reg_write(UC_ARM64_REG_SP,STACK+0x8000); uc.reg_write(UC_ARM64_REG_X30,RETURN)
-    uc.reg_write(UC_ARM64_REG_D0,0x3F400000); uc.reg_write(UC_ARM64_REG_D1,0x41200000)
+    dt_bits, = struct.unpack('<I',struct.pack('<f',dt))
+    uc.reg_write(UC_ARM64_REG_D0,dt_bits); uc.reg_write(UC_ARM64_REG_D1,0x41200000)
     saved = {r:0xFFF000+i for i,r in enumerate([UC_ARM64_REG_X19,UC_ARM64_REG_X20,
         UC_ARM64_REG_X21,UC_ARM64_REG_X22,UC_ARM64_REG_X23,UC_ARM64_REG_X24,
         UC_ARM64_REG_X25,UC_ARM64_REG_X26,UC_ARM64_REG_X27,UC_ARM64_REG_X28,UC_ARM64_REG_X29])}
@@ -66,9 +70,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     def hook(uc,a,size,_):
         if a == ORIGINAL:
             assert uc.reg_read(UC_ARM64_REG_X0)==self and uc.reg_read(UC_ARM64_REG_X1)==0x1234
-            assert uc.reg_read(UC_ARM64_REG_D0)==0x3F400000 and uc.reg_read(UC_ARM64_REG_D1)==0x41200000
+            assert uc.reg_read(UC_ARM64_REG_D0)==dt_bits and uc.reg_read(UC_ARM64_REG_D1)==0x41200000
             calls.append('update')
-        elif a in [CLOCK,GETTER,START,END]:
+        elif a in [CLOCK,GETTER,START,END,INTERVAL]:
             if a==GETTER:
                 assert uc.reg_read(UC_ARM64_REG_X0)==LOCAL
                 getter_calls.append(a)
@@ -78,9 +82,16 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
                 calls.append('start' if a==START else 'stop')
                 uc.mem_write(ENTRY+0x18,struct.pack('<H',2 if a==START else 0))
             if a==CLOCK and clock_action: clock_action(word)
+            if a==INTERVAL:
+                assert uc.reg_read(UC_ARM64_REG_X0)==WEAPON
+                assert uc.reg_read(UC_ARM64_REG_X1)==0
+                if interval_action: interval_action(word)
             uc.reg_write(UC_ARM64_REG_D0,0); uc.reg_write(UC_ARM64_REG_D1,0)
             uc.reg_write(UC_ARM64_REG_X1,0)
             uc.reg_write(UC_ARM64_REG_X0,weapon if a==GETTER else now)
+            if a==INTERVAL:
+                bits, = struct.unpack('<I',struct.pack('<f',interval))
+                uc.reg_write(UC_ARM64_REG_S0,bits)
     uc.hook_add(UC_HOOK_CODE,hook)
     for step in range(steps):
         if before_step: before_step(step,word)
@@ -116,6 +127,20 @@ assert case(self=WEAPON+8,held=WEAPON)==(['update'],WEAPON,0)
 assert case(busy=1,held=WEAPON)==(['update'],WEAPON,0)
 assert case(weapon=WEAPON+0x100,held=WEAPON)==(['update'],0,0)
 assert case(steps=3)==(['start','update','update','update'],WEAPON,1)
+calls, held, starts = case(steps=10)
+assert starts==3 and held==WEAPON and calls.count('update')==10
+assert [i for i,c in enumerate(calls) if c=='start']==[0,5,10]
+assert case(steps=10,interval=1)[2]==1  # slow gun cannot inherit fast-gun cadence
+assert case(steps=40,interval=1)[2]==3  # repeat slow/one-shot gun, too
+assert case(steps=6,interval=0.125)[2]==3
+assert case(firing=2,steps=10)==(['update']*10,0,0)  # never claim manual fire
+assert case(firing=2,held=WEAPON,elapsed=0.1875)==(['start','update'],WEAPON,1)
+for interval in [0,-1,float('nan'),float('inf')]:
+    assert case(held=WEAPON,interval=interval)==(['stop','update'],0,0)
+for dt in [float('nan'),float('inf'),2]:
+    assert case(held=WEAPON,dt=dt)==(['stop','update'],0,0)
+assert case(held=WEAPON,dt=0)==(['update'],WEAPON,0)
+assert case(held=WEAPON,elapsed=0.25,interval_action=lambda w:w(STATE+40,4))==(['stop','update'],0,0)
 assert case(steps=3,before_step=lambda i,w:w(STATE+44,0) if i==1 else None)==(
     ['start','update','stop','update','update'],0,1)
-print('Auto fire weapon ticks, start/release, swaps, ownership, expiry and float ABI passed')
+print('Auto fire sustained native cadence, manual fire, start/release, swaps, expiry and float ABI passed')

@@ -46,7 +46,7 @@
     brand.tag = 10;
     [self.header addSubview:brand];
     UILabel *caption = [[UILabel alloc] initWithFrame:CGRectMake(18, 35, 220, 14)];
-    caption.text = @"FOCUS / FREE FIRE";
+    caption.text = @"AIM / ESP";
     caption.font = [UIFont systemFontOfSize:9 weight:UIFontWeightMedium];
     caption.tag = 11;
     [self.header addSubview:caption];
@@ -65,7 +65,7 @@
     [close addTarget:self action:@selector(closeMenu) forControlEvents:UIControlEventTouchUpInside];
     [self.header addSubview:close];
     NSMutableArray *navigation = [NSMutableArray array];
-    NSArray *names = @[@"Focus", @"ESP", @"Màu sắc", @"Thiết lập"];
+    NSArray *names = @[@"Aim", @"ESP", @"Màu sắc", @"Thiết lập"];
     for (NSInteger i = 0; i < 4; ++i) {
         UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
         button.tag = 200 + i; button.accessibilityLabel = names[i];
@@ -214,7 +214,7 @@
             y = [self slider:@"Vùng chọn Silent" key:@"SilentFovSize" min:5 max:30 fallback:18 y:y];
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
-        y = [self slider:@"Tỷ lệ chọn đầu" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
+        y = [self slider:@"Tỷ lệ HS" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
         y = [self toggle:@"Tự bắn (thử nghiệm)" key:@"AutoFire" fallback:NO y:y];
         y = [self note:@"Tỷ lệ đầu là phân bổ điểm ngắm, không phải cam kết số headshot." y:y];
 #ifndef MIZZE_INJECTED
@@ -259,7 +259,6 @@
         boxStyle.frame = CGRectMake(8, y + 28, [self contentWidth] - 16, 30);
         boxStyle.tag = 101;
         boxStyle.selectedSegmentIndex = ESPPrefsBool(@"Box3D", NO) ? 1 : 0;
-        boxStyle.enabled = !ESPPrefsBool(@"CleanESP", YES);
         [boxStyle addTarget:self action:@selector(boxStyleChanged:) forControlEvents:UIControlEventValueChanged];
         [self.scroll addSubview:boxStyle]; [self.controls addObject:boxStyle];
         y += 70;
@@ -299,6 +298,7 @@
     NSString *key = objc_getAssociatedObject(sender, "key");
     if ([key isEqualToString:@"AutoFire"] && sender.on) ESPPrefsSetBool(@"SilentAim", YES);
     if ([key isEqualToString:@"SilentAim"] && !sender.on) ESPPrefsSetBool(@"AutoFire", NO);
+    if ([key isEqualToString:@"CleanESP"] && sender.on) ESPPrefsSetBool(@"Box3D", NO);
     ESPPrefsSetBool(key, sender.on); ESPSyncFromPrefs();
     if ([key isEqualToString:@"AnLive"] && ![UIView applyCaptureProtectionToRegisteredViews:sender.on]) {
         sender.on = NO; ESPPrefsSetBool(key, NO);
@@ -327,6 +327,14 @@
 }
 - (void)boxStyleChanged:(UISegmentedControl *)sender {
     ESPPrefsSetBool(@"Box3D", sender.selectedSegmentIndex == 1);
+    ESPPrefsSetBool(@"Box", YES);
+    if (sender.selectedSegmentIndex == 1) ESPPrefsSetBool(@"CleanESP", NO);
+    for (UIControl *control in self.controls) {
+        if (![control isKindOfClass:UISwitch.class]) continue;
+        NSString *key = objc_getAssociatedObject(control, "key");
+        if ([key isEqualToString:@"Box"] || [key isEqualToString:@"CleanESP"])
+            ((UISwitch *)control).on = ESPPrefsBool(key, NO);
+    }
     ESPSyncFromPrefs();
 }
 - (void)aimModeChanged:(UISegmentedControl *)sender {

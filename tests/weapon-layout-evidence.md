@@ -33,3 +33,25 @@ are made through the previous owner; a different task discards the old state.
 
 The fixture verifies these guards and restore behavior. It cannot establish
 on-device behavior or whether server rules accept the changed firing rate.
+
+## Automatic shot cadence
+
+`HBIBDMMOOOK.ALJMFCJMDCF()` at `0x5C179E8` (virtual 182) sends a shot
+event. Calling it once does not install a held trigger in the weapon's firing
+state machine. Player PRI21 equal to 2 therefore cannot be used to assume
+that subsequent automatic shots will be produced by `Weapon.Update`.
+
+In `POFKDNELDJL.IPFONNHEKFA(float,float)` at `0x5BA3F30`, the game accumulates
+dt at state offset `0x24`. At `0x5BA4054..0x5BA40A4` it obtains the weapon,
+calls `HBIBDMMOOOK.LDKCJEMDAMC()` at `0x5BF3B0C`, compares accumulated time
+with that returned interval, and dispatches virtual 182 when due. The
+interval getter multiplies the weapon interval by the player's current
+interval modifiers, including the skill and weapon-type modifiers.
+
+AutoFire repeats only its own shot requests using that verified getter and
+the original callback's dt. It leaves existing manual fire unclaimed, emits
+at most one request per callback, and drops accumulated time on release.
+Both the getter's full `0x210` bytes and the above `0x50` call-site bytes are
+fingerprinted before installing the callback. The ARM64 emulation tests
+check repeated fast/slow gun requests, manual ownership, expiration, and
+preservation of the float callback ABI; actual projectiles need device testing.

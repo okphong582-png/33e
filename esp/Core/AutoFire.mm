@@ -15,6 +15,10 @@
 extern "C" const unsigned char AutoFireRemoteStart[], AutoFireRemoteEnd[];
 namespace {
 constexpr uint64_t Getter=0x5616118, Start=0x5C179E8, Stop=0x5C222EC;
+// Weapon.LDKCJEMDAMC() returns the current fire interval, including attributes
+// and weapon type. POFKDNELDJL.IPFONNHEKFA compares accumulated dt against it
+// before each virtual-182 shot (0x5BA4054..0x5BA40A4).
+constexpr uint64_t Interval=0x5BF3B0C;
 // Player.PostUpdate calls the current weapon's MAMFDNEJAPF(float,float)
 // through virtual slot 28 at 0x569C4E8. Player.OnUpdate is also called
 // directly, so replacing its virtual slot can install a callback with no ticks.
@@ -114,7 +118,8 @@ bool Adopt(uint64_t slot,uint64_t a) {
     std::array<uint8_t,AUTO_PAGE> code{};AutoFireRemote::State state{};
     if(!Read(a,code)||std::memcmp(code.data(),AutoFireRemoteStart,code.size())||
         !Read(a+AUTO_PAGE,state)||state.magic!=AutoFireRemote::Magic||!SupportedUpdate(state.original)||
-        state.getter!=module+Getter||state.start!=module+Start||state.stop!=module+Stop||state.clock!=Clock())return false;
+        state.getter!=module+Getter||state.start!=module+Start||state.stop!=module+Stop||
+        state.interval!=module+Interval||state.clock!=Clock())return false;
     sessions.push_back({slot,a,state.original,state.sequence&~1u});
     Disable(sessions.back());
     return true;
@@ -135,6 +140,7 @@ int Install(uint64_t slot,Session *&session) {
         if(!mapping.address)return 10;
         AutoFireRemote::State state;state.original=current;state.clock=clock;
         state.getter=module+Getter;state.start=module+Start;state.stop=module+Stop;
+        state.interval=module+Interval;
         if(!Write(mapping.address+AUTO_PAGE,state)){mach_vm_deallocate(task,mapping.address,2*AUTO_PAGE);return 10;}
         sessions.push_back({slot,mapping.address,current,0});session=&sessions.back();
     }
@@ -176,7 +182,8 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
     if(!weapon||!Read(weapon,weaponClass)||!isVaildPtr(weaponClass)||
         !Read(weaponClass+StartSlot,start)||start!=base+Start||!Read(weaponClass+StopSlot,stop)||stop!=base+Stop||
         !Fingerprint<0xCC>(base+Getter,0xC5E012EE)||!Fingerprint<0x5A8>(base+Start,0x9AD8096C)||
-        !Fingerprint<0x1E4>(base+Stop,0xA2F105A1)||!Fingerprint<0xCC>(base+0x569C434,0x88A4BD15)){
+        !Fingerprint<0x1E4>(base+Stop,0xA2F105A1)||!Fingerprint<0xCC>(base+0x569C434,0x88A4BD15)||
+        !Fingerprint<0x210>(base+Interval,0x131E1130)||!Fingerprint<0x50>(base+0x5BA4054,0xA165FA4A)){
         Clear();retryAt=now+1;retryState=9;return 9;
     }
     Session *session=nullptr;

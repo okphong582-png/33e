@@ -87,8 +87,12 @@ _AutoFireRemoteStart:
     ldar w8, [x8]
     cmp w8, w23
     b.ne .LautoRelease
-    // Native firing already active: leave manual fire alone; an owned hold
-    // continues through the game's original update and rate-limit handling.
+    // A shot event is not a persistent trigger. Leave manual fire alone, but
+    // repeat owned shots at Weapon.LDKCJEMDAMC's native interval, as the game's
+    // firing-state ticks do. PRI21 == 2 must not suppress our next owned shot.
+    ldr x8, [x19, #AUTO_HELD]
+    cmp x8, x22
+    b.eq .LautoCadence
     ldr x8, [x25, #0x70]
     cbz x8, .LautoRelease
     ldr x8, [x8, #0x10]
@@ -98,6 +102,38 @@ _AutoFireRemoteStart:
     ldrh w8, [x8, #0x18]
     cmp w8, #2
     b.eq .LautoUnlock
+    b .LautoMethods
+.LautoCadence:
+    ldr s0, [sp, #80]          // caller's dt, saved before any native call
+    fcmp s0, #0.0
+    b.vs .LautoRelease
+    b.le .LautoUnlock
+    fmov s1, #1.0
+    fcmp s0, s1
+    b.gt .LautoRelease         // reject invalid/stale simulation deltas
+    ldr s1, [x19, #AUTO_ELAPSED]
+    fadd s0, s0, s1
+    str s0, [x19, #AUTO_ELAPSED]
+    mov x0, x22
+    mov x1, #0
+    ldr x8, [x19, #AUTO_INTERVAL]
+    blr x8
+    fmov w8, s0
+    ubfx w8, w8, #23, #8
+    cmp w8, #255
+    b.eq .LautoRelease         // reject NaN/infinite native intervals
+    fcmp s0, #0.0
+    b.vs .LautoRelease
+    b.le .LautoRelease
+    ldr s1, [x19, #AUTO_ELAPSED]
+    fcmp s1, s0
+    b.lt .LautoUnlock
+    // The interval method may run a hotfix. Recheck publication after it.
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRelease
+.LautoMethods:
     // Ensure the weapon still uses the statically verified input methods.
     ldr x8, [x22]
     ldr x9, [x8, #0xC98]       // virtual 182: ALJMFCJMDCF()
@@ -112,12 +148,14 @@ _AutoFireRemoteStart:
     ldr x1, [x8, #0xCA0]
     ldr x8, [x19, #AUTO_START]
     blr x8
+    str wzr, [x19, #AUTO_ELAPSED] // one attempt per tick; no catch-up bursts
     str x22, [x19, #AUTO_HELD]
     ldr x8, [x19, #AUTO_STARTS]
     add x8, x8, #1
     str x8, [x19, #AUTO_STARTS]
     b .LautoUnlock
 .LautoRelease:
+    str wzr, [x19, #AUTO_ELAPSED]
     ldr x8, [x19, #AUTO_HELD]
     cmp x8, x22
     b.ne .LautoUnlock
@@ -133,6 +171,7 @@ _AutoFireRemoteStart:
     b .LautoUnlock
 .LautoForget:
     str xzr, [x19, #AUTO_HELD]
+    str wzr, [x19, #AUTO_ELAPSED]
 .LautoUnlock:
     add x8, x19, #AUTO_BUSY
     stlr wzr, [x8]

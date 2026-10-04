@@ -101,7 +101,8 @@ void ESPSyncFromPrefs(void) {
     isDis        = ESPPrefsBool(KH_NS("Dis"),        YES);
     isLine       = ESPPrefsBool(KH_NS("Line"),       NO);
     isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), NO);
-    isCleanESP = ESPPrefsBool(@"CleanESP", YES);
+    isBox3D = ESPPrefsBool(@"Box3D", NO);
+    isCleanESP = !isBox3D && ESPPrefsBool(@"CleanESP", YES);
     isAimbotFire  = ESPPrefsBool(KH_NS("AimbotFire"), YES);
     isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
     isHipAlways   = ESPPrefsBool(@"AimHipAlways", NO);
@@ -118,7 +119,6 @@ void ESPSyncFromPrefs(void) {
     gAutoFire = autoEnabled;
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
-    isBox3D       = !isCleanESP && ESPPrefsBool(@"Box3D", NO);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
     silentFovPercent = ESPPrefsFloat(@"SilentFovSize", 18);
     silentAutoConfig = ESPPrefsBool(@"SilentAutoConfig", YES);
