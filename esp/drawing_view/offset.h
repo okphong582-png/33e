@@ -75,8 +75,8 @@
 
 #define kWeaponOnHand           0x690
 #define kWeaponCostAmmo         0x7B9
-#define kPlayerAttributes       0x700
-#define kShootNoReload          0xD9
-#define kFastFireOff            0x208
+#define kPlayerAttributes       0x768
+#define kShootNoReload          0x111
+#define kFastFireOff            0x258 // PlayerAttributes.FireIntervalScale (float)
 
 

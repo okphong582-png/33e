@@ -1,6 +1,7 @@
 #import "GameLogic.h"
 #include "AimSelection.h"
 #include "GamePRI.h"
+#include "WeaponFeatures.h"
 #import "../drawing_view/offset.h"
 #import <Foundation/Foundation.h>
 #import <math.h>
@@ -8,6 +9,36 @@
 #import "NetworkHelper.h"
 #include "KabraxHide.h"
 #pragma mark - Function Game
+
+static WeaponFeatures::Controller gWeaponFeatures;
+static uint64_t gWeaponModuleBase = 0;
+static_assert(kPlayerAttributes == WeaponFeatures::PlayerAttributesOffset, "PlayerAttributes layout");
+static_assert(kShootNoReload == WeaponFeatures::ShootNoReloadOffset, "ShootNoReload layout");
+static_assert(kFastFireOff == WeaponFeatures::FireIntervalScaleOffset, "FireIntervalScale layout");
+
+static WeaponFeatures::Context CurrentWeaponContext() {
+    if (!isVaildPtr(gWeaponModuleBase) || get_task == MACH_PORT_NULL) return {};
+    const uint64_t match = getMatch(getMatchGame(gWeaponModuleBase));
+    return {static_cast<uint64_t>(get_task), match, getLocalPlayer(match)};
+}
+
+void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire) {
+    if (!noReload && !fastFire && !gWeaponFeatures.HasChanges()) return;
+    gWeaponModuleBase = moduleBase;
+    gWeaponFeatures.Update(CurrentWeaponContext(), noReload, fastFire,
+        [](uint64_t address, void *buffer, size_t length) {
+            return _read((long)address, buffer, static_cast<int>(length));
+        },
+        [](uint64_t address, const void *buffer, size_t length) {
+            return _write((long)address, buffer, static_cast<int>(length));
+        },
+        [](uint64_t address) { return isVaildPtr(address); },
+        [] { return CurrentWeaponContext(); });
+}
+
+void ResetWeaponFeatures(void) {
+    UpdateWeaponFeatures(gWeaponModuleBase, false, false);
+}
 
 static uint64_t ReadMatchGameFromGameFacadeStatics(uint64_t GameFacade_Static) {
     if (!isVaildPtr(GameFacade_Static)) return 0;

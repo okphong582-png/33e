@@ -98,6 +98,11 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror tests/overlay_geometry_test.cpp -o /tmp/overlay-geometry-test
           /tmp/overlay-geometry-test
 
+      - name: Test reversible weapon settings and stale owner guards
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/weapon_features_test.cpp -o /tmp/weapon-features-test
+          /tmp/weapon-features-test
+
       - name: Test nonblocking offset requests
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror tests/async_offset_state_test.cpp -o /tmp/async-offset-test

@@ -83,6 +83,8 @@ static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
 static bool gBalancedRender = true;
 static bool gAimDiagnostics = false;
+static bool gNoReload = false;
+static bool gFastFire = false;
 
 // ============================================================
 // ✅ SYNC PREFS - ESP & AIMBOT
@@ -104,6 +106,9 @@ void ESPSyncFromPrefs(void) {
     isBox3D       = ESPPrefsBool(@"Box3D", YES);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", YES);
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
+    gNoReload = ESPPrefsBool(@"ShootNoReload", NO);
+    gFastFire = ESPPrefsBool(@"FastFire", NO);
+    if (!gNoReload && !gFastFire) ResetWeaponFeatures();
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
     if (gESPMaxDistance < 30.0f)  gESPMaxDistance = 30.0f;
@@ -348,7 +353,15 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.lastEnemyCount = -1;
 
     [self configureRenderingLayers];
+#ifdef MIZZE_INJECTED
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(applicationWillResignActive:)
+                                              name:UIApplicationWillResignActiveNotification object:nil];
+#endif
     return self;
+}
+
+- (void)applicationWillResignActive:(NSNotification *)notification {
+    [self clearAllContent];
 }
 
 - (void)didMoveToWindow {
@@ -533,6 +546,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 
 - (void)updateFrame {
     if (!self.window) return;
+#ifdef MIZZE_INJECTED
+    if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) {
+        [self clearAllContent]; return;
+    }
+#endif
     if (![LicenseSession shared].authorized) { [self clearAllContent]; return; }
     @autoreleasepool {
         const CFTimeInterval now = CACurrentMediaTime();
@@ -647,6 +665,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)clearAllContent {
+    ResetWeaponFeatures();
     SetMatchReady(NO);
     gAimLockTarget      = 0;
     gAimLockedHead      = {};
@@ -662,6 +681,8 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)dealloc {
+    ResetWeaponFeatures();
+    [NSNotificationCenter.defaultCenter removeObserver:self];
     [_displayLink invalidate];
     _displayLink = nil;
 }
@@ -738,6 +759,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     if (!matrix) return stats;
     stats.inMatch = true;
     SetMatchReady(YES);
+    UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire);
 
     stats.firingRaw = get_FiringPRIState(local);
     stats.firing    = GamePRI::Firing(stats.firingRaw);
