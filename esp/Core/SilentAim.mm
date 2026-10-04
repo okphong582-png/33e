@@ -42,6 +42,7 @@ std::atomic<uint64_t> redirects{0};
 std::atomic<uint64_t> originalHandler{0};
 uint64_t installedSlot = 0;
 uint32_t headPhase = 50;
+alignas(8) uint64_t autoShotWeapon = 0;
 
 template <typename T> bool Read(uint64_t address, T &value) {
     return isVaildPtr(address) && _read((long)address, &value, sizeof(value));
@@ -80,12 +81,12 @@ bool WritablePointer(uint64_t address) {
         size - (address - region) >= sizeof(uint64_t) &&
         !info.is_submap && (info.protection & VM_PROT_WRITE);
 }
-bool Current(const Snapshot &s) {
+bool Current(const Snapshot &s, bool automaticShot) {
     uint8_t localKnocked = 0, targetKnocked = 0;
     return enabled.load() && SilentAimDirection::Fresh(s.updated, CACurrentMediaTime()) &&
         getMatch(getMatchGame(s.module)) == s.match && getLocalPlayer(s.match) == s.local &&
         get_CurHP(s.local) > 0 && get_CurHP(s.target) > 0 &&
-        get_IsFiring(s.local) && getAimVisibility(s.target) &&
+        (automaticShot || get_IsFiring(s.local)) && getAimVisibility(s.target) &&
         !isLocalTeamMate(s.local, s.target) &&
         Read(s.local + kKnocked, localKnocked) && localKnocked == 0 &&
         Read(s.target + kKnocked, targetKnocked) && targetKnocked == 0;
@@ -101,8 +102,9 @@ void RedirectHandler(uint64_t handler, const void *method) {
     Point origin{}, desired{};
     uint32_t nextPhase = 0;
     const Point aimPoint = SilentAimPolicy::Head(s.headPercent, headPhase, nextPhase) ? s.head : s.body;
-    if (!s.target || !Current(s) || !Read(handler + HandlerWeapon, weapon) ||
+    if (!s.target || !Read(handler + HandlerWeapon, weapon) ||
         !Read(weapon + WeaponOwner, owner) || owner != s.local ||
+        !Current(s, __atomic_load_n(&autoShotWeapon, __ATOMIC_ACQUIRE) == weapon) ||
         ReadAddr<uint64_t>(weapon + WeaponHandler) != handler ||
         !Read(handler + HandlerInfo, info) || !ClassName(info, "CGKJLKPMGDJ") ||
         !Read(info + InfoOrigin, origin) ||
@@ -139,6 +141,9 @@ void SilentAimSetEnabled(bool value) {
     if (!value) Uninstall();
 }
 uint64_t SilentAimRedirectCount() { return redirects.load(); }
+uint64_t SilentAimAutoFireGate() {
+    return enabled.load() && originalHandler.load() ? reinterpret_cast<uint64_t>(&autoShotWeapon) : 0;
+}
 SilentAimFailure SilentAimLastFailure() { return {}; }
 int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local,
                     uint64_t target, const Vector3 &head, const Vector3 &body, uint32_t headPercent) {
@@ -178,6 +183,7 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local,
 void SilentAimSetEnabled(bool) {}
 void SilentAimClearTarget() {}
 uint64_t SilentAimRedirectCount() { return 0; }
+uint64_t SilentAimAutoFireGate() { return 0; }
 SilentAimFailure SilentAimLastFailure() { return {}; }
 int SilentAimUpdate(uint64_t, uint64_t, uint64_t, uint64_t, const Vector3 &, const Vector3 &, uint32_t) { return 9; }
 #endif

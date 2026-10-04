@@ -62,6 +62,12 @@ _SilentAimRemoteStart:
     add x8, x24, #0x1000
     ldrb w8, [x8, #0x258]      // local knock
     cbnz w8, .Lnative
+    // Native shot events may run without the manual trigger's PRI21. Only
+    // a scoped AutoFire call for this exact local weapon can bypass that gate.
+    add x8, x19, #SILENT_REMOTE_AUTO_WEAPON
+    ldar x8, [x8]
+    cmp x8, x23
+    b.eq .LshotInfo
     ldr x8, [x24, #0x70]       // firing PRI 21 == UInt16(2)
     cbz x8, .Lnative
     ldr x8, [x8, #0x10]
@@ -71,6 +77,7 @@ _SilentAimRemoteStart:
     ldrh w8, [x8, #0x18]
     cmp w8, #2
     b.ne .Lnative
+.LshotInfo:
     ldr x22, [x20, #0x28]
     cbz x22, .Lnative
     ldr x8, [x22]

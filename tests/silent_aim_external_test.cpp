@@ -8,7 +8,7 @@ int main() {
     using namespace SilentAimRemote;
     State state{};
     assert(state.magic == Magic && state.enabled == 0 && state.redirects == 0 && state.busy == 0);
-    assert(sizeof(State) == 128);
+    assert(sizeof(State) == 136 && state.autoWeapon == 0);
     assert(state.headPercent == 75 && state.phase == 50);
     std::unordered_map<uint64_t, uint64_t> memory;
     const uint64_t local = 0x100000, manager = 0x200000, regular = 0x300000, combined = 0x400000;

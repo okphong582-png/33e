@@ -55,3 +55,15 @@ Both the getter's full `0x210` bytes and the above `0x50` call-site bytes are
 fingerprinted before installing the callback. The ARM64 emulation tests
 check repeated fast/slow gun requests, manual ownership, expiration, and
 preservation of the float callback ABI; actual projectiles need device testing.
+
+Automatic native events do not require the manual trigger's PRI21 to be set.
+AutoFire therefore sets a weapon-specific marker only around the verified
+native shot call. Silent's handler accepts that exact local weapon while the
+marker is active, with its usual target, freshness, match and knock guards.
+The marker is cleared before returning to the weapon update. TIPA stores it
+in Silent's remote data page; dylib uses an aligned, atomically read field in
+the injected process. Renderer publication never overwrites this dispatch
+field. The combined ARM64 test executes both shipped callbacks in one VM and
+checks 100 automatically dispatched directions at 0/25/75/100% head selection
+with manual PRI21 left at zero, including direction restoration and marker
+cleanup after every shot.

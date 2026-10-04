@@ -144,10 +144,14 @@ _AutoFireRemoteStart:
     ldr x10, [x19, #AUTO_STOP]
     cmp x9, x10
     b.ne .LautoRelease
+    ldr x26, [x19, #AUTO_SILENT_GATE]
+    cbz x26, .LautoRelease
+    stlr x22, [x26]            // only this native shot may bypass manual PRI21
     mov x0, x22
     ldr x1, [x8, #0xCA0]
     ldr x8, [x19, #AUTO_START]
     blr x8
+    stlr xzr, [x26]
     str wzr, [x19, #AUTO_ELAPSED] // one attempt per tick; no catch-up bursts
     str x22, [x19, #AUTO_HELD]
     ldr x8, [x19, #AUTO_STARTS]

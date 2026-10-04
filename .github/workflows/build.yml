@@ -101,12 +101,12 @@ jobs:
           /tmp/silent-aim-external-test
           python3 -m pip install unicorn==2.1.4
           clang --target=aarch64-linux-gnu -c esp/Core/AutoFireRemote.S -o /tmp/auto-fire.o
-          python3 tests/auto_fire_remote_test.py /tmp/auto-fire.o
-          clang --target=arm64-apple-ios16.5 -c esp/Core/AutoFireRemote.S -o /tmp/auto-fire-ios.o
-          python3 tests/auto_fire_remote_test.py /tmp/auto-fire-ios.o
           clang --target=aarch64-linux-gnu -c esp/Core/SilentAimRemote.S -o /tmp/silent-remote.o
+          python3 tests/auto_fire_remote_test.py /tmp/auto-fire.o /tmp/silent-remote.o
           python3 tests/silent_aim_remote_test.py /tmp/silent-remote.o
+          clang --target=arm64-apple-ios16.5 -c esp/Core/AutoFireRemote.S -o /tmp/auto-fire-ios.o
           clang --target=arm64-apple-ios16.5 -c esp/Core/SilentAimRemote.S -o /tmp/silent-remote-ios.o
+          python3 tests/auto_fire_remote_test.py /tmp/auto-fire-ios.o /tmp/silent-remote-ios.o
           python3 tests/silent_aim_remote_test.py /tmp/silent-remote-ios.o
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/silent_aim_direction_test.cpp -o /tmp/silent-aim-direction-test
           /tmp/silent-aim-direction-test

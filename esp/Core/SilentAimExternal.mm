@@ -218,6 +218,10 @@ uint64_t SilentAimRedirectCount() {
     if (allocation) Read(StateAddress() + SILENT_REMOTE_REDIRECTS, value);
     return value;
 }
+uint64_t SilentAimAutoFireGate() {
+    std::lock_guard<std::recursive_mutex> guard(controllerMutex);
+    return enabled && installedSlot && allocation ? StateAddress() + SILENT_REMOTE_AUTO_WEAPON : 0;
+}
 SilentAimFailure SilentAimLastFailure() {
     std::lock_guard<std::recursive_mutex> guard(controllerMutex);
     return lastFailure;

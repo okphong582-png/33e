@@ -16,13 +16,14 @@
 #define SILENT_REMOTE_BODY 104
 #define SILENT_REMOTE_HEAD_PERCENT 116
 #define SILENT_REMOTE_PHASE 120
+#define SILENT_REMOTE_AUTO_WEAPON 128
 
 #ifndef __ASSEMBLER__
 #include "SilentAimDirection.h"
 #include <cstddef>
 #include <cstdint>
 namespace SilentAimRemote {
-inline constexpr uint64_t Magic = 0x53494C454E543032ULL; // SILENT02, layout version 2
+inline constexpr uint64_t Magic = 0x53494C454E543033ULL; // SILENT03: scoped automatic shots
 struct alignas(8) State {
     uint64_t original = 0, clock = 0;
     uint32_t sequence = 0, enabled = 0;
@@ -34,6 +35,7 @@ struct alignas(8) State {
     uint64_t magic = Magic, match = 0;
     SilentAimDirection::Point body;
     uint32_t headPercent = 75, phase = 50;
+    uint64_t autoWeapon = 0;
 };
 static_assert(offsetof(State, original) == SILENT_REMOTE_ORIGINAL);
 static_assert(offsetof(State, clock) == SILENT_REMOTE_CLOCK);
@@ -51,5 +53,6 @@ static_assert(offsetof(State, match) == SILENT_REMOTE_MATCH);
 static_assert(offsetof(State, body) == SILENT_REMOTE_BODY);
 static_assert(offsetof(State, headPercent) == SILENT_REMOTE_HEAD_PERCENT);
 static_assert(offsetof(State, phase) == SILENT_REMOTE_PHASE);
+static_assert(offsetof(State, autoWeapon) == SILENT_REMOTE_AUTO_WEAPON);
 } // namespace SilentAimRemote
 #endif

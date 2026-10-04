@@ -215,7 +215,7 @@
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
         y = [self slider:@"Tỷ lệ HS" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
-        y = [self toggle:@"Tự bắn (thử nghiệm)" key:@"AutoFire" fallback:NO y:y];
+        y = [self toggle:@"Tự bắn theo Silent" key:@"AutoFire" fallback:NO y:y];
         y = [self note:@"Tỷ lệ đầu là phân bổ điểm ngắm, không phải cam kết số headshot." y:y];
 #ifndef MIZZE_INJECTED
         y = [self note:@"TIPA: xem Chẩn đoán aim khi tự bắn không chạy." y:y];

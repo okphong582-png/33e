@@ -4,42 +4,50 @@ import sys
 from unicorn import Uc, UC_ARCH_ARM64, UC_MODE_ARM, UC_HOOK_CODE
 from unicorn.arm64_const import *
 
-data = open(sys.argv[1], 'rb').read()
-if data[:4] == b'\x7fELF':
-    offset, = struct.unpack_from('<Q', data, 40)
-    size, count, strings = struct.unpack_from('<HHH', data, 58)
-    sections = [struct.unpack_from('<IIQQQQIIQQ', data, offset+i*size) for i in range(count)]
-    names = data[sections[strings][4]:sections[strings][4]+sections[strings][5]]
+def read_code(path, section):
+    data = open(path, 'rb').read()
     code = None
-    for s in sections:
-        assert not (s[1] in (4, 9) and s[5]), 'No runtime relocations allowed'
-        if names[s[0]:].split(b'\0', 1)[0] == b'.text':
-            assert s[8] == 0x4000
-            code = data[s[4]:s[4]+s[5]]
-else:
-    code = None
-    p = 32
-    for _ in range(struct.unpack_from('<I', data, 16)[0]):
-        command, size = struct.unpack_from('<II', data, p)
-        if command == 0x19:
-            count, = struct.unpack_from('<I', data, p+64)
-            for i in range(count):
-                s = struct.unpack_from('<16s16sQQIIIIIIII', data, p+72+i*80)
-                if s[0].rstrip(b'\0') == b'__autofire':
+    if data[:4] == b'\x7fELF':
+        offset, = struct.unpack_from('<Q', data, 40)
+        size, count, strings = struct.unpack_from('<HHH', data, 58)
+        sections = [struct.unpack_from('<IIQQQQIIQQ', data, offset+i*size) for i in range(count)]
+        names = data[sections[strings][4]:sections[strings][4]+sections[strings][5]]
+        for s in sections:
+            assert not (s[1] in (4, 9) and s[5]), 'No runtime relocations allowed'
+            if names[s[0]:].split(b'\0', 1)[0] == b'.text':
+                assert s[8] == 0x4000
+                code = data[s[4]:s[4]+s[5]]
+    else:
+        p = 32
+        for _ in range(struct.unpack_from('<I', data, 16)[0]):
+            command, size = struct.unpack_from('<II', data, p)
+            if command == 0x19:
+                count, = struct.unpack_from('<I', data, p+64)
+                for i in range(count):
+                    s = struct.unpack_from('<16s16sQQIIIIIIII', data, p+72+i*80)
+                    if s[0].rstrip(b'\0') != section:
+                        continue
                     assert s[1].rstrip(b'\0') == b'__TEXT'
                     assert s[2] == 0 and s[5] == 14 and s[7] == 0
                     code = data[s[4]:s[4]+s[3]]
-        p += size
-assert code is not None and len(code) == 0x4000
+            p += size
+    assert code is not None and len(code) == 0x4000
+    return code
+
+code = read_code(sys.argv[1], b'__autofire')
+silent_code = read_code(sys.argv[2], b'__silent') if len(sys.argv)>2 else None
 
 BASE, STATE, ORIGINAL, CLOCK, GETTER, START, END, RETURN = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200, 0x120300, 0x120400, 0x120500
 INTERVAL = 0x120600
+SILENT_BASE, SILENT_STATE, SHOT = 0x110000, 0x114000, 0x120700
+HANDLER, INFO, INFO_CLASS = 0x270000, 0x271000, 0x272000
 LOCAL, WEAPON, CLASS, MATCH, POOL, ENTRIES, ENTRY, STACK = 0x200000, 0x210000, 0x220000, 0x230000, 0x240000, 0x250000, 0x260000, 0x300000
 
 def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          self=WEAPON, owner=LOCAL, weapon=WEAPON, snapshot_weapon=WEAPON,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
-         steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None):
+         steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
+         gate=SILENT_STATE+128, silent_percent=None):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -52,11 +60,24 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     word(STATE+88,busy)
     ptr(STATE+120,INTERVAL)
     uc.mem_write(STATE+128,struct.pack('<f',elapsed))
+    ptr(STATE+136,gate)
     ptr(WEAPON+0x60,owner); ptr(WEAPON,CLASS)
     ptr(CLASS+0xc98,start); ptr(CLASS+0xca0,0xABC); ptr(CLASS+0xe88,stop); ptr(CLASS+0xe90,0xDEF)
     ptr(MATCH+0xd8,match_local); uc.mem_write(LOCAL+0x1258,bytes([knocked]))
     ptr(LOCAL+0x70,POOL); ptr(POOL+0x10,ENTRIES); ptr(ENTRIES+0xc8,ENTRY)
     uc.mem_write(ENTRY+0x18,struct.pack('<H',firing))
+    if silent_percent is not None:
+        assert silent_code is not None
+        uc.mem_write(SILENT_BASE,silent_code); uc.mem_write(SHOT,b'\xc0\x03\x5f\xd6')
+        ptr(SILENT_STATE,SHOT); ptr(SILENT_STATE+8,CLOCK)
+        word(SILENT_STATE+16,2); word(SILENT_STATE+20,1); ptr(SILENT_STATE+24,deadline)
+        ptr(SILENT_STATE+32,LOCAL); ptr(SILENT_STATE+40,HANDLER); ptr(SILENT_STATE+48,INFO_CLASS)
+        uc.mem_write(SILENT_STATE+56,struct.pack('<fff',3,4,0))
+        ptr(SILENT_STATE+96,MATCH)
+        uc.mem_write(SILENT_STATE+104,struct.pack('<fff',2,0,0))
+        word(SILENT_STATE+116,silent_percent); word(SILENT_STATE+120,50)
+        ptr(WEAPON+0x80,HANDLER); ptr(HANDLER+0x10,WEAPON); ptr(HANDLER+0x28,INFO)
+        ptr(INFO,INFO_CLASS); uc.mem_write(INFO+0x40,struct.pack('<fff',0,0,1))
     uc.reg_write(UC_ARM64_REG_X0,self); uc.reg_write(UC_ARM64_REG_X1,0x1234)
     uc.reg_write(UC_ARM64_REG_SP,STACK+0x8000); uc.reg_write(UC_ARM64_REG_X30,RETURN)
     dt_bits, = struct.unpack('<I',struct.pack('<f',dt))
@@ -66,6 +87,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         UC_ARM64_REG_X25,UC_ARM64_REG_X26,UC_ARM64_REG_X27,UC_ARM64_REG_X28,UC_ARM64_REG_X29])}
     for r,v in saved.items(): uc.reg_write(r,v)
     calls=[]
+    bullets=[]
     getter_calls=[]
     def hook(uc,a,size,_):
         if a == ORIGINAL:
@@ -80,7 +102,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
                 assert uc.reg_read(UC_ARM64_REG_X0)==WEAPON
                 assert uc.reg_read(UC_ARM64_REG_X1)==(0xABC if a==START else 0xDEF)
                 calls.append('start' if a==START else 'stop')
-                uc.mem_write(ENTRY+0x18,struct.pack('<H',2 if a==START else 0))
+                assert struct.unpack('<Q',uc.mem_read(SILENT_STATE+128,8))[0]==(WEAPON if a==START else 0)
+                # A native automatic shot may leave manual PRI21 idle.
+                uc.mem_write(ENTRY+0x18,struct.pack('<H',2 if a==START and silent_percent is None else 0))
             if a==CLOCK and clock_action: clock_action(word)
             if a==INTERVAL:
                 assert uc.reg_read(UC_ARM64_REG_X0)==WEAPON
@@ -92,6 +116,12 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
             if a==INTERVAL:
                 bits, = struct.unpack('<I',struct.pack('<f',interval))
                 uc.reg_write(UC_ARM64_REG_S0,bits)
+            if a==START and silent_percent is not None:
+                uc.reg_write(UC_ARM64_REG_X0,HANDLER); uc.reg_write(UC_ARM64_REG_X1,0x456)
+                uc.reg_write(UC_ARM64_REG_PC,SILENT_BASE)
+        elif a==SHOT:
+            assert uc.reg_read(UC_ARM64_REG_X0)==HANDLER and uc.reg_read(UC_ARM64_REG_X1)==0x456
+            bullets.append(struct.unpack('<fff',uc.mem_read(INFO+0x40,12)))
     uc.hook_add(UC_HOOK_CODE,hook)
     for step in range(steps):
         if before_step: before_step(step,word)
@@ -101,6 +131,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         assert uc.reg_read(UC_ARM64_REG_PC)==RETURN and calls.count('update')==step+1
         assert uc.reg_read(UC_ARM64_REG_SP)==STACK+0x8000
         assert all(uc.reg_read(r)==v for r,v in saved.items())
+        assert struct.unpack('<Q',uc.mem_read(SILENT_STATE+128,8))[0]==0, 'Automatic-shot marker leaked'
+        if silent_percent is not None:
+            assert struct.unpack('<fff',uc.mem_read(INFO+0x40,12))==(0,0,1)
     if not enabled and not held: assert not getter_calls
     assert struct.unpack('<I',uc.mem_read(STATE+88,4))[0]==busy
     held_after,=struct.unpack('<Q',uc.mem_read(STATE+80,8))
@@ -109,7 +142,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     if not before_step:
         relevant = self == WEAPON and owner == LOCAL and (snapshot_weapon == WEAPON or held == WEAPON)
         assert ticks == (steps if relevant and (enabled or held) else 0)
-    return calls,held_after,starts
+    return (calls,held_after,starts,bullets) if silent_percent is not None else (calls,held_after,starts)
 
 assert case()==(['start','update'],WEAPON,1)
 assert case(firing=2)==(['update'],0,0)  # do not claim a manual hold
@@ -123,6 +156,7 @@ assert case(owner=LOCAL+8,held=WEAPON)==(['update'],WEAPON,0)
 assert case(weapon=0,held=WEAPON)==(['update'],0,0)
 assert case(start=START+4)==(['update'],0,0)
 assert case(stop=END+4)==(['update'],0,0)
+assert case(gate=0)==(['update'],0,0)
 assert case(self=WEAPON+8,held=WEAPON)==(['update'],WEAPON,0)
 assert case(busy=1,held=WEAPON)==(['update'],WEAPON,0)
 assert case(weapon=WEAPON+0x100,held=WEAPON)==(['update'],0,0)
@@ -144,3 +178,12 @@ assert case(held=WEAPON,elapsed=0.25,interval_action=lambda w:w(STATE+40,4))==([
 assert case(steps=3,before_step=lambda i,w:w(STATE+44,0) if i==1 else None)==(
     ['start','update','stop','update','update'],0,1)
 print('Auto fire sustained native cadence, manual fire, start/release, swaps, expiry and float ABI passed')
+if silent_code is not None:
+    for percent in [0,25,75,100]:
+        calls,held,starts,bullets=case(steps=397,silent_percent=percent)
+        assert starts==len(bullets)==100 and held==WEAPON
+        assert sum(p[1]>0.7 for p in bullets)==percent
+        assert all(p==(1,0,0) or abs(p[0]-.6)<1e-6 and abs(p[1]-.8)<1e-6 for p in bullets)
+    assert case(enabled=0,silent_percent=100)[3]==[]
+    assert case(now=111,silent_percent=100)[3]==[]
+    print('AutoFire -> Silent handler integration: 100 automatic shots follow HS/body ratios without manual PRI21')

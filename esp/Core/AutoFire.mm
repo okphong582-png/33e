@@ -1,4 +1,5 @@
 #include "AutoFire.h"
+#include "SilentAim.h"
 #if defined(__aarch64__) || defined(__arm64__)
 #include "AutoFireRemoteLayout.h"
 #include "SilentAimRemoteMapping.h"
@@ -190,6 +191,8 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
     const int result=Install(weaponClass+UpdateSlot,session);
     if(result!=8){Clear();retryAt=now+1;retryState=result;return result;}
     if(activeSlot!=session->slot){for(auto &s:sessions)if(s.slot!=session->slot)Disable(s);activeSlot=session->slot;}
+    const uint64_t silentGate=SilentAimAutoFireGate();
+    if(!silentGate||!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 7;}
     mach_timebase_info_data_t tb{};
     if(mach_timebase_info(&tb)!=KERN_SUCCESS||!tb.numer||!tb.denom){Clear();return 9;}
     struct Publication {uint32_t enabled;uint64_t deadline,local,match,weapon;} __attribute__((packed));

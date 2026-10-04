@@ -18,11 +18,12 @@
 #define AUTO_TICKS 112
 #define AUTO_INTERVAL 120
 #define AUTO_ELAPSED 128
+#define AUTO_SILENT_GATE 136
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495233ULL; // AUTOFIR3: repeated, native-cadence shots
+inline constexpr uint64_t Magic = 0x4155544f46495234ULL; // AUTOFIR4: native cadence + scoped Silent shots
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;
@@ -32,6 +33,7 @@ struct State {
     uint64_t interval=0;
     float elapsed=0;
     uint32_t reserved=0;
+    uint64_t silentGate=0;
 };
 static_assert(offsetof(State, sequence)==AUTO_SEQUENCE);
 static_assert(offsetof(State, enabled)==AUTO_ENABLED);
@@ -41,5 +43,6 @@ static_assert(offsetof(State, magic)==AUTO_MAGIC);
 static_assert(offsetof(State, ticks)==AUTO_TICKS);
 static_assert(offsetof(State, interval)==AUTO_INTERVAL);
 static_assert(offsetof(State, elapsed)==AUTO_ELAPSED);
+static_assert(offsetof(State, silentGate)==AUTO_SILENT_GATE);
 }
 #endif
