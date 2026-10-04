@@ -129,7 +129,10 @@ void ESPSyncFromPrefs(void) {
     silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
     gNoReload = ESPPrefsBool(@"ShootNoReload", NO);
-    gFastFire = ESPPrefsBool(@"FastFire", NO);
+    // Automatic fire uses the reversible 2x interval modifier. Preserve the
+    // separate manual preference so turning auto OFF restores its baseline
+    // unless the user explicitly enabled faster manual fire as well.
+    gFastFire = gAutoFire || ESPPrefsBool(@"FastFire", NO);
     SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);

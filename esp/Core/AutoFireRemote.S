@@ -102,6 +102,7 @@ _AutoFireRemoteStart:
     ldrh w8, [x8, #0x18]
     cmp w8, #2
     b.eq .LautoUnlock
+    str wzr, [sp, #96]        // first shot has no carried cadence time
     b .LautoMethods
 .LautoCadence:
     ldr s0, [sp, #80]          // caller's dt, saved before any native call
@@ -128,6 +129,12 @@ _AutoFireRemoteStart:
     ldr s1, [x19, #AUTO_ELAPSED]
     fcmp s1, s0
     b.lt .LautoUnlock
+    // Keep the fractional firing time instead of
+    // discarding it every shot, capped at dt. Still at most one shot per tick.
+    fsub s1, s1, s0
+    ldr s2, [sp, #80]
+    fmin s1, s1, s2
+    str s1, [sp, #96]
     // The interval method may run a hotfix. Recheck publication after it.
     add x8, x19, #AUTO_SEQUENCE
     ldar w8, [x8]
@@ -152,7 +159,8 @@ _AutoFireRemoteStart:
     ldr x8, [x19, #AUTO_START]
     blr x8
     stlr xzr, [x26]
-    str wzr, [x19, #AUTO_ELAPSED] // one attempt per tick; no catch-up bursts
+    ldr w8, [sp, #96]
+    str w8, [x19, #AUTO_ELAPSED]
     str x22, [x19, #AUTO_HELD]
     ldr x8, [x19, #AUTO_STARTS]
     add x8, x8, #1

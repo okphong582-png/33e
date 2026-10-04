@@ -215,7 +215,8 @@
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
         y = [self slider:@"Tỷ lệ HS" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
-        y = [self toggle:@"Tự bắn theo Silent" key:@"AutoFire" fallback:NO y:y];
+        y = [self toggle:@"Tự bắn nhanh (2x)" key:@"AutoFire" fallback:NO y:y];
+        y = [self note:@"Bật là tự bắn theo Silent khi có mục tiêu." y:y];
         y = [self note:@"Tỷ lệ đầu là phân bổ điểm ngắm, không phải cam kết số headshot." y:y];
 #ifndef MIZZE_INJECTED
         y = [self note:@"TIPA: xem Chẩn đoán aim khi tự bắn không chạy." y:y];
@@ -235,7 +236,7 @@
         y = [self note:@"Aim cổ: điểm thấp hơn đầu." y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
         y = [self toggle:@"Không thay đạn" key:@"ShootNoReload" fallback:NO y:y + 10];
-        y = [self toggle:@"Bắn nhanh (2x)" key:@"FastFire" fallback:NO y:y];
+        y = [self toggle:@"Bắn tay nhanh (2x)" key:@"FastFire" fallback:NO y:y];
         y = [self note:@"Áp dụng trong trận." y:y];
     } else if (self.page == 1) {
         UIButton *preset = [UIButton buttonWithType:UIButtonTypeSystem];

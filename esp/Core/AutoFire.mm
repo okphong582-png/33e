@@ -41,9 +41,9 @@ struct Session {
 std::recursive_mutex mutex;
 mach_port_t task=MACH_PORT_NULL;
 int pid=-1;
-uint64_t module=0, activeSlot=0, dwellTarget=0, dwellLocal=0;
+uint64_t module=0, activeSlot=0;
 std::vector<Session> sessions;
-double dwellSince=0, retryAt=0;
+double retryAt=0;
 int retryState=9;
 bool ReadBytes(uint64_t a, void *v, size_t n) {
     mach_vm_size_t actual=0;
@@ -65,7 +65,7 @@ void Disable(Session &s) {
 }
 void Clear() {
     for (auto &s : sessions) Disable(s);
-    activeSlot=0; dwellTarget=dwellLocal=0; dwellSince=0;
+    activeSlot=0;
     // Leave code mapped: a game thread may have cached its address. Disabled
     // callbacks release an owned hold on the next current-weapon tick.
 }
@@ -176,8 +176,6 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
         isLocalTeamMate(local,target)||!getAimVisibility(target)){Clear();return 7;}
     const double now=CACurrentMediaTime();
     if(now<retryAt)return retryState;
-    if(target!=dwellTarget || local!=dwellLocal){Clear();dwellTarget=target;dwellLocal=local;dwellSince=now;}
-    if(now-dwellSince<0.18)return 7;
     uint64_t weaponClass=0,start=0,stop=0;
     const uint64_t weapon=SilentAimWeapon::OnHand(local,[](uint64_t a,auto &v){return Read(a,v);},[](uint64_t a){return isVaildPtr(a);});
     if(!weapon||!Read(weapon,weaponClass)||!isVaildPtr(weaponClass)||

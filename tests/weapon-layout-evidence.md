@@ -50,7 +50,8 @@ interval modifiers, including the skill and weapon-type modifiers.
 
 AutoFire repeats only its own shot requests using that verified getter and
 the original callback's dt. It leaves existing manual fire unclaimed, emits
-at most one request per callback, and drops accumulated time on release.
+at most one request per callback, carries the remaining interval time capped
+to dt, and drops accumulated time on release.
 Both the getter's full `0x210` bytes and the above `0x50` call-site bytes are
 fingerprinted before installing the callback. The ARM64 emulation tests
 check repeated fast/slow gun requests, manual ownership, expiration, and
@@ -67,3 +68,9 @@ field. The combined ARM64 test executes both shipped callbacks in one VM and
 checks 100 automatically dispatched directions at 0/25/75/100% head selection
 with manual PRI21 left at zero, including direction restoration and marker
 cleanup after every shot.
+
+Enabling AutoFire also applies the existing reversible 2x fire-interval
+modifier. The manual FastFire preference is kept independently: AutoFire OFF
+restores the original interval unless manual FastFire is still enabled.
+The old 0.18-second target dwell has been removed, so a valid Silent target
+can request the first shot on the next weapon callback without manual input.

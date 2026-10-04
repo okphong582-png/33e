@@ -167,6 +167,9 @@ assert [i for i,c in enumerate(calls) if c=='start']==[0,5,10]
 assert case(steps=10,interval=1)[2]==1  # slow gun cannot inherit fast-gun cadence
 assert case(steps=40,interval=1)[2]==3  # repeat slow/one-shot gun, too
 assert case(steps=6,interval=0.125)[2]==3
+assert case(steps=100,interval=0.1)[2]==62  # preserve cadence between uneven frame/shot intervals
+assert case(steps=100,interval=0.05)[2]==100  # 2x interval: bounded to one shot per tick
+assert case(steps=10,interval=0.01,dt=0.5)[2]==10  # no looped catch-up burst after a stalled tick
 assert case(firing=2,steps=10)==(['update']*10,0,0)  # never claim manual fire
 assert case(firing=2,held=WEAPON,elapsed=0.1875)==(['start','update'],WEAPON,1)
 for interval in [0,-1,float('nan'),float('inf')]:
