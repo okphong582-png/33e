@@ -22,10 +22,14 @@ Likewise, `Player + 0x700` is a `Transform`, not `PlayerAttributes`.
 
 The controller validates the class name, namespace and owning player, then
 rechecks the current task/match/player before writes. Both toggles default off.
-Fast fire halves the current valid interval scale, with a positive minimum of
-`0.05`. Disabling restores the saved value only while the same verified owner
-and last written value remain current. Failed restores are retried; a changed
-owner is discarded without writing through stale pointers.
+Fast fire halves the valid interval scale captured before activation, with a
+positive minimum of `0.05`. That baseline is not recalculated from a patched
+value. OFF is applied immediately for each switch and retried until readback
+confirms restoration, including rounded or cached values. Values which no
+longer carry the effect (no-reload already false, or interval at/above its
+baseline) are preserved. A replacement component in the same match can retain
+the baseline when it demonstrably inherited the last written fields. No writes
+are made through the previous owner; a different task discards the old state.
 
 The fixture verifies these guards and restore behavior. It cannot establish
 on-device behavior or whether server rules accept the changed firing rate.

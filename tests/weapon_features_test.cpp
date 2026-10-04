@@ -42,7 +42,7 @@ struct Fixture {
         return value;
     }
     bool valid(uint64_t address) const { return address >= Base && address - Base < memory.size(); }
-    void tick(bool noReload, bool fastFire) {
+    void tick(bool noReload, bool fastFire, bool applyEnabled = true) {
         controller.Update(context, noReload, fastFire,
             [&](uint64_t address, void *buffer, size_t length) {
                 ++reads;
@@ -53,8 +53,9 @@ struct Fixture {
             [&](uint64_t address, const void *buffer, size_t length) {
                 if (failWrites) return false;
                 assert(valid(address) && valid(address + length - 1));
-                assert((address == Attributes + ShootNoReloadOffset && length == sizeof(uint8_t)) ||
-                       (address == Attributes + FireIntervalScaleOffset && length == sizeof(float)));
+                const uint64_t currentAttributes = get<uint64_t>(context.player + PlayerAttributesOffset);
+                assert((address == currentAttributes + ShootNoReloadOffset && length == sizeof(uint8_t)) ||
+                       (address == currentAttributes + FireIntervalScaleOffset && length == sizeof(float)));
                 ++writes;
                 writtenAddresses.push_back(address);
                 std::memcpy(memory.data() + address - Base, buffer, length);
@@ -65,7 +66,7 @@ struct Fixture {
                 Context live = context;
                 if (changeBeforeWrite) ++live.player;
                 return live;
-            });
+            }, applyEnabled);
     }
     uint8_t noReload() const { return get<uint8_t>(Attributes + ShootNoReloadOffset); }
     float scale() const { return get<float>(Attributes + FireIntervalScaleOffset); }
@@ -86,6 +87,7 @@ int main() {
         f.tick(false, true);
         assert(f.noReload() == 0 && f.scale() == 0.5f);
         f.tick(false, false);
+        f.tick(false, false);
         assert(f.scale() == 1.0f && !f.controller.HasChanges());
         assert(f.get<uint8_t>(Fixture::Attributes + 0x110) == 0xA5);
         assert(f.get<float>(Fixture::Attributes + 0xD8) == 3.0f);
@@ -105,9 +107,10 @@ int main() {
         f.tick(true, true);
         f.put<float>(Fixture::Attributes + FireIntervalScaleOffset, 1.5f);
         f.tick(true, true);
-        assert(f.scale() == 0.75f);
+        assert(f.scale() == 0.5f); // Keep the value captured before enabling.
         f.tick(false, false);
-        assert(f.scale() == 1.5f);
+        assert(f.scale() == 1.0f);
+        f.tick(false, false);
         f.tick(false, true);
         f.put<float>(Fixture::Attributes + FireIntervalScaleOffset, 3.0f);
         f.tick(false, false);
@@ -126,6 +129,7 @@ int main() {
         assert(f.noReload() == 1 && f.scale() == 0.5f && f.controller.HasChanges());
         f.failWrites = false;
         f.tick(false, false);
+        f.tick(false, false);
         assert(f.noReload() == 0 && f.scale() == 1.0f && !f.controller.HasChanges());
     }
     {
@@ -140,6 +144,7 @@ int main() {
         f.tick(false, false);
         assert(f.scale() == 0.5f && f.controller.HasChanges());
         f.failedRead = 0;
+        f.tick(false, false);
         f.tick(false, false);
         assert(f.scale() == 1.0f && !f.controller.HasChanges());
     }
@@ -161,6 +166,61 @@ int main() {
         f.tick(false, false);
         assert(f.writes == 2);
         f.context = {1, Fixture::Base + 0x7000, Fixture::Player};
+        f.tick(false, false);
+        assert(f.noReload() == 0 && f.scale() == 1.0f);
+    }
+    {
+        Fixture f;
+        f.tick(true, true);
+        f.put<float>(Fixture::Attributes + FireIntervalScaleOffset, 0.500001f);
+        f.tick(true, true);
+        f.tick(false, false, false); // UI switch, independent of a render frame.
+        assert(f.noReload() == 0 && f.scale() == 1.0f);
+        assert(f.controller.HasChanges()); // Wait for readback before dropping baseline.
+        // The game reapplies a cached value while switching weapons.
+        f.put<float>(Fixture::Attributes + FireIntervalScaleOffset, 0.5f);
+        f.tick(false, false);
+        assert(f.scale() == 1.0f);
+        f.tick(false, false);
+        assert(!f.controller.HasChanges());
+    }
+    {
+        Fixture f;
+        f.tick(true, true);
+        f.tick(false, true, false);
+        assert(f.noReload() == 0 && f.scale() == 0.5f);
+        f.tick(false, false, false);
+        assert(f.scale() == 1.0f);
+        Fixture neverEnabled;
+        neverEnabled.tick(true, true, false);
+        assert(neverEnabled.writes == 0); // Syncing preferences must not activate in the lobby.
+    }
+    {
+        Fixture f;
+        f.tick(true, true);
+        const uint64_t nextAttributes = Fixture::Attributes + 0x800;
+        f.put(Fixture::Player + PlayerAttributesOffset, nextAttributes);
+        f.put(nextAttributes, Fixture::Klass);
+        f.put(nextAttributes + AttributesPlayerOffset, Fixture::Player);
+        f.put<uint8_t>(nextAttributes + ShootNoReloadOffset, 1);
+        f.put<float>(nextAttributes + FireIntervalScaleOffset, 0.500001f);
+        f.failedRead = nextAttributes + FireIntervalScaleOffset;
+        f.tick(true, true);
+        assert(f.controller.HasChanges());
+        f.failedRead = 0;
+        f.tick(true, true); // Replacement inherited the modified fields.
+        f.tick(false, false);
+        assert(f.get<uint8_t>(nextAttributes + ShootNoReloadOffset) == 0);
+        assert(f.get<float>(nextAttributes + FireIntervalScaleOffset) == 1.0f);
+        assert(f.noReload() == 1 && f.scale() == 0.5f); // No writes to the previous owner.
+        f.tick(false, false);
+        assert(!f.controller.HasChanges());
+    }
+    {
+        Fixture f;
+        f.tick(true, true);
+        ++f.context.match; // A new facade snapshot of the same verified component.
+        f.tick(true, true);
         f.tick(false, false);
         assert(f.noReload() == 0 && f.scale() == 1.0f);
     }

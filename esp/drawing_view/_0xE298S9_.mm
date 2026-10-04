@@ -108,7 +108,7 @@ void ESPSyncFromPrefs(void) {
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
     gNoReload = ESPPrefsBool(@"ShootNoReload", NO);
     gFastFire = ESPPrefsBool(@"FastFire", NO);
-    if (!gNoReload && !gFastFire) ResetWeaponFeatures();
+    SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
     if (gESPMaxDistance < 30.0f)  gESPMaxDistance = 30.0f;

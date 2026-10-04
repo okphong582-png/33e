@@ -22,8 +22,8 @@ static WeaponFeatures::Context CurrentWeaponContext() {
     return {static_cast<uint64_t>(get_task), match, getLocalPlayer(match)};
 }
 
-void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire) {
-    if (!noReload && !fastFire && !gWeaponFeatures.HasChanges()) return;
+static void RunWeaponFeatureUpdate(uint64_t moduleBase, bool noReload, bool fastFire, bool applyEnabled) {
+    if (!gWeaponFeatures.HasChanges() && (!applyEnabled || (!noReload && !fastFire))) return;
     gWeaponModuleBase = moduleBase;
     gWeaponFeatures.Update(CurrentWeaponContext(), noReload, fastFire,
         [](uint64_t address, void *buffer, size_t length) {
@@ -33,7 +33,17 @@ void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire) {
             return _write((long)address, buffer, static_cast<int>(length));
         },
         [](uint64_t address) { return isVaildPtr(address); },
-        [] { return CurrentWeaponContext(); });
+        [] { return CurrentWeaponContext(); }, applyEnabled);
+}
+
+void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire) {
+    RunWeaponFeatureUpdate(moduleBase, noReload, fastFire, true);
+}
+
+void SyncWeaponFeatureSwitches(uint64_t moduleBase, bool noReload, bool fastFire) {
+    // Apply OFF independently and immediately, even when ESP has no valid matrix.
+    // Turning ON still waits for the normal validated in-match frame.
+    RunWeaponFeatureUpdate(moduleBase, noReload, fastFire, false);
 }
 
 void ResetWeaponFeatures(void) {

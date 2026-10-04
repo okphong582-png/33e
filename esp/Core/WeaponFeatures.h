@@ -71,18 +71,37 @@ public:
     bool Changed() const { return changed_; }
     void Forget() { changed_ = false; }
 
-    template <typename Reader, typename Writer, typename Accept, typename Transform>
-    void Update(bool enabled, Reader read, Writer write, Accept accept, Transform transform) {
+    template <typename Reader, typename Equal>
+    bool Retarget(Reader read, Equal equal) {
+        if (!changed_) return true;
+        T current{};
+        // A replacement component can inherit the value we wrote. Keep its
+        // original baseline only when that inheritance can be confirmed.
+        if (!read(current)) return false;
+        if (!equal(current, written_)) Forget();
+        return true;
+    }
+
+    template <typename Reader, typename Writer, typename Accept, typename Transform, typename Modified>
+    void Update(bool enabled, Reader read, Writer write, Accept accept, Transform transform, Modified modified) {
         if (!enabled && !changed_) return;
         T current{};
         if (!read(current)) return; // Retry a transient read/restore failure next frame.
-        if (!accept(current)) { Forget(); return; }
+        if (!accept(current)) return;
         if (!enabled) {
-            // A buff or game update owns a different value; do not overwrite it.
-            if (current != written_ || write(original_)) Forget();
+            if (current == original_ || !modified(current, original_)) {
+                Forget();
+            } else {
+                // Do not drop the baseline just because the game rounded or
+                // recalculated our value. Confirm the restore on a later read;
+                // retry if the write fails or a cached value is reapplied.
+                write(original_);
+            }
             return;
         }
-        if (!changed_ || current != written_) original_ = current;
+        // Capture once per activation, before our first successful write.
+        // Rebasing from a recalculated patched value makes the effect survive OFF.
+        if (!changed_) original_ = current;
         const T desired = transform(original_);
         if (!accept(desired) || desired == current) return;
         if (write(desired)) {
@@ -107,15 +126,32 @@ public:
 
     template <typename Reader, typename Writer, typename Valid, typename CurrentContext>
     void Update(Context context, bool noReload, bool fastFire,
-                Reader read, Writer write, Valid valid, CurrentContext currentContext) {
+                Reader read, Writer write, Valid valid, CurrentContext currentContext,
+                bool applyEnabled = true) {
         if (!noReload && !fastFire && !HasChanges()) return;
         Identity identity;
         // Keep the baseline over transient chain failures. Dropping it would
         // treat our existing 0.5x value as a new baseline on the next frame.
         if (!Resolve(context, identity, read, valid)) return;
         if (!identified_ || !(identity == identity_)) {
-            // Never restore through an old player, process, or recycled object address.
-            Forget();
+            const bool sameObject = identified_ && identity.context.task == identity_.context.task &&
+                identity.context.player == identity_.context.player &&
+                identity.attributes == identity_.attributes && identity.klass == identity_.klass;
+            const bool sameMatch = identified_ && identity.context.task == identity_.context.task &&
+                identity.context.match == identity_.context.match && identity.klass == identity_.klass;
+            if (!sameObject && sameMatch) {
+                if (!noReload_.Retarget([&](uint8_t &value) {
+                    return ReadField(identity.attributes, ShootNoReloadOffset, value, read, valid);
+                }, [](uint8_t a, uint8_t b) { return a == b; }) ||
+                    !fastFire_.Retarget([&](float &value) {
+                    return ReadField(identity.attributes, FireIntervalScaleOffset, value, read, valid);
+                }, [](float a, float b) {
+                    return std::isfinite(a) && std::fabs(a - b) <= 0.0001f * std::max(1.0f, std::fabs(b));
+                })) return;
+            } else if (!sameObject) {
+                // Never restore through an old process or unrelated match.
+                Forget();
+            }
             identity_ = identity;
             identified_ = true;
         }
@@ -123,7 +159,7 @@ public:
             Identity live;
             return Resolve(currentContext(), live, read, valid) && live == identity_;
         };
-        noReload_.Update(noReload,
+        if (!noReload || applyEnabled) noReload_.Update(noReload,
             [&](uint8_t &value) {
                 return ReadField(identity.attributes, ShootNoReloadOffset, value, read, valid);
             },
@@ -131,8 +167,9 @@ public:
                 return stillCurrent() && write(identity.attributes + ShootNoReloadOffset, &value, sizeof(value));
             },
             [](uint8_t value) { return value <= 1; },
-            [](uint8_t) -> uint8_t { return 1; });
-        fastFire_.Update(fastFire,
+            [](uint8_t) -> uint8_t { return 1; },
+            [](uint8_t current, uint8_t original) { return current > original; });
+        if (!fastFire || applyEnabled) fastFire_.Update(fastFire,
             [&](float &value) {
                 return ReadField(identity.attributes, FireIntervalScaleOffset, value, read, valid);
             },
@@ -140,7 +177,8 @@ public:
                 return stillCurrent() && write(identity.attributes + FireIntervalScaleOffset, &value, sizeof(value));
             },
             [](float value) { return std::isfinite(value) && value >= 0.05f && value <= 16.0f; },
-            [](float value) { return std::max(0.05f, value * 0.5f); });
+            [](float value) { return std::max(0.05f, value * 0.5f); },
+            [](float current, float original) { return current < original; });
     }
 };
 } // namespace WeaponFeatures
