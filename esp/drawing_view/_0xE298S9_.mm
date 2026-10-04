@@ -104,11 +104,7 @@ void ESPSyncFromPrefs(void) {
     isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
     isHipAlways   = ESPPrefsBool(@"AimHipAlways", NO);
     isAimNeck     = ESPPrefsBool(@"AimNeck", NO);
-#ifdef MIZZE_INJECTED
     const bool silentEnabled = ESPPrefsBool(@"SilentAim", NO);
-#else
-    const bool silentEnabled = false;
-#endif
     if (silentEnabled != isSilentAim) {
         gAimLockTarget = 0;
         gAimSmoothedValid = false;
@@ -188,6 +184,7 @@ static NSString *AimStateDescription(int state) {
         case 7: return @"silent: chờ địch hiện";
         case 8: return @"silent thử nghiệm: đã chọn đầu";
         case 9: return @"silent: bản game/vũ khí chưa hỗ trợ";
+        case 10: return @"silent: iOS không cho cài xử lý phát bắn";
         default: return @"chờ dữ liệu trận";
     }
 }
@@ -740,7 +737,10 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
     ESPFrameStats stats = {};
-    SilentAimClearTarget();
+    struct SilentFrame {
+        bool published = false;
+        ~SilentFrame() { if (isSilentAim && !published) SilentAimClearTarget(); }
+    } silentFrame;
     if (!buffers || !isVaildPtr(Moudule_Base)) {
         cachedMatchGame = cachedMatch = cachedCamera = 0;
         return stats;
@@ -850,6 +850,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         SilentAimSetEnabled(true);
         stats.aimState = SilentAimUpdate(Moudule_Base, match, local,
             get_IsKnockedDown(local) ? 0 : selection.target, targetHead);
+        silentFrame.published = true;
         gAimLockTarget = selection.target;
         gAimSmoothedValid = false;
         return stats;

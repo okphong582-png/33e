@@ -1,0 +1,110 @@
+"""Emulate the actual copied ARM64 handler, including ABI and restoration.
+
+clang --target=aarch64-linux-gnu -c esp/Core/SilentAimRemote.S -o /tmp/silent-remote.o
+python3 tests/silent_aim_remote_test.py /tmp/silent-remote.o
+"""
+import math
+import struct
+import sys
+from unicorn import Uc, UC_ARCH_ARM64, UC_MODE_ARM, UC_HOOK_CODE
+from unicorn.arm64_const import (
+    UC_ARM64_REG_PC, UC_ARM64_REG_SP, UC_ARM64_REG_X0, UC_ARM64_REG_X1,
+    UC_ARM64_REG_X19, UC_ARM64_REG_X20, UC_ARM64_REG_X21, UC_ARM64_REG_X22,
+    UC_ARM64_REG_X23, UC_ARM64_REG_X24, UC_ARM64_REG_X25, UC_ARM64_REG_X26,
+    UC_ARM64_REG_X27, UC_ARM64_REG_X28, UC_ARM64_REG_X29, UC_ARM64_REG_X30,
+)
+
+def code_from_elf(path):
+    data = open(path, "rb").read()
+    assert data[:6] == b"\x7fELF\x02\x01"
+    offset, = struct.unpack_from("<Q", data, 40)
+    size, count, strings = struct.unpack_from("<HHH", data, 58)
+    sections = [struct.unpack_from("<IIQQQQIIQQ", data, offset + i * size) for i in range(count)]
+    names = data[sections[strings][4]:sections[strings][4]+sections[strings][5]]
+    code = None
+    for section in sections:
+        name = names[section[0]:].split(b"\0", 1)[0]
+        assert not (section[1] in (4, 9) and section[5]), "Copied code must have no relocations"
+        if name == b".text":
+            code = data[section[4]:section[4]+section[5]]
+    assert code is not None and len(code) == 0x4000
+    return code
+
+CODE = code_from_elf(sys.argv[1])
+BASE, STATE, ORIGINAL, CLOCK, STOP = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200
+LOCAL, HANDLER, WEAPON, INFO, INFO_CLASS, MATCH = 0x200000, 0x210000, 0x220000, 0x230000, 0x240000, 0x250000
+POOL, ENTRIES, ENTRY, STACK, METHOD = 0x260000, 0x270000, 0x280000, 0x300000, 0xAABBCC
+SAVED = [UC_ARM64_REG_X19, UC_ARM64_REG_X20, UC_ARM64_REG_X21, UC_ARM64_REG_X22,
+         UC_ARM64_REG_X23, UC_ARM64_REG_X24, UC_ARM64_REG_X25, UC_ARM64_REG_X26,
+         UC_ARM64_REG_X27, UC_ARM64_REG_X28, UC_ARM64_REG_X29]
+
+def case(*, enabled=1, sequence=2, now=100, deadline=110, firing=2,
+         knocked=0, busy=0, owner=LOCAL, match_local=LOCAL, handler=HANDLER,
+         info_class=INFO_CLASS, head=(3., 4., 0.), origin=(0., 0., 0.),
+         direction=(0., 0., 1.), original_action=None, clock_action=None):
+    uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
+    uc.mem_map(BASE, 0x30000)
+    uc.mem_map(LOCAL, 0x90000)
+    uc.mem_map(STACK, 0x10000)
+    uc.mem_write(BASE, CODE)
+    uc.mem_write(ORIGINAL, b"\xc0\x03\x5f\xd6") # ret
+    uc.mem_write(CLOCK, b"\xc0\x03\x5f\xd6")
+    def u64(a, v): uc.mem_write(a, struct.pack("<Q", v))
+    def u32(a, v): uc.mem_write(a, struct.pack("<I", v))
+    def point(a, v): uc.mem_write(a, struct.pack("<fff", *v))
+    u64(STATE, ORIGINAL); u64(STATE+8, CLOCK)
+    u32(STATE+16, sequence); u32(STATE+20, enabled); u64(STATE+24, deadline)
+    u64(STATE+32, LOCAL); u64(STATE+40, handler); u64(STATE+48, info_class)
+    point(STATE+56, head); u32(STATE+80, busy); u64(STATE+96, MATCH)
+    u64(HANDLER+0x10, WEAPON); u64(HANDLER+0x28, INFO)
+    u64(WEAPON+0x60, owner); u64(WEAPON+0x80, HANDLER); u64(INFO, INFO_CLASS)
+    u64(MATCH+0xD8, match_local); uc.mem_write(LOCAL+0x1258, bytes([knocked]))
+    u64(LOCAL+0x70, POOL); u64(POOL+0x10, ENTRIES); u64(ENTRIES+0xC8, ENTRY)
+    uc.mem_write(ENTRY+0x18, struct.pack("<H", firing))
+    point(INFO+0x40, direction); point(INFO+0x4C, origin)
+    uc.reg_write(UC_ARM64_REG_X0, HANDLER); uc.reg_write(UC_ARM64_REG_X1, METHOD)
+    uc.reg_write(UC_ARM64_REG_X30, STOP); uc.reg_write(UC_ARM64_REG_SP, STACK+0x8000)
+    saved = {r:0xABC000+i for i, r in enumerate(SAVED)}
+    for r, v in saved.items(): uc.reg_write(r, v)
+    calls, observed = [], []
+    def hook(uc, address, size, _):
+        if address == CLOCK:
+            if clock_action: clock_action(uc, u32)
+            uc.reg_write(UC_ARM64_REG_X0, now)
+        elif address == ORIGINAL:
+            calls.append((uc.reg_read(UC_ARM64_REG_X0), uc.reg_read(UC_ARM64_REG_X1)))
+            observed.append(struct.unpack("<fff", uc.mem_read(INFO+0x40, 12)))
+            if original_action: original_action(uc, u64, point)
+    uc.hook_add(UC_HOOK_CODE, hook)
+    uc.emu_start(BASE, STOP, count=2000)
+    assert uc.reg_read(UC_ARM64_REG_PC) == STOP, "Callback did not return"
+    assert calls == [(HANDLER, METHOD)], calls
+    assert uc.reg_read(UC_ARM64_REG_SP) == STACK+0x8000
+    assert all(uc.reg_read(r) == v for r, v in saved.items()), "Callee-saved registers corrupted"
+    redirects, = struct.unpack("<Q", uc.mem_read(STATE+72, 8))
+    live_busy, = struct.unpack("<I", uc.mem_read(STATE+80, 4))
+    assert live_busy == busy, "Dispatch lock leaked"
+    restored = struct.unpack("<fff", uc.mem_read(INFO+0x40, 12))
+    return observed[0], restored, redirects
+
+seen, restored, redirects = case()
+assert all(math.isclose(v, w, abs_tol=1e-6) for v, w in zip(seen, (.6, .8, 0.)))
+assert restored == (0., 0., 1.) and redirects == 1
+for arguments in [dict(enabled=0), dict(sequence=3), dict(now=111), dict(firing=0),
+                  dict(knocked=1), dict(busy=1), dict(owner=LOCAL+8),
+                  dict(match_local=LOCAL+8), dict(handler=HANDLER+8), dict(info_class=INFO_CLASS+8),
+                  dict(head=(float("nan"), 0., 0.)), dict(origin=(float("inf"), 0., 0.)),
+                  dict(head=(.001, 0., 0.)), dict(head=(0., 0., 0.)),
+                  dict(clock_action=lambda uc, write: write(STATE+16, 4))]:
+    seen, restored, redirects = case(**arguments)
+    assert seen == restored == (0., 0., 1.) and redirects == 0, arguments
+
+seen, restored, redirects = case(head=(3e38, 0., 0.), origin=(-3e38, 0., 0.))
+assert seen == (1., 0., 0.) and restored == (0., 0., 1.) and redirects == 1
+seen, restored, _ = case(original_action=lambda uc, ptr, point: point(INFO+0x40, (.2, .3, .4)))
+assert all(math.isclose(v, w, abs_tol=1e-6) for v, w in zip(restored, (.2, .3, .4)))
+seen, restored, _ = case(original_action=lambda uc, ptr, point: ptr(HANDLER+0x28, INFO+0x100))
+assert seen == restored, "Replaced aiming-info must not be restored"
+seen, restored, _ = case(original_action=lambda uc, ptr, point: ptr(HANDLER+0x10, WEAPON+0x100))
+assert seen == restored, "Replaced weapon must not be restored"
+print("ARM64 remote direction callback: ABI, publication, expiry, ownership and restoration passed.")

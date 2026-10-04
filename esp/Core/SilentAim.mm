@@ -165,7 +165,7 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local,
       snapshot = {base, match, local, target, {head.x, head.y, head.z}, CACurrentMediaTime()}; }
     return 8;
 }
-#else
+#elif !defined(__aarch64__) && !defined(__arm64__)
 void SilentAimSetEnabled(bool) {}
 void SilentAimClearTarget() {}
 uint64_t SilentAimRedirectCount() { return 0; }

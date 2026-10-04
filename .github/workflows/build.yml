@@ -86,6 +86,11 @@ jobs:
 
       - name: Test aim selection
         run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/silent_aim_external_test.cpp -o /tmp/silent-aim-external-test
+          /tmp/silent-aim-external-test
+          python3 -m pip install unicorn==2.1.4
+          clang --target=aarch64-linux-gnu -c esp/Core/SilentAimRemote.S -o /tmp/silent-remote.o
+          python3 tests/silent_aim_remote_test.py /tmp/silent-remote.o
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/silent_aim_direction_test.cpp -o /tmp/silent-aim-direction-test
           /tmp/silent-aim-direction-test
           g++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-function -Wno-error=attributes -Wno-error=parentheses -I. -fsanitize=address,undefined tests/game_pri_test.cpp -o /tmp/game-pri-test

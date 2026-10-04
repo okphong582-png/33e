@@ -32,8 +32,13 @@ function fingerprint(address, length) {
     return hash;
 }
 assert.equal(fingerprint(0x5616118, 0xCC), 0xC5E012EE);
+assert.equal(fingerprint(0x5AC970C, 0xA0), 0x93FD3984);
 assert.equal(fingerprint(0x5C59B94, 0x16C), 0xDFE8FAC6);
 words(0x5616118, [0xA9BE4FF4, 0xA9017BFD, 0x910043FD, 0xAA0003F3]);
+// Player +0x740 -> manager; flag +0x148 selects +0xA0 or +0xA8.
+words(0x561617C, [0xF943A260]);
+words(0x5AC9780, [0xF9405260]);
+words(0x5AC9790, [0x39452268, 0x3607FF68, 0xF9405660]);
 words(0x5C59B94, [0xD10343FF, 0x6D033BEF, 0x6D0433ED, 0x6D052BEB]);
 // Handler reads its aiming-info reference, then the direction triplet at +0x40.
 words(0x5C59CE4, [0xF8428E88]);

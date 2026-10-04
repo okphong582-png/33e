@@ -223,11 +223,10 @@
     summary.textColor = [self mutedColor]; [section addSubview:summary]; [self.scroll addSubview:section];
     CGFloat y = 74;
     if (self.page == 0) {
-#ifdef MIZZE_INJECTED
         y = [self toggle:@"Silent aim (thử nghiệm)" key:@"SilentAim" fallback:NO y:y];
         y = [self note:@"Ưu tiên đầu địch hiện trên màn hình khi bắn. Bật Silent sẽ thay Aim thường; cần kiểm tra hiệu quả trên thiết bị." y:y];
-#else
-        y = [self note:@"Silent aim thử nghiệm hỗ trợ bản dylib chạy trong game." y:y];
+#ifndef MIZZE_INJECTED
+        y = [self note:@"TIPA cần quyền xử lý phát bắn trong game. Bật Chẩn đoán aim để xem máy có hỗ trợ." y:y];
 #endif
         y = [self toggle:@"Aim thường" key:@"AimbotFire" fallback:YES y:y];
         UISegmentedControl *mode = [[UISegmentedControl alloc] initWithItems:@[@"Chỉ khi bắn", @"Luôn trong FOV"]];
