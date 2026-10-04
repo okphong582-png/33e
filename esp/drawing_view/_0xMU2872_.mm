@@ -3,6 +3,7 @@
 #import "ModMenuViewController.h"
 #import "ESPPrefs.h"
 #import "esp.h"
+#import "../../sources/MizzeTheme.h"
 #import "../../mahoa.h"
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
@@ -88,10 +89,10 @@ static const CGFloat kMenuButtonSize = 44.0f;
 - (void)setupMenuButton {
     _menuButton = [UIButton buttonWithType:UIButtonTypeCustom];
     _menuButton.frame = CGRectMake(20, 100, kMenuButtonSize, kMenuButtonSize);
-    _menuButton.backgroundColor = [UIColor colorWithRed:0.12 green:0.78 blue:0.36 alpha:0.95];
-    _menuButton.layer.cornerRadius = kMenuButtonSize / 2.0f;
-    _menuButton.layer.borderWidth = 1.0f;
-    _menuButton.layer.borderColor = [UIColor colorWithRed:0.7 green:1 blue:0.78 alpha:0.75].CGColor;
+    _menuButton.backgroundColor = [UIColor colorWithWhite:0.095 alpha:0.96];
+    _menuButton.layer.cornerRadius = 13;
+    _menuButton.layer.borderWidth = 0.5;
+    _menuButton.layer.borderColor = [MizzeMint() colorWithAlphaComponent:0.5].CGColor;
     _menuButton.layer.shadowColor = [UIColor blackColor].CGColor;
     _menuButton.layer.shadowOffset = CGSizeMake(0, 2);
     _menuButton.layer.shadowOpacity = 0;
@@ -99,9 +100,9 @@ static const CGFloat kMenuButtonSize = 44.0f;
     _menuButton.layer.zPosition = 999.0f;
     _menuButton.clipsToBounds = YES;
     
-    [_menuButton setTitle:@"Mizze" forState:UIControlStateNormal];
-    [_menuButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    _menuButton.titleLabel.font = [UIFont systemFontOfSize:11.0f weight:UIFontWeightBold];
+    [_menuButton setTitle:@"m" forState:UIControlStateNormal];
+    [_menuButton setTitleColor:MizzeMint() forState:UIControlStateNormal];
+    _menuButton.titleLabel.font = [UIFont systemFontOfSize:27 weight:UIFontWeightMedium];
     _menuButton.titleLabel.textAlignment = NSTextAlignmentCenter;
     [_menuButton addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dragNativeButton:)];

@@ -60,6 +60,7 @@ typedef void (*ESPAddTextCallback)(
 extern bool isHeadRedDot;
 extern bool isBox;
 extern bool isBox3D;
+extern bool isCleanESP;
 extern bool isBone;
 extern bool isHealth;
 extern bool isName;

@@ -2,6 +2,7 @@
 #import "HUDHelper.h"
 #import "LicenseSession.h"
 #import "../esp/drawing_view/ESPStyle.h"
+#import "MizzeTheme.h"
 
 @interface _0xHOMEVC () <UITextFieldDelegate, UIGestureRecognizerDelegate>
 @property (nonatomic, strong) UIScrollView *scroll;
@@ -13,6 +14,9 @@
 @property (nonatomic, strong) UILabel *fieldLabel;
 @property (nonatomic, strong) UILabel *status;
 @property (nonatomic, strong) UILabel *footer;
+@property (nonatomic, strong) UILabel *brand;
+@property (nonatomic, strong) UILabel *monogram;
+@property (nonatomic, strong) NSArray<UILabel *> *featureLabels;
 @property (nonatomic, strong) UITextField *keyField;
 @property (nonatomic, strong) UIButton *submit;
 @property (nonatomic, strong) UIButton *start;
@@ -51,13 +55,28 @@
     self.scroll.keyboardDismissMode = UIScrollViewKeyboardDismissModeOnDrag;
     self.scroll.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     [self.view addSubview:self.scroll];
-    self.card = [UIView new]; self.card.layer.cornerRadius = 24; self.card.layer.borderWidth = 1;
+    self.card = [UIView new]; self.card.layer.cornerRadius = 22; self.card.layer.borderWidth = 0.5;
     [self.scroll addSubview:self.card];
-    self.eyebrow = [self label:@"P E R S O N A L   A C C E S S" size:10 weight:UIFontWeightSemibold];
-    self.titleLabel = [self label:@"Mizze" size:32 weight:UIFontWeightBold];
-    self.subtitle = [self label:@"Nhập key để mở bảng điều khiển của bạn." size:13 weight:UIFontWeightRegular];
+    self.brand = [UILabel new]; self.brand.text = @"mizze /";
+    self.brand.font = [UIFont systemFontOfSize:18 weight:UIFontWeightSemibold];
+    [self.scroll addSubview:self.brand];
+    self.monogram = [self label:@"m" size:27 weight:UIFontWeightMedium];
+    self.monogram.textAlignment = NSTextAlignmentCenter;
+    self.monogram.layer.cornerRadius = 12; self.monogram.clipsToBounds = YES;
+    self.eyebrow = [self label:@"FREE FIRE · PERSONAL SPACE" size:9 weight:UIFontWeightMedium];
+    self.titleLabel = [self label:@"Tập trung.\nChơi theo ý bạn." size:30 weight:UIFontWeightSemibold];
+    self.titleLabel.numberOfLines = 2;
+    self.subtitle = [self label:@"Một không gian gọn gàng cho những lựa chọn của bạn." size:13 weight:UIFontWeightRegular];
     self.subtitle.numberOfLines = 2;
     self.divider = [UIView new]; [self.card addSubview:self.divider];
+    NSMutableArray *features = [NSMutableArray array];
+    for (NSString *text in @[@"ESP\nMảnh & dịu", @"FOCUS\nTheo hướng", @"MENU\nTối giản"]) {
+        UILabel *label = [self label:text size:11 weight:UIFontWeightMedium];
+        label.numberOfLines = 2; label.textAlignment = NSTextAlignmentCenter;
+        label.layer.cornerRadius = 10; label.clipsToBounds = YES;
+        [features addObject:label];
+    }
+    self.featureLabels = features;
     self.fieldLabel = [self label:@"KEY TRUY CẬP" size:10 weight:UIFontWeightSemibold];
     self.keyField = [UITextField new]; self.keyField.placeholder = @"Nhập key của bạn";
     self.keyField.secureTextEntry = YES; self.keyField.autocorrectionType = UITextAutocorrectionTypeNo;
@@ -71,11 +90,11 @@
     self.keyField.clearButtonMode = UITextFieldViewModeWhileEditing;
     [self.card addSubview:self.keyField];
     self.submit = [self button:@"Đăng nhập" action:@selector(login)];
-    self.start = [self button:@"Start menu" action:@selector(startMenu)];
+    self.start = [self button:@"Mở bảng điều khiển" action:@selector(startMenu)];
     self.logoutButton = [self button:@"Đăng xuất" action:@selector(logout)];
     self.status = [self label:@"Kết nối mạng để xác thực key." size:12 weight:UIFontWeightRegular];
     self.status.numberOfLines = 0;
-    self.footer = [UILabel new]; self.footer.text = @"MIZZE  /  FREE FIRE";
+    self.footer = [UILabel new]; self.footer.text = @"Ít nhiễu hơn. Nhiều tập trung hơn.";
     self.footer.font = [UIFont systemFontOfSize:9 weight:UIFontWeightMedium]; self.footer.textAlignment = NSTextAlignmentCenter;
     [self.scroll addSubview:self.footer];
     self.theme = [UISwitch new]; self.theme.on = ESPDarkTheme();
@@ -118,25 +137,32 @@
     self.scroll.frame = UIEdgeInsetsInsetRect(self.view.bounds, safe);
     CGFloat availableWidth = self.scroll.bounds.size.width;
     CGFloat w = MAX(220, MIN(420, availableWidth - 36));
-    CGFloat h = self.loggedIn ? 344 : 400;
+    CGFloat h = self.loggedIn ? 472 : 528;
     CGFloat keyboardInset = MAX(0, self.keyboardOverlap - safe.bottom);
     CGFloat usableHeight = self.scroll.bounds.size.height - keyboardInset;
-    CGFloat cardY = MAX(78, (usableHeight - h) * 0.5);
+    CGFloat cardY = MAX(76, (usableHeight - h) * 0.5);
     CGFloat cardX = (availableWidth - w) * 0.5;
     self.scroll.contentInset = UIEdgeInsetsMake(0, 0, keyboardInset, 0);
     self.scroll.scrollIndicatorInsets = self.scroll.contentInset;
     self.card.frame = CGRectMake(cardX, cardY, w, h);
     CGFloat inset = w < 300 ? 20 : 28, content = w - inset * 2;
-    self.eyebrow.frame = CGRectMake(inset, 27, content, 15);
-    self.titleLabel.frame = CGRectMake(inset, 51, content, 41);
-    self.subtitle.frame = CGRectMake(inset, 104, content, 36);
-    self.divider.frame = CGRectMake(inset, 155, content, 1);
-    self.fieldLabel.frame = CGRectMake(inset, 174, content, 14);
-    self.keyField.frame = CGRectMake(inset, 197, content, 50);
-    self.submit.frame = CGRectMake(inset, 261, content, 50);
-    self.start.frame = CGRectMake(inset, 180, content, 50);
-    self.logoutButton.frame = CGRectMake(inset, 239, content, 40);
-    self.status.frame = CGRectMake(inset, self.loggedIn ? 290 : 326, content, self.loggedIn ? 38 : 50);
+    self.brand.frame = CGRectMake(cardX, 22, 120, 30);
+    self.monogram.frame = CGRectMake(inset, 24, 42, 42);
+    self.eyebrow.frame = CGRectMake(inset + 54, 34, content - 54, 22);
+    self.eyebrow.adjustsFontSizeToFitWidth = YES;
+    self.titleLabel.frame = CGRectMake(inset, 84, content, 78);
+    self.titleLabel.adjustsFontSizeToFitWidth = YES; self.titleLabel.minimumScaleFactor = 0.7;
+    self.subtitle.frame = CGRectMake(inset, 174, content, 42);
+    CGFloat tileWidth = (content - 16) / 3;
+    for (NSInteger i = 0; i < 3; ++i)
+        self.featureLabels[i].frame = CGRectMake(inset + i * (tileWidth + 8), 236, tileWidth, 56);
+    self.divider.frame = CGRectMake(inset, 310, content, 0.5);
+    self.fieldLabel.frame = CGRectMake(inset, 330, content, 14);
+    self.keyField.frame = CGRectMake(inset, 353, content, 48);
+    self.submit.frame = CGRectMake(inset, 414, content, 48);
+    self.start.frame = CGRectMake(inset, 330, content, 48);
+    self.logoutButton.frame = CGRectMake(inset, 386, content, 30);
+    self.status.frame = CGRectMake(inset, self.loggedIn ? 424 : 476, content, 40);
     self.theme.frame = CGRectMake(cardX + w - 51, 18, 51, 31);
     self.themeLabel.frame = CGRectMake(self.theme.frame.origin.x - 112, 18, 103, 31);
     self.footer.frame = CGRectMake(cardX, CGRectGetMaxY(self.card.frame) + 20, w, 20);
@@ -155,24 +181,28 @@
 - (void)applyAppearance {
     BOOL dark = ESPDarkTheme();
     self.view.overrideUserInterfaceStyle = dark ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
-    self.view.backgroundColor = [UIColor colorWithWhite:dark ? 0.025 : 0.955 alpha:1];
-    self.card.backgroundColor = [UIColor colorWithWhite:dark ? 0.066 : 1 alpha:1];
-    self.card.layer.borderColor = [UIColor colorWithWhite:dark ? 0.16 : 0.875 alpha:1].CGColor;
-    UIColor *text = [UIColor colorWithWhite:dark ? 0.96 : 0.1 alpha:1];
-    UIColor *muted = [UIColor colorWithWhite:dark ? 0.61 : 0.43 alpha:1];
-    UIColor *accent = [UIColor colorWithRed:0.30 green:0.53 blue:0.96 alpha:1];
+    self.view.backgroundColor = MizzeBackground();
+    self.card.backgroundColor = MizzeSurface();
+    self.card.layer.borderColor = MizzeBorder().CGColor;
+    UIColor *text = MizzeText(), *muted = MizzeMuted(), *accent = MizzeMint();
+    self.brand.textColor = text;
+    self.monogram.textColor = accent;
+    self.monogram.backgroundColor = [accent colorWithAlphaComponent:0.12];
+    for (UILabel *label in self.featureLabels) {
+        label.textColor = muted; label.backgroundColor = MizzeRaised();
+    }
     self.titleLabel.textColor = self.keyField.textColor = text;
     self.subtitle.textColor = self.status.textColor = self.themeLabel.textColor = muted;
     self.eyebrow.textColor = accent; self.fieldLabel.textColor = muted;
     self.footer.textColor = [UIColor colorWithWhite:dark ? 0.36 : 0.55 alpha:1];
-    self.divider.backgroundColor = [UIColor colorWithWhite:dark ? 0.15 : 0.91 alpha:1];
+    self.divider.backgroundColor = MizzeBorder();
     self.keyField.backgroundColor = [UIColor colorWithWhite:dark ? 0.037 : 0.978 alpha:1];
     self.keyField.layer.borderColor = [UIColor colorWithWhite:dark ? 0.22 : 0.84 alpha:1].CGColor;
     self.keyField.tintColor = self.theme.onTintColor = accent;
     for (UIButton *button in @[self.submit, self.start]) {
         button.backgroundColor = accent;
-        [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-        [button setTitleColor:[UIColor colorWithWhite:1 alpha:0.5] forState:UIControlStateDisabled];
+        [button setTitleColor:[UIColor colorWithWhite:0.065 alpha:1] forState:UIControlStateNormal];
+        [button setTitleColor:[UIColor colorWithWhite:0.065 alpha:0.45] forState:UIControlStateDisabled];
     }
     [self.logoutButton setTitleColor:muted forState:UIControlStateNormal];
 }
@@ -190,8 +220,8 @@
     self.start.hidden = self.logoutButton.hidden = !self.loggedIn;
     self.start.enabled = !self.starting;
     [self.submit setTitle:([LicenseSession shared].hasSavedKey ? @"Xác thực / dùng key đã lưu" : @"Xác thực key") forState:UIControlStateNormal];
-    self.subtitle.text = self.loggedIn ? [@"Hạn sử dụng: " stringByAppendingString:[self licenseExpiryDescription]] : @"Nhập key để mở bảng điều khiển của bạn.";
-    [self.start setTitle:IsHUDEnabled() ? @"Stop menu" : @"Start menu" forState:UIControlStateNormal];
+    self.subtitle.text = self.loggedIn ? [@"Phiên đã xác thực · " stringByAppendingString:[self licenseExpiryDescription]] : @"Nhập key để mở không gian điều khiển của bạn.";
+    [self.start setTitle:IsHUDEnabled() ? @"Dừng bảng điều khiển" : @"Mở bảng điều khiển" forState:UIControlStateNormal];
     [self.view setNeedsLayout];
 }
 - (NSString *)licenseExpiryDescription {

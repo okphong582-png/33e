@@ -7,7 +7,7 @@
 #include <limits>
 
 UIFont *VietnameseFontForLayer(CGFloat size) {
-    return [UIFont systemFontOfSize:size weight:UIFontWeightSemibold];
+    return [UIFont systemFontOfSize:size weight:UIFontWeightMedium];
 }
 
 static bool ValidPosition(const Vector3 &v) {
@@ -107,7 +107,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
                bool knocked, bool bot, float *matrix,
                float width, float height, float vpWidth, float vpHeight) {
     if (!buffers || !matrix || !isVaildPtr(pawn) || hp <= 0 ||
-        !std::isfinite(distance) || distance > 150 || width <= 0 || height <= 0 ||
+        !std::isfinite(distance) || width <= 0 || height <= 0 ||
         (!isBox && !isBone && !isHeadRedDot && !isLine && !isHealth && !isDis && !isName)) return;
 
     const Vector3 head = getPositionExt(getHead(pawn));
@@ -122,13 +122,13 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     const bool headInFront   = ValidPosition(headScreen) && headScreen.z > 0.001f;
 
     // --- Snapline: luôn vẽ, kể cả khi địch sau lưng ---
-    if (isLine) {
+    if (isLine && headOnScreen) {
         CGMutablePathRef linePath = knocked
             ? buffers->lineKnockPath
             : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
         if (linePath) {
             const CGFloat cx = width * 0.5f;
-            const CGFloat cy = 40.0f;
+            const CGFloat cy = height * 0.08f;
             CGPoint rawEnd;
             bool drawLine = false;
 
@@ -160,7 +160,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     }
 
     // Phần còn lại chỉ vẽ khi đầu địch thực sự trong FOV
-    if (!headInFront) return;
+    if (!headOnScreen) return;
 
     AddSkeleton(buffers, pawn, head, hip, matrix, width, height, vpWidth, vpHeight);
     if (!isBox && !isHealth && !isDis && !isName) {
@@ -188,7 +188,19 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     Vector3 corners[8];
     CGFloat minX = std::numeric_limits<CGFloat>::infinity();
     CGFloat minY = minX, maxX = -minX, maxY = -minX;
-    for (int i = 0; i < 8; ++i) {
+    if (!isBox3D) {
+        // An upright screen-space box is stable while rotating the camera and
+        // needs two projections instead of eight world-space corner projections.
+        Vector3 top = head; top.y += 0.14f;
+        const Vector3 topScreen = project(top), feetScreen = project(feet);
+        if (!ValidPosition(topScreen) || !ValidPosition(feetScreen) ||
+            topScreen.z <= 0.001f || feetScreen.z <= 0.001f) return;
+        minY = std::min(topScreen.y, feetScreen.y);
+        maxY = std::max(topScreen.y, feetScreen.y);
+        const CGFloat half = (maxY - minY) * (knocked ? 0.4f : 0.23f);
+        const CGFloat center = (topScreen.x + feetScreen.x) * 0.5f;
+        minX = center - half; maxX = center + half;
+    } else for (int i = 0; i < 8; ++i) {
         Vector3 world(hip.x + ((i & 1) ? halfWidth : -halfWidth),
                       (i & 2) ? highY : lowY,
                       hip.z + ((i & 4) ? halfDepth : -halfDepth));
@@ -211,9 +223,9 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         if (!nick || nick.length == 0) {
             nick = bot ? @"[BOT]" : @"Player";
         }
-        UIColor *nameColor = knocked ? [UIColor colorWithRed:1.0f green:0.25f blue:0.3f alpha:1.0f]
-                                      : (bot ? [UIColor colorWithRed:1.0f green:0.84f blue:0.0f alpha:1.0f]
-                                             : [UIColor colorWithRed:0.2f green:0.9f blue:1.0f alpha:1.0f]);
+        UIColor *nameColor = knocked ? [UIColor colorWithRed:0.9 green:0.55 blue:0.55 alpha:0.85]
+                                      : [UIColor colorWithRed:0.84 green:0.91 blue:0.88 alpha:0.9];
+        if (nick.length > 20) nick = [[nick substringToIndex:20] stringByAppendingString:@"…"];
         textCallback(context, nick, CGRectMake((minX + maxX) / 2.0f - 60.0f, minY - 18.0f, 120.0f, 14.0f),
                      nameColor, 10.0f, NO);
     }
@@ -227,6 +239,15 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
                     const Vector3 a = corners[i], b = corners[i | bit];
                     AddLine(boxPath, CGPointMake(a.x, a.y), CGPointMake(b.x, b.y), width, height);
                 }
+            }
+        } else if (isCleanESP) {
+            const CGFloat length = std::min(boxWidth * 0.25, boxHeight * 0.15);
+            for (int edge = 0; edge < 4; ++edge) {
+                const CGFloat x = (edge & 1) ? maxX : minX;
+                const CGFloat y = (edge & 2) ? maxY : minY;
+                const CGFloat sx = (edge & 1) ? -1 : 1, sy = (edge & 2) ? -1 : 1;
+                AddLine(boxPath, CGPointMake(x, y + sy * length), CGPointMake(x, y), width, height);
+                AddLine(boxPath, CGPointMake(x, y), CGPointMake(x + sx * length, y), width, height);
             }
         } else {
             AddRoundedRect(boxPath, CGRectMake(minX, minY, boxWidth, boxHeight),
@@ -257,7 +278,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         const int maxHP = get_MaxHP(pawn);
         if (maxHP > 0) {
             const float ratio = std::max(0.0f, std::min(1.0f, (float)hp / maxHP));
-            const CGFloat barX = maxX + 4, barWidth = 3.5f;
+            const CGFloat barX = minX - 5, barWidth = 2.0f;
             const CGFloat filled = boxHeight * ratio;
             AddRoundedRect(buffers->hpBackgroundPath, CGRectMake(barX - 1, minY - 1, barWidth + 2, boxHeight + 2), 2.0f);
             buffers->hpBackgroundDirty = true;
@@ -277,13 +298,13 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         static NSArray<NSString *> *labels;
         static dispatch_once_t once;
         dispatch_once(&once, ^{
-            NSMutableArray<NSString *> *items = [NSMutableArray arrayWithCapacity:151];
-            for (int meters = 0; meters <= 150; ++meters)
-                [items addObject:[NSString stringWithFormat:@"%dm", meters]];
+            NSMutableArray<NSString *> *items = [NSMutableArray arrayWithCapacity:501];
+            for (int meters = 0; meters <= 500; ++meters)
+                [items addObject:[NSString stringWithFormat:@"%d m", meters]];
             labels = [items copy];
         });
-        NSString *label = labels[std::max(0, std::min(150, (int)distance))];
+        NSString *label = labels[std::max(0, std::min(500, (int)distance))];
         textCallback(context, label, CGRectMake((minX + maxX) / 2 - 28, maxY + 4, 56, 14),
-                     UIColor.whiteColor, 10, NO);
+                     [UIColor colorWithWhite:0.83 alpha:0.85], 9, NO);
     }
 }

@@ -2,8 +2,12 @@
 
 Cả TIPA và dylib có công tắc **Silent aim (thử nghiệm)**, mặc định tắt. Khi bật,
 aim thường không ghi góc camera. Bộ chọn lấy đầu địch còn sống, chưa knock,
-khác đội và đang hiện trong viewport, trong khoảng cách hiển thị đã đặt.
-Vòng FOV và lựa chọn aim cổ chỉ áp dụng cho aim thường.
+khác đội và nhìn thấy trong vòng Silent FOV. Mặc định bán kính là 18% cạnh
+ngắn màn hình, tầm chọn 100 m; có thể chỉnh riêng trong menu Focus. Hướng tâm
+ngắm chiếm 75% điểm ưu tiên, khoảng cách chiếm 25%. Mục tiêu cũ chỉ được cộng
+một ưu tiên nhỏ để tránh nhấp nháy, không giữ khóa khi có mục tiêu tốt hơn rõ rệt.
+Ra ngoài vòng sẽ nhả khóa ngay. Vòng hiển thị đúng vùng chọn của chế độ đang bật;
+aim cổ áp dụng cho aim thường. Tầm ESP không hạn chế tầm Silent.
 
 Đây là triển khai thử nghiệm có kiểm tra layout, **chưa được xác nhận bằng
 phát bắn trên thiết bị**. Không cam kết mọi viên đều trúng đầu. Độ tản,
@@ -19,20 +23,18 @@ TIPA lấy vũ khí bằng đọc bộ nhớ: `Player + 0x740` là `GMOCOOEIFMK`
 TIPA không gọi trực tiếp địa chỉ hàm của game trong process của ứng dụng.
 
 Adapter có callback ARM64 không chứa relocation, chạy tại một vùng nhớ riêng
-trong game. Trang code được ghi khi RW, flush cache rồi chuyển RX; trang trạng
-thái giữ RW. Nó dùng địa chỉ handler gốc và `mach_absolute_time` của process game;
+trong game. Trang RX có sẵn trong TIPA được ánh xạ bằng `mach_vm_remap(copy=false)`
+để giữ backing object của mã đã ký; trang trạng thái riêng kế tiếp giữ RW.
+Không tạo mã trên trang RW rồi chuyển RX. Nó dùng địa chỉ handler gốc và `mach_absolute_time` của process game;
 địa chỉ clock được tìm theo image và kiểm tra byte mã. Snapshot có sequence để
 callback bỏ qua ghi dở, hết hạn sau 150 ms. Callback kiểm tra match/local, chủ
 vũ khí, handler, class aiming-info, knock và PRI bắn trước khi đổi hướng. HP,
 đội, visibility và đầu trong màn hình được kiểm tra lúc TIPA xuất snapshot.
 Nếu HUD dừng, snapshot hết hạn và callback trở về handler gốc.
 
-TIPA cần game cho phép chạy code ở vùng nhớ mới. Adapter chỉ đọc
-`CS_OPS_STATUS` và yêu cầu `CS_DEBUGGED`, không có `CS_HARD`/`CS_KILL`; nó không
-gắn debugger hay thay chính sách ký mã. Các cờ này được định nghĩa trong
-[XNU cs_blobs.h](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/kern/cs_blobs.h).
-Nếu truy vấn, cấp phát, flush cache, chuyển RX hay tạm dừng để thay slot không
-được phép, chẩn đoán báo **iOS không cho cài xử lý phát bắn**. Có quyền đọc/ghi
+Adapter không yêu cầu `CS_DEBUGGED` và không thay chính sách ký mã.
+Nếu truy vấn, cấp phát, remap hay tạm dừng để thay slot không
+được phép, chẩn đoán báo thao tác và mã lỗi Mach cụ thể. Có quyền đọc/ghi
 ESP không đảm bảo có quyền chạy callback. Không tự chuyển sang aim kéo camera.
 
 Tắt Silent bỏ snapshot và hoàn lại slot nếu còn thuộc adapter. Code đã công bố
@@ -86,14 +88,16 @@ vì getter góc phụ còn có nhánh trả về góc chính `0x614`.
 
 ## Kiểm tra
 
-`tests/silent_aim_direction_test.cpp` kiểm tra chọn toàn viewport, loại điểm
-ngoài màn hình, vector suy biến/NaN, hết hạn snapshot, lỗi đọc/ghi, thay
+`tests/silent_aim_selection_test.cpp` kiểm tra hướng tâm, ưu tiên địch gần,
+đổi mục tiêu cũ, hysteresis, giới hạn FOV/tầm, loại mục tiêu không hợp lệ.
+`tests/silent_aim_direction_test.cpp` kiểm tra vector suy biến/NaN, hết hạn snapshot, lỗi đọc/ghi, thay
 object, game tự cập nhật vector và hoàn lại input khi handler ném exception.
 Workflow chạy test này với AddressSanitizer và UndefinedBehaviorSanitizer,
 rồi build cả dylib lẫn TIPA.
 
-`tests/silent_aim_external_test.cpp` kiểm tra layout trang trạng thái, điều kiện
-ký mã và đường lấy vũ khí thường/kết hợp, lỗi đọc và đổi owner.
+`tests/silent_aim_external_test.cpp` kiểm tra layout trang trạng thái và đường
+lấy vũ khí thường/kết hợp, lỗi đọc và đổi owner. Test mapping native macOS
+chạy trang RX đã ký dưới hardened runtime, kiểm tra trạng thái RW và code cấm ghi.
 `tests/silent_aim_remote_test.py` chạy byte code ARM64 bằng Unicorn: giữ ABI,
 gọi handler đúng một lần, bỏ snapshot ghi dở/hết hạn, nhả bắn/knock/đổi owner,
 loại NaN/Inf, xử lý float lớn, hoàn hướng và giữ kết quả khi game đổi vector/object.
@@ -111,8 +115,8 @@ SHA-256 nguồn:
 - UnityFramework: `ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8`
 - Metadata: `597e77fc1dd15bac9ff75215bd328d60c6d205f5fc4a7e32cec1b37d3cc2ea5d`
 
-Trên thiết bị: bật chẩn đoán và Silent trong từng bản; thử địch ngoài vòng FOV
-nhưng trong màn hình, nhả bắn, mất visibility, knock, đổi súng và đổi trận.
+Trên thiết bị: bật chẩn đoán và Silent trong từng bản; thử hai địch gần hướng tâm,
+địch ngoài vòng Silent FOV, quay hướng khác, nhả bắn, mất visibility, knock, đổi súng và đổi trận.
 Counter chỉ có ý nghĩa kiểm tra adapter được gọi. Cần quan sát riêng góc
 camera và kết quả từng phát để xác nhận hiệu quả. Nếu báo chưa hỗ trợ thì
 adapter không cài hook; không có fallback kéo camera.
