@@ -284,6 +284,8 @@
         for (int i = 0; i < 3; ++i) y = [self slider:names[i] key:[prefix stringByAppendingString:suffixes[i]] min:0 max:1 fallback:defaults[i] y:y];
         [self updateSwatch];
     } else {
+        y = [self toggle:@"Ghost Mode (thử nghiệm)" key:@"GhostMode" fallback:NO y:y];
+        y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];

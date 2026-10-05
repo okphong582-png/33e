@@ -2,6 +2,7 @@
 #include "../Core/AimSelection.h"
 #include "../Core/SilentAimSelection.h"
 #include "../Core/AutoFire.h"
+#include "../Core/GhostMode.h"
 #include "../Core/GamePRI.h"
 #include "../Core/AimPoint.h"
 #include "../Core/SilentAim.h"
@@ -74,6 +75,10 @@ static bool isHipAlways  = NO;
 static bool isAimNeck    = NO;
 static bool isSilentAim  = NO;
 static bool gAutoFire = false;
+static bool gGhostMode = false;
+static int gGhostInstall = 1;
+static GhostModeSnapshot gGhostSnapshot;
+static CFTimeInterval gNextGhostRead = 0;
 static uint64_t gAimLockTarget  = 0;
 static uint64_t gAimLocalPlayer = 0;
 static Vector3  gAimLockedHead  = {};
@@ -117,6 +122,8 @@ void ESPSyncFromPrefs(void) {
     const bool autoEnabled = silentEnabled && ESPPrefsBool(@"AutoFire", NO);
     if (gAutoFire != autoEnabled) AutoFireClear();
     gAutoFire = autoEnabled;
+    gGhostMode = ESPPrefsBool(@"GhostMode", NO);
+    GhostModeSetEnabled(gGhostMode);
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
@@ -330,6 +337,8 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 @property (nonatomic, strong) CAShapeLayer           *aimAssistLayer;
 @property (nonatomic, strong) CAShapeLayer           *alertLayer;
 @property (nonatomic, strong) CAShapeLayer           *fovLayer;
+@property (nonatomic, strong) CAShapeLayer *ghostLayer;
+@property (nonatomic, strong) CATextLayer *ghostStatusLayer;
 @property (nonatomic, strong) NSMutableArray<CATextLayer *> *textLayerPool;
 @property (nonatomic, assign) NSUInteger              activeTextLayerCount;
 @property (nonatomic, strong) CATextLayer            *statusLayer;
@@ -397,12 +406,14 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)applicationWillResignActive:(NSNotification *)notification {
+    GhostModeCancel();
     [self clearAllContent];
 }
 
 - (void)didMoveToWindow {
     [super didMoveToWindow];
     if (!self.window) {
+        GhostModeCancel();
         [self.displayLink invalidate];
         self.displayLink = nil;
         [self clearAllContent];
@@ -467,6 +478,19 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.boxPlayerLayer  = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:3];
 
     self.fovLayer        = [self makeShapeLayer:[UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f] fill:nil lineWidth:1.5f zPos:7];
+    self.ghostLayer = [self makeShapeLayer:[UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.95]
+        fill:nil lineWidth:1.8 zPos:7];
+    self.ghostStatusLayer = [CATextLayer layer];
+    self.ghostStatusLayer.fontSize = 13;
+    self.ghostStatusLayer.contentsScale = UIScreen.mainScreen.scale;
+    self.ghostStatusLayer.zPosition = 8;
+    self.ghostStatusLayer.foregroundColor = [UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:1].CGColor;
+    self.ghostStatusLayer.shadowColor = UIColor.blackColor.CGColor;
+    self.ghostStatusLayer.shadowOpacity = 0.8;
+    self.ghostStatusLayer.shadowRadius = 1;
+    self.ghostStatusLayer.shadowOffset = CGSizeMake(0, 1);
+    self.ghostStatusLayer.hidden = YES;
+    [self.layer addSublayer:self.ghostStatusLayer];
 
     self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.8f zPos:1];
     self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:1.0f zPos:2];
@@ -478,7 +502,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.hpCriticalLayer = [self makeShapeLayer:nil fill:[UIColor colorWithRed:1 green:0.27 blue:0.32 alpha:1] lineWidth:0 zPos:5];
     self.hpHighlightLayer = [self makeShapeLayer:nil fill:[UIColor colorWithWhite:1 alpha:0.4] lineWidth:0 zPos:6];
 
-    for (CAShapeLayer *l in @[self.hpWarningLayer, self.hpCriticalLayer, self.hpHighlightLayer, self.fovLayer, self.snaplineLayer, self.boneLayer, self.boxLayer,
+    for (CAShapeLayer *l in @[self.ghostLayer, self.hpWarningLayer, self.hpCriticalLayer, self.hpHighlightLayer, self.fovLayer, self.snaplineLayer, self.boneLayer, self.boxLayer,
                                self.hpBackgroundLayer, self.hpFillLayer,
                             self.boxBotLayer, self.boxPlayerLayer, self.lineBotLayer, self.linePlayerLayer, self.lineKnockLayer, self.boxKnockLayer]) {
         [self.layer addSublayer:l];
@@ -597,10 +621,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (!self.window) return;
 #ifdef MIZZE_INJECTED
     if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) {
+        GhostModeCancel();
         [self clearAllContent]; return;
     }
 #endif
-    if (![LicenseSession shared].authorized) { [self clearAllContent]; return; }
+    if (![LicenseSession shared].authorized) { GhostModeCancel(); [self clearAllContent]; return; }
     @autoreleasepool {
         const CFTimeInterval now = CACurrentMediaTime();
         BeginTransformFrame();
@@ -612,6 +637,13 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         if (!gESPPrefsLoadedOnce) {
             ESPSyncFromPrefs();
         }
+        // Ghost does not depend on a target, gun, ESP dictionary or camera.
+        gGhostInstall = GhostModeUpdate(Moudule_Base);
+        if (now >= gNextGhostRead) {
+            gNextGhostRead = now + 0.1;
+            gGhostSnapshot = GhostModeRead();
+        }
+        self.ghostLayer.path = nil;
         [CATransaction begin];
         [CATransaction setDisableActions:YES];
         [self applyRenderPreferences];
@@ -619,6 +651,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             [self clearAllContent];
             [self updateFovCircle];
             [self updateAimDiagnostic:(ESPFrameStats){} now:now];
+            [self updateGhostStatus];
             [CATransaction commit];
             return;
         }
@@ -681,6 +714,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         // FOV is a screen-space setting and does not depend on successful game reads.
         [self updateFovCircle];
         [self updateAimDiagnostic:stats now:now];
+        [self updateGhostStatus];
         [CATransaction commit];
         // CADisplayLink owns pacing. A second random timer used to skip valid
         // display ticks and leave ESP geometry behind the moving camera.
@@ -716,7 +750,46 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.aimDiagnosticLayer.hidden = NO;
 }
 
+- (void)updateGhostStatus {
+    self.ghostStatusLayer.hidden = !gGhostMode;
+    if (!gGhostMode) return;
+    NSString *status = @"chờ dữ liệu";
+    if (gGhostInstall == 9) status = @"bản game chưa hỗ trợ";
+    else if (gGhostInstall == 10) status = @"iOS từ chối cài";
+    else if (gGhostInstall == 11) status = @"chờ vào trận";
+    else if (gGhostInstall == 8) {
+        if (gGhostSnapshot.active) status = gGhostSnapshot.packets ? @"đang gửi vị trí gốc" : @"đã lưu vị trí";
+        else if (gGhostSnapshot.status == 7) status = @"tạm dừng";
+        else if (gGhostSnapshot.status == 8) status = @"chờ nhịp game";
+    }
+    self.ghostStatusLayer.string = [@"Ghost · " stringByAppendingString:status];
+    self.ghostStatusLayer.frame = CGRectMake(10, gAimDiagnostics ? 90 : 50,
+        MAX(0, self.bounds.size.width - 20), 22);
+}
+- (void)drawGhostAnchor:(Vector3)anchor matrix:(float *)matrix width:(CGFloat)vw height:(CGFloat)vh
+               vpWidth:(CGFloat)vpW vpHeight:(CGFloat)vpH {
+    // A small world-space cube marks the saved point, independently of ESP flags.
+    Vector3 corners[8], projected[8];
+    for (int i = 0; i < 8; ++i) {
+        corners[i] = {anchor.x + ((i & 1) ? 0.18f : -0.18f),
+            anchor.y + ((i & 2) ? 0.36f : 0), anchor.z + ((i & 4) ? 0.18f : -0.18f)};
+        projected[i] = WorldToScreenLayer(corners[i], matrix, vpW, vpH, vw, vh);
+    }
+    CGMutablePathRef path = CGPathCreateMutable();
+    for (int i = 0; i < 8; ++i) for (int bit : {1,2,4}) {
+        if (i & bit) continue;
+        const auto a = projected[i], b = projected[i | bit];
+        if (a.z <= 0.001f || b.z <= 0.001f || !std::isfinite(a.x) || !std::isfinite(a.y) ||
+            !std::isfinite(b.x) || !std::isfinite(b.y)) continue;
+        CGPathMoveToPoint(path, NULL, a.x, a.y);
+        CGPathAddLineToPoint(path, NULL, b.x, b.y);
+    }
+    self.ghostLayer.path = path;
+    CGPathRelease(path);
+}
 - (void)clearAllContent {
+    self.ghostLayer.path = nil;
+    self.ghostStatusLayer.hidden = YES;
     AutoFireClear();
     SilentAimSetEnabled(false);
     ResetWeaponFeatures();
@@ -735,6 +808,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)dealloc {
+    GhostModeCancel();
     AutoFireClear();
     SilentAimSetEnabled(false);
     ResetWeaponFeatures();
@@ -823,6 +897,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     if (!matrix) return stats;
     stats.inMatch = true;
     SetMatchReady(YES);
+    if (gGhostMode && gGhostSnapshot.active && gGhostSnapshot.match == match && gGhostSnapshot.local == local)
+        [self drawGhostAnchor:gGhostSnapshot.anchor matrix:matrix width:vw height:vh vpWidth:vpW vpHeight:vpH];
     UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire);
 
     stats.firingRaw = get_FiringPRIState(local);
