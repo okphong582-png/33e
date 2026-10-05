@@ -126,7 +126,7 @@ class Simulation:
         for reg in (UC_ARM64_REG_X8, UC_ARM64_REG_X9, UC_ARM64_REG_X10, UC_ARM64_REG_X11, UC_ARM64_REG_X12, UC_ARM64_REG_X13):
             uc.reg_write(reg, 0xdeadbeef)
 
-    def run(self, player):
+    def run(self, player, interface=False, wrapped=True):
         self.player = player
         if player not in self.positions:
             self.positions[player] = (50, 10, 50); self.authoritative[player] = self.positions[player]
@@ -138,7 +138,17 @@ class Simulation:
             UC_ARM64_REG_X22, UC_ARM64_REG_X23, UC_ARM64_REG_X24, UC_ARM64_REG_X25, UC_ARM64_REG_X26,
             UC_ARM64_REG_X27, UC_ARM64_REG_X28, UC_ARM64_REG_X29))}
         for reg, value in saved.items(): self.uc.reg_write(reg, value)
-        self.uc.emu_start(BASE, RETURN, count=10000)
+        entry = BASE
+        if interface:
+            # Actual metadata: IEntityTicker starts at class vtable slot 4;
+            # OnUpdate is interface method 1, hence class slot 5 (0x188).
+            # Patching only ordinary slot 26 does not affect this dispatch.
+            klass, entry = 0x420000, BASE+0x18000
+            self.ptr(player, klass)
+            self.ptr(klass+0x188, BASE if wrapped else self.functions['ORIGINAL'])
+            self.ptr(klass+0x2d8, BASE)
+            self.uc.mem_write(entry, struct.pack('<III', 0xf9400008, 0xf940c508, 0xd61f0100))
+        self.uc.emu_start(entry, RETURN, count=10000)
         assert self.uc.reg_read(UC_ARM64_REG_PC) == RETURN, 'Callback did not return'
         assert self.uc.reg_read(UC_ARM64_REG_SP) == STACK+0x8000
         assert all(self.uc.reg_read(reg) == value for reg, value in saved.items()), 'Callee-saved ABI'
@@ -147,6 +157,13 @@ class Simulation:
 
 
 # No downward accumulation, full native movement, and return at current X/Z.
+s = Simulation(flags=2); s.run(LOCAL, interface=True, wrapped=False)
+assert s.q('TICKS') == 0 and s.q('APPLIES') == 0 and s.positions[LOCAL][1] == 10
+s.run(LOCAL, interface=True)
+assert s.q('TICKS') == 1 and s.q('APPLIES') == 1 and math.isclose(s.positions[LOCAL][1], 9.55, abs_tol=1e-6)
+s.w('FLAGS', 0); s.run(LOCAL, interface=True)
+assert s.positions[LOCAL][1] == 10, 'Interface release must restore normal height'
+
 s = Simulation(flags=2)
 for step in range(100):
     s.run(LOCAL)
@@ -165,6 +182,30 @@ s.w('FLAGS', 0); s.w('EPOCH', 2); s.run(ENEMY)
 assert s.positions[ENEMY] == (42, 10, 64), 'Release must use latest interpolation, not the old anchor'
 s.w('FLAGS', 1); s.w('EPOCH', 3); s.run(ENEMY)
 assert s.positions[ENEMY] == (43, 10, 66)
+
+# Real fixed/interpolation ticks can advance the transform outside our wrapper.
+# Small ordinary motion must keep the visual anchor, and must never restore an
+# outdated normal position over the newly arrived state.
+s = Simulation(flags=1); s.run(ENEMY, interface=True); anchor = s.positions[ENEMY]
+for _ in range(20):
+    s.positions[ENEMY] = tuple(f32(v+0.1) for v in s.authoritative[ENEMY])
+    s.authoritative[ENEMY] = s.positions[ENEMY]
+    normal = s.positions[ENEMY]
+    count = len(s.writes)
+    s.run(ENEMY, interface=True)
+    assert s.original_seen[-1] == normal and s.positions[ENEMY] == anchor
+    assert len(s.writes) == count+1, 'Do not restore stale state after an outside update'
+s.w('FLAGS', 0); s.run(ENEMY, interface=True)
+assert s.positions[ENEMY] == s.authoritative[ENEMY] and s.positions[ENEMY] != anchor
+
+# Reused entity pointers with a new native UniqueID never revive the old anchor,
+# even when the replacement spawns within the ordinary-motion threshold.
+s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
+s.uc.mem_write(ENEMY+0x60, struct.pack('<I', 2))
+s.positions[ENEMY] = (22, 10, 23); s.authoritative[ENEMY] = s.positions[ENEMY]
+before = len(s.writes); s.run(ENEMY)
+assert s.original_seen[-1] == (22, 10, 23) and s.positions[ENEMY] != anchor
+assert len(s.writes) == before+1
 
 # Both roles can coexist, and neither role spills to teammates/unlisted actors.
 s = Simulation(flags=3); s.run(LOCAL); s.run(ENEMY); s.run(OTHER)

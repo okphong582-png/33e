@@ -44,6 +44,10 @@ _PlayerModesRemoteStart:
     b .Loriginal
 .LfoundRow:
     mov x22, x8
+    ldr w8, [x20, #0x60] // Entity.UniqueID distinguishes recycled instances.
+    ldr w9, [x22, #ROW_ID]
+    cmp w8, w9
+    b.ne .LdropBefore
     ldr w8, [x22, #ROW_MODE]
     cbz w8, .Loriginal
     // Restore only an unchanged visual override for the same living context.
@@ -91,8 +95,25 @@ _PlayerModesRemoteStart:
     str x8, [x19, #MODES_RESTORES]
     b .Loriginal
 .LnewPosition:
-    // A correction or recycled entity with a different live transform starts
-    // a fresh visual anchor, even if its pointer was reused within this match.
+    // Fixed ticks/interpolation can move a remote transform BETWEEN OnUpdate
+    // calls. Do not restore stale normal data or recapture on each such move.
+    // Large corrections/teleports recapture; ordinary motion keeps the anchor.
+    ldr w8, [x22, #ROW_MODE]
+    cmp w8, #1
+    b.ne .LresetAnchor
+    ldp s3, s4, [x22, #ROW_REAL]
+    ldr s5, [x22, #(ROW_REAL+8)]
+    fsub s3, s0, s3
+    fsub s4, s1, s4
+    fsub s5, s2, s5
+    fmul s3, s3, s3
+    fmadd s3, s4, s4, s3
+    fmadd s3, s5, s5, s3
+    fmov s4, #16.0 // 4 m correction threshold, squared
+    fcmp s3, s4
+    b.vs .LresetAnchor
+    b.le .Loriginal
+.LresetAnchor:
     str wzr, [x22, #ROW_MODE]
     b .Loriginal
 .LdropBefore:
@@ -257,6 +278,8 @@ _PlayerModesRemoteStart:
     ldr w8, [x19, #MODES_EPOCH]
     str w8, [x22, #ROW_EPOCH]
     str w25, [x22, #ROW_MODE]
+    ldr w8, [x20, #0x60]
+    str w8, [x22, #ROW_ID]
     mov x0, x20
     mov x1, #0
     ldr x8, [x19, #MODES_SET_POS]

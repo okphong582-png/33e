@@ -1,10 +1,17 @@
 # Experimental local player presentation modes
 
-TIPA and dylib share a signed ARM64 virtual-OnUpdate wrapper. It supports the
+TIPA and dylib share a signed ARM64 OnUpdate wrapper. It supports the
 supplied Free Fire 1.132.1 `Player.OnUpdate` and `PlayerNetwork.OnUpdate` native
 implementations after full code fingerprints. Class slots with other callbacks
 are rejected. Neither mode intercepts incoming packets, freezes network state,
 changes gravity/collision configuration, or skips the original player update.
+
+The supplied metadata places `IEntityTicker` at interface offset 4. Its OnUpdate
+method 1 occupies class vtable entry 5 (`0x188`), while ordinary Player.OnUpdate
+also occupies entry 26 (`0x2D8`). The original implementation patched only entry
+26, leaving interface calls untouched. Both entries now point to the same
+callback/state; both original pointers must match before installing. Failed
+second-slot writes roll back the first without overwriting another hook.
 
 ## Burrow
 
@@ -43,16 +50,28 @@ page contains no runtime relocations. The HUD writes only input snapshots;
 game callbacks exclusively own their output rows. Finite/nonzero position checks,
 native match/local ownership, health, knock, an even publication sequence and
 a 250 ms lease precede application. A changed/dead owner discards old state.
-An incoming transform correction that differs from the applied visual value
-is not overwritten with the previous saved position. Corrections also start a
-new visual anchor, protecting a recycled enemy pointer whose live transform has
-changed within the same match. OFF/expired leases allow the next eligible
-entity update to restore a held override.
+An incoming transform change is not overwritten with the previous saved normal
+position. Entity.UniqueID distinguishes recycled pointers, including replacement
+entities spawning nearby. Small external interpolation/fixed updates keep the
+scoped anchor without restoring stale normal data. Movement more than 4 m from
+the latest saved normal position starts a fresh anchor. OFF/expired leases allow
+the next eligible entity update to restore a held override.
 
 `tests/player_modes_remote_test.py` emulates the actual Mach-O and ELF callback,
 including 100 local motion updates, continually advancing enemy interpolation,
 scope release/re-entry, simultaneous roles, corrections, fixed capacity, stale
 owners, unsupported movement, publication races and preserved ARM64 ABI.
+It also executes interface-slot dispatch and interleaved external transform
+updates, reproducing the two failures missed by directly calling the wrapper.
+`tests/player_modes_install_test.cpp` checks paired installation, no per-frame
+rewrites, rejected conflicting hooks, rollback and preserved MethodInfo pointers.
+
+The HUD samples native ticks/application counts and held rows at 5 Hz. Installing
+a slot alone no longer claims an effect: stopped ticks show "chờ nhịp game";
+Aimlag shows whether scoping/eligible enemies are available. Diagnostic mode
+includes counts and a failing code offset. Failure messages identify fingerprint,
+clock lookup, mapping and callback-write stages. Unsupported enemy classes do
+not cancel supported enemies or an installed local Burrow callback.
 
 ## Quick controls
 

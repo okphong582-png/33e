@@ -31,16 +31,17 @@
 #define ROW_EPOCH 24
 #define ROW_MODE 28
 #define ROW_REAL 32
+#define ROW_ID 44
 #define ROW_SHOWN 48
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453031ULL;
+constexpr uint64_t Magic = 0x504c4d4f44453032ULL;
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
-    float real[3]={}; uint32_t pad=0;
+    float real[3]={}; uint32_t identity=0;
     float shown[3]={}; uint32_t pad2=0;
 };
 struct Input {
@@ -68,6 +69,7 @@ static_assert(offsetof(State, magic)==MODES_MAGIC);
 static_assert(offsetof(State, rows)==MODES_ROWS);
 static_assert(sizeof(Row)==MODES_ROW_SIZE);
 static_assert(offsetof(Row, real)==ROW_REAL && offsetof(Row, shown)==ROW_SHOWN);
+static_assert(offsetof(Row, identity)==ROW_ID);
 static_assert(sizeof(State)<MODES_PAGE);
 }
 #endif

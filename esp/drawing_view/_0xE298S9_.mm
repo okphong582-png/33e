@@ -769,10 +769,24 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     NSMutableArray<NSString *> *modes = [NSMutableArray array];
     if (ESPPrefsBool(@"Burrow", NO)) [modes addObject:@"Độn thổ"];
     if (ESPPrefsBool(@"AimLag", NO)) [modes addObject:@"Aimlag"];
-    if (modes.count && gPlayerModesInstall != 8) {
-        NSString *reason = gPlayerModesInstall == 9 ? @"bản game chưa hỗ trợ" :
-            (gPlayerModesInstall == 10 ? @"iOS từ chối cài" : @"chờ vào trận");
-        [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
+    if (modes.count) {
+        const auto current = PlayerModesRead();
+        if (gPlayerModesInstall != 8) {
+            NSString *reason = gPlayerModesInstall == 9 ? @"bản game chưa hỗ trợ" :
+                (gPlayerModesInstall == 10 ? @"không cài được nhịp game" : @"chờ vào trận");
+            if (current.detail && current.detail[0]) reason = [NSString stringWithUTF8String:current.detail];
+            [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
+        } else {
+            if (ESPPrefsBool(@"Burrow", NO)) [lines addObject:current.burrow ?
+                @"Độn thổ · đang hạ 0,45 m" : (current.running ? @"Độn thổ · tạm dừng" : @"Độn thổ · chờ nhịp game")];
+            if (ESPPrefsBool(@"AimLag", NO)) [lines addObject:!current.scoped ? @"Aimlag · mở ngắm để giữ địch" :
+                (current.heldEnemies ? [NSString stringWithFormat:@"Aimlag · giữ %u địch", current.heldEnemies] :
+                (current.running ? @"Aimlag · chờ địch phù hợp" : @"Aimlag · chờ nhịp game"))];
+        }
+        if (gAimDiagnostics) [lines addObject:[NSString stringWithFormat:@"Nhịp %llu · áp dụng %llu · bỏ qua %u",
+            (unsigned long long)current.ticks, (unsigned long long)current.applies, current.skipped]];
+        if (gAimDiagnostics && current.failedOffset) [lines addObject:[NSString stringWithFormat:@"Mã khác: 0x%llx",
+            (unsigned long long)current.failedOffset]];
     }
     self.ghostStatusLayer.hidden = lines.count == 0;
     self.ghostStatusLayer.string = [lines componentsJoinedByString:@"\n"];
