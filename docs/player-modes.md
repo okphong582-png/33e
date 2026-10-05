@@ -15,7 +15,7 @@ second-slot writes roll back the first without overwriting another hook.
 
 ## Burrow
 
-The local player's root transform is lowered 0.45 m after the normal update.
+The local player's root transform is lowered 0.75 m after the normal update.
 On the next update, the wrapper restores its last normal position before the
 game runs movement/physics/animation, then applies one offset to the new normal
 position. Disabling leaves the normal update's current position, preserving

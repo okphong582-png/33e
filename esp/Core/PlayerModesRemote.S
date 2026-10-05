@@ -119,7 +119,7 @@ _PlayerModesRemoteStart:
 .LburrowMoved:
     // An outside horizontal move can carry our lowered Y unchanged. Restore
     // only that owned height, keeping the fresh X/Z, before normal movement.
-    // Otherwise each such move would subtract another 0.45 m on the next tick.
+    // Otherwise each such move would subtract another 0.75 m on the next tick.
     fmov w8, s1
     ldr w9, [x22, #(ROW_SHOWN+4)]
     cmp w8, w9
@@ -295,9 +295,7 @@ _PlayerModesRemoteStart:
 .Lburrow:
     // Always offset the fresh normal position, never the previous lowered one.
     // Do not disable gravity or collisions, or replace the physics controller.
-    mov w8, #0x6666
-    movk w8, #0x3ee6, lsl #16 // 0.45 m
-    fmov s3, w8
+    fmov s3, #0.75 // Shallow depth, applied once to the fresh normal position.
     fsub s1, s1, s3
 .LcaptureShown:
     stp s0, s1, [x22, #ROW_SHOWN]

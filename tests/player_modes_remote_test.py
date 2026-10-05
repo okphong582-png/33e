@@ -160,7 +160,7 @@ class Simulation:
 s = Simulation(flags=2); s.run(LOCAL, interface=True, wrapped=False)
 assert s.q('TICKS') == 0 and s.q('APPLIES') == 0 and s.positions[LOCAL][1] == 10
 s.run(LOCAL, interface=True)
-assert s.q('TICKS') == 1 and s.q('APPLIES') == 1 and math.isclose(s.positions[LOCAL][1], 9.55, abs_tol=1e-6)
+assert s.q('TICKS') == 1 and s.q('APPLIES') == 1 and math.isclose(s.positions[LOCAL][1], 9.25, abs_tol=1e-6)
 s.w('FLAGS', 0); s.run(LOCAL, interface=True)
 assert s.positions[LOCAL][1] == 10, 'Interface release must restore normal height'
 
@@ -168,7 +168,7 @@ s = Simulation(flags=2)
 for step in range(100):
     s.run(LOCAL)
     assert s.original_seen[-1] == (step, 10, step*2), 'Physics update received a lowered transform'
-    assert math.isclose(s.positions[LOCAL][1], 9.55, abs_tol=1e-6)
+    assert math.isclose(s.positions[LOCAL][1], 9.25, abs_tol=1e-6)
     assert s.positions[LOCAL][0] == step+1 and s.positions[LOCAL][2] == (step+1)*2
 s.w('FLAGS', 0); s.run(LOCAL)
 assert s.positions[LOCAL] == (101, 10, 202) and s.q('APPLIES') == 100
@@ -182,7 +182,7 @@ for _ in range(100):
     s.positions[LOCAL] = (x+0.5, y, z+0.5)
     s.run(LOCAL, interface=True)
     assert s.original_seen[-1] == (x+0.5, 10, z+0.5)
-    assert s.positions[LOCAL] == (x+1.5, f32(9.55), z+2.5)
+    assert s.positions[LOCAL] == (x+1.5, f32(9.25), z+2.5)
 s.w('FLAGS', 0); s.run(LOCAL, interface=True)
 assert s.positions[LOCAL][1] == 10
 for value in [math.nan, math.inf, -math.inf, 1000001]:
@@ -228,7 +228,7 @@ assert len(s.writes) == before+1
 
 # Both roles can coexist, and neither role spills to teammates/unlisted actors.
 s = Simulation(flags=3); s.run(LOCAL); s.run(ENEMY); s.run(OTHER)
-assert math.isclose(s.positions[LOCAL][1], 9.55, abs_tol=1e-6)
+assert math.isclose(s.positions[LOCAL][1], 9.25, abs_tol=1e-6)
 assert s.positions[OTHER] == (41, 10, 42) and not any(player == OTHER for player, _ in s.writes)
 s = Simulation(flags=1); s.run(LOCAL); assert not s.writes
 s = Simulation(flags=2); s.run(ENEMY); assert not s.writes
@@ -236,7 +236,7 @@ s = Simulation(flags=2); s.run(ENEMY); assert not s.writes
 # New corrections win over stale restore data, including local teleports.
 s = Simulation(flags=2); s.run(LOCAL); s.positions[LOCAL] = (100, 15, 100); s.run(LOCAL)
 assert s.original_seen[-1] == (100, 15, 100)
-assert s.positions[LOCAL][0] == 101 and math.isclose(s.positions[LOCAL][1], 14.55, abs_tol=1e-6)
+assert s.positions[LOCAL][0] == 101 and math.isclose(s.positions[LOCAL][1], 14.25, abs_tol=1e-6)
 s = Simulation(flags=1); s.run(ENEMY)
 s.positions[ENEMY] = (100, 10, 100); s.authoritative[ENEMY] = s.positions[ENEMY]
 writes = len(s.writes); s.run(ENEMY)

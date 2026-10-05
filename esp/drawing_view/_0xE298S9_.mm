@@ -778,7 +778,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
         } else {
             if (ESPPrefsBool(@"Burrow", NO)) [lines addObject:current.burrow ?
-                @"Độn thổ · đang hạ 0,45 m" : (current.running ? @"Độn thổ · tạm dừng" : @"Độn thổ · chờ nhịp game")];
+                @"Độn thổ · đang hạ 0,75 m" : (current.running ? @"Độn thổ · tạm dừng" : @"Độn thổ · chờ nhịp game")];
             if (ESPPrefsBool(@"AimLag", NO)) [lines addObject:!current.scoped ? @"Aimlag · mở ngắm để giữ địch" :
                 (current.heldEnemies ? [NSString stringWithFormat:@"Aimlag · giữ %u địch", current.heldEnemies] :
                 (current.running ? @"Aimlag · chờ địch phù hợp" : @"Aimlag · chờ nhịp game"))];
