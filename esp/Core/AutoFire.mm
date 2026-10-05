@@ -21,6 +21,8 @@ constexpr uint64_t Getter=0x5616118, Start=0x5C179E8, Stop=0x5C222EC;
 // before each virtual-182 shot (0x5BA4054..0x5BA40A4).
 constexpr uint64_t Interval=0x5BF3B0C;
 constexpr uint64_t FireEffect=0x56AC3A8, EffectSlot=0x138+182*16;
+constexpr uint64_t Tracer=0x5C76890, TracerSlot=0x138+5*16;
+constexpr uint64_t MetadataInit=0xA11121C, TracerTypeInfo=0xBB4BEC8;
 // Player.PostUpdate calls the current weapon's MAMFDNEJAPF(float,float)
 // through virtual slot 28 at 0x569C4E8. Player.OnUpdate is also called
 // directly, so replacing its virtual slot can install a callback with no ticks.
@@ -125,7 +127,9 @@ bool Adopt(uint64_t slot,uint64_t a) {
     if(!Read(a,code)||std::memcmp(code.data(),AutoFireRemoteStart,code.size())||
         !Read(a+AUTO_PAGE,state)||state.magic!=AutoFireRemote::Magic||!SupportedUpdate(state.original)||
         state.getter!=module+Getter||state.start!=module+Start||state.stop!=module+Stop||
-        state.interval!=module+Interval||state.clock!=Clock()||state.effectOriginal!=module+FireEffect)return false;
+        state.interval!=module+Interval||state.clock!=Clock()||state.effectOriginal!=module+FireEffect||
+        state.tracerOriginal!=module+Tracer||state.metadataInit!=module+MetadataInit||
+        state.tracerTypeInfo!=module+TracerTypeInfo)return false;
     sessions.push_back({slot,a,state.original,state.sequence&~1u,true});
     Disable(sessions.back());
     return true;
@@ -148,6 +152,9 @@ int Install(uint64_t slot,Session *&session) {
         state.getter=module+Getter;state.start=module+Start;state.stop=module+Stop;
         state.interval=module+Interval;
         state.effectOriginal=module+FireEffect;
+        state.tracerOriginal=module+Tracer;
+        state.metadataInit=module+MetadataInit;
+        state.tracerTypeInfo=module+TracerTypeInfo;
         if(!Write(mapping.address+AUTO_PAGE,state)){mach_vm_deallocate(task,mapping.address,2*AUTO_PAGE);return 10;}
         sessions.push_back({slot,mapping.address,current,0});session=&sessions.back();
     }
@@ -162,13 +169,13 @@ int Install(uint64_t slot,Session *&session) {
 #endif
     return 8;
 }
-int InstallEffect(Session &session,uint64_t local) {
-    uint64_t klass=0,current=0;
-    if(!Read(local,klass)||!isVaildPtr(klass)||!Read(klass+EffectSlot,current))return 9;
-    const uint64_t replacement=session.allocation+AUTO_EFFECT_ENTRY,slot=klass+EffectSlot;
+int InstallPresentation(Session &session,uint64_t slot,uint64_t native,uint64_t entry) {
+    uint64_t current=0;
+    if(!Read(slot,current))return 9;
+    const uint64_t replacement=session.allocation+entry;
     if(current==replacement)return 8;
-    bool supported=current==module+FireEffect;
-    for(const auto &other:sessions) supported=supported||current==other.allocation+AUTO_EFFECT_ENTRY;
+    bool supported=current==module+native;
+    for(const auto &other:sessions) supported=supported||current==other.allocation+entry;
     if(!supported)return 9;
     if(!Writable(slot))return 10;
 #ifdef MIZZE_INJECTED
@@ -179,6 +186,28 @@ int InstallEffect(Session &session,uint64_t local) {
     const bool ok=Read(slot,live)&&live==current&&Write(slot,replacement);
     task_resume(task);return ok?8:10;
 #endif
+}
+int InstallEffect(Session &session,uint64_t local) {
+    uint64_t klass=0;
+    if(!Read(local,klass)||!isVaildPtr(klass))return 9;
+    return InstallPresentation(session,klass+EffectSlot,FireEffect,AUTO_EFFECT_ENTRY);
+}
+template<size_t N> bool ClassText(uint64_t address,const char (&expected)[N]) {
+    uint64_t p=0;std::array<char,N> text{};
+    return Read(address,p)&&Read(p,text)&&!std::memcmp(text.data(),expected,N);
+}
+int InstallTracer(Session &session,uint64_t weapon) {
+    uint32_t ready=0;
+    if(!Read(session.state()+AUTO_METADATA_READY,ready))return 10;
+    // The signed weapon callback resolves this metadata usage on a game thread.
+    // Do not publish automatic fire before its lazy visual class is available.
+    if(!ready)return 7;
+    uint64_t klass=0,component=0,actual=0;
+    if(!Read(module+TracerTypeInfo,klass)||!isVaildPtr(klass)||
+        !ClassText(klass+0x10,"NGMILJIELKA")||!ClassText(klass+0x18,"COW.GamePlay")||
+        !Read(weapon+0x530,component))return 9;
+    if(component&&(!Read(component,actual)||actual!=klass))return 9;
+    return InstallPresentation(session,klass+TracerSlot,Tracer,AUTO_TRACER_ENTRY);
 }
 uint64_t Count(uint64_t offset) {
     uint64_t total=0;
@@ -207,7 +236,9 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
         (!codeVerified && (!Fingerprint<0xCC>(base+Getter,0xC5E012EE)||!Fingerprint<0x5A8>(base+Start,0x9AD8096C)||
         !Fingerprint<0x1E4>(base+Stop,0xA2F105A1)||!Fingerprint<0xCC>(base+0x569C434,0x88A4BD15)||
         !Fingerprint<0x210>(base+Interval,0x131E1130)||!Fingerprint<0x50>(base+0x5BA4054,0xA165FA4A)||
-        !Fingerprint<0x10>(base+0x6483C7C,0x572D5404)||!Fingerprint<0x1E8>(base+FireEffect,0x1EE7E697)))){
+        !Fingerprint<0x10>(base+0x6483C7C,0x572D5404)||!Fingerprint<0x1E8>(base+FireEffect,0x1EE7E697)||
+        !Fingerprint<0x26B0>(base+Tracer,0x6D340948)||!Fingerprint<0x18>(base+MetadataInit,0x2FC932FA)||
+        !Fingerprint<0x30>(base+0x5C1E910,0xC285FA0E)||!Fingerprint<0x30C>(base+0x5C22FA8,0x76159E8D)))){
         Clear();retryAt=now+1;retryState=9;return 9;
     }
     codeVerified=true; // Immutable signed code; reset when task/PID/base changes.
@@ -216,6 +247,12 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
     if(result!=8){Clear();retryAt=now+1;retryState=result;return result;}
     const int effectResult=InstallEffect(*session,local);
     if(effectResult!=8){Clear();retryAt=now+1;retryState=effectResult;return effectResult;}
+    const int tracerResult=InstallTracer(*session,weapon);
+    if(tracerResult!=8){
+        Clear();
+        if(tracerResult!=7){retryAt=now+1;retryState=tracerResult;}
+        return tracerResult;
+    }
     if(activeSlot!=session->slot){for(auto &s:sessions)if(s.slot!=session->slot)Disable(s);activeSlot=session->slot;}
     const uint64_t silentGate=SilentAimAutoFireGate();
     if(!silentGate||!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 7;}

@@ -10,6 +10,77 @@
 _AutoFireRemoteStart:
     b .LautoMain
     .p2align 4
+    b .LautoEffect
+    .p2align 4
+    b .LautoTracer
+.LautoTracer:
+    // NGMILJIELKA.JCCIMHDAPDB: visual shot presentation. Preserve all
+    // argument registers for the unchanged tail-call (five args plus dt).
+    stp x29, x30, [sp, #-160]!
+    stp x19, x20, [sp, #16]
+    stp x0, x1, [sp, #32]
+    stp x2, x3, [sp, #48]
+    stp x4, x5, [sp, #64]
+    stp x6, x7, [sp, #80]
+    stp d0, d1, [sp, #96]
+    stp d2, d3, [sp, #112]
+    stp d4, d5, [sp, #128]
+    stp d6, d7, [sp, #144]
+    adr x19, .LautoState
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w20, [x8]
+    tbnz w20, #0, .LtracerOriginal
+    ldr w8, [x19, #AUTO_ENABLED]
+    cbz w8, .LtracerOriginal
+    ldr x8, [x19, #AUTO_WEAPON]
+    cbz x8, .LtracerOriginal
+    ldr x9, [x8, #0x530]
+    cmp x9, x0
+    b.ne .LtracerOriginal
+    ldr x9, [x19, #AUTO_LOCAL]
+    cbz x9, .LtracerOriginal
+    ldr x8, [x8, #0x60]
+    cmp x8, x9
+    b.ne .LtracerOriginal
+    ldr x8, [x19, #AUTO_MATCH]
+    cbz x8, .LtracerOriginal
+    ldr x8, [x8, #0xd8]
+    cmp x8, x9
+    b.ne .LtracerOriginal
+    add x8, x9, #0x1000
+    ldrb w8, [x8, #0x258]
+    cbnz w8, .LtracerOriginal
+    ldr x8, [x19, #AUTO_CLOCK]
+    blr x8
+    ldr x8, [x19, #AUTO_DEADLINE]
+    cmp x0, x8
+    b.hi .LtracerOriginal
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w20
+    b.ne .LtracerOriginal
+    ldr x8, [x19, #AUTO_TRACER_SKIPS]
+    add x8, x8, #1
+    str x8, [x19, #AUTO_TRACER_SKIPS]
+    mov x8, #0
+    b .LtracerReturn
+.LtracerOriginal:
+    ldr x8, [x19, #AUTO_TRACER_ORIGINAL]
+.LtracerReturn:
+    ldp d0, d1, [sp, #96]
+    ldp d2, d3, [sp, #112]
+    ldp d4, d5, [sp, #128]
+    ldp d6, d7, [sp, #144]
+    ldp x0, x1, [sp, #32]
+    ldp x2, x3, [sp, #48]
+    ldp x4, x5, [sp, #64]
+    ldp x6, x7, [sp, #80]
+    ldp x19, x20, [sp, #16]
+    ldp x29, x30, [sp], #160
+    cbz x8, .LtracerDone
+    br x8
+.LtracerDone:
+    ret
     // Player.PlayFireEffect(self, weapon, MethodInfo*). This virtual method
     // triggers presentation; native shot dispatch remains in the weapon path.
 .LautoEffect:
@@ -79,6 +150,21 @@ _AutoFireRemoteStart:
     adr x19, .LautoState
     mov x20, x0
     mov x21, x1
+    // Resolve the exact TypeInfo on a game thread before the first shot.
+    // The host can bind its visual slot next frame without requiring manual fire.
+    ldr w8, [x19, #AUTO_METADATA_READY]
+    cbnz w8, .LautoPrepared
+    ldr x8, [x19, #AUTO_METADATA_INIT]
+    cbz x8, .LautoPrepared
+    ldr x0, [x19, #AUTO_TRACER_TYPEINFO]
+    cbz x0, .LautoPrepared
+    blr x8
+    mov w8, #1
+    str w8, [x19, #AUTO_METADATA_READY]
+.LautoPrepared:
+    mov x0, x20
+    mov x1, x21
+    ldp d0, d1, [sp, #80]
     // Advance native gun/handler state before trying a shot. The start method
     // can reject a command while the previous tick's state is still active.
     ldr x8, [x19, #AUTO_ORIGINAL]

@@ -41,6 +41,11 @@ assert.equal(fingerprint(0x5C179E8, 0x5A8), 0x9AD8096C);
 words(0x6483C7C,[0x39465000,0xD65F03C0,0x39065001,0xD65F03C0]);
 words(0x5C17DB0,[0x39465008,0x37000A88]);
 assert.equal(fingerprint(0x56AC3A8,0x1E8),0x1EE7E697);
+// Separate visual dispatch and hit-processing branches; lazy visual TypeInfo.
+assert.equal(fingerprint(0x5C76890,0x26B0),0x6D340948);
+assert.equal(fingerprint(0xA11121C,0x18),0x2FC932FA);
+assert.equal(fingerprint(0x5C1E910,0x30),0xC285FA0E);
+assert.equal(fingerprint(0x5C22FA8,0x30C),0x76159E8D);
 assert.equal(fingerprint(0x5C222EC, 0x1E4), 0xA2F105A1);
 assert.equal(fingerprint(0x5660700, 0x100), 0xC902032E);
 assert.equal(fingerprint(0x5A4BEC0, 0x100), 0x4B4A9AE9);
@@ -65,8 +70,21 @@ const strings = metadata.readUInt32LE(24), methods = metadata.readUInt32LE(48);
 const types = metadata.readUInt32LE(160), typeBytes = metadata.readUInt32LE(164);
 const string = i => { const start = strings+i; return metadata.subarray(start, metadata.indexOf(0,start)).toString(); };
 let found = false;
+let visualFound = false;
 const inputMethods = new Set();
 for (let p = types; p < types+typeBytes; p += 88) {
+    if (string(metadata.readUInt32LE(p)) === 'NGMILJIELKA') {
+        assert.equal(string(metadata.readUInt32LE(p+4)), 'COW.GamePlay');
+        const start = metadata.readUInt32LE(p+36), count = metadata.readUInt16LE(p+64);
+        for(let j=start;j<start+count;++j) {
+            const q=methods+j*40;
+            if(string(metadata.readUInt32LE(q)) !== 'JCCIMHDAPDB') continue;
+            assert.equal(metadata.readUInt16LE(q+36),5);
+            assert.equal(metadata.readUInt16LE(q+38),5);
+            assert(metadata.readUInt16LE(q+32)&0x40);
+            visualFound=true;
+        }
+    }
     if (string(metadata.readUInt32LE(p)) === 'HBIBDMMOOOK') {
         const start = metadata.readUInt32LE(p+36), count = metadata.readUInt16LE(p+64);
         for (let j = start; j < start+count; ++j) {
@@ -91,5 +109,6 @@ for (let p = types; p < types+typeBytes; p += 88) {
     }
 }
 assert(found, 'Expected native handler metadata');
+assert(visualFound,'Expected separate virtual shot presentation');
 assert.equal(inputMethods.size, 2, 'Expected native weapon input pair');
 console.log('1.132.1 static shot-input layout verified; runtime hits remain unverified.');

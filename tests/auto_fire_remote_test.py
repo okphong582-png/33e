@@ -76,7 +76,53 @@ for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(local=False),di
     assert effect_case(**args)==(['effect'],0),args
 
 BASE, STATE, ORIGINAL, CLOCK, GETTER, START, END, RETURN = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200, 0x120300, 0x120400, 0x120500
+
+def tracer_case(enabled=1,sequence=2,now=100,current=True,owner=True,
+                match=True,knocked=0,race=False):
+    uc=Uc(UC_ARCH_ARM64,UC_MODE_ARM)
+    uc.mem_map(0x100000,0x40000);uc.mem_map(0x200000,0x80000);uc.mem_map(0x300000,0x10000)
+    uc.mem_write(BASE,code)
+    def ptr(a,v):uc.mem_write(a,struct.pack('<Q',v))
+    def word(a,v):uc.mem_write(a,struct.pack('<I',v))
+    original=0x120800
+    for a in [CLOCK,original]:uc.mem_write(a,b'\xc0\x03\x5f\xd6')
+    ptr(STATE+8,CLOCK);ptr(STATE+160,original)
+    word(STATE+40,sequence);word(STATE+44,enabled)
+    for a,v in [(48,110),(56,0x200000),(64,0x230000),(72,0x210000)]:ptr(STATE+a,v)
+    ptr(0x210530,0x273000 if current else 0x273008)
+    ptr(0x210060,0x200000 if owner else 0x200008)
+    ptr(0x2300d8,0x200000 if match else 0x200008)
+    uc.mem_write(0x201258,bytes([knocked]))
+    xr=[UC_ARM64_REG_X0+i for i in range(8)]
+    dr=[UC_ARM64_REG_D0+i for i in range(8)]
+    args=[0x273000]+[0xABC00+i for i in range(1,8)]
+    floats=[0x3F800000+i for i in range(8)]
+    for r,v in zip(xr+dr,args+floats):uc.reg_write(r,v)
+    uc.reg_write(UC_ARM64_REG_SP,0x308000);uc.reg_write(UC_ARM64_REG_X30,RETURN)
+    uc.reg_write(UC_ARM64_REG_X19,0x999);uc.reg_write(UC_ARM64_REG_X20,0x888)
+    calls=[]
+    def hook(uc,a,size,_):
+        if a==CLOCK:
+            for r in xr+dr:uc.reg_write(r,0)
+            uc.reg_write(UC_ARM64_REG_X0,now)
+            if race:word(STATE+40,sequence+2)
+        elif a==original:
+            assert [uc.reg_read(r) for r in xr+dr]==args+floats
+            assert uc.reg_read(UC_ARM64_REG_SP)==0x308000
+            calls.append('tracer')
+    uc.hook_add(UC_HOOK_CODE,hook);uc.emu_start(BASE+32,RETURN,count=1000)
+    assert uc.reg_read(UC_ARM64_REG_PC)==RETURN and uc.reg_read(UC_ARM64_REG_SP)==0x308000
+    assert uc.reg_read(UC_ARM64_REG_X19)==0x999 and uc.reg_read(UC_ARM64_REG_X20)==0x888
+    return calls,struct.unpack('<Q',uc.mem_read(STATE+168,8))[0]
+
+assert tracer_case()==([],1)
+for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(current=False),
+             dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
+    assert tracer_case(**args)==(['tracer'],0),args
+print('Local tracer suppression, OFF/remote/stale fallbacks and all argument registers passed')
+
 INTERVAL = 0x120600
+METADATA_INIT, TYPEINFO = 0x120900, 0x274000
 SILENT_BASE, SILENT_STATE, SHOT = 0x110000, 0x114000, 0x120700
 HANDLER, INFO, INFO_CLASS = 0x270000, 0x271000, 0x272000
 LOCAL, WEAPON, CLASS, MATCH, POOL, ENTRIES, ENTRY, STACK = 0x200000, 0x210000, 0x220000, 0x230000, 0x240000, 0x250000, 0x260000, 0x300000
@@ -85,7 +131,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          self=WEAPON, owner=LOCAL, weapon=WEAPON, snapshot_weapon=WEAPON,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
          steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
-         gate=SILENT_STATE+128, silent_percent=None, cold_info=False):
+         gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -99,6 +145,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     ptr(STATE+120,INTERVAL)
     uc.mem_write(STATE+128,struct.pack('<f',elapsed))
     ptr(STATE+136,gate)
+    if warm:
+        ptr(STATE+176,METADATA_INIT);ptr(STATE+184,TYPEINFO)
+        uc.mem_write(METADATA_INIT,b'\xc0\x03\x5f\xd6')
     ptr(WEAPON+0x60,owner); ptr(WEAPON,CLASS)
     ptr(CLASS+0xc98,start); ptr(CLASS+0xca0,0xABC); ptr(CLASS+0xe88,stop); ptr(CLASS+0xe90,0xDEF)
     ptr(MATCH+0xd8,match_local); uc.mem_write(LOCAL+0x1258,bytes([knocked]))
@@ -128,8 +177,14 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     calls=[]
     bullets=[]
     getter_calls=[]
+    metadata_calls=[]
     def hook(uc,a,size,_):
-        if a == ORIGINAL:
+        if a == METADATA_INIT:
+            assert uc.reg_read(UC_ARM64_REG_X0)==TYPEINFO
+            metadata_calls.append(a)
+            uc.reg_write(UC_ARM64_REG_X0,0);uc.reg_write(UC_ARM64_REG_X1,0)
+            uc.reg_write(UC_ARM64_REG_D0,0);uc.reg_write(UC_ARM64_REG_D1,0)
+        elif a == ORIGINAL:
             assert uc.reg_read(UC_ARM64_REG_X0)==self and uc.reg_read(UC_ARM64_REG_X1)==0x1234
             assert uc.reg_read(UC_ARM64_REG_D0)==dt_bits and uc.reg_read(UC_ARM64_REG_D1)==0x41200000
             calls.append('update')
@@ -177,6 +232,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         if silent_percent is not None:
             assert struct.unpack('<fff',uc.mem_read(INFO+0x40,12))==(0,0,1)
     if not enabled and not held: assert not getter_calls
+    assert len(metadata_calls)==int(warm)
+    assert struct.unpack('<I',uc.mem_read(STATE+192,4))[0]==int(warm)
     assert struct.unpack('<I',uc.mem_read(STATE+88,4))[0]==busy
     held_after,=struct.unpack('<Q',uc.mem_read(STATE+80,8))
     starts,=struct.unpack('<Q',uc.mem_read(STATE+96,8))
@@ -187,6 +244,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     return (calls,held_after,starts,bullets) if silent_percent is not None else (calls,held_after,starts)
 
 assert case()==(['update','start'],WEAPON,1)
+assert case(steps=10,warm=True)[2]==3
+assert case(steps=10,warm=True,enabled=0)==(['update']*10,0,0)
 assert case(firing=2)==(['update'],0,0)  # do not claim a manual hold
 assert case(firing=2,held=WEAPON)==(['update'],WEAPON,0)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(knocked=1),

@@ -100,3 +100,33 @@ fixtures cover ammo-free activation/restoration, existing effects and failed
 writes. These checks do not prove server ammo acceptance or that every separate
 weapon/FPP animation is routed through Player.PlayFireEffect; those require
 device testing. The flag does not create ammo in an already empty weapon.
+
+## AimKill local bullet presentation
+
+Weapon.CIHHEOKFADJ at 0x5C22FA8 dispatches CHBHFOIAMDE (visuals) at
+0x5C23280 and LHNJLFOINDO (hit processing) at 0x5C2328C. The visual branch
+uses weapon+0x530, an NGMILJIELKA component, and calls JCCIMHDAPDB through
+virtual slot 5 at class+0x188. Its implementation at 0x5C76890 has five
+parameters plus MethodInfo and float arguments. The complete 0x26B0-byte
+implementation, 0x30-byte virtual call block and 0x30C-byte shot wrapper
+are fingerprinted before installation.
+
+AutoFire's signed page adds an entry at +32 which suppresses this visual
+component only for the current local weapon in a fresh enabled AimKill
+publication. Weapon ownership, match, knock and sequence guards are checked.
+Other components, OFF and stale/racing publications tail-call the original,
+preserving x0..x7, d0..d7, stack and callee-saved registers. Native shot
+dispatch and the subsequent hit-processing branch are unchanged. This skips
+the visual dispatch as a whole, potentially including associated shot effects.
+
+To cover a first shot without manual priming, the weapon update resolves the
+exact TypeInfo usage at image+0xBB4BEC8 with the fingerprinted metadata helper
+at 0xA11121C on a game thread. The host waits for preparation, validates the
+resolved class name/namespace and binds the visual slot before enabling shots.
+The shared implementation is used by both TIPA and dylib. State magic changes
+to AUTOFIR8; restart the game and overlay when replacing an older build.
+
+ARM64 simulation verifies suppression/fallback, metadata preparation once per
+page and ABI restoration, alongside the existing sustained-shot/Silent tests.
+Static evidence establishes this layout for the supplied 1.132.1 binary only;
+device testing must confirm visible trails and any separate weapon effects.
