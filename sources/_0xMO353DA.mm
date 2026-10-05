@@ -218,6 +218,8 @@
     if (self.page == 0) {
         y = [self toggle:@"AimKill" key:@"AutoFire" fallback:NO y:y];
         y = [self toggle:@"Silent Aim" key:@"SilentAim" fallback:NO y:y];
+        y = [self toggle:@"Aimlag" key:@"AimLag" fallback:NO y:y];
+        y = [self note:@"Giữ vị trí địch khi ngắm · chỉ trên máy bạn." y:y];
         y = [self slider:@"FOV" key:ESPPrefsBool(@"SilentAim", NO) ? @"SilentFovSize" : @"FovSize"
             min:5 max:48 fallback:ESPPrefsBool(@"SilentAim", NO) ? 18 : 40 y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
@@ -286,6 +288,8 @@
     } else {
         y = [self toggle:@"Ghost Mode (thử nghiệm)" key:@"GhostMode" fallback:NO y:y];
         y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
+        y = [self toggle:@"Độn thổ" key:@"Burrow" fallback:NO y:y];
+        y = [self note:@"Hạ nông 0,45 m · tắt để trở lại." y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];

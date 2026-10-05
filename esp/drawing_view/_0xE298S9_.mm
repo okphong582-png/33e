@@ -3,6 +3,7 @@
 #include "../Core/SilentAimSelection.h"
 #include "../Core/AutoFire.h"
 #include "../Core/GhostMode.h"
+#include "../Core/PlayerModes.h"
 #include "../Core/GamePRI.h"
 #include "../Core/AimPoint.h"
 #include "../Core/SilentAim.h"
@@ -77,6 +78,7 @@ static bool isSilentAim  = NO;
 static bool gAutoFire = false;
 static bool gGhostMode = false;
 static int gGhostInstall = 1;
+static int gPlayerModesInstall = 1;
 static GhostModeSnapshot gGhostSnapshot;
 static CFTimeInterval gNextGhostRead = 0;
 static uint64_t gAimLockTarget  = 0;
@@ -124,6 +126,7 @@ void ESPSyncFromPrefs(void) {
     gAutoFire = autoEnabled;
     gGhostMode = ESPPrefsBool(@"GhostMode", NO);
     GhostModeSetEnabled(gGhostMode);
+    PlayerModesSetEnabled(ESPPrefsBool(@"Burrow", NO), ESPPrefsBool(@"AimLag", NO));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
@@ -406,14 +409,14 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)applicationWillResignActive:(NSNotification *)notification {
-    GhostModeCancel();
+    GhostModeCancel(); PlayerModesCancel();
     [self clearAllContent];
 }
 
 - (void)didMoveToWindow {
     [super didMoveToWindow];
     if (!self.window) {
-        GhostModeCancel();
+        GhostModeCancel(); PlayerModesCancel();
         [self.displayLink invalidate];
         self.displayLink = nil;
         [self clearAllContent];
@@ -621,11 +624,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (!self.window) return;
 #ifdef MIZZE_INJECTED
     if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) {
-        GhostModeCancel();
+        GhostModeCancel(); PlayerModesCancel();
         [self clearAllContent]; return;
     }
 #endif
-    if (![LicenseSession shared].authorized) { GhostModeCancel(); [self clearAllContent]; return; }
+    if (![LicenseSession shared].authorized) { GhostModeCancel(); PlayerModesCancel(); [self clearAllContent]; return; }
     @autoreleasepool {
         const CFTimeInterval now = CACurrentMediaTime();
         BeginTransformFrame();
@@ -639,6 +642,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         }
         // Ghost does not depend on a target, gun, ESP dictionary or camera.
         gGhostInstall = GhostModeUpdate(Moudule_Base);
+        gPlayerModesInstall = PlayerModesUpdate(Moudule_Base);
         if (now >= gNextGhostRead) {
             gNextGhostRead = now + 0.1;
             gGhostSnapshot = GhostModeRead();
@@ -751,8 +755,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)updateGhostStatus {
-    self.ghostStatusLayer.hidden = !gGhostMode;
-    if (!gGhostMode) return;
+    NSMutableArray<NSString *> *lines = [NSMutableArray array];
     NSString *status = @"chờ dữ liệu";
     if (gGhostInstall == 9) status = @"bản game chưa hỗ trợ";
     else if (gGhostInstall == 10) status = @"iOS từ chối cài";
@@ -762,9 +765,20 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         else if (gGhostSnapshot.status == 7) status = @"tạm dừng";
         else if (gGhostSnapshot.status == 8) status = @"chờ nhịp game";
     }
-    self.ghostStatusLayer.string = [@"Ghost · " stringByAppendingString:status];
+    if (gGhostMode) [lines addObject:[@"Ghost · " stringByAppendingString:status]];
+    NSMutableArray<NSString *> *modes = [NSMutableArray array];
+    if (ESPPrefsBool(@"Burrow", NO)) [modes addObject:@"Độn thổ"];
+    if (ESPPrefsBool(@"AimLag", NO)) [modes addObject:@"Aimlag"];
+    if (modes.count && gPlayerModesInstall != 8) {
+        NSString *reason = gPlayerModesInstall == 9 ? @"bản game chưa hỗ trợ" :
+            (gPlayerModesInstall == 10 ? @"iOS từ chối cài" : @"chờ vào trận");
+        [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
+    }
+    self.ghostStatusLayer.hidden = lines.count == 0;
+    self.ghostStatusLayer.string = [lines componentsJoinedByString:@"\n"];
+    self.ghostStatusLayer.wrapped = YES;
     self.ghostStatusLayer.frame = CGRectMake(10, gAimDiagnostics ? 90 : 50,
-        MAX(0, self.bounds.size.width - 20), 22);
+        MAX(0, self.bounds.size.width - 20), MAX(22, lines.count * 22));
 }
 - (void)drawGhostAnchor:(Vector3)anchor matrix:(float *)matrix width:(CGFloat)vw height:(CGFloat)vh
                vpWidth:(CGFloat)vpW vpHeight:(CGFloat)vpH {
@@ -808,7 +822,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)dealloc {
-    GhostModeCancel();
+    GhostModeCancel(); PlayerModesCancel();
     AutoFireClear();
     SilentAimSetEnabled(false);
     ResetWeaponFeatures();

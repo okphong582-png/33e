@@ -112,6 +112,10 @@ jobs:
           python3 tests/ghost_remote_test.py /tmp/ghost-remote.o
           clang --target=arm64-apple-ios16.5 -c esp/Core/GhostRemote.S -o /tmp/ghost-remote-ios.o
           python3 tests/ghost_remote_test.py /tmp/ghost-remote-ios.o
+          clang --target=aarch64-linux-gnu -c esp/Core/PlayerModesRemote.S -o /tmp/player-modes.o
+          python3 tests/player_modes_remote_test.py /tmp/player-modes.o
+          clang --target=arm64-apple-ios16.5 -c esp/Core/PlayerModesRemote.S -o /tmp/player-modes-ios.o
+          python3 tests/player_modes_remote_test.py /tmp/player-modes-ios.o
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/silent_aim_direction_test.cpp -o /tmp/silent-aim-direction-test
           /tmp/silent-aim-direction-test
           g++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-function -Wno-error=attributes -Wno-error=parentheses -I. -fsanitize=address,undefined tests/game_pri_test.cpp -o /tmp/game-pri-test
