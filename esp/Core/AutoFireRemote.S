@@ -8,6 +8,65 @@
 .globl _AutoFireRemoteStart
 .globl _AutoFireRemoteEnd
 _AutoFireRemoteStart:
+    b .LautoMain
+    .p2align 4
+    // Player.PlayFireEffect(self, weapon, MethodInfo*). This virtual method
+    // triggers presentation; native shot dispatch remains in the weapon path.
+.LautoEffect:
+    stp x29, x30, [sp, #-64]!
+    stp x19, x20, [sp, #16]
+    stp x0, x1, [sp, #32]
+    str x2, [sp, #48]
+    adr x19, .LautoState
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w20, [x8]
+    tbnz w20, #0, .LeffectOriginal
+    ldr w8, [x19, #AUTO_ENABLED]
+    cbz w8, .LeffectOriginal
+    ldr x8, [x19, #AUTO_LOCAL]
+    cmp x0, x8
+    b.ne .LeffectOriginal
+    ldr x8, [x19, #AUTO_WEAPON]
+    cmp x1, x8
+    b.ne .LeffectOriginal
+    cbz x1, .LeffectOriginal
+    ldr x8, [x1, #0x60]
+    cmp x8, x0
+    b.ne .LeffectOriginal
+    ldr x8, [x19, #AUTO_MATCH]
+    cbz x8, .LeffectOriginal
+    ldr x8, [x8, #0xd8]
+    cmp x8, x0
+    b.ne .LeffectOriginal
+    add x8, x0, #0x1000
+    ldrb w8, [x8, #0x258]
+    cbnz w8, .LeffectOriginal
+    ldr x8, [x19, #AUTO_CLOCK]
+    blr x8
+    ldr x8, [x19, #AUTO_DEADLINE]
+    cmp x0, x8
+    b.hi .LeffectOriginal
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w20
+    b.ne .LeffectOriginal
+    ldr x8, [x19, #AUTO_EFFECT_SKIPS]
+    add x8, x8, #1
+    str x8, [x19, #AUTO_EFFECT_SKIPS]
+    mov x8, #0
+    b .LeffectReturn
+.LeffectOriginal:
+    ldr x8, [x19, #AUTO_EFFECT_ORIGINAL]
+.LeffectReturn:
+    ldp x0, x1, [sp, #32]
+    ldr x2, [sp, #48]
+    ldp x19, x20, [sp, #16]
+    ldp x29, x30, [sp], #64
+    cbz x8, .LeffectDone
+    br x8
+.LeffectDone:
+    ret
+.LautoMain:
     // Weapon.MAMFDNEJAPF(self, float dt, float time, MethodInfo*).
     // Player.PostUpdate calls this virtual slot even while the gun is idle.
     // Preserve the caller ABI and issue input only for the current local gun.

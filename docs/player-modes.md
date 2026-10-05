@@ -9,8 +9,13 @@ captures the base altitude. Each OnUpdate and PostUpdate advances by at most
 use the same bounded adjustment. Enemy hold epochs do not recapture the base.
 A native vertical correction greater than 4 metres captures a fresh base.
 
-The controller validates the local PhysicalCCT instance, class and transform.
-The signed remote callback calls its verified ForceSetPosition method
+The controller follows Player.UsePhysicalCharacterController (0x260). Ordinary
+matches can leave PhysicalCCT (0x268) empty and use CharacterController (0x4D8).
+Both paths validate the instance, class and namespace; Unity controllers also
+require a nonzero cached native pointer. The callback rechecks the selected
+mode and exact instance/class before applying. Unity controllers use the
+verified Entity transform setter. Physical controllers additionally call
+their verified ForceSetPosition method
 (0x646B648, size 0xB0, fingerprint 0x7C5E5F3F), then Entity.set_Position so the
 physical controller and rendered position agree. Full method fingerprints and
 signed callback installation guards remain required. Publication has a one-second

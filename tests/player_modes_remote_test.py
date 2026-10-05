@@ -51,7 +51,7 @@ def f32(value):
 
 
 class Simulation:
-    def __init__(self, flags=3, height=3.0):
+    def __init__(self, flags=3, height=3.0, physical=True):
         self.uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
         self.uc.mem_map(BASE, 0x40000)
         self.uc.mem_map(LOCAL, 0x240000)
@@ -77,6 +77,9 @@ class Simulation:
         self.uc.mem_write(STATE+OFF['MODES_HEIGHT'], struct.pack('<f', height))
         self.ptr(LOCAL+0x268,CCT);self.ptr(CCT,CCT_CLASS);self.ptr(CCT+0x1c8,0x432000)
         self.q('FLY_CCT',CCT);self.q('FLY_CLASS',CCT_CLASS)
+        self.w('FLY_KIND',1 if physical else 2)
+        self.uc.mem_write(LOCAL+0x260,bytes([int(physical)]))
+        self.ptr(LOCAL+0x4d8,CCT);self.ptr(CCT+0x10,0x432000)
         self.uc.hook_add(UC_HOOK_CODE, self.hook)
 
     def ptr(self, address, value):
@@ -138,6 +141,7 @@ class Simulation:
                 assert all(math.isfinite(v) for v in value)
                 self.writes.append((player, value))
                 self.positions[player] = value
+                if player==LOCAL and self.w('FLY_KIND')==2:self.cct_position=value
         if name not in ('GET_POS', 'SET_POS'):
             uc.reg_write(UC_ARM64_REG_D0, 0); uc.reg_write(UC_ARM64_REG_D1, 0)
         for reg in (UC_ARM64_REG_X8, UC_ARM64_REG_X9, UC_ARM64_REG_X10, UC_ARM64_REG_X11, UC_ARM64_REG_X12, UC_ARM64_REG_X13):
@@ -181,6 +185,23 @@ class Simulation:
 
 
 # Smooth modest ascent, horizontal movement and a fixed altitude in BOTH phases.
+for physical in [False,True]:
+    s=Simulation(flags=2,physical=physical)
+    for step in range(240):
+        if step==1:s.gravity_step=-0.25
+        s.run(LOCAL);s.run(LOCAL,post=True)
+        assert s.positions[LOCAL]==s.cct_position
+    assert s.positions[LOCAL][1]==13
+    assert len(s.force_writes)==(480 if physical else 0)
+    count=len(s.writes);s.uc.mem_write(LOCAL+0x260,bytes([int(not physical)]));s.run(LOCAL)
+    assert len(s.writes)==count
+for reason in ['object','class','native','kind']:
+    s=Simulation(flags=2,physical=False)
+    if reason=='object':s.ptr(LOCAL+0x4d8,0)
+    elif reason=='class':s.ptr(CCT,CCT_CLASS+0x100)
+    elif reason=='native':s.ptr(CCT+0x10,0)
+    else:s.w('FLY_KIND',9)
+    s.run(LOCAL);assert not s.writes
 s=Simulation(flags=2)
 s.run(LOCAL,interface=True,wrapped=False);assert not s.force_writes
 base=s.positions[LOCAL][1];previous=base

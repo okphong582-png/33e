@@ -9,6 +9,7 @@ an earlier game version.
 | `IODLOCEJIOK` | `COW.GamePlay.Player` (TypeDef 31767) | `0x768` | `PlayerAttributes` reference |
 | `BDOEGBMMEOK` | `COW.GamePlay.PlayerAttributes` (TypeDef 34482) | `0x20` | owning `Player` reference |
 | `ShootNoReload` | `PlayerAttributes` | `0x111` | `bool` (one byte) |
+| `IsAmmoFree` | `PlayerAttributes` | `0x194` | `bool` (one byte) |
 | `CILIDJHLLJA` / `FireIntervalScale` | `PlayerAttributes` | `0x258` | `float` |
 
 `get_FireIntervalScale`, token `0x0603C070`, address `0x64877D8`,
@@ -74,3 +75,28 @@ modifier. The manual FastFire preference is kept independently: AutoFire OFF
 restores the original interval unless manual FastFire is still enabled.
 The old 0.18-second target dwell has been removed, so a valid Silent target
 can request the first shot on the next weapon callback without manual input.
+
+## AimKill ammo and firing presentation
+
+IsAmmoFree's getter/setter at 0x6483C7C/0x6483C84 are single-byte loads/stores
+at +0x194. Weapon.ALJMFCJMDCF checks that attribute at 0x5C17DB0..0x5C17DB4
+and branches to 0x5C17F04 when true, skipping its subtract/set-ammo path.
+ShootNoReload is separate and does not prevent ammo consumption. AimKill now
+owns a reversible IsAmmoFree patch while enabled, preserving an existing game
+effect and restoring only its own value on OFF. The owner/class/match guards,
+replacement-component handling and failed-I/O retries match the other patches.
+
+The signed automatic-fire page adds a Player.PlayFireEffect entry at +16.
+Its complete 0x1E8-byte method at 0x56AC3A8 is fingerprinted before binding
+virtual slot 182 of the local player's class. The callback suppresses that
+presentation method only for a fresh enabled publication with the exact local
+player and weapon, correct owner/match and no knock. OFF, remote players,
+weapon changes, stale publication and publication races tail-call the original
+with its arguments preserved. Weapon updates, native shot events and Silent's
+direction handler continue to run. No global animator pause is used.
+
+ARM64 simulations cover both presentation paths and ABI restoration. Host
+fixtures cover ammo-free activation/restoration, existing effects and failed
+writes. These checks do not prove server ammo acceptance or that every separate
+weapon/FPP animation is routed through Player.PlayFireEffect; those require
+device testing. The flag does not create ammo in an already empty weapon.

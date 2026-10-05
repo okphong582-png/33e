@@ -3,6 +3,7 @@
 #include "PlayerModesLayout.h"
 #include "PlayerModesInstallPolicy.h"
 #include "PlayerModesControlPolicy.h"
+#include "PlayerModesControllerPolicy.h"
 #include "SilentAimRemoteMapping.h"
 #include "GameLogic.h"
 #include "../drawing_view/offset.h"
@@ -24,7 +25,8 @@ constexpr Signature signatures[] = {
     {0x56AA7C8,0x110,0x4478C55F},{0x561CA30,0xB4,0xABF31A13},
     {0x561C7C8,0x6C,0x7958F6CC},{0x5636F20,0x60,0x6E4B75FE},
     {0x6B4A924,0x8,0x64A6725A},{0x569C1E4,0x2BAC,0x458F369A},
-    {0x646B648,0xB0,0x7C5E5F3F}
+    {0x646B648,0xB0,0x7C5E5F3F},{0x5631D28,0x58,0xEBC9879D},
+    {0x56268B4,0x24,0xE7908BBE}
 };
 struct Session {
     uint64_t slot=0, allocation=0, original=0, originalPost=0;
@@ -248,11 +250,9 @@ int PlayerModesUpdate(uint64_t base){
     input.flags=control.Flags(wanted,(wanted&PlayerModesControl::AimLag)&&get_IsScoping(local),CACurrentMediaTime());
     input.height=height;
     if(wanted&PlayerModesControl::Fly){
-        uint64_t cct=0,klass=0,name=0,transform=0;char buffer[12]{};
-        if(Read(local+0x268,cct)&&isVaildPtr(cct)&&Read(cct,klass)&&isVaildPtr(klass)&&
-            Read(klass+0x10,name)&&ReadBytes(name,buffer,sizeof(buffer))&&!std::memcmp(buffer,"PhysicalCCT",sizeof(buffer))&&
-            Read(cct+0x1C8,transform)&&isVaildPtr(transform)){
-            input.flyCCT=cct;input.flyClass=klass;
+        PlayerModesController::Identity controller;
+        if(PlayerModesController::Resolve(local,controller,ReadBytes,[](uint64_t a){return isVaildPtr(a);})){
+            input.flyCCT=controller.object;input.flyClass=controller.klass;input.flyKind=controller.kind;
         }else snapshot.detail="Fly chưa có bộ điều khiển vị trí phù hợp";
     }
     input.match=match;input.local=local;input.deadline=Deadline();

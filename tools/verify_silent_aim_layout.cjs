@@ -36,6 +36,11 @@ assert.equal(fingerprint(0x5AC970C, 0xA0), 0x93FD3984);
 assert.equal(fingerprint(0x5C59B94, 0x16C), 0xDFE8FAC6);
 // Native weapon input: begin/end methods, and the two allowed player updates.
 assert.equal(fingerprint(0x5C179E8, 0x5A8), 0x9AD8096C);
+// IsAmmoFree is a separate byte from ShootNoReload. The native shot skips
+// the subtraction/set-ammo branch when this byte is true.
+words(0x6483C7C,[0x39465000,0xD65F03C0,0x39065001,0xD65F03C0]);
+words(0x5C17DB0,[0x39465008,0x37000A88]);
+assert.equal(fingerprint(0x56AC3A8,0x1E8),0x1EE7E697);
 assert.equal(fingerprint(0x5C222EC, 0x1E4), 0xA2F105A1);
 assert.equal(fingerprint(0x5660700, 0x100), 0xC902032E);
 assert.equal(fingerprint(0x5A4BEC0, 0x100), 0x4B4A9AE9);

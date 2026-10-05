@@ -215,7 +215,20 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_WAIT_SYNC]
     blr x8
     cbnz w0, .Ldrop
+    ldr w10, [x19, #MODES_FLY_KIND]
+    ldrb w8, [x20, #0x260]
+    cmp w10, #1
+    b.ne .LunityController
+    cmp w8, #1
+    b.ne .Ldrop
     ldr x8, [x20, #0x268]
+    b .LcontrollerIdentity
+.LunityController:
+    cmp w10, #2
+    b.ne .Ldrop
+    cbnz w8, .Ldrop
+    ldr x8, [x20, #0x4d8]
+.LcontrollerIdentity:
     cbz x8, .Ldrop
     ldr x9, [x19, #MODES_FLY_CCT]
     cmp x8, x9
@@ -224,7 +237,14 @@ _PlayerModesRemoteStart:
     ldr x10, [x19, #MODES_FLY_CLASS]
     cmp x9, x10
     b.ne .Ldrop
+    ldr w10, [x19, #MODES_FLY_KIND]
+    cmp w10, #1
+    b.ne .LunityNative
     ldr x8, [x8, #0x1c8]
+    b .LcontrollerNative
+.LunityNative:
+    ldr x8, [x8, #0x10]
+.LcontrollerNative:
     cbz x8, .Ldrop
 .Lposition:
     mov x0, x20
@@ -338,6 +358,9 @@ _PlayerModesRemoteStart:
     ldr w8, [x20, #0x60]
     str w8, [x22, #ROW_ID]
     cmp w25, #2
+    b.ne .LsetVisual
+    ldr w8, [x19, #MODES_FLY_KIND]
+    cmp w8, #1
     b.ne .LsetVisual
     stp s0, s1, [sp, #112]
     str s2, [sp, #120]

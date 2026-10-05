@@ -40,8 +40,8 @@ void SetDataUInt16(uint64_t player, int varID, uint16_t value);
 int get_CurHP(uint64_t Player);
 int get_MaxHP(uint64_t Player);
 bool isLocalTeamMate(uint64_t localPlayer, uint64_t Player);
-void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire);
-void SyncWeaponFeatureSwitches(uint64_t moduleBase, bool noReload, bool fastFire);
+void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire, bool ammoFree=false);
+void SyncWeaponFeatureSwitches(uint64_t moduleBase, bool noReload, bool fastFire, bool ammoFree=false);
 void ResetWeaponFeatures(void);
 
 #endif

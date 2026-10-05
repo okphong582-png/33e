@@ -22,9 +22,16 @@ static WeaponFeatures::Context CurrentWeaponContext() {
     return {static_cast<uint64_t>(get_task), match, getLocalPlayer(match)};
 }
 
-static void RunWeaponFeatureUpdate(uint64_t moduleBase, bool noReload, bool fastFire, bool applyEnabled) {
-    if (!gWeaponFeatures.HasChanges() && (!applyEnabled || (!noReload && !fastFire))) return;
+static void RunWeaponFeatureUpdate(uint64_t moduleBase, bool noReload, bool fastFire, bool applyEnabled, bool ammoFree) {
+    if (!gWeaponFeatures.HasChanges() && (!applyEnabled || (!noReload && !fastFire && !ammoFree))) return;
     gWeaponModuleBase = moduleBase;
+    if(ammoFree) {
+        // Match both single-byte accessors before activating this new field.
+        uint32_t getter[2]={},setter[2]={};
+        ammoFree=isVaildPtr(moduleBase)&&_read((long)(moduleBase+0x6483C7C),getter,sizeof(getter))&&
+            _read((long)(moduleBase+0x6483C84),setter,sizeof(setter))&&
+            getter[0]==0x39465000&&getter[1]==0xD65F03C0&&setter[0]==0x39065001&&setter[1]==0xD65F03C0;
+    }
     gWeaponFeatures.Update(CurrentWeaponContext(), noReload, fastFire,
         [](uint64_t address, void *buffer, size_t length) {
             return _read((long)address, buffer, static_cast<int>(length));
@@ -33,17 +40,17 @@ static void RunWeaponFeatureUpdate(uint64_t moduleBase, bool noReload, bool fast
             return _write((long)address, buffer, static_cast<int>(length));
         },
         [](uint64_t address) { return isVaildPtr(address); },
-        [] { return CurrentWeaponContext(); }, applyEnabled);
+        [] { return CurrentWeaponContext(); }, applyEnabled, ammoFree);
 }
 
-void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire) {
-    RunWeaponFeatureUpdate(moduleBase, noReload, fastFire, true);
+void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire, bool ammoFree) {
+    RunWeaponFeatureUpdate(moduleBase, noReload, fastFire, true, ammoFree);
 }
 
-void SyncWeaponFeatureSwitches(uint64_t moduleBase, bool noReload, bool fastFire) {
+void SyncWeaponFeatureSwitches(uint64_t moduleBase, bool noReload, bool fastFire, bool ammoFree) {
     // Apply OFF independently and immediately, even when ESP has no valid matrix.
     // Turning ON still waits for the normal validated in-match frame.
-    RunWeaponFeatureUpdate(moduleBase, noReload, fastFire, false);
+    RunWeaponFeatureUpdate(moduleBase, noReload, fastFire, false, ammoFree);
 }
 
 void ResetWeaponFeatures(void) {

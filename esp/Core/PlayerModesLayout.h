@@ -18,6 +18,7 @@
 #define MODES_EPOCH 104
 #define MODES_COUNT 108
 #define MODES_HEIGHT 112
+#define MODES_FLY_KIND 116
 #define MODES_PLAYERS 120
 #define MODES_FLY_CCT 632
 #define MODES_FLY_CLASS 640
@@ -44,7 +45,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453036ULL;
+constexpr uint64_t Magic = 0x504c4d4f44453037ULL;
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
@@ -55,7 +56,7 @@ struct Input {
     uint32_t flags=0;
     uint64_t deadline=0, match=0, local=0;
     uint32_t epoch=0, count=0;
-    float height=3.0f; uint32_t reserved=0;
+    float height=3.0f; uint32_t flyKind=0;
     uint64_t players[MODES_CAPACITY]={};
     uint64_t flyCCT=0, flyClass=0;
 } __attribute__((packed));
@@ -73,6 +74,7 @@ struct State {
 static_assert(offsetof(State, input)==MODES_FLAGS);
 static_assert(offsetof(State, input)+offsetof(Input, players)==MODES_PLAYERS);
 static_assert(offsetof(State, input)+offsetof(Input, height)==MODES_HEIGHT);
+static_assert(offsetof(State, input)+offsetof(Input, flyKind)==MODES_FLY_KIND);
 static_assert(offsetof(State, input)+offsetof(Input, flyCCT)==MODES_FLY_CCT);
 static_assert(offsetof(State, forcePos)==MODES_FORCE_POS);
 static_assert(offsetof(State, busy)==MODES_BUSY);

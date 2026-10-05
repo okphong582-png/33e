@@ -1,5 +1,6 @@
 #pragma once
 #define AUTO_PAGE 0x4000
+#define AUTO_EFFECT_ENTRY 16
 #define AUTO_ORIGINAL 0
 #define AUTO_CLOCK 8
 #define AUTO_GET_WEAPON 16
@@ -19,11 +20,13 @@
 #define AUTO_INTERVAL 120
 #define AUTO_ELAPSED 128
 #define AUTO_SILENT_GATE 136
+#define AUTO_EFFECT_ORIGINAL 144
+#define AUTO_EFFECT_SKIPS 152
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495236ULL; // AUTOFIR6: native update before automatic shot
+inline constexpr uint64_t Magic = 0x4155544f46495237ULL; // AUTOFIR7: local firing presentation gate
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;
@@ -34,6 +37,7 @@ struct State {
     float elapsed=0;
     uint32_t reserved=0;
     uint64_t silentGate=0;
+    uint64_t effectOriginal=0, effectSkips=0;
 };
 static_assert(offsetof(State, sequence)==AUTO_SEQUENCE);
 static_assert(offsetof(State, enabled)==AUTO_ENABLED);
@@ -44,5 +48,7 @@ static_assert(offsetof(State, ticks)==AUTO_TICKS);
 static_assert(offsetof(State, interval)==AUTO_INTERVAL);
 static_assert(offsetof(State, elapsed)==AUTO_ELAPSED);
 static_assert(offsetof(State, silentGate)==AUTO_SILENT_GATE);
+static_assert(offsetof(State, effectOriginal)==AUTO_EFFECT_ORIGINAL);
+static_assert(offsetof(State, effectSkips)==AUTO_EFFECT_SKIPS);
 }
 #endif

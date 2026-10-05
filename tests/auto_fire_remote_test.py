@@ -37,6 +37,44 @@ def read_code(path, section):
 code = read_code(sys.argv[1], b'__autofire')
 silent_code = read_code(sys.argv[2], b'__silent') if len(sys.argv)>2 else None
 
+def effect_case(enabled=1, sequence=2, now=100, local=True, current=True, owner=True,
+                match=True, knocked=0, race=False):
+    uc=Uc(UC_ARCH_ARM64,UC_MODE_ARM)
+    uc.mem_map(0x100000,0x40000);uc.mem_map(0x200000,0x50000);uc.mem_map(0x300000,0x10000)
+    uc.mem_write(0x100000,code)
+    def ptr(a,v):uc.mem_write(a,struct.pack('<Q',v))
+    def word(a,v):uc.mem_write(a,struct.pack('<I',v))
+    state,clock,original=0x104000,0x120100,0x120800
+    uc.mem_write(clock,b'\xc0\x03\x5f\xd6');uc.mem_write(original,b'\xc0\x03\x5f\xd6')
+    ptr(state+8,clock);ptr(state+144,original);word(state+40,sequence);word(state+44,enabled)
+    ptr(state+48,110);ptr(state+56,0x200000);ptr(state+64,0x230000);ptr(state+72,0x210000)
+    ptr(0x2300d8,0x200000 if match else 0x200008)
+    ptr(0x210060,0x200000 if owner else 0x200008)
+    uc.mem_write(0x201258,bytes([knocked]))
+    args=(0x200000 if local else 0x200008,0x210000 if current else 0x210008,0x456)
+    for reg,v in zip((UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2),args):uc.reg_write(reg,v)
+    uc.reg_write(UC_ARM64_REG_SP,0x308000);uc.reg_write(UC_ARM64_REG_X30,0x130000)
+    uc.reg_write(UC_ARM64_REG_X19,0x999);uc.reg_write(UC_ARM64_REG_X20,0x888)
+    calls=[]
+    def hook(uc,a,size,_):
+        if a==clock:
+            uc.reg_write(UC_ARM64_REG_X0,now)
+            if race:word(state+40,sequence+2)
+        elif a==original:
+            assert tuple(uc.reg_read(r) for r in (UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2))==args
+            assert uc.reg_read(UC_ARM64_REG_SP)==0x308000
+            calls.append('effect')
+    uc.hook_add(UC_HOOK_CODE,hook);uc.emu_start(0x100010,0x130000,count=1000)
+    assert uc.reg_read(UC_ARM64_REG_PC)==0x130000 and uc.reg_read(UC_ARM64_REG_SP)==0x308000
+    assert uc.reg_read(UC_ARM64_REG_X19)==0x999 and uc.reg_read(UC_ARM64_REG_X20)==0x888
+    skips,=struct.unpack('<Q',uc.mem_read(state+152,8))
+    return calls,skips
+
+assert effect_case()==([],1)
+for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(local=False),dict(current=False),
+             dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
+    assert effect_case(**args)==(['effect'],0),args
+
 BASE, STATE, ORIGINAL, CLOCK, GETTER, START, END, RETURN = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200, 0x120300, 0x120400, 0x120500
 INTERVAL = 0x120600
 SILENT_BASE, SILENT_STATE, SHOT = 0x110000, 0x114000, 0x120700

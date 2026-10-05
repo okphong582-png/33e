@@ -144,7 +144,7 @@ void ESPSyncFromPrefs(void) {
     // separate manual preference so turning auto OFF restores its baseline
     // unless the user explicitly enabled faster manual fire as well.
     gFastFire = gAutoFire || ESPPrefsBool(@"FastFire", NO);
-    SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire);
+    SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire, gAutoFire);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
     if (!std::isfinite(gESPMaxDistance)) gESPMaxDistance = 150;
@@ -937,7 +937,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     SetMatchReady(YES);
     if (gGhostMode && gGhostSnapshot.active && gGhostSnapshot.match == match && gGhostSnapshot.local == local)
         [self drawGhostAnchor:gGhostSnapshot.anchor matrix:matrix width:vw height:vh vpWidth:vpW vpHeight:vpH];
-    UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire);
+    UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire, gAutoFire);
 
     stats.firingRaw = get_FiringPRIState(local);
     stats.firing    = GamePRI::Firing(stats.firingRaw);

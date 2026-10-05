@@ -42,7 +42,7 @@ struct Fixture {
         return value;
     }
     bool valid(uint64_t address) const { return address >= Base && address - Base < memory.size(); }
-    void tick(bool noReload, bool fastFire, bool applyEnabled = true) {
+    void tick(bool noReload, bool fastFire, bool applyEnabled = true, bool ammoFree=false) {
         controller.Update(context, noReload, fastFire,
             [&](uint64_t address, void *buffer, size_t length) {
                 ++reads;
@@ -55,6 +55,7 @@ struct Fixture {
                 assert(valid(address) && valid(address + length - 1));
                 const uint64_t currentAttributes = get<uint64_t>(context.player + PlayerAttributesOffset);
                 assert((address == currentAttributes + ShootNoReloadOffset && length == sizeof(uint8_t)) ||
+                       (address == currentAttributes + IsAmmoFreeOffset && length == sizeof(uint8_t)) ||
                        (address == currentAttributes + FireIntervalScaleOffset && length == sizeof(float)));
                 ++writes;
                 writtenAddresses.push_back(address);
@@ -66,13 +67,31 @@ struct Fixture {
                 Context live = context;
                 if (changeBeforeWrite) ++live.player;
                 return live;
-            }, applyEnabled);
+            }, applyEnabled, ammoFree);
     }
     uint8_t noReload() const { return get<uint8_t>(Attributes + ShootNoReloadOffset); }
     float scale() const { return get<float>(Attributes + FireIntervalScaleOffset); }
 };
 
 int main() {
+    {
+        Fixture f;f.put<uint8_t>(Fixture::Attributes+0x193,0xA5);
+        f.tick(false,false,true,true);
+        assert(f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==1);
+        f.tick(false,false,false,false);f.tick(false,false,false,false);
+        assert(f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==0 && !f.controller.HasChanges());
+        assert(f.get<uint8_t>(Fixture::Attributes+0x193)==0xA5);
+        f.put<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset,1);
+        f.tick(false,false,true,true);f.tick(false,false);
+        assert(f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==1); // existing game effect survives OFF
+    }
+    {
+        Fixture f;f.changeBeforeWrite=true;f.tick(false,false,true,true);
+        assert(!f.writes && f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==0);
+        f.changeBeforeWrite=false;f.tick(false,false,true,true);f.failWrites=true;
+        f.tick(false,false);assert(f.controller.HasChanges());
+        f.failWrites=false;f.tick(false,false);f.tick(false,false);assert(!f.controller.HasChanges());
+    }
     {
         Fixture f;
         f.tick(false, false);

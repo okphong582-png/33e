@@ -12,6 +12,7 @@ namespace WeaponFeatures {
 constexpr uint64_t PlayerAttributesOffset = 0x768;
 constexpr uint64_t AttributesPlayerOffset = 0x20;
 constexpr uint64_t ShootNoReloadOffset = 0x111;
+constexpr uint64_t IsAmmoFreeOffset = 0x194;
 constexpr uint64_t FireIntervalScaleOffset = 0x258;
 
 struct Context {
@@ -116,19 +117,21 @@ class Controller {
     bool identified_ = false;
     FieldPatch<uint8_t> noReload_;
     FieldPatch<float> fastFire_;
+    FieldPatch<uint8_t> ammoFree_;
 public:
-    bool HasChanges() const { return noReload_.Changed() || fastFire_.Changed(); }
+    bool HasChanges() const { return noReload_.Changed() || fastFire_.Changed() || ammoFree_.Changed(); }
     void Forget() {
         identified_ = false;
         noReload_.Forget();
         fastFire_.Forget();
+        ammoFree_.Forget();
     }
 
     template <typename Reader, typename Writer, typename Valid, typename CurrentContext>
     void Update(Context context, bool noReload, bool fastFire,
                 Reader read, Writer write, Valid valid, CurrentContext currentContext,
-                bool applyEnabled = true) {
-        if (!noReload && !fastFire && !HasChanges()) return;
+                bool applyEnabled = true, bool ammoFree = false) {
+        if (!noReload && !fastFire && !ammoFree && !HasChanges()) return;
         Identity identity;
         // Keep the baseline over transient chain failures. Dropping it would
         // treat our existing 0.5x value as a new baseline on the next frame.
@@ -147,7 +150,9 @@ public:
                     return ReadField(identity.attributes, FireIntervalScaleOffset, value, read, valid);
                 }, [](float a, float b) {
                     return std::isfinite(a) && std::fabs(a - b) <= 0.0001f * std::max(1.0f, std::fabs(b));
-                })) return;
+                }) || !ammoFree_.Retarget([&](uint8_t &value) {
+                    return ReadField(identity.attributes, IsAmmoFreeOffset, value, read, valid);
+                }, [](uint8_t a,uint8_t b){return a==b;})) return;
             } else if (!sameObject) {
                 // Never restore through an old process or unrelated match.
                 Forget();
@@ -159,6 +164,11 @@ public:
             Identity live;
             return Resolve(currentContext(), live, read, valid) && live == identity_;
         };
+        if (!ammoFree || applyEnabled) ammoFree_.Update(ammoFree,
+            [&](uint8_t &value) { return ReadField(identity.attributes, IsAmmoFreeOffset, value, read, valid); },
+            [&](uint8_t value) { return stillCurrent() && write(identity.attributes+IsAmmoFreeOffset,&value,sizeof(value)); },
+            [](uint8_t value){return value<=1;}, [](uint8_t)->uint8_t{return 1;},
+            [](uint8_t current,uint8_t original){return current>original;});
         if (!noReload || applyEnabled) noReload_.Update(noReload,
             [&](uint8_t &value) {
                 return ReadField(identity.attributes, ShootNoReloadOffset, value, read, valid);
