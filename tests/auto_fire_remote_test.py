@@ -78,15 +78,17 @@ for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(local=False),di
 BASE, STATE, ORIGINAL, CLOCK, GETTER, START, END, RETURN = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200, 0x120300, 0x120400, 0x120500
 
 def tracer_case(enabled=1,sequence=2,now=100,current=True,owner=True,
-                match=True,knocked=0,race=False):
+                match=True,knocked=0,race=False,shot=False):
     uc=Uc(UC_ARCH_ARM64,UC_MODE_ARM)
     uc.mem_map(0x100000,0x40000);uc.mem_map(0x200000,0x80000);uc.mem_map(0x300000,0x10000)
     uc.mem_write(BASE,code)
     def ptr(a,v):uc.mem_write(a,struct.pack('<Q',v))
     def word(a,v):uc.mem_write(a,struct.pack('<I',v))
     original=0x120800
-    for a in [CLOCK,original]:uc.mem_write(a,b'\xc0\x03\x5f\xd6')
+    hit=0x120a00
+    for a in [CLOCK,original,hit]:uc.mem_write(a,b'\xc0\x03\x5f\xd6')
     ptr(STATE+8,CLOCK);ptr(STATE+160,original)
+    ptr(STATE+200,original);ptr(STATE+216,hit)
     word(STATE+40,sequence);word(STATE+44,enabled)
     for a,v in [(48,110),(56,0x200000),(64,0x230000),(72,0x210000)]:ptr(STATE+a,v)
     ptr(0x210530,0x273000 if current else 0x273008)
@@ -95,11 +97,12 @@ def tracer_case(enabled=1,sequence=2,now=100,current=True,owner=True,
     uc.mem_write(0x201258,bytes([knocked]))
     xr=[UC_ARM64_REG_X0+i for i in range(8)]
     dr=[UC_ARM64_REG_D0+i for i in range(8)]
-    args=[0x273000]+[0xABC00+i for i in range(1,8)]
+    args=[(0x210000 if current else 0x210008) if shot else 0x273000]+[0xABC00+i for i in range(1,8)]
     floats=[0x3F800000+i for i in range(8)]
     for r,v in zip(xr+dr,args+floats):uc.reg_write(r,v)
     uc.reg_write(UC_ARM64_REG_SP,0x308000);uc.reg_write(UC_ARM64_REG_X30,RETURN)
     uc.reg_write(UC_ARM64_REG_X19,0x999);uc.reg_write(UC_ARM64_REG_X20,0x888)
+    uc.reg_write(UC_ARM64_REG_X21,0x777);uc.reg_write(UC_ARM64_REG_X22,0x666)
     calls=[]
     def hook(uc,a,size,_):
         if a==CLOCK:
@@ -110,15 +113,23 @@ def tracer_case(enabled=1,sequence=2,now=100,current=True,owner=True,
             assert [uc.reg_read(r) for r in xr+dr]==args+floats
             assert uc.reg_read(UC_ARM64_REG_SP)==0x308000
             calls.append('tracer')
-    uc.hook_add(UC_HOOK_CODE,hook);uc.emu_start(BASE+32,RETURN,count=1000)
+        elif a==hit:
+            expected=list(args);expected[2]=0
+            assert [uc.reg_read(r) for r in xr+dr]==expected+floats
+            assert uc.reg_read(UC_ARM64_REG_SP)==0x308000
+            calls.append('hit')
+    uc.hook_add(UC_HOOK_CODE,hook);uc.emu_start(BASE+(48 if shot else 32),RETURN,count=1000)
     assert uc.reg_read(UC_ARM64_REG_PC)==RETURN and uc.reg_read(UC_ARM64_REG_SP)==0x308000
     assert uc.reg_read(UC_ARM64_REG_X19)==0x999 and uc.reg_read(UC_ARM64_REG_X20)==0x888
-    return calls,struct.unpack('<Q',uc.mem_read(STATE+168,8))[0]
+    assert uc.reg_read(UC_ARM64_REG_X21)==0x777 and uc.reg_read(UC_ARM64_REG_X22)==0x666
+    return calls,struct.unpack('<Q',uc.mem_read(STATE+(208 if shot else 168),8))[0]
 
 assert tracer_case()==([],1)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(current=False),
              dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
     assert tracer_case(**args)==(['tracer'],0),args
+    assert tracer_case(shot=True,**args)==(['tracer'],0),args
+assert tracer_case(shot=True)==(['hit'],1)
 print('Local tracer suppression, OFF/remote/stale fallbacks and all argument registers passed')
 
 INTERVAL = 0x120600
@@ -131,7 +142,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          self=WEAPON, owner=LOCAL, weapon=WEAPON, snapshot_weapon=WEAPON,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
          steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
-         gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False):
+         gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False, presentation=False):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -145,6 +156,10 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     ptr(STATE+120,INTERVAL)
     uc.mem_write(STATE+128,struct.pack('<f',elapsed))
     ptr(STATE+136,gate)
+    visual,hit=0x120800,0x120a00
+    if presentation:
+        for a in [visual,hit]:uc.mem_write(a,b'\xc0\x03\x5f\xd6')
+        ptr(STATE+200,visual);ptr(STATE+216,hit)
     if warm:
         ptr(STATE+176,METADATA_INIT);ptr(STATE+184,TYPEINFO)
         uc.mem_write(METADATA_INIT,b'\xc0\x03\x5f\xd6')
@@ -178,6 +193,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     bullets=[]
     getter_calls=[]
     metadata_calls=[]
+    hit_calls=[];visual_calls=[]
     def hook(uc,a,size,_):
         if a == METADATA_INIT:
             assert uc.reg_read(UC_ARM64_REG_X0)==TYPEINFO
@@ -219,6 +235,18 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         elif a==SHOT:
             assert uc.reg_read(UC_ARM64_REG_X0)==HANDLER and uc.reg_read(UC_ARM64_REG_X1)==0x456
             bullets.append(struct.unpack('<fff',uc.mem_read(INFO+0x40,12)))
+            if presentation:
+                # Simulate the native handler's virtual-223 shot dispatch in
+                # this VM while Silent's redirected direction is still live.
+                uc.reg_write(UC_ARM64_REG_X0,WEAPON);uc.reg_write(UC_ARM64_REG_X1,INFO)
+                uc.reg_write(UC_ARM64_REG_X2,0xABC)
+                uc.reg_write(UC_ARM64_REG_PC,BASE+48)
+        elif presentation and a==hit:
+            assert uc.reg_read(UC_ARM64_REG_X0)==WEAPON and uc.reg_read(UC_ARM64_REG_X1)==INFO
+            assert uc.reg_read(UC_ARM64_REG_X2)==0
+            assert struct.unpack('<fff',uc.mem_read(INFO+0x40,12))==bullets[-1]
+            hit_calls.append(a)
+        elif presentation and a==visual:visual_calls.append(a)
     uc.hook_add(UC_HOOK_CODE,hook)
     for step in range(steps):
         if before_step: before_step(step,word)
@@ -233,6 +261,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
             assert struct.unpack('<fff',uc.mem_read(INFO+0x40,12))==(0,0,1)
     if not enabled and not held: assert not getter_calls
     assert len(metadata_calls)==int(warm)
+    if presentation:
+        assert len(hit_calls)==len(bullets) and not visual_calls
+        assert struct.unpack('<Q',uc.mem_read(STATE+208,8))[0]==len(bullets)
     assert struct.unpack('<I',uc.mem_read(STATE+192,4))[0]==int(warm)
     assert struct.unpack('<I',uc.mem_read(STATE+88,4))[0]==busy
     held_after,=struct.unpack('<Q',uc.mem_read(STATE+80,8))
@@ -286,10 +317,10 @@ if silent_code is not None:
     cold_bullets = case(silent_percent=100,cold_info=True)[3]
     assert len(cold_bullets)==1 and abs(cold_bullets[0][1]-.8)<1e-6, 'First native shot must redirect without a manual primer'
     for percent in [0,25,75,100]:
-        calls,held,starts,bullets=case(steps=397,silent_percent=percent)
+        calls,held,starts,bullets=case(steps=397,silent_percent=percent,presentation=True)
         assert starts==len(bullets)==100 and held==WEAPON
         assert sum(p[1]>0.7 for p in bullets)==percent
         assert all(p==(1,0,0) or abs(p[0]-.6)<1e-6 and abs(p[1]-.8)<1e-6 for p in bullets)
     assert case(enabled=0,silent_percent=100)[3]==[]
     assert case(now=111,silent_percent=100)[3]==[]
-    print('AutoFire -> Silent handler integration: 100 automatic shots follow HS/body ratios without manual PRI21')
+    print('AutoFire -> Silent -> hit-only integration: 100 hits, no visual dispatch, HS/body ratios and restored directions')

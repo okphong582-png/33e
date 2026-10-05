@@ -312,7 +312,7 @@ _PlayerModesRemoteStart:
     fcmp s3, s4
     b.vs .Ldrop
     b.lo .Ldrop
-    fmov s4, #5.0
+    fmov s4, #6.0
     fcmp s3, s4
     b.gt .Ldrop
     fmov s4, s1

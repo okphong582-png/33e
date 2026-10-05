@@ -62,8 +62,8 @@ int main() {
     assert(NewEpoch(100,200,1,100,201,1));
     // Saved preferences cannot publish non-finite or unbounded height.
     assert(Height(2)==2&&Height(2.25f)==2.25f&&Height(1)==1);
-    assert(Height(-100)==1&&Height(100)==5);
-    assert(Height(std::numeric_limits<float>::quiet_NaN())==3);
-    assert(Height(std::numeric_limits<float>::infinity())==3);
+    assert(Height(-100)==1&&Height(100)==6&&Height(6)==6);
+    assert(Height(std::numeric_limits<float>::quiet_NaN())==4);
+    assert(Height(std::numeric_limits<float>::infinity())==4);
     assert(LeaseNanoseconds==1000000000ULL);
 }

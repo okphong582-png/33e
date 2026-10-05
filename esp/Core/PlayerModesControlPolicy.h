@@ -5,7 +5,7 @@
 
 namespace PlayerModesControl {
 constexpr uint32_t AimLag=1, Fly=2, FakeLag=4;
-constexpr float DefaultHeight=3.0f, MinimumHeight=1.0f, MaximumHeight=5.0f;
+constexpr float DefaultHeight=4.0f, MinimumHeight=1.0f, MaximumHeight=6.0f;
 constexpr double ScopeGrace=0.18;
 constexpr uint64_t LeaseNanoseconds=1000000000ULL;
 inline float Height(float value) {

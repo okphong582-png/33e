@@ -4,6 +4,7 @@
 #include "../Core/AutoFire.h"
 #include "../Core/GhostMode.h"
 #include "../Core/PlayerModes.h"
+#include "../Core/PlayerModesControlPolicy.h"
 #include "../Core/GamePRI.h"
 #include "../Core/AimPoint.h"
 #include "../Core/SilentAim.h"
@@ -126,8 +127,12 @@ void ESPSyncFromPrefs(void) {
     gAutoFire = autoEnabled;
     gGhostMode = ESPPrefsBool(@"GhostMode", NO);
     GhostModeSetEnabled(gGhostMode);
+    if (!ESPPrefsBool(@"FlyHeightRaisedV1", NO)) {
+        ESPPrefsSetFloat(@"FlyHeight", PlayerModesControl::Height(ESPPrefsFloat(@"FlyHeight", 3.0f) + 1.0f));
+        ESPPrefsSetBool(@"FlyHeightRaisedV1", YES);
+    }
     PlayerModesSetEnabled(ESPPrefsBool(@"Fly", NO), ESPPrefsBool(@"AimLag", NO),
-        ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"FlyHeight", 3.0f));
+        ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"FlyHeight", PlayerModesControl::DefaultHeight));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
@@ -756,6 +761,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)updateGhostStatus {
+    if (!ESPMatchReady()) {
+        self.ghostStatusLayer.hidden = YES;
+        self.ghostStatusLayer.string = nil;
+        return;
+    }
     NSMutableArray<NSString *> *lines = [NSMutableArray array];
     NSString *status = @"chờ dữ liệu";
     if (gGhostInstall == 9) status = @"bản game chưa hỗ trợ";

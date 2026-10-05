@@ -13,10 +13,19 @@ _AutoFireRemoteStart:
     b .LautoEffect
     .p2align 4
     b .LautoTracer
+    .p2align 4
+    b .LautoShot
 .LautoTracer:
+    mov w8, #0
+    b .Lpresentation
+.LautoShot:
+    mov w8, #1
+.Lpresentation:
     // NGMILJIELKA.JCCIMHDAPDB: visual shot presentation. Preserve all
     // argument registers for the unchanged tail-call (five args plus dt).
-    stp x29, x30, [sp, #-160]!
+    stp x29, x30, [sp, #-176]!
+    stp x21, x22, [sp, #160]
+    mov w21, w8
     stp x19, x20, [sp, #16]
     stp x0, x1, [sp, #32]
     stp x2, x3, [sp, #48]
@@ -34,9 +43,15 @@ _AutoFireRemoteStart:
     cbz w8, .LtracerOriginal
     ldr x8, [x19, #AUTO_WEAPON]
     cbz x8, .LtracerOriginal
+    cbz w21, .LcomponentIdentity
+    cmp x8, x0
+    b.ne .LtracerOriginal
+    b .LpresentationOwner
+.LcomponentIdentity:
     ldr x9, [x8, #0x530]
     cmp x9, x0
     b.ne .LtracerOriginal
+.LpresentationOwner:
     ldr x9, [x19, #AUTO_LOCAL]
     cbz x9, .LtracerOriginal
     ldr x8, [x8, #0x60]
@@ -59,12 +74,24 @@ _AutoFireRemoteStart:
     ldar w8, [x8]
     cmp w8, w20
     b.ne .LtracerOriginal
+    cbnz w21, .LshotHit
     ldr x8, [x19, #AUTO_TRACER_SKIPS]
     add x8, x8, #1
     str x8, [x19, #AUTO_TRACER_SKIPS]
     mov x8, #0
     b .LtracerReturn
+.LshotHit:
+    ldr x8, [x19, #AUTO_SHOT_SKIPS]
+    add x8, x8, #1
+    str x8, [x19, #AUTO_SHOT_SKIPS]
+    ldr x8, [x19, #AUTO_SHOT_HIT]
+    mov w21, #2
+    b .LtracerReturn
 .LtracerOriginal:
+    cbz w21, .LcomponentOriginal
+    ldr x8, [x19, #AUTO_SHOT_ORIGINAL]
+    b .LtracerReturn
+.LcomponentOriginal:
     ldr x8, [x19, #AUTO_TRACER_ORIGINAL]
 .LtracerReturn:
     ldp d0, d1, [sp, #96]
@@ -75,8 +102,14 @@ _AutoFireRemoteStart:
     ldp x2, x3, [sp, #48]
     ldp x4, x5, [sp, #64]
     ldp x6, x7, [sp, #80]
+    mov w9, w21
+    ldp x21, x22, [sp, #160]
     ldp x19, x20, [sp, #16]
-    ldp x29, x30, [sp], #160
+    ldp x29, x30, [sp], #176
+    cmp w9, #2
+    b.ne .LpresentationDispatch
+    mov x2, #0               // LHNJLFOINDO(self, shotInfo, MethodInfo*)
+.LpresentationDispatch:
     cbz x8, .LtracerDone
     br x8
 .LtracerDone:

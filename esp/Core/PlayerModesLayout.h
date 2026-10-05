@@ -45,7 +45,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453037ULL;
+constexpr uint64_t Magic = 0x504c4d4f44453038ULL;
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
@@ -56,7 +56,7 @@ struct Input {
     uint32_t flags=0;
     uint64_t deadline=0, match=0, local=0;
     uint32_t epoch=0, count=0;
-    float height=3.0f; uint32_t flyKind=0;
+    float height=4.0f; uint32_t flyKind=0;
     uint64_t players[MODES_CAPACITY]={};
     uint64_t flyCCT=0, flyClass=0;
 } __attribute__((packed));

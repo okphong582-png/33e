@@ -2,6 +2,7 @@
 #define AUTO_PAGE 0x4000
 #define AUTO_EFFECT_ENTRY 16
 #define AUTO_TRACER_ENTRY 32
+#define AUTO_SHOT_ENTRY 48
 #define AUTO_ORIGINAL 0
 #define AUTO_CLOCK 8
 #define AUTO_GET_WEAPON 16
@@ -28,11 +29,14 @@
 #define AUTO_METADATA_INIT 176
 #define AUTO_TRACER_TYPEINFO 184
 #define AUTO_METADATA_READY 192
+#define AUTO_SHOT_ORIGINAL 200
+#define AUTO_SHOT_SKIPS 208
+#define AUTO_SHOT_HIT 216
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495238ULL; // AUTOFIR8: local tracer presentation gate
+inline constexpr uint64_t Magic = 0x4155544f46495239ULL; // AUTOFIR9: hit-only automatic shot presentation
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;
@@ -46,6 +50,7 @@ struct State {
     uint64_t effectOriginal=0, effectSkips=0;
     uint64_t tracerOriginal=0, tracerSkips=0, metadataInit=0, tracerTypeInfo=0;
     uint32_t metadataReady=0, padding2=0;
+    uint64_t shotOriginal=0, shotSkips=0, shotHit=0;
 };
 static_assert(offsetof(State, sequence)==AUTO_SEQUENCE);
 static_assert(offsetof(State, enabled)==AUTO_ENABLED);
@@ -63,5 +68,8 @@ static_assert(offsetof(State, tracerSkips)==AUTO_TRACER_SKIPS);
 static_assert(offsetof(State, metadataInit)==AUTO_METADATA_INIT);
 static_assert(offsetof(State, tracerTypeInfo)==AUTO_TRACER_TYPEINFO);
 static_assert(offsetof(State, metadataReady)==AUTO_METADATA_READY);
+static_assert(offsetof(State, shotOriginal)==AUTO_SHOT_ORIGINAL);
+static_assert(offsetof(State, shotSkips)==AUTO_SHOT_SKIPS);
+static_assert(offsetof(State, shotHit)==AUTO_SHOT_HIT);
 }
 #endif

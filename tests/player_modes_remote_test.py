@@ -226,11 +226,11 @@ assert len(s.force_writes)==count and s.positions[LOCAL][1]==previous-0.25
 s.w('FLAGS',2);old=s.positions[LOCAL][1];s.run(LOCAL)
 assert s.positions[LOCAL][1]==old-0.25+0.0625
 # Bounded height, bad controllers and malformed positions fail closed.
-for height in [1.0,3.0,5.0]:
+for height in [1.0,3.0,4.0,5.0,6.0]:
     s=Simulation(flags=2,height=height)
     for _ in range(160):s.run(LOCAL)
     assert s.positions[LOCAL][1]==10+height
-for height in [math.nan,math.inf,-math.inf,-1.0,0.75,5.01,1000]:
+for height in [math.nan,math.inf,-math.inf,-1.0,0.75,6.01,1000]:
     s=Simulation(flags=2,height=height);s.run(LOCAL)
     assert not s.writes and not s.force_writes
 for reason in ['cct','class','transform']:

@@ -130,3 +130,22 @@ ARM64 simulation verifies suppression/fallback, metadata preparation once per
 page and ABI restoration, alongside the existing sustained-shot/Silent tests.
 Static evidence establishes this layout for the supplied 1.132.1 binary only;
 device testing must confirm visible trails and any separate weapon effects.
+
+The follow-up adds a signed entry at +48 for weapon virtual 223. The native
+wrapper can route its visual branch through IFix before the component virtual
+call; component-only suppression does not cover that route. For the exact
+current local weapon in a fresh AimKill publication, this entry delegates to
+the wrapper's separate LHNJLFOINDO hit branch (0x5C23B54, full 0x1B08-byte hash
+0xF0BC2099), omitting visual/replay presentation. OFF, remote guns, knock,
+expiry and races call the full original wrapper with arguments preserved.
+The signed state changes to AUTOFIR9. A combined ARM64 VM now executes
+AutoFire, Silent and this gate for 100 shots at each tested head percentage,
+asserting one native hit branch per shot, no visual dispatch and restored
+direction/automatic-shot marker after each call. Live acceptance and visual
+behavior remain unverified.
+
+Fly now defaults to 4 m and accepts 1..6 m in both the host and signed callback.
+Existing saved heights gain 1 m once, capped at 6 m; later preference changes
+are kept. Ascent retains its existing per-tick step. The player-mode state
+magic changes to PLMODE08. Feature status is hidden until the renderer has
+valid match data, so Ghost/Fly waiting logs do not appear on the waiting screen.

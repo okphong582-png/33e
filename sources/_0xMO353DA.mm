@@ -320,7 +320,7 @@
         y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
         y = [self toggle:@"Fly" key:@"Fly" fallback:NO y:y];
         if (ESPPrefsBool(@"Fly", NO))
-            y = [self slider:@"Độ cao" key:@"FlyHeight" min:1 max:5 fallback:3 y:y];
+            y = [self slider:@"Độ cao" key:@"FlyHeight" min:1 max:6 fallback:4 y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];

@@ -46,6 +46,7 @@ assert.equal(fingerprint(0x5C76890,0x26B0),0x6D340948);
 assert.equal(fingerprint(0xA11121C,0x18),0x2FC932FA);
 assert.equal(fingerprint(0x5C1E910,0x30),0xC285FA0E);
 assert.equal(fingerprint(0x5C22FA8,0x30C),0x76159E8D);
+assert.equal(fingerprint(0x5C23B54,0x1B08),0xF0BC2099);
 assert.equal(fingerprint(0x5C222EC, 0x1E4), 0xA2F105A1);
 assert.equal(fingerprint(0x5660700, 0x100), 0xC902032E);
 assert.equal(fingerprint(0x5A4BEC0, 0x100), 0x4B4A9AE9);
@@ -89,6 +90,11 @@ for (let p = types; p < types+typeBytes; p += 88) {
         const start = metadata.readUInt32LE(p+36), count = metadata.readUInt16LE(p+64);
         for (let j = start; j < start+count; ++j) {
             const q = methods+j*40, name = string(metadata.readUInt32LE(q));
+            if(name==='CIHHEOKFADJ') {
+                assert.equal(metadata.readUInt16LE(q+36),223);
+                assert.equal(metadata.readUInt16LE(q+38),3);
+            }
+            if(name==='LHNJLFOINDO') assert.equal(metadata.readUInt16LE(q+38),1);
             const slot = name === 'ALJMFCJMDCF' ? 182 : (name === 'NFFJEBKJCAK' ? 213 : -1);
             if (slot < 0) continue;
             assert.equal(metadata.readUInt16LE(q+36), slot);
