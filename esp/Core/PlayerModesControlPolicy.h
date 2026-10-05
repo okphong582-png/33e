@@ -4,12 +4,12 @@
 #include <cstdint>
 
 namespace PlayerModesControl {
-constexpr uint32_t AimLag=1, Burrow=2, FakeLag=4, Teleport=8;
-constexpr float DefaultDepth=2.0f, MinimumDepth=1.0f, MaximumDepth=2.25f;
+constexpr uint32_t AimLag=1, Fly=2, FakeLag=4;
+constexpr float DefaultHeight=3.0f, MinimumHeight=1.0f, MaximumHeight=5.0f;
 constexpr double ScopeGrace=0.18;
 constexpr uint64_t LeaseNanoseconds=1000000000ULL;
-inline float Depth(float value) {
-    return std::isfinite(value) ? std::max(MinimumDepth,std::min(value,MaximumDepth)) : DefaultDepth;
+inline float Height(float value) {
+    return std::isfinite(value) ? std::max(MinimumHeight,std::min(value,MaximumHeight)) : DefaultHeight;
 }
 struct State {
     double scopeUntil=0;
@@ -19,12 +19,12 @@ struct State {
         if(!(wanted&AimLag))scopeUntil=0;
         else if(scope)scopeUntil=now+ScopeGrace;
         scoped=(wanted&AimLag)&&scopeUntil>0&&now<scopeUntil;
-        return (wanted&Burrow)|(((wanted&FakeLag)||scoped)?1u:0u);
+        return (wanted&Fly)|(((wanted&FakeLag)||scoped)?1u:0u);
     }
 };
 inline bool NewEpoch(uint64_t oldMatch,uint64_t oldLocal,uint32_t oldFlags,
                      uint64_t match,uint64_t local,uint32_t flags) {
-    // Burrow and depth changes do not release an unrelated enemy hold.
+    // Fly and height changes do not release an unrelated enemy hold.
     return match!=oldMatch||local!=oldLocal||((flags^oldFlags)&1u);
 }
 }

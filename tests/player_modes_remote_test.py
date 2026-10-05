@@ -43,7 +43,7 @@ OFF = {name: int(value, 0) for name, value in re.findall(r'^#define ((?:MODES|RO
 BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x120000, 0x130000, 0x600000
 LOCAL, ENEMY, OTHER, MATCH = 0x200000, 0x210000, 0x220000, 0x400000
 FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS']
-CCT, CCT_CLASS = 0x430000, 0x431000
+CCT,CCT_CLASS=0x430000,0x431000
 
 
 def f32(value):
@@ -51,7 +51,7 @@ def f32(value):
 
 
 class Simulation:
-    def __init__(self, flags=3, depth=2.0):
+    def __init__(self, flags=3, height=3.0):
         self.uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
         self.uc.mem_map(BASE, 0x40000)
         self.uc.mem_map(LOCAL, 0x240000)
@@ -68,13 +68,15 @@ class Simulation:
         self.health, self.special = {}, {}
         self.events, self.original_seen, self.writes = [], [], []
         self.action = None
-        self.physics = False; self.cct_position = self.positions[LOCAL]; self.force_writes = []
+        self.gravity_step=0.0;self.force_writes=[];self.cct_position=self.positions[LOCAL]
         self.delta = (1, 0, 2)
         self.ptr(MATCH+0xd8, LOCAL)
         self.q('MATCH', MATCH); self.q('LOCAL', LOCAL); self.q('DEADLINE', 110)
         self.w('SEQUENCE', 2); self.w('EPOCH', 1); self.w('FLAGS', flags)
         self.w('COUNT', 1); self.ptr(STATE+OFF['MODES_PLAYERS'], ENEMY)
-        self.uc.mem_write(STATE+OFF['MODES_DEPTH'], struct.pack('<f', depth))
+        self.uc.mem_write(STATE+OFF['MODES_HEIGHT'], struct.pack('<f', height))
+        self.ptr(LOCAL+0x268,CCT);self.ptr(CCT,CCT_CLASS);self.ptr(CCT+0x1c8,0x432000)
+        self.q('FLY_CCT',CCT);self.q('FLY_CLASS',CCT_CLASS)
         self.uc.hook_add(UC_HOOK_CODE, self.hook)
 
     def ptr(self, address, value):
@@ -103,26 +105,27 @@ class Simulation:
             self.original_seen.append(self.positions[player])
             # Local motion uses the normal transform. Remote interpolation uses
             # the continually advancing incoming state, independent of visuals.
-            source = (self.cct_position if self.physics else self.positions[player]) if player == LOCAL else self.authoritative[player]
+            source = self.positions[player] if player == LOCAL else self.authoritative[player]
             # PostUpdate has its own late incoming motion/vertical jump. Local
-            # post timing only observes the pose; Burrow must not be undone.
-            delta = (0, 0, 0) if self.post and player == LOCAL else self.delta
+            # post timing only observes the pose; Fly must not be undone.
+            delta = (0,self.gravity_step,0) if self.post and player == LOCAL else (
+                (self.delta[0],self.gravity_step,self.delta[2]) if player==LOCAL else self.delta)
             normal = tuple(f32(v+d) for v, d in zip(source, delta))
             self.positions[player] = normal
-            if player == LOCAL and self.physics: self.cct_position = normal
+            if player==LOCAL:self.cct_position=normal
             if player != LOCAL: self.authoritative[player] = normal
         elif name == 'CLOCK': uc.reg_write(UC_ARM64_REG_X0, self.now)
         elif name == 'CURRENT_MATCH':
             assert player == 0
             uc.reg_write(UC_ARM64_REG_X0, self.current_match)
         elif name == 'FORCE_POS':
-            assert player == CCT and uc.reg_read(UC_ARM64_REG_X1) == 0
-            value = tuple(struct.unpack('<f', struct.pack('<I', uc.reg_read(reg)))[0]
-                          for reg in (UC_ARM64_REG_S0, UC_ARM64_REG_S1, UC_ARM64_REG_S2))
+            assert player==CCT and uc.reg_read(UC_ARM64_REG_X1)==0
+            value=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(reg)))[0]
+                        for reg in (UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2))
             assert all(math.isfinite(v) for v in value)
-            self.cct_position = value; self.force_writes.append(value)
+            self.cct_position=value;self.force_writes.append(value)
         else:
-            assert (player == self.player or (name in ('HP','GET_POS') and player == ENEMY)) and uc.reg_read(UC_ARM64_REG_X1) == 0, name
+            assert player == self.player and uc.reg_read(UC_ARM64_REG_X1) == 0, name
             if name == 'HP': uc.reg_write(UC_ARM64_REG_X0, self.health.get(player, 100) & 0xffffffff)
             elif name in ('VEHICLE', 'PARACHUTE', 'WAIT_SYNC'):
                 uc.reg_write(UC_ARM64_REG_X0, self.special.get((player, name), 0))
@@ -176,66 +179,49 @@ class Simulation:
         assert self.events[first_call:].count('ORIGINAL' if post else 'POST_ORIGINAL') == 0
         assert self.w('BUSY') == initial_busy
 
-    def teleport(self, serial=1):
-        self.physics = True
-        self.ptr(LOCAL+0x268, CCT); self.ptr(CCT, CCT_CLASS); self.ptr(CCT+0x1c8, 0x432000)
-        self.uc.mem_write(LOCAL+0x60, struct.pack('<I', 42))
-        self.uc.mem_write(ENEMY+0x60, struct.pack('<I', 73))
-        self.w('COMMAND', serial); self.w('COMMAND_LOCAL_ID', 42)
-        self.q('COMMAND_TARGET', ENEMY); self.w('COMMAND_TARGET_ID', 73)
-        self.q('COMMAND_CCT', CCT); self.q('COMMAND_CCT_CLASS', CCT_CLASS)
-        self.q('COMMAND_DEADLINE', 110)
 
-
-# No downward accumulation, full native movement, and return at current X/Z.
-s = Simulation(flags=2); s.run(LOCAL, interface=True, wrapped=False)
-assert s.q('TICKS') == 0 and s.q('APPLIES') == 0 and s.positions[LOCAL][1] == 10
-s.run(LOCAL, interface=True)
-assert s.q('TICKS') == 1 and s.q('APPLIES') == 1 and math.isclose(s.positions[LOCAL][1], 8.0, abs_tol=1e-6)
-s.w('FLAGS', 0); s.run(LOCAL, interface=True)
-assert s.positions[LOCAL][1] == 10, 'Interface release must restore normal height'
-
-s = Simulation(flags=2)
-for step in range(100):
-    s.run(LOCAL)
-    assert s.original_seen[-1] == (step, 10, step*2), 'Physics update received a lowered transform'
-    assert math.isclose(s.positions[LOCAL][1], 8.0, abs_tol=1e-6)
-    assert s.positions[LOCAL][0] == step+1 and s.positions[LOCAL][2] == (step+1)*2
-s.w('FLAGS', 0); s.run(LOCAL)
-assert s.positions[LOCAL] == (101, 10, 202) and s.q('APPLIES') == 100
-s.run(LOCAL); assert s.positions[LOCAL] == (102, 10, 204)
-
-# Horizontal native movement between updates can carry the same lowered Y.
-# Restore only our height offset without losing the newly moved X/Z.
-s = Simulation(flags=2); s.run(LOCAL, interface=True)
+# Smooth modest ascent, horizontal movement and a fixed altitude in BOTH phases.
+s=Simulation(flags=2)
+s.run(LOCAL,interface=True,wrapped=False);assert not s.force_writes
+base=s.positions[LOCAL][1];previous=base
+for step in range(240):
+    if step==1:s.gravity_step=-0.25
+    s.run(LOCAL,interface=True);s.run(LOCAL,post=True)
+    assert previous<=s.positions[LOCAL][1]<=base+3
+    assert s.positions[LOCAL][1]-previous<=0.125001
+    assert s.positions[LOCAL]==s.cct_position
+    previous=s.positions[LOCAL][1]
+assert previous==base+3 and len(s.force_writes)==480
+# Height adjustment is smooth and never adds another height per tick.
+s.uc.mem_write(STATE+OFF['MODES_HEIGHT'],struct.pack('<f',1.0))
+previous=s.positions[LOCAL][1]
 for _ in range(100):
-    x, y, z = s.positions[LOCAL]
-    s.positions[LOCAL] = (x+0.5, y, z+0.5)
-    s.run(LOCAL, interface=True)
-    assert s.original_seen[-1] == (x+0.5, 10, z+0.5)
-    assert s.positions[LOCAL] == (x+1.5, 8.0, z+2.5)
-s.w('FLAGS', 0); s.run(LOCAL, interface=True)
-assert s.positions[LOCAL][1] == 10
-# Native application independently rejects corrupt/unbounded input depths.
-for depth in [1.0, 1.5, 2.0, 2.25]:
-    s = Simulation(flags=2, depth=depth)
-    for _ in range(100):
-        s.run(LOCAL)
-        assert s.original_seen[-1][1] == 10 and s.positions[LOCAL][1] == 10-depth
-    # Depth changes while ON restore the previous offset before applying the new.
-    s.uc.mem_write(STATE+OFF['MODES_DEPTH'], struct.pack('<f', 2.0)); s.run(LOCAL)
-    assert s.positions[LOCAL][1] == 8
-    s.w('FLAGS', 0); s.run(LOCAL); assert s.positions[LOCAL][1] == 10
-for depth in [math.nan, math.inf, -math.inf, -1.0, 0.75, 2.26, 1000.0]:
-    s = Simulation(flags=2, depth=depth); s.run(LOCAL)
-    assert not s.writes and s.q('APPLIES') == 0
-for value in [math.nan, math.inf, -math.inf, 1000001]:
-    for axis in [0, 2]:
-        s = Simulation(flags=2); s.run(LOCAL)
-        position = list(s.positions[LOCAL]); position[axis] = value
-        s.positions[LOCAL] = tuple(position)
-        before = len(s.writes); s.run(LOCAL)
-        assert len(s.writes) == before, 'Height restore must not write invalid outside X/Z'
+    s.run(LOCAL);assert 0<=previous-s.positions[LOCAL][1]<=0.062501
+    previous=s.positions[LOCAL][1]
+assert previous==base+1
+count=len(s.force_writes);s.w('FLAGS',0);s.run(LOCAL)
+assert len(s.force_writes)==count and s.positions[LOCAL][1]==previous-0.25
+# Fresh enable starts at the current position and rises by one bounded step.
+s.w('FLAGS',2);old=s.positions[LOCAL][1];s.run(LOCAL)
+assert s.positions[LOCAL][1]==old-0.25+0.0625
+# Bounded height, bad controllers and malformed positions fail closed.
+for height in [1.0,3.0,5.0]:
+    s=Simulation(flags=2,height=height)
+    for _ in range(160):s.run(LOCAL)
+    assert s.positions[LOCAL][1]==10+height
+for height in [math.nan,math.inf,-math.inf,-1.0,0.75,5.01,1000]:
+    s=Simulation(flags=2,height=height);s.run(LOCAL)
+    assert not s.writes and not s.force_writes
+for reason in ['cct','class','transform']:
+    s=Simulation(flags=2)
+    if reason=='cct':s.ptr(LOCAL+0x268,0)
+    elif reason=='class':s.ptr(CCT,CCT_CLASS+0x100)
+    else:s.ptr(CCT+0x1c8,0)
+    s.run(LOCAL);assert not s.force_writes and not s.writes
+for value in [math.nan,math.inf,-math.inf,1000001]:
+    for axis in [0,1,2]:
+        s=Simulation(flags=2);position=list(s.positions[LOCAL]);position[axis]=value
+        s.positions[LOCAL]=tuple(position);s.run(LOCAL);assert not s.force_writes
 
 # A scoped visual stays anchored; incoming state and original updates advance.
 s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
@@ -272,7 +258,7 @@ assert len(s.writes) == before+1
 
 # Both roles can coexist, and neither role spills to teammates/unlisted actors.
 s = Simulation(flags=3); s.run(LOCAL); s.run(ENEMY); s.run(OTHER)
-assert math.isclose(s.positions[LOCAL][1], 8.0, abs_tol=1e-6)
+assert s.positions[LOCAL][1]==10.0625
 assert s.positions[OTHER] == (41, 10, 42) and not any(player == OTHER for player, _ in s.writes)
 s = Simulation(flags=1); s.run(LOCAL); assert not s.writes
 s = Simulation(flags=2); s.run(ENEMY); assert not s.writes
@@ -280,7 +266,7 @@ s = Simulation(flags=2); s.run(ENEMY); assert not s.writes
 # New corrections win over stale restore data, including local teleports.
 s = Simulation(flags=2); s.run(LOCAL); s.positions[LOCAL] = (100, 15, 100); s.run(LOCAL)
 assert s.original_seen[-1] == (100, 15, 100)
-assert s.positions[LOCAL][0] == 101 and math.isclose(s.positions[LOCAL][1], 13.0, abs_tol=1e-6)
+assert s.positions[LOCAL]==(101,15.0625,102), 'Large native corrections establish a fresh base'
 s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
 s.positions[ENEMY] = (100, 10, 100); s.authoritative[ENEMY] = s.positions[ENEMY]
 writes = len(s.writes); s.run(ENEMY)
@@ -303,7 +289,7 @@ for native in [None, 'CLOCK', 'GET_POS']:
     s.action = None; s.w('SEQUENCE', 6); s.run(ENEMY)
     assert s.positions[ENEMY] == anchor, 'Concurrent publication must not release the anchor'
 
-# Sustained large incoming motion and unrelated Burrow toggles keep one anchor.
+# Sustained large incoming motion and unrelated Fly toggles keep one anchor.
 s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
 for step in range(200):
     s.positions[ENEMY] = (100+step*10, 10, 100+step*10)
@@ -330,7 +316,7 @@ for reason in ['off', 'lease', 'sequence', 'vehicle', 'parachute', 'sync']:
     elif reason == 'sequence': s.w('SEQUENCE', 3)
     else: s.special[(LOCAL, {'vehicle': 'VEHICLE', 'parachute': 'PARACHUTE', 'sync': 'WAIT_SYNC'}[reason])] = 1
     applies = s.q('APPLIES'); s.run(LOCAL)
-    assert s.positions[LOCAL] == (2, 10, 4) and s.q('APPLIES') == applies, reason
+    assert s.positions[LOCAL] == (2,10.0625,4) and s.q('APPLIES') == applies, reason
 
 # Changed owners/death never write old coordinates into a new context.
 for reason in ['match', 'local', 'dead', 'negative_hp', 'knocked', 'busy', 'count']:
@@ -409,52 +395,15 @@ for reason in ['off', 'lease', 'match', 'dead', 'busy', 'race']:
         s.action = post_race
     before = s.q('APPLIES'); s.run(ENEMY, post=True)
     assert s.q('APPLIES') == before, reason
-# Late enforcement never restores/reapplies the local Burrow offset.
-s = Simulation(flags=3); s.run(LOCAL); lowered = s.positions[LOCAL]
-before = len(s.writes); s.run(LOCAL, post=True)
-assert s.positions[LOCAL] == lowered and len(s.writes) == before and s.q('POST_TICKS') == 0
-s.run(LOCAL); assert s.original_seen[-1][1] == 10 and s.positions[LOCAL][1] == 8
+# Local PostUpdate applies the same altitude, without recapturing a base.
+s=Simulation(flags=3);s.run(LOCAL);before=s.positions[LOCAL][1]
+s.run(LOCAL,post=True);assert s.positions[LOCAL][1]==before+0.0625 and s.q('POST_TICKS')==1
+s.run(LOCAL);assert s.positions[LOCAL][1]==before+0.125
+# Toggling enemy modes cannot restart the local ascent.
+for i in range(200):
+    s.w('FLAGS',3 if i%2 else 2);s.w('EPOCH',i+2);s.run(LOCAL)
+assert s.positions[LOCAL][1]==13
 # Unlisted teammates continue their ordinary PostUpdate.
 s = Simulation(flags=1); s.run(OTHER, post=True)
 assert not s.writes and s.positions[OTHER] == s.authoritative[OTHER]
-# User command works independently of Burrow/FakeLag, applies once on local native tick.
-s = Simulation(flags=0); s.teleport(); s.run(ENEMY); assert not s.force_writes
-s.run(LOCAL, post=True); assert not s.force_writes
-s.run(LOCAL, interface=True)
-assert s.w('COMMAND_ACK') == 1 and s.w('COMMAND_RESULT') == 1
-assert s.positions[LOCAL] == s.cct_position == s.positions[ENEMY]
-assert len(s.force_writes) == 1 and s.events.index('FORCE_POS') < s.events.index('SET_POS')
-for _ in range(30): s.run(LOCAL)
-assert len(s.force_writes) == 1, 'No repeats from held buttons/republished snapshots'
-s.positions[ENEMY] = (100, 20, 200); s.teleport(2); s.run(LOCAL)
-assert len(s.force_writes) == 2 and s.positions[LOCAL] == (100, 20, 200)
-# A teleport and Burrow use the fresh new position, never an old activation pose.
-s = Simulation(flags=2); s.teleport(); s.run(LOCAL)
-assert s.cct_position == s.positions[ENEMY] and s.positions[LOCAL][1] == s.cct_position[1]-2
-s.w('FLAGS', 0); s.w('COMMAND', 0); s.run(LOCAL)
-assert s.positions[LOCAL] == s.cct_position
-# Recycled owners/targets, dead actors, special movement and bad physics are rejected.
-for reason in ['local_id','target_id','target_dead','target_knocked','cct','class','transform','vehicle','sync','parachute','off','lease','command_lease','match','torn','nan','zero']:
-    s = Simulation(flags=0); s.teleport()
-    if reason == 'local_id': s.w('COMMAND_LOCAL_ID', 99)
-    elif reason == 'target_id': s.w('COMMAND_TARGET_ID', 99)
-    elif reason == 'target_dead': s.health[ENEMY] = 0
-    elif reason == 'target_knocked': s.uc.mem_write(ENEMY+0x1258,b'\x01')
-    elif reason == 'cct': s.ptr(LOCAL+0x268, 0)
-    elif reason == 'class': s.ptr(CCT, CCT_CLASS+0x100)
-    elif reason == 'transform': s.ptr(CCT+0x1c8, 0)
-    elif reason in ['vehicle','sync','parachute']: s.special[(LOCAL,{'vehicle':'VEHICLE','sync':'WAIT_SYNC','parachute':'PARACHUTE'}[reason])] = 1
-    elif reason == 'off': s.w('COMMAND', 0)
-    elif reason == 'lease': s.now = 111
-    elif reason == 'command_lease': s.q('COMMAND_DEADLINE', 99)
-    elif reason == 'match': s.current_match = MATCH+0x2000
-    elif reason == 'torn': s.w('SEQUENCE',3)
-    elif reason == 'nan': s.positions[ENEMY] = (math.nan,10,20)
-    else: s.positions[ENEMY] = (0,0,0)
-    s.run(LOCAL); assert not s.force_writes and not s.writes, reason
-# Publication racing the target getter must defer, not consume a torn command.
-s = Simulation(flags=0); s.teleport()
-s.action = lambda name, sim: sim.w('SEQUENCE',4) if name == 'GET_POS' else None
-s.run(LOCAL); assert not s.force_writes and s.w('COMMAND_ACK') == 0
-s.action=None; s.w('SEQUENCE',6); s.run(LOCAL); assert len(s.force_writes)==1
-print('Player modes ARM64: presentation phases, one-shot physics teleport, expiry, identities, release and ABI passed')
+print('Player modes ARM64: two frame phases, running/jumping hold, height, latest release, guards and ABI passed')

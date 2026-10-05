@@ -114,7 +114,6 @@ void _0x35572DA(
 );
 
 void ESPSyncFromPrefs(void);
-BOOL ESPTeleportToEnemy(void);
 // Nhả aim lock để render frame kế tiếp đánh giá lại theo FOV mới
 void ESPClearAimLock(void);
 BOOL ESPMatchReady(void);

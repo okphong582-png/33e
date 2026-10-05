@@ -5,6 +5,22 @@
 #import "UIView+SecureView.h"
 #import "MizzeTheme.h"
 
+@interface MizzeCheckBox : UIButton
+@property(nonatomic,assign) BOOL on;
+- (void)setOn:(BOOL)on animated:(BOOL)animated;
+@end
+@implementation MizzeCheckBox
+- (void)setOn:(BOOL)on {
+    _on=on;self.selected=on;
+    [self setTitle:on ? @"X" : @"" forState:UIControlStateNormal];
+    [self setTitleColor:MizzeMint() forState:UIControlStateNormal];
+    self.backgroundColor=on ? [MizzeMint() colorWithAlphaComponent:0.13] : MizzeSurface();
+    self.layer.borderColor=(on ? MizzeMint() : MizzeBorder()).CGColor;
+    self.accessibilityValue=on ? @"Bật" : @"Tắt";
+}
+- (void)setOn:(BOOL)on animated:(BOOL)animated { self.on=on; }
+@end
+
 @interface _0xDEADBEEE () <UIGestureRecognizerDelegate>
 @property (nonatomic, strong) UIView *panel;
 @property (nonatomic, strong) UIView *header;
@@ -15,6 +31,7 @@
 @property (nonatomic, strong) UILabel *swatch;
 @property (nonatomic, assign) NSInteger page;
 @property (nonatomic, assign) NSInteger colorTarget;
+@property (nonatomic, assign) BOOL aimExpanded;
 @property (nonatomic, assign) NSInteger pointer;
 @property (nonatomic, assign) CGPoint began;
 @property (nonatomic, assign) CGPoint panelOrigin;
@@ -148,11 +165,13 @@
     UILabel *titleLabel = [self label:title frame:CGRectMake(14, 0, MAX(10, width - 86), 54) size:15];
     titleLabel.adjustsFontSizeToFitWidth = YES; titleLabel.minimumScaleFactor = 0.75;
     [row addSubview:titleLabel];
-    UISwitch *sw = [[UISwitch alloc] initWithFrame:CGRectMake(width - 65, 11, 51, 31)];
-    sw.onTintColor = MizzeMint();
+    MizzeCheckBox *sw = [[MizzeCheckBox alloc] initWithFrame:CGRectMake(width - 50, 10, 34, 34)];
+    sw.layer.cornerRadius=8;sw.layer.borderWidth=1.25;
+    sw.titleLabel.font=[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold];
+    sw.accessibilityLabel=title;
     sw.on = ESPPrefsBool(key, fallback);
     objc_setAssociatedObject(sw, "key", key, OBJC_ASSOCIATION_COPY_NONATOMIC);
-    [sw addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
+    [sw addTarget:self action:@selector(checkboxPressed:) forControlEvents:UIControlEventTouchUpInside];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(toggleRow:)];
     tap.delegate = self;
     objc_setAssociatedObject(tap, "switch", sw, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -161,8 +180,11 @@
     return y + 62;
 }
 - (void)toggleRow:(UITapGestureRecognizer *)tap {
-    UISwitch *sw = objc_getAssociatedObject(tap, "switch");
+    MizzeCheckBox *sw = objc_getAssociatedObject(tap, "switch");
     if (sw.enabled) { [sw setOn:!sw.on animated:YES]; [self toggleChanged:sw]; }
+}
+- (void)checkboxPressed:(MizzeCheckBox *)sender {
+    sender.on=!sender.on;[self toggleChanged:sender];
 }
 - (CGFloat)slider:(NSString *)title key:(NSString *)key min:(float)minimum max:(float)maximum fallback:(float)fallback y:(CGFloat)y {
     CGFloat width = [self contentWidth];
@@ -196,6 +218,27 @@
     UILabel *label = [self label:title frame:CGRectMake(4, y + 6, [self contentWidth] - 8, 24) size:14];
     label.textColor = MizzeMint(); [self.scroll addSubview:label]; return y + 38;
 }
+- (void)chooseAim { self.aimExpanded=!self.aimExpanded;[self buildPage]; }
+- (CGFloat)aimChooser:(CGFloat)y {
+    NSArray *keys=@[@"AimbotFire",@"AimbotScope",@"AimHipAlways",@"AimNeck",@"SilentAim",@"AutoFire",@"AimLag",@"FakeLag"];
+    NSArray *names=@[@"Aim khi bắn",@"Aim khi ngắm",@"Aim luôn",@"Aim cổ",@"Silent Aim",@"AimKill",@"Aimlag",@"FakeLag"];
+    NSMutableArray *active=[NSMutableArray array];
+    for(NSUInteger i=0;i<keys.count;++i) if(ESPPrefsBool(keys[i],i<2)) [active addObject:names[i]];
+    NSString *summary=active.count ? [active componentsJoinedByString:@" · "] : @"Tắt";
+    if(active.count>2) summary=[NSString stringWithFormat:@"%@ +%lu",active[0],(unsigned long)(active.count-1)];
+    UIButton *chooser=[UIButton buttonWithType:UIButtonTypeSystem];chooser.tag=302;
+    chooser.frame=CGRectMake(0,y,[self contentWidth],54);chooser.layer.cornerRadius=10;
+    chooser.backgroundColor=MizzeRaised();chooser.contentHorizontalAlignment=UIControlContentHorizontalAlignmentLeft;
+    chooser.contentEdgeInsets=UIEdgeInsetsMake(0,14,0,14);
+    [chooser setTitle:[NSString stringWithFormat:@"Loại aim   %@  %@",summary,self.aimExpanded ? @"▴" : @"▾"] forState:UIControlStateNormal];
+    [chooser setTitleColor:MizzeMint() forState:UIControlStateNormal];
+    chooser.titleLabel.font=[UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+    chooser.titleLabel.adjustsFontSizeToFitWidth=YES;chooser.accessibilityValue=self.aimExpanded ? @"Đang mở" : @"Đang thu gọn";
+    [chooser addTarget:self action:@selector(chooseAim) forControlEvents:UIControlEventTouchUpInside];
+    [self.scroll addSubview:chooser];[self.controls addObject:chooser];y+=62;
+    if(self.aimExpanded) for(NSUInteger i=0;i<keys.count;++i) y=[self toggle:names[i] key:keys[i] fallback:i<2 y:y];
+    return y;
+}
 - (void)buildPage {
     const CGFloat offset = self.scroll.contentOffset.y;
     for (UIView *v in self.scroll.subviews) [v removeFromSuperview];
@@ -216,12 +259,7 @@
     }
     CGFloat y = 0;
     if (self.page == 0) {
-        y = [self toggle:@"AimKill" key:@"AutoFire" fallback:NO y:y];
-        y = [self toggle:@"Silent Aim" key:@"SilentAim" fallback:NO y:y];
-        y = [self toggle:@"Aimlag" key:@"AimLag" fallback:NO y:y];
-        y = [self note:@"Giữ vị trí địch khi ngắm · chỉ trên máy bạn." y:y];
-        y = [self toggle:@"FakeLag" key:@"FakeLag" fallback:NO y:y];
-        y = [self note:@"Giữ địch · không cần ngắm · chỉ máy bạn." y:y];
+        y = [self aimChooser:y];
         y = [self slider:@"FOV" key:ESPPrefsBool(@"SilentAim", NO) ? @"SilentFovSize" : @"FovSize"
             min:5 max:48 fallback:ESPPrefsBool(@"SilentAim", NO) ? 18 : 40 y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
@@ -230,17 +268,6 @@
         if (!ESPPrefsBool(@"SilentAutoConfig", YES)) {
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
-        y = [self note:@"AimKill: tự bắn 2x vào mục tiêu trong FOV." y:y];
-        y = [self section:@"Aim thường" y:y];
-        y = [self toggle:@"Aim thường" key:@"AimbotFire" fallback:YES y:y];
-        UISegmentedControl *mode = [[UISegmentedControl alloc] initWithItems:@[@"Chỉ khi bắn", @"Luôn trong FOV"]];
-        mode.frame = CGRectMake(0, y, [self contentWidth], 44);
-        mode.tag = 102;
-        mode.selectedSegmentIndex = ESPPrefsBool(@"AimHipAlways", NO) ? 1 : 0;
-        [mode addTarget:self action:@selector(aimModeChanged:) forControlEvents:UIControlEventValueChanged];
-        [self.scroll addSubview:mode]; [self.controls addObject:mode]; y += 54;
-        y = [self toggle:@"Aim khi mở ngắm" key:@"AimbotScope" fallback:YES y:y];
-        y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:NO y:y];
         y = [self section:@"Súng & trạng thái" y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
         y = [self toggle:@"Không thay đạn" key:@"ShootNoReload" fallback:NO y:y + 10];
@@ -289,22 +316,11 @@
         [self updateSwatch];
     } else {
         y = [self toggle:@"Ẩn nút chức năng" key:@"HideFeatureButtons" fallback:NO y:y];
-        y = [self toggle:@"Nút dịch chuyển (thử nghiệm)" key:@"Teleport" fallback:NO y:y];
-        if (ESPPrefsBool(@"Teleport", NO)) {
-            UIButton *teleport = [UIButton buttonWithType:UIButtonTypeSystem];
-            teleport.frame = CGRectMake(0,y,[self contentWidth],44);teleport.tag=301;
-            [teleport setTitle:@"Đến địch gần tâm" forState:UIControlStateNormal];
-            [teleport setTitleColor:MizzeMint() forState:UIControlStateNormal];
-            teleport.layer.cornerRadius=10;teleport.backgroundColor=[MizzeMint() colorWithAlphaComponent:0.12];
-            [teleport addTarget:self action:@selector(teleportPressed:) forControlEvents:UIControlEventTouchUpInside];
-            [self.scroll addSubview:teleport];[self.controls addObject:teleport];y+=52;
-            y = [self note:@"Bấm một lần · chọn địch gần tâm · tắt Ghost trước." y:y];
-        }
         y = [self toggle:@"Ghost Mode (thử nghiệm)" key:@"GhostMode" fallback:NO y:y];
         y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
-        y = [self toggle:@"Độn thổ" key:@"Burrow" fallback:NO y:y];
-        if (ESPPrefsBool(@"Burrow", NO))
-            y = [self slider:@"Độ sâu" key:@"BurrowDepth" min:1 max:2.25 fallback:2 y:y];
+        y = [self toggle:@"Fly" key:@"Fly" fallback:NO y:y];
+        if (ESPPrefsBool(@"Fly", NO))
+            y = [self slider:@"Độ cao" key:@"FlyHeight" min:1 max:5 fallback:3 y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
@@ -319,13 +335,25 @@
     self.scroll.contentSize = CGSizeMake([self contentWidth], y + 8);
     self.scroll.contentOffset = CGPointMake(0, MAX(0, MIN(offset, y + 8 - self.scroll.bounds.size.height)));
 }
-- (void)toggleChanged:(UISwitch *)sender {
+- (void)toggleChanged:(MizzeCheckBox *)sender {
     NSString *key = objc_getAssociatedObject(sender, "key");
+    if ([key isEqualToString:@"AimHipAlways"] && sender.on) ESPPrefsSetBool(@"AimbotFire", YES);
+    if ([key isEqualToString:@"AimbotFire"]) ESPPrefsSetBool(@"AimHipAlways", NO);
+    if (sender.on && ([@[@"AimbotFire",@"AimHipAlways"] containsObject:key])) {
+        ESPPrefsSetBool(@"AimbotScope", NO);ESPPrefsSetBool(@"SilentAim", NO);ESPPrefsSetBool(@"AutoFire", NO);
+    }
+    if ([key isEqualToString:@"AimbotScope"] && sender.on) {
+        ESPPrefsSetBool(@"AimbotFire", NO);ESPPrefsSetBool(@"AimHipAlways", NO);
+        ESPPrefsSetBool(@"SilentAim", NO);ESPPrefsSetBool(@"AutoFire", NO);
+    }
+    if (sender.on && ([@[@"SilentAim",@"AutoFire"] containsObject:key])) {
+        ESPPrefsSetBool(@"AimbotFire", NO);ESPPrefsSetBool(@"AimbotScope", NO);ESPPrefsSetBool(@"AimHipAlways", NO);
+    }
     if ([key isEqualToString:@"AutoFire"] && sender.on) ESPPrefsSetBool(@"SilentAim", YES);
     if ([key isEqualToString:@"SilentAim"] && !sender.on) ESPPrefsSetBool(@"AutoFire", NO);
     if ([key isEqualToString:@"CleanESP"] && sender.on) ESPPrefsSetBool(@"Box3D", NO);
     ESPPrefsSetBool(key, sender.on); ESPSyncFromPrefs();
-    if ([@[@"AutoFire", @"GhostMode", @"Burrow", @"FakeLag", @"Teleport"] containsObject:key])
+    if ([@[@"AutoFire", @"GhostMode", @"Fly", @"FakeLag"] containsObject:key])
         ESPPrefsSetBool([key stringByAppendingString:@"Floating"], sender.on);
     if ([key isEqualToString:@"AnLive"] && ![UIView applyCaptureProtectionToRegisteredViews:sender.on]) {
         sender.on = NO; ESPPrefsSetBool(key, NO);
@@ -335,11 +363,8 @@
     }
     if ([key isEqualToString:@"DarkTheme"] || [key isEqualToString:@"CleanESP"] ||
         [key isEqualToString:@"AutoFire"] || [key isEqualToString:@"SilentAim"] ||
-        [key isEqualToString:@"SilentAutoConfig"] || [key isEqualToString:@"Burrow"] ||
-        [key isEqualToString:@"Teleport"]) [self buildPage];
-}
-- (void)teleportPressed:(UIButton *)sender {
-    [sender setTitle:ESPTeleportToEnemy() ? @"Đã gửi dịch chuyển" : @"Chưa có địch / vị trí phù hợp" forState:UIControlStateNormal];
+        [key isEqualToString:@"SilentAutoConfig"] || [key isEqualToString:@"Fly"] ||
+        [@[@"AimbotFire",@"AimbotScope",@"AimHipAlways",@"AimNeck",@"AimLag",@"FakeLag"] containsObject:key]) [self buildPage];
 }
 - (void)applyMinimalESP {
     for (NSString *key in @[@"Box", @"Health", @"Name", @"Dis", @"CleanESP"])
@@ -361,10 +386,10 @@
     ESPPrefsSetBool(@"Box", YES);
     if (sender.selectedSegmentIndex == 1) ESPPrefsSetBool(@"CleanESP", NO);
     for (UIControl *control in self.controls) {
-        if (![control isKindOfClass:UISwitch.class]) continue;
+        if (![control isKindOfClass:MizzeCheckBox.class]) continue;
         NSString *key = objc_getAssociatedObject(control, "key");
         if ([key isEqualToString:@"Box"] || [key isEqualToString:@"CleanESP"])
-            ((UISwitch *)control).on = ESPPrefsBool(key, NO);
+            ((MizzeCheckBox *)control).on = ESPPrefsBool(key, NO);
     }
     ESPSyncFromPrefs();
 }
@@ -379,7 +404,7 @@
         [key isEqualToString:@"SilentHeadPercent"] || [key isEqualToString:@"HealthYellowPercent"] ||
         [key isEqualToString:@"HealthRedPercent"]) {
         label.text = [NSString stringWithFormat:@"%@   %.0f%%", title, sender.value];
-    } else if ([key isEqualToString:@"BurrowDepth"]) {
+    } else if ([key isEqualToString:@"FlyHeight"]) {
         label.text = [NSString stringWithFormat:@"%@   %.2f m", title, sender.value];
     } else if ([key isEqualToString:@"ESPMaxDistance"] || [key isEqualToString:@"SilentMaxDistance"]) {
         label.text = [NSString stringWithFormat:@"%@   %.0fm", title, sender.value];
@@ -471,7 +496,7 @@
             for (UIControl *c in self.controls) {
                 if (!c.enabled) continue;
                 CGRect hit = c.bounds;
-                if ([c isKindOfClass:UISwitch.class]) hit = [c convertRect:c.superview.bounds fromView:c.superview];
+                if ([c isKindOfClass:MizzeCheckBox.class]) hit = [c convertRect:c.superview.bounds fromView:c.superview];
                 if (CGRectContainsPoint(hit, [c convertPoint:point fromView:self.view])) { self.activeControl = c; break; }
             }
         }
@@ -498,8 +523,8 @@
         BOOL activate = phase == UITouchPhaseEnded && !self.dragging && !self.scrolling && fabs(dx) < 24 && fabs(dy) < 24;
         self.pointer = -1; self.activeControl = nil;
         if (activate && !control.enabled) activate = NO;
-        if (activate && [control isKindOfClass:UISwitch.class]) {
-            UISwitch *sw = (UISwitch *)control; [sw setOn:!sw.on animated:NO]; [self toggleChanged:sw];
+        if (activate && [control isKindOfClass:MizzeCheckBox.class]) {
+            MizzeCheckBox *sw = (MizzeCheckBox *)control; [sw setOn:!sw.on animated:NO]; [self toggleChanged:sw];
         } else if (activate && [control isKindOfClass:UISegmentedControl.class]) {
             UISegmentedControl *seg = (UISegmentedControl *)control;
             CGPoint p = [seg convertPoint:point fromView:self.view];
@@ -510,7 +535,7 @@
         } else if (activate && [control isKindOfClass:UIButton.class]) {
             if (control.tag >= 200 && control.tag < 204) [self changePage:(UIButton *)control];
             else if (control.tag == 300) [self applyMinimalESP];
-            else if (control.tag == 301) [self teleportPressed:(UIButton *)control];
+            else if (control.tag == 302) [self chooseAim];
             else [self closeMenu];
         }
         if ([control isKindOfClass:UISlider.class]) [self fovSliderTouchUp:(UISlider *)control];
