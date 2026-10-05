@@ -1,5 +1,6 @@
 #pragma once
 #define MODES_PAGE 0x4000
+#define MODES_POST_ENTRY 16
 #define MODES_ORIGINAL 0
 #define MODES_CLOCK 8
 #define MODES_CURRENT_MATCH 16
@@ -23,7 +24,9 @@
 #define MODES_APPLIES 648
 #define MODES_RESTORES 656
 #define MODES_MAGIC 664
-#define MODES_ROWS 680
+#define MODES_POST_ORIGINAL 680
+#define MODES_POST_TICKS 688
+#define MODES_ROWS 696
 #define MODES_CAPACITY 64
 #define MODES_ROW_SIZE 64
 #define ROW_PLAYER 0
@@ -38,7 +41,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453033ULL;
+constexpr uint64_t Magic = 0x504c4d4f44453034ULL;
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
@@ -59,6 +62,7 @@ struct State {
     Input input;
     uint32_t busy=0, pad=0;
     uint64_t ticks=0, applies=0, restores=0, magic=Magic, pad2=0;
+    uint64_t originalPost=0, postTicks=0;
     Row rows[MODES_CAPACITY];
 };
 static_assert(offsetof(State, input)==MODES_FLAGS);
@@ -69,6 +73,8 @@ static_assert(offsetof(State, ticks)==MODES_TICKS);
 static_assert(offsetof(State, applies)==MODES_APPLIES);
 static_assert(offsetof(State, restores)==MODES_RESTORES);
 static_assert(offsetof(State, magic)==MODES_MAGIC);
+static_assert(offsetof(State, originalPost)==MODES_POST_ORIGINAL);
+static_assert(offsetof(State, postTicks)==MODES_POST_TICKS);
 static_assert(offsetof(State, rows)==MODES_ROWS);
 static_assert(sizeof(Row)==MODES_ROW_SIZE);
 static_assert(offsetof(Row, real)==ROW_REAL && offsetof(Row, shown)==ROW_SHOWN);

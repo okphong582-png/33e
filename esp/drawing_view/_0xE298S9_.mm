@@ -787,12 +787,13 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
                 NSString *name = fakeLag ? @"FakeLag" : @"Aimlag";
                 NSString *reason = !fakeLag && !current.scoped ? @"mở ngắm để giữ địch" :
                     (current.heldEnemies ? [NSString stringWithFormat:@"giữ %u địch", current.heldEnemies] :
-                    (current.running ? @"chờ địch phù hợp" : @"chờ nhịp game"));
+                    (current.presenting ? @"chờ địch phù hợp" : @"chờ nhịp hiển thị"));
                 [lines addObject:[NSString stringWithFormat:@"%@ · %@", name, reason]];
             }
         }
-        if (gAimDiagnostics) [lines addObject:[NSString stringWithFormat:@"Nhịp %llu · áp dụng %llu · bỏ qua %u",
-            (unsigned long long)current.ticks, (unsigned long long)current.applies, current.skipped]];
+        if (gAimDiagnostics) [lines addObject:[NSString stringWithFormat:@"Nhịp %llu · hiển thị %llu · áp dụng %llu · bỏ qua %u",
+            (unsigned long long)current.ticks, (unsigned long long)current.postTicks,
+            (unsigned long long)current.applies, current.skipped]];
         if (gAimDiagnostics && current.failedOffset) [lines addObject:[NSString stringWithFormat:@"Mã khác: 0x%llx",
             (unsigned long long)current.failedOffset]];
     }

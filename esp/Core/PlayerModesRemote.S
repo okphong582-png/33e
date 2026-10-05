@@ -10,6 +10,12 @@
 // Wrap virtual OnUpdate(self, dt, time, MethodInfo). Incoming interpolation,
 // health, weapon and animation logic still run; no outgoing packets are hooked.
 _PlayerModesRemoteStart:
+    mov w16, #0
+    b .Lentry
+.org MODES_POST_ENTRY, 0
+    mov w16, #1
+    b .Lentry
+.Lentry:
     stp x29, x30, [sp, #-144]!
     stp x19, x20, [sp, #16]
     stp x21, x22, [sp, #32]
@@ -18,8 +24,16 @@ _PlayerModesRemoteStart:
     stp x27, x28, [sp, #80]
     stp d0, d1, [sp, #96]
     adr x19, .LmodesState
+    mov w23, w16 // Same state/anchor, distinct original for each frame phase.
     mov x20, x0
     mov x21, x1
+    // Burrow retains its existing OnUpdate timing. PostUpdate enforcement is
+    // only for remote enemies, never the local player's camera/physics phase.
+    cbz w23, .Llock
+    ldr x8, [x19, #MODES_LOCAL]
+    cmp x20, x8
+    b.eq .Ltail
+.Llock:
     add x8, x19, #MODES_BUSY
     ldaxr w9, [x8]
     cbnz w9, .Lreserved
@@ -146,10 +160,18 @@ _PlayerModesRemoteStart:
     mov x1, x21
     ldp d0, d1, [sp, #96]
     ldr x8, [x19, #MODES_ORIGINAL]
+    cbz w23, .LcallOriginal
+    ldr x8, [x19, #MODES_POST_ORIGINAL]
+.LcallOriginal:
     blr x8
     ldr x8, [x19, #MODES_TICKS]
     add x8, x8, #1
     str x8, [x19, #MODES_TICKS]
+    cbz w23, .Lsnapshot
+    ldr x8, [x19, #MODES_POST_TICKS]
+    add x8, x8, #1
+    str x8, [x19, #MODES_POST_TICKS]
+.Lsnapshot:
     add x8, x19, #MODES_SEQUENCE
     ldar w24, [x8]
     tbnz w24, #0, .Ldefer
@@ -232,7 +254,7 @@ _PlayerModesRemoteStart:
     mov x1, #0
     ldr x8, [x19, #MODES_GET_POS]
     blr x8
-    // Finite world coordinates, bounded before applying the shallow offset.
+    // Finite world coordinates, bounded before applying a visual override.
     // Entity.get_Position returns Vector3.zero when its Unity transform is gone.
     fmov w8, s0
     fmov w9, s1
@@ -268,7 +290,7 @@ _PlayerModesRemoteStart:
     str s2, [x22, #(ROW_REAL+8)]
     cmp w25, #2
     b.eq .Lburrow
-    // Keep the first position in this scoped epoch; normal interpolation has
+    // Keep the first position in this hold epoch; normal interpolation has
     // already advanced, so latest real coordinates remain available on release.
     ldr w8, [x22, #ROW_MODE]
     cmp w8, #1
@@ -337,6 +359,9 @@ _PlayerModesRemoteStart:
     mov x1, x21
     ldp d0, d1, [sp, #96]
     ldr x8, [x19, #MODES_ORIGINAL]
+    cbz w23, .LcallTail
+    ldr x8, [x19, #MODES_POST_ORIGINAL]
+.LcallTail:
     blr x8
 .Lreturn:
     mov x0, x20

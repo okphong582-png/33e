@@ -1,6 +1,6 @@
 # Experimental local player presentation modes
 
-TIPA and dylib share a signed ARM64 OnUpdate wrapper. It supports the
+TIPA and dylib share signed ARM64 OnUpdate/PostUpdate wrappers. They support the
 supplied Free Fire 1.132.1 `Player.OnUpdate` and `PlayerNetwork.OnUpdate` native
 implementations after full code fingerprints. Class slots with other callbacks
 are rejected. Neither mode intercepts incoming packets, freezes network state,
@@ -11,7 +11,19 @@ method 1 occupies class vtable entry 5 (`0x188`), while ordinary Player.OnUpdate
 also occupies entry 26 (`0x2D8`). The original implementation patched only entry
 26, leaving interface calls untouched. Both entries now point to the same
 callback/state; both original pointers must match before installing. Failed
-second-slot writes roll back the first without overwriting another hook.
+later-slot writes roll back previous entries without overwriting another hook.
+
+The supplied Player and PlayerNetwork vtables also contain `Player.PostUpdate`
+at entry 174 (`0xC18`), native body `0x569C1E4`, size `0x2BAC`, FNV-1a
+`0x458F369A`. Match update implementations `0x5BA4414`, `0x5C83250`,
+`0x5C87950` and `0x5C8DFB0` dispatch through this entry. This late method runs
+high-frame/avatar presentation after the early update, so an OnUpdate-only
+override can be overwritten before display. A separate entry at callback +16
+calls the verified PostUpdate original and reuses the SAME anchor/state page.
+Each phase runs its own original exactly once. Local PostUpdate bypasses visual
+enforcement so Burrow retains its existing timing. All three pointers are
+preflighted together, including the distinct PostUpdate original/callback;
+any failed pointer write rolls back preceding owned writes.
 
 ## Burrow
 
@@ -41,7 +53,7 @@ FakeLag holds enemies while enabled without requiring scoping. A hold starts an 
 each enemy captures its displayed root position on its first eligible update.
 Before later updates, the wrapper restores the latest normal position, runs the
 original update, saves the newly interpolated position, and reapplies the
-captured visual position. Aimlag tolerates false scope samples for 180 ms;
+captured visual position after both OnUpdate and PostUpdate. Aimlag tolerates false scope samples for 180 ms;
 an actual scope release ends the hold after that grace. Turning off FakeLag
 releases unless scoped Aimlag still owns the hold. Burrow/depth changes and
 switching between Aimlag/FakeLag during the same active hold preserve its epoch.
@@ -90,9 +102,18 @@ release and depth bounds. ARM64 tests check publication races after capture,
 The HUD samples native ticks/application counts and held rows at 5 Hz. Installing
 a slot alone no longer claims an effect: stopped ticks show "chờ nhịp game";
 Aimlag shows whether scoping/eligible enemies are available. Diagnostic mode
-includes counts and a failing code offset. Failure messages identify fingerprint,
+includes early/late phase counts and a failing code offset. A hold is reported
+only while late-phase ticks advance; installed pointers alone show "chờ nhịp
+hiển thị". Failure messages identify fingerprint,
 clock lookup, mapping and callback-write stages. Unsupported enemy classes do
 not cancel supported enemies or an installed local Burrow callback.
+
+The late-phase regression first runs the old unwrapped PostUpdate to reproduce
+the moving visual, then executes real slot-174 dispatch for 120 running/jumping
+frames. Tests check the shared anchor, latest release/re-enable, separate original
+dispatch, guarded publication, unchanged local Burrow and unlisted teammates.
+This does not lock skeletal animation or establish device render order for every
+game mode/IFix replacement; those still require an iPhone test.
 
 ## Quick controls
 

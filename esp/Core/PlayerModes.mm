@@ -23,10 +23,10 @@ constexpr Signature signatures[] = {
     {0x6B49E10,0x104,0xAACE9654},{0x591B898,0x1C8,0x92F2568B},
     {0x56AA7C8,0x110,0x4478C55F},{0x561CA30,0xB4,0xABF31A13},
     {0x561C7C8,0x6C,0x7958F6CC},{0x5636F20,0x60,0x6E4B75FE},
-    {0x6B4A924,0x8,0x64A6725A}
+    {0x6B4A924,0x8,0x64A6725A},{0x569C1E4,0x2BAC,0x458F369A}
 };
 struct Session {
-    uint64_t slot=0, allocation=0, original=0;
+    uint64_t slot=0, allocation=0, original=0, originalPost=0;
     uint32_t sequence=0;
     bool published=false;
     uint64_t state()const{return allocation+MODES_PAGE;}
@@ -42,8 +42,8 @@ bool verified=false;
 double retryAt=0;
 int lastResult=1;
 PlayerModesSnapshot snapshot{};
-double lastSample=0, lastTickAt=0;
-uint64_t sampledTicks=0;
+double lastSample=0, lastTickAt=0, lastPostAt=0;
+uint64_t sampledTicks=0, sampledPostTicks=0;
 std::vector<Session> sessions;
 bool ReadBytes(uint64_t address,void *value,size_t size){
     mach_vm_size_t actual=0;
@@ -82,13 +82,13 @@ bool Attach(uint64_t base){
     Clear();
     if(task!=MACH_PORT_NULL)mach_port_deallocate(mach_task_self(),task);
     task=MACH_PORT_NULL;sessions.clear();verified=false;retryAt=0;
-    snapshot={};lastSample=lastTickAt=0;sampledTicks=0;
+    snapshot={};lastSample=lastTickAt=lastPostAt=0;sampledTicks=sampledPostTicks=0;
     if(mach_port_mod_refs(mach_task_self(),candidate,MACH_PORT_RIGHT_SEND,1)!=KERN_SUCCESS)return false;
     task=candidate;pid=candidatePID;module=base;return true;
 }
 bool Verify(){
     if(verified)return true;
-    std::array<uint8_t,0x844> bytes{};
+    std::array<uint8_t,0x2BAC> bytes{};
     for(const auto &signature:signatures){
         if(!ReadBytes(module+signature.offset,bytes.data(),signature.size)){
             snapshot.detail="không đọc được mã game";snapshot.failedOffset=signature.offset;return false;
@@ -123,8 +123,9 @@ bool Adopt(uint64_t slot,uint64_t address){
         !Read(address+MODES_PAGE,state)||state.magic!=PlayerModesRemote::Magic||!Supported(state.original)||
         state.clock!=Clock()||state.currentMatch!=module+0x591B898||state.getPos!=module+0x6B49D04||
         state.setPos!=module+0x6B49E10||state.hp!=module+0x56AA7C8||state.vehicle!=module+0x561CA30||
-        state.parachute!=module+0x561C7C8||state.waitSync!=module+0x5636F20)return false;
-    sessions.push_back({slot,address,state.original,state.sequence&~1u,true});
+        state.parachute!=module+0x561C7C8||state.waitSync!=module+0x5636F20||
+        state.originalPost!=module+0x569C1E4)return false;
+    sessions.push_back({slot,address,state.original,state.originalPost,state.sequence&~1u,true});
     epoch=state.input.epoch+1;
     PlayerModesRemote::Input off{};off.epoch=epoch;
     return Publish(sessions.back(),off);
@@ -138,6 +139,11 @@ int Install(uint64_t klass){
         session=Find(slot);
     }
     if(session&&current!=session->original&&current!=session->allocation){snapshot.detail="nhịp nhân vật đã bị thay đổi";return 9;}
+    uint64_t post=0;
+    if(!Read(klass+PlayerModesInstall::Slots[2],post)||
+        (post!=module+0x569C1E4&&(!session||post!=session->allocation+MODES_POST_ENTRY))){
+        snapshot.detail="nhịp hiển thị chưa hỗ trợ";return 9;
+    }
     if(!session){
         if(sessions.size()>=16)return 9;
         const uint64_t clock=Clock();if(!clock){snapshot.detail="không tìm được đồng hồ game";return 9;}
@@ -147,32 +153,35 @@ int Install(uint64_t klass){
         state.original=current;state.clock=clock;state.currentMatch=module+0x591B898;
         state.getPos=module+0x6B49D04;state.setPos=module+0x6B49E10;state.hp=module+0x56AA7C8;
         state.vehicle=module+0x561CA30;state.parachute=module+0x561C7C8;state.waitSync=module+0x5636F20;
+        state.originalPost=post;
         if(!Write(mapping.address+MODES_PAGE,state)){snapshot.detail="không ghi được trạng thái";mach_vm_deallocate(task,mapping.address,2*MODES_PAGE);return 10;}
-        sessions.push_back({slot,mapping.address,current,0,false});session=&sessions.back();
+        sessions.push_back({slot,mapping.address,current,post,0,false});session=&sessions.back();
     }
-    // Publish both entries to the SAME state, so interface and concrete calls
-    // share their restore/anchor rows. Never patch a method's instructions.
+    // All phases share restore/anchor rows; each entry calls its own original.
+    // Publish virtual pointers only, never patch a method's instructions.
+    const auto originals=PlayerModesInstall::Originals(session->original,session->originalPost);
+    const auto callbacks=PlayerModesInstall::Callbacks(session->allocation);
     uint64_t concrete=0;
     bool bound=true;
-    for(auto offset:PlayerModesInstall::Slots){
-        if(!Read(klass+offset,concrete)||(concrete!=session->original&&concrete!=session->allocation)){
+    for(size_t i=0;i<PlayerModesInstall::Slots.size();++i){
+        if(!Read(klass+PlayerModesInstall::Slots[i],concrete)||(concrete!=originals[i]&&concrete!=callbacks[i])){
             snapshot.detail="nhịp interface không khớp";return 9;
         }
-        bound=bound&&concrete==session->allocation;
+        bound=bound&&concrete==callbacks[i];
     }
     if(bound)return 8;
     for(auto offset:PlayerModesInstall::Slots)
         if(!Writable(klass+offset)){snapshot.detail="vùng nhịp nhân vật chỉ đọc";return 10;}
     bool ok=false;
 #ifdef MIZZE_INJECTED
-    ok=PlayerModesInstall::Bind(klass,session->original,session->allocation,
+    ok=PlayerModesInstall::Bind(klass,originals,callbacks,
         [](uint64_t address,uint64_t &value){return Read(address,value);},
         [](uint64_t address,uint64_t expected,uint64_t replacement){
             return __atomic_compare_exchange_n((uint64_t *)address,&expected,replacement,false,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST);
         });
 #else
     if(task_suspend(task)!=KERN_SUCCESS){snapshot.detail="không đồng bộ được nhịp game";return 10;}
-    ok=PlayerModesInstall::Bind(klass,session->original,session->allocation,
+    ok=PlayerModesInstall::Bind(klass,originals,callbacks,
         [](uint64_t address,uint64_t &value){return Read(address,value);},
         [](uint64_t address,uint64_t expected,uint64_t replacement){
             uint64_t live=0;return Read(address,live)&&live==expected&&Write(address,replacement);
@@ -193,6 +202,7 @@ void Sample(){
         PlayerModesRemote::State state{};
         if(!Read(session.state(),state))continue;
         next.ticks+=state.ticks;next.applies+=state.applies;next.restores+=state.restores;
+        next.postTicks+=state.postTicks;
         for(const auto &row:state.rows){
             if(row.match!=ownerMatch||row.local!=ownerLocal||row.epoch!=epoch||!row.player)continue;
             if(row.mode==2&&(previousFlags&2u))++next.burrow;
@@ -200,8 +210,11 @@ void Sample(){
         }
     }
     if(next.ticks!=sampledTicks){sampledTicks=next.ticks;lastTickAt=now;}
+    if(next.postTicks!=sampledPostTicks){sampledPostTicks=next.postTicks;lastPostAt=now;}
     next.running=lastTickAt>0&&now-lastTickAt<1.0;
-    if(!next.running)next.burrow=next.heldEnemies=0;
+    next.presenting=lastPostAt>0&&now-lastPostAt<1.0;
+    if(!next.running)next.burrow=0;
+    if(!next.presenting)next.heldEnemies=0;
     snapshot=next;
 }
 uint64_t Deadline(){

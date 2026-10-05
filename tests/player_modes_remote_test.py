@@ -42,7 +42,7 @@ HEADER = (pathlib.Path(__file__).parent.parent / 'esp/Core/PlayerModesLayout.h')
 OFF = {name: int(value, 0) for name, value in re.findall(r'^#define ((?:MODES|ROW)_\w+) (0x[\da-fA-F]+|\d+)$', HEADER, re.M)}
 BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x120000, 0x130000, 0x600000
 LOCAL, ENEMY, OTHER, MATCH = 0x200000, 0x210000, 0x220000, 0x400000
-FUNCTIONS = ['ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC']
+FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC']
 
 
 def f32(value):
@@ -94,14 +94,18 @@ class Simulation:
         self.events.append(name)
         if self.action: self.action(name, self)
         player = uc.reg_read(UC_ARM64_REG_X0)
-        if name == 'ORIGINAL':
+        if name in ('ORIGINAL', 'POST_ORIGINAL'):
+            assert name == ('POST_ORIGINAL' if self.post else 'ORIGINAL'), 'Correct original for each phase'
             assert player == self.player and uc.reg_read(UC_ARM64_REG_X1) == 0x1234
             assert uc.reg_read(UC_ARM64_REG_D0) == 0x3d800000 and uc.reg_read(UC_ARM64_REG_D1) == 0x41200000
             self.original_seen.append(self.positions[player])
             # Local motion uses the normal transform. Remote interpolation uses
             # the continually advancing incoming state, independent of visuals.
             source = self.positions[player] if player == LOCAL else self.authoritative[player]
-            normal = tuple(f32(v+d) for v, d in zip(source, self.delta))
+            # PostUpdate has its own late incoming motion/vertical jump. Local
+            # post timing only observes the pose; Burrow must not be undone.
+            delta = (0, 0, 0) if self.post and player == LOCAL else self.delta
+            normal = tuple(f32(v+d) for v, d in zip(source, delta))
             self.positions[player] = normal
             if player != LOCAL: self.authoritative[player] = normal
         elif name == 'CLOCK': uc.reg_write(UC_ARM64_REG_X0, self.now)
@@ -127,8 +131,9 @@ class Simulation:
         for reg in (UC_ARM64_REG_X8, UC_ARM64_REG_X9, UC_ARM64_REG_X10, UC_ARM64_REG_X11, UC_ARM64_REG_X12, UC_ARM64_REG_X13):
             uc.reg_write(reg, 0xdeadbeef)
 
-    def run(self, player, interface=False, wrapped=True):
+    def run(self, player, interface=False, wrapped=True, post=False):
         self.player = player
+        self.post = post
         if player not in self.positions:
             self.positions[player] = (50, 10, 50); self.authoritative[player] = self.positions[player]
         initial_busy, first_call = self.w('BUSY'), len(self.events)
@@ -139,8 +144,8 @@ class Simulation:
             UC_ARM64_REG_X22, UC_ARM64_REG_X23, UC_ARM64_REG_X24, UC_ARM64_REG_X25, UC_ARM64_REG_X26,
             UC_ARM64_REG_X27, UC_ARM64_REG_X28, UC_ARM64_REG_X29))}
         for reg, value in saved.items(): self.uc.reg_write(reg, value)
-        entry = BASE
-        if interface:
+        entry = BASE+OFF['MODES_POST_ENTRY'] if post else BASE
+        if interface or post:
             # Actual metadata: IEntityTicker starts at class vtable slot 4;
             # OnUpdate is interface method 1, hence class slot 5 (0x188).
             # Patching only ordinary slot 26 does not affect this dispatch.
@@ -148,12 +153,15 @@ class Simulation:
             self.ptr(player, klass)
             self.ptr(klass+0x188, BASE if wrapped else self.functions['ORIGINAL'])
             self.ptr(klass+0x2d8, BASE)
-            self.uc.mem_write(entry, struct.pack('<III', 0xf9400008, 0xf940c508, 0xd61f0100))
+            self.ptr(klass+0xc18, BASE+OFF['MODES_POST_ENTRY'] if wrapped else self.functions['POST_ORIGINAL'])
+            load = 0xf9460d08 if post else 0xf940c508 # ldr x8,[x8,#0xc18] / #0x188
+            self.uc.mem_write(entry, struct.pack('<III', 0xf9400008, load, 0xd61f0100))
         self.uc.emu_start(entry, RETURN, count=10000)
         assert self.uc.reg_read(UC_ARM64_REG_PC) == RETURN, 'Callback did not return'
         assert self.uc.reg_read(UC_ARM64_REG_SP) == STACK+0x8000
         assert all(self.uc.reg_read(reg) == value for reg, value in saved.items()), 'Callee-saved ABI'
-        assert self.events[first_call:].count('ORIGINAL') == 1
+        assert self.events[first_call:].count('POST_ORIGINAL' if post else 'ORIGINAL') == 1
+        assert self.events[first_call:].count('ORIGINAL' if post else 'POST_ORIGINAL') == 0
         assert self.w('BUSY') == initial_busy
 
 
@@ -340,4 +348,51 @@ s.w('FLAGS', 0)
 for player in players: s.run(player)
 s.w('FLAGS', 1); s.w('EPOCH', 2); s.run(extra)
 assert s.q('APPLIES') == 65
-print('Player modes ARM64: bounded depth, latest-state release, roles, corrections, expiry and ABI passed')
+
+# Regression: a late presentation update can overwrite an OnUpdate-only hold.
+s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
+s.delta = (3, 1.5, 2)
+s.run(ENEMY, post=True, wrapped=False)
+assert s.positions[ENEMY] != anchor and s.q('POST_TICKS') == 0
+s.run(ENEMY, post=True)
+assert s.positions[ENEMY] == anchor and s.q('POST_TICKS') == 1
+# Both real frame phases reuse one anchor across running and vertical jumping.
+for step in range(120):
+    s.delta = (2, 1.5 if step % 2 else -1.5, 3)
+    s.run(ENEMY, interface=True)
+    assert s.positions[ENEMY] == anchor
+    s.positions[ENEMY] = s.authoritative[ENEMY]
+    s.run(ENEMY, post=True)
+    assert s.positions[ENEMY] == anchor
+assert s.q('POST_TICKS') == 121
+s.w('FLAGS', 0); s.run(ENEMY, post=True)
+assert s.positions[ENEMY] == s.authoritative[ENEMY] and s.positions[ENEMY] != anchor
+# A fresh enable captures the latest pose, not an old hold's anchor.
+s.w('FLAGS', 1); s.w('EPOCH', 2); s.run(ENEMY, post=True)
+new_anchor = s.positions[ENEMY]; assert new_anchor != anchor
+s.run(ENEMY); assert s.positions[ENEMY] == new_anchor
+# Shared-state ownership/lease/torn publication guards also apply after PostUpdate.
+for reason in ['off', 'lease', 'match', 'dead', 'busy', 'race']:
+    s = Simulation(flags=1); s.run(ENEMY)
+    if reason == 'off': s.w('FLAGS', 0)
+    elif reason == 'lease': s.now = 111
+    elif reason == 'match': s.current_match = MATCH+0x2000
+    elif reason == 'dead': s.health[ENEMY] = 0
+    elif reason == 'busy': s.w('BUSY', 1)
+    else:
+        stage = [False]
+        def post_race(name, sim):
+            if name == 'POST_ORIGINAL': stage[0] = True
+            if name == 'GET_POS' and stage[0]: sim.w('SEQUENCE', 4)
+        s.action = post_race
+    before = s.q('APPLIES'); s.run(ENEMY, post=True)
+    assert s.q('APPLIES') == before, reason
+# Late enforcement never restores/reapplies the local Burrow offset.
+s = Simulation(flags=3); s.run(LOCAL); lowered = s.positions[LOCAL]
+before = len(s.writes); s.run(LOCAL, post=True)
+assert s.positions[LOCAL] == lowered and len(s.writes) == before and s.q('POST_TICKS') == 0
+s.run(LOCAL); assert s.original_seen[-1][1] == 10 and s.positions[LOCAL][1] == 8
+# Unlisted teammates continue their ordinary PostUpdate.
+s = Simulation(flags=1); s.run(OTHER, post=True)
+assert not s.writes and s.positions[OTHER] == s.authoritative[OTHER]
+print('Player modes ARM64: two frame phases, running/jumping hold, depth, latest release, guards and ABI passed')
