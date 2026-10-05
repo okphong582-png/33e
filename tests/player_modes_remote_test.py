@@ -149,7 +149,10 @@ class Simulation:
             # Actual metadata: IEntityTicker starts at class vtable slot 4;
             # OnUpdate is interface method 1, hence class slot 5 (0x188).
             # Patching only ordinary slot 26 does not affect this dispatch.
-            klass, entry = 0x420000, BASE+0x18000
+            # Stable distinct dispatch thunks: Unicorn caches translated code,
+            # so rewriting one thunk from Update to PostUpdate can execute the
+            # previous phase even though memory contains the new instruction.
+            klass, entry = 0x420000, BASE+0x18000+(0x10 if post else 0)
             self.ptr(player, klass)
             self.ptr(klass+0x188, BASE if wrapped else self.functions['ORIGINAL'])
             self.ptr(klass+0x2d8, BASE)
