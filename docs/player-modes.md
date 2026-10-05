@@ -40,12 +40,14 @@ the server will accept shots at that displayed position.
 Callbacks hold at most 64 entity entries in a private RW page, with separate
 data for each supported class's original callback. A shared signed 16 KiB RX
 page contains no runtime relocations. The HUD writes only input snapshots;
-game callbacks exclusively own their output rows. Finite position checks,
+game callbacks exclusively own their output rows. Finite/nonzero position checks,
 native match/local ownership, health, knock, an even publication sequence and
 a 250 ms lease precede application. A changed/dead owner discards old state.
 An incoming transform correction that differs from the applied visual value
-is not overwritten with the previous saved position. OFF/expired leases allow
-the next eligible entity update to restore a held override.
+is not overwritten with the previous saved position. Corrections also start a
+new visual anchor, protecting a recycled enemy pointer whose live transform has
+changed within the same match. OFF/expired leases allow the next eligible
+entity update to restore a held override.
 
 `tests/player_modes_remote_test.py` emulates the actual Mach-O and ELF callback,
 including 100 local motion updates, continually advancing enemy interpolation,

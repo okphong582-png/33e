@@ -289,7 +289,7 @@
         y = [self toggle:@"Ghost Mode (thử nghiệm)" key:@"GhostMode" fallback:NO y:y];
         y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
         y = [self toggle:@"Độn thổ" key:@"Burrow" fallback:NO y:y];
-        y = [self note:@"Hạ nông 0,45 m · tắt để trở lại." y:y];
+        y = [self note:@"Thử nghiệm · hạ nông 0,45 m." y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];

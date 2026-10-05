@@ -67,6 +67,7 @@ class Simulation:
         self.health, self.special = {}, {}
         self.events, self.original_seen, self.writes = [], [], []
         self.action = None
+        self.delta = (1, 0, 2)
         self.ptr(MATCH+0xd8, LOCAL)
         self.q('MATCH', MATCH); self.q('LOCAL', LOCAL); self.q('DEADLINE', 110)
         self.w('SEQUENCE', 2); self.w('EPOCH', 1); self.w('FLAGS', flags)
@@ -99,7 +100,7 @@ class Simulation:
             # Local motion uses the normal transform. Remote interpolation uses
             # the continually advancing incoming state, independent of visuals.
             source = self.positions[player] if player == LOCAL else self.authoritative[player]
-            normal = tuple(f32(v+d) for v, d in zip(source, (1, 0, 2)))
+            normal = tuple(f32(v+d) for v, d in zip(source, self.delta))
             self.positions[player] = normal
             if player != LOCAL: self.authoritative[player] = normal
         elif name == 'CLOCK': uc.reg_write(UC_ARM64_REG_X0, self.now)
@@ -176,6 +177,10 @@ s = Simulation(flags=2); s.run(ENEMY); assert not s.writes
 s = Simulation(flags=2); s.run(LOCAL); s.positions[LOCAL] = (100, 15, 100); s.run(LOCAL)
 assert s.original_seen[-1] == (100, 15, 100)
 assert s.positions[LOCAL][0] == 101 and math.isclose(s.positions[LOCAL][1], 14.55, abs_tol=1e-6)
+s = Simulation(flags=1); s.run(ENEMY)
+s.positions[ENEMY] = (100, 10, 100); s.authoritative[ENEMY] = s.positions[ENEMY]
+writes = len(s.writes); s.run(ENEMY)
+assert s.positions[ENEMY] == (101, 10, 102) and len(s.writes) == writes+1, 'Changed live transform must recapture rather than revive a stale anchor'
 
 # OFF, expired/odd snapshots and unsupported movement release a held override.
 for reason in ['off', 'lease', 'sequence', 'vehicle', 'parachute', 'sync']:
@@ -209,6 +214,8 @@ for native in ['CLOCK', 'GET_POS']:
 for value in [math.nan, math.inf, -math.inf, 1000001]:
     s = Simulation(flags=2); s.positions[LOCAL] = (1, value, 1); s.run(LOCAL)
     assert not s.writes
+s = Simulation(flags=2); s.positions[LOCAL] = (0, 0, 0); s.delta = (0, 0, 0); s.run(LOCAL)
+assert not s.writes, 'Missing-transform zero sentinel must bypass the setter'
 
 # Fixed capacity never writes past its state page, and release frees entries.
 s = Simulation(flags=1)

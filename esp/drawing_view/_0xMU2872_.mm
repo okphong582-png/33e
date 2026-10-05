@@ -394,7 +394,8 @@ static const CGFloat kMenuButtonSize = 44.0f;
         if (!control) {
             control = [[FloatingFeatureControl alloc] initWithKey:key title:titles[i] symbol:symbols[i]];
             CGFloat x = ESPPrefsFloat([key stringByAppendingString:@"FloatX"], MAX(8, self.bounds.size.width - 90));
-            CGFloat y = ESPPrefsFloat([key stringByAppendingString:@"FloatY"], 70 + i * 88);
+            CGFloat top = MAX(8, MIN(70, self.bounds.size.height - 3 * 88 - 12));
+            CGFloat y = ESPPrefsFloat([key stringByAppendingString:@"FloatY"], top + i * 88);
             control.frame = CGRectMake(x, y, 76, 80);
             [control addTarget:self action:@selector(toggleQuickFeature:) forControlEvents:UIControlEventTouchUpInside];
             self.quickControls[key] = control; [self addSubview:control];

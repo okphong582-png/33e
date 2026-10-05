@@ -75,11 +75,11 @@ _PlayerModesRemoteStart:
     ldp w11, w12, [x22, #ROW_SHOWN]
     ldr w13, [x22, #(ROW_SHOWN+8)]
     cmp w8, w11
-    b.ne .Loriginal
+    b.ne .LnewPosition
     cmp w9, w12
-    b.ne .Loriginal
+    b.ne .LnewPosition
     cmp w10, w13
-    b.ne .Loriginal
+    b.ne .LnewPosition
     ldp s0, s1, [x22, #ROW_REAL]
     ldr s2, [x22, #(ROW_REAL+8)]
     mov x0, x20
@@ -89,6 +89,11 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_RESTORES]
     add x8, x8, #1
     str x8, [x19, #MODES_RESTORES]
+    b .Loriginal
+.LnewPosition:
+    // A correction or recycled entity with a different live transform starts
+    // a fresh visual anchor, even if its pointer was reused within this match.
+    str wzr, [x22, #ROW_MODE]
     b .Loriginal
 .LdropBefore:
     str xzr, [x22, #ROW_PLAYER]
@@ -182,6 +187,14 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_GET_POS]
     blr x8
     // Finite world coordinates, bounded before applying the shallow offset.
+    // Entity.get_Position returns Vector3.zero when its Unity transform is gone.
+    fmov w8, s0
+    fmov w9, s1
+    fmov w10, s2
+    orr w8, w8, w9
+    orr w8, w8, w10
+    and w8, w8, #0x7fffffff
+    cbz w8, .Ldrop
     mov w8, #0x2400
     movk w8, #0x4974, lsl #16
     fmov s3, w8
