@@ -83,6 +83,8 @@ static GhostModeSnapshot gGhostSnapshot;
 static CFTimeInterval gNextGhostRead = 0;
 static uint64_t gAimLockTarget  = 0;
 static uint64_t gAimLocalPlayer = 0;
+static uint64_t gTeleportMatch=0, gTeleportLocal=0, gTeleportTarget=0;
+static double gTeleportSampleAt=0;
 static Vector3  gAimLockedHead  = {};
 static Quaternion gAimSmoothed      = {0,0,0,1};
 static bool       gAimSmoothedValid = false;
@@ -96,6 +98,11 @@ static bool gBalancedRender = false;
 static bool gAimDiagnostics = false;
 static bool gNoReload = false;
 static bool gFastFire = false;
+BOOL ESPTeleportToEnemy(void) {
+    if (!ESPPrefsBool(@"Teleport", NO) || ![LicenseSession shared].authorized ||
+        ESPPrefsBool(@"GhostMode", NO) || !gTeleportTarget || CACurrentMediaTime()-gTeleportSampleAt>0.2) return NO;
+    return PlayerModesRequestTeleport(gTeleportMatch,gTeleportLocal,gTeleportTarget);
+}
 
 // ============================================================
 // ✅ SYNC PREFS - ESP & AIMBOT
@@ -127,7 +134,7 @@ void ESPSyncFromPrefs(void) {
     gGhostMode = ESPPrefsBool(@"GhostMode", NO);
     GhostModeSetEnabled(gGhostMode);
     PlayerModesSetEnabled(ESPPrefsBool(@"Burrow", NO), ESPPrefsBool(@"AimLag", NO),
-        ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"BurrowDepth", 2.0f));
+        ESPPrefsBool(@"FakeLag", NO), ESPPrefsBool(@"Teleport", NO) && !gGhostMode, ESPPrefsFloat(@"BurrowDepth", 2.0f));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
@@ -771,6 +778,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (ESPPrefsBool(@"Burrow", NO)) [modes addObject:@"Độn thổ"];
     if (ESPPrefsBool(@"AimLag", NO)) [modes addObject:@"Aimlag"];
     if (ESPPrefsBool(@"FakeLag", NO)) [modes addObject:@"FakeLag"];
+    if (ESPPrefsBool(@"Teleport", NO)) [modes addObject:@"Dịch chuyển"];
     if (modes.count) {
         const auto current = PlayerModesRead();
         if (gPlayerModesInstall != 8) {
@@ -779,6 +787,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             if (current.detail && current.detail[0]) reason = [NSString stringWithUTF8String:current.detail];
             [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
         } else {
+            if (ESPPrefsBool(@"Teleport", NO)) {
+                NSString *state = current.teleport==1 ? @"đang gửi" : current.teleport==2 ? @"đã áp dụng trên máy" :
+                    current.teleport==3 ? @"không thực hiện được" : @"bấm nút để đến địch";
+                [lines addObject:[@"Dịch chuyển · " stringByAppendingString:state]];
+            }
             if (ESPPrefsBool(@"Burrow", NO)) [lines addObject:current.burrow ?
                 [NSString stringWithFormat:@"Độn thổ · hạ %.2f m", current.depth] :
                 (current.running ? @"Độn thổ · tạm dừng" : @"Độn thổ · chờ nhịp game")];
@@ -886,6 +899,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
     ESPFrameStats stats = {};
+    gTeleportTarget=0;gTeleportSampleAt=0;
     struct SilentFrame {
         bool published = false;
         ~SilentFrame() {
@@ -958,6 +972,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     gAimLockedHead = {};
 
     AimSelection::Selection selection;
+    AimSelection::Selection teleportSelection;
     selection.previous = triggerActive ? previousTarget : 0;
     SilentAimSelection::Selection silentSelection;
     silentSelection.previous = previousTarget;
@@ -983,6 +998,12 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
             isSilentAim ? activeSilentDistance : gESPMaxDistance)) continue;
         const bool knocked = get_IsKnockedDown(pawn);
         const bool visible = getIsVisible(pawn);
+        if (ESPPrefsBool(@"Teleport", NO) && visible && !knocked) {
+            const Vector3 head = getPositionExt(getHead(pawn));
+            const Vector3 screen = WorldToScreenLayer(head, matrix, vpW, vpH, vw, vh);
+            if (!IsZeroVec(head)) teleportSelection.consider(pawn,screen.x,screen.y,screen.z,
+                vw,vh,std::hypot((float)vw,(float)vh),true);
+        }
 
         if ((triggerActive || isSilentAim) && visible && !knocked) {
             Vector3 head = getPositionExt(getHead(pawn));
@@ -1014,6 +1035,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         }
     }
 
+    gTeleportMatch=match;gTeleportLocal=local;gTeleportTarget=teleportSelection.target;
+    gTeleportSampleAt=CACurrentMediaTime();
     if (isSilentAim) {
         // Re-arm after invalid match/window frames. The adapter rechecks firing
         // and player/weapon identity at the native handler, not at render time.

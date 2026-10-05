@@ -288,6 +288,18 @@
         for (int i = 0; i < 3; ++i) y = [self slider:names[i] key:[prefix stringByAppendingString:suffixes[i]] min:0 max:1 fallback:defaults[i] y:y];
         [self updateSwatch];
     } else {
+        y = [self toggle:@"Ẩn nút chức năng" key:@"HideFeatureButtons" fallback:NO y:y];
+        y = [self toggle:@"Nút dịch chuyển (thử nghiệm)" key:@"Teleport" fallback:NO y:y];
+        if (ESPPrefsBool(@"Teleport", NO)) {
+            UIButton *teleport = [UIButton buttonWithType:UIButtonTypeSystem];
+            teleport.frame = CGRectMake(0,y,[self contentWidth],44);teleport.tag=301;
+            [teleport setTitle:@"Đến địch gần tâm" forState:UIControlStateNormal];
+            [teleport setTitleColor:MizzeMint() forState:UIControlStateNormal];
+            teleport.layer.cornerRadius=10;teleport.backgroundColor=[MizzeMint() colorWithAlphaComponent:0.12];
+            [teleport addTarget:self action:@selector(teleportPressed:) forControlEvents:UIControlEventTouchUpInside];
+            [self.scroll addSubview:teleport];[self.controls addObject:teleport];y+=52;
+            y = [self note:@"Bấm một lần · chọn địch gần tâm · tắt Ghost trước." y:y];
+        }
         y = [self toggle:@"Ghost Mode (thử nghiệm)" key:@"GhostMode" fallback:NO y:y];
         y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
         y = [self toggle:@"Độn thổ" key:@"Burrow" fallback:NO y:y];
@@ -313,7 +325,7 @@
     if ([key isEqualToString:@"SilentAim"] && !sender.on) ESPPrefsSetBool(@"AutoFire", NO);
     if ([key isEqualToString:@"CleanESP"] && sender.on) ESPPrefsSetBool(@"Box3D", NO);
     ESPPrefsSetBool(key, sender.on); ESPSyncFromPrefs();
-    if ([@[@"AutoFire", @"GhostMode", @"Burrow", @"FakeLag"] containsObject:key])
+    if ([@[@"AutoFire", @"GhostMode", @"Burrow", @"FakeLag", @"Teleport"] containsObject:key])
         ESPPrefsSetBool([key stringByAppendingString:@"Floating"], sender.on);
     if ([key isEqualToString:@"AnLive"] && ![UIView applyCaptureProtectionToRegisteredViews:sender.on]) {
         sender.on = NO; ESPPrefsSetBool(key, NO);
@@ -323,7 +335,11 @@
     }
     if ([key isEqualToString:@"DarkTheme"] || [key isEqualToString:@"CleanESP"] ||
         [key isEqualToString:@"AutoFire"] || [key isEqualToString:@"SilentAim"] ||
-        [key isEqualToString:@"SilentAutoConfig"] || [key isEqualToString:@"Burrow"]) [self buildPage];
+        [key isEqualToString:@"SilentAutoConfig"] || [key isEqualToString:@"Burrow"] ||
+        [key isEqualToString:@"Teleport"]) [self buildPage];
+}
+- (void)teleportPressed:(UIButton *)sender {
+    [sender setTitle:ESPTeleportToEnemy() ? @"Đã gửi dịch chuyển" : @"Chưa có địch / vị trí phù hợp" forState:UIControlStateNormal];
 }
 - (void)applyMinimalESP {
     for (NSString *key in @[@"Box", @"Health", @"Name", @"Dis", @"CleanESP"])
@@ -494,6 +510,7 @@
         } else if (activate && [control isKindOfClass:UIButton.class]) {
             if (control.tag >= 200 && control.tag < 204) [self changePage:(UIButton *)control];
             else if (control.tag == 300) [self applyMinimalESP];
+            else if (control.tag == 301) [self teleportPressed:(UIButton *)control];
             else [self closeMenu];
         }
         if ([control isKindOfClass:UISlider.class]) [self fovSliderTouchUp:(UISlider *)control];

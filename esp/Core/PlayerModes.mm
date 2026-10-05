@@ -23,7 +23,8 @@ constexpr Signature signatures[] = {
     {0x6B49E10,0x104,0xAACE9654},{0x591B898,0x1C8,0x92F2568B},
     {0x56AA7C8,0x110,0x4478C55F},{0x561CA30,0xB4,0xABF31A13},
     {0x561C7C8,0x6C,0x7958F6CC},{0x5636F20,0x60,0x6E4B75FE},
-    {0x6B4A924,0x8,0x64A6725A},{0x569C1E4,0x2BAC,0x458F369A}
+    {0x6B4A924,0x8,0x64A6725A},{0x569C1E4,0x2BAC,0x458F369A},
+    {0x646B648,0xB0,0x7C5E5F3F},{0x56268C4,0x8,0xA9036B47}
 };
 struct Session {
     uint64_t slot=0, allocation=0, original=0, originalPost=0;
@@ -38,6 +39,9 @@ uint64_t module=0, ownerMatch=0, ownerLocal=0;
 uint32_t wanted=0, epoch=0, previousFlags=0;
 float depth=PlayerModesControl::DefaultDepth;
 PlayerModesControl::State control;
+PlayerModesRemote::Input pendingTeleport{};
+uint32_t commandSerial=0;
+double commandExpires=0;
 bool verified=false;
 double retryAt=0;
 int lastResult=1;
@@ -61,11 +65,21 @@ bool Publish(Session &session,const PlayerModesRemote::Input &input){
     return Write(session.state()+MODES_SEQUENCE,odd)&&
         Write(session.state()+MODES_FLAGS,input)&&Write(session.state()+MODES_SEQUENCE,session.sequence);
 }
+void ConsumeCommandResult(){
+    if(!pendingTeleport.command)return;
+    for(const auto &session:sessions){
+        std::array<uint32_t,2> result{};
+        if(Read(session.state()+MODES_COMMAND_ACK,result)&&result[0]==pendingTeleport.command&&result[1]){
+            snapshot.teleport=result[1]==1?2:3;pendingTeleport={};commandExpires=0;return;
+        }
+    }
+}
 void Clear(){
     PlayerModesRemote::Input off{};off.epoch=++epoch;
     for(auto &session:sessions)if(session.published&&Publish(session,off))session.published=false;
     ownerMatch=ownerLocal=0;previousFlags=0;
     control.Reset();
+    pendingTeleport={};commandExpires=0;snapshot.teleport=0;
     snapshot.burrow=snapshot.heldEnemies=0;snapshot.running=false;
     // Keep executable callbacks mapped while game threads may still use them.
     // Each callback restores its own held transform before its original update.
@@ -124,7 +138,7 @@ bool Adopt(uint64_t slot,uint64_t address){
         state.clock!=Clock()||state.currentMatch!=module+0x591B898||state.getPos!=module+0x6B49D04||
         state.setPos!=module+0x6B49E10||state.hp!=module+0x56AA7C8||state.vehicle!=module+0x561CA30||
         state.parachute!=module+0x561C7C8||state.waitSync!=module+0x5636F20||
-        state.originalPost!=module+0x569C1E4)return false;
+        state.originalPost!=module+0x569C1E4||state.forcePos!=module+0x646B648)return false;
     sessions.push_back({slot,address,state.original,state.originalPost,state.sequence&~1u,true});
     epoch=state.input.epoch+1;
     PlayerModesRemote::Input off{};off.epoch=epoch;
@@ -154,6 +168,7 @@ int Install(uint64_t klass){
         state.getPos=module+0x6B49D04;state.setPos=module+0x6B49E10;state.hp=module+0x56AA7C8;
         state.vehicle=module+0x561CA30;state.parachute=module+0x561C7C8;state.waitSync=module+0x5636F20;
         state.originalPost=post;
+        state.forcePos=module+0x646B648;
         if(!Write(mapping.address+MODES_PAGE,state)){snapshot.detail="không ghi được trạng thái";mach_vm_deallocate(task,mapping.address,2*MODES_PAGE);return 10;}
         sessions.push_back({slot,mapping.address,current,post,0,false});session=&sessions.back();
     }
@@ -196,6 +211,7 @@ void Sample(){
     if(now-lastSample<0.2)return;
     lastSample=now;
     PlayerModesSnapshot next{};next.detail=snapshot.detail;next.failedOffset=snapshot.failedOffset;
+    next.teleport=snapshot.teleport;
     next.scoped=control.scoped;next.fakeLag=wanted&PlayerModesControl::FakeLag;
     next.depth=depth;next.skipped=snapshot.skipped;
     for(const auto &session:sessions){
@@ -203,6 +219,9 @@ void Sample(){
         if(!Read(session.state(),state))continue;
         next.ticks+=state.ticks;next.applies+=state.applies;next.restores+=state.restores;
         next.postTicks+=state.postTicks;
+        if(pendingTeleport.command&&state.commandAck==pendingTeleport.command){
+            next.teleport=state.commandResult==1?2:3;pendingTeleport={};commandExpires=0;
+        }
         for(const auto &row:state.rows){
             if(row.match!=ownerMatch||row.local!=ownerLocal||row.epoch!=epoch||!row.player)continue;
             if(row.mode==2&&(previousFlags&2u))++next.burrow;
@@ -217,18 +236,40 @@ void Sample(){
     if(!next.presenting)next.heldEnemies=0;
     snapshot=next;
 }
-uint64_t Deadline(){
+uint64_t Deadline(uint64_t nanoseconds=PlayerModesControl::LeaseNanoseconds){
     mach_timebase_info_data_t timebase{};
     return mach_timebase_info(&timebase)==KERN_SUCCESS&&timebase.numer&&timebase.denom?
-        mach_absolute_time()+PlayerModesControl::LeaseNanoseconds*timebase.denom/timebase.numer:0;
+        mach_absolute_time()+nanoseconds*timebase.denom/timebase.numer:0;
 }
 }
-void PlayerModesSetEnabled(bool burrow,bool aimLag,bool fakeLag,float requestedDepth){
+void PlayerModesSetEnabled(bool burrow,bool aimLag,bool fakeLag,bool teleport,float requestedDepth){
     std::lock_guard<std::recursive_mutex> guard(mutex);
     const uint32_t next=(burrow?PlayerModesControl::Burrow:0u)|(aimLag?PlayerModesControl::AimLag:0u)|
-        (fakeLag?PlayerModesControl::FakeLag:0u);
+        (fakeLag?PlayerModesControl::FakeLag:0u)|(teleport?PlayerModesControl::Teleport:0u);
+    if(!teleport){pendingTeleport={};commandExpires=0;snapshot.teleport=0;}
     depth=PlayerModesControl::Depth(requestedDepth);
     if(next!=wanted){if(!next)Clear();wanted=next;retryAt=0;}
+}
+bool PlayerModesRequestTeleport(uint64_t match,uint64_t local,uint64_t target){
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    if(!(wanted&PlayerModesControl::Teleport)||match!=ownerMatch||local!=ownerLocal||
+        !isVaildPtr(target)||target==local||get_CurHP(target)<=0||isLocalTeamMate(local,target))return false;
+    uint64_t cct=0,klass=0,name=0,transform=0;char buffer[12]{};
+    uint8_t knocked=1;uint32_t localID=0,targetID=0;
+    if(!Read(local+0x268,cct)||!isVaildPtr(cct)||!Read(cct,klass)||!isVaildPtr(klass)||
+        !Read(klass+0x10,name)||!ReadBytes(name,buffer,sizeof(buffer))||std::memcmp(buffer,"PhysicalCCT",sizeof(buffer))||
+        !Read(cct+0x1C8,transform)||!isVaildPtr(transform)||!Read(target+kKnocked,knocked)||knocked||
+        !Read(local+0x60,localID)||!Read(target+0x60,targetID)){
+        snapshot.teleport=3;return false;
+    }
+    pendingTeleport={};if(!++commandSerial)++commandSerial;
+    pendingTeleport.match=match;pendingTeleport.local=local;
+    pendingTeleport.command=commandSerial;pendingTeleport.commandLocalID=localID;
+    pendingTeleport.commandTarget=target;pendingTeleport.commandTargetID=targetID;
+    pendingTeleport.commandCCT=cct;pendingTeleport.commandCCTClass=klass;
+    pendingTeleport.commandDeadline=Deadline(350000000ULL);
+    if(!pendingTeleport.commandDeadline){pendingTeleport={};snapshot.teleport=3;return false;}
+    commandExpires=CACurrentMediaTime()+0.35;snapshot.teleport=1;return true;
 }
 void PlayerModesCancel(){std::lock_guard<std::recursive_mutex> guard(mutex);Clear();}
 int PlayerModesUpdate(uint64_t base){
@@ -256,7 +297,7 @@ int PlayerModesUpdate(uint64_t base){
         if(classCount==classes.size())return false;
         classes[classCount++]=klass;return true;
     };
-    if((wanted&2u)&&!addClass(local)){Clear();return lastResult=9;}
+    if((wanted&(PlayerModesControl::Burrow|PlayerModesControl::Teleport))&&!addClass(local)){Clear();return lastResult=9;}
     if(wanted&(PlayerModesControl::AimLag|PlayerModesControl::FakeLag)){
         uint64_t dictionary=0,entries=0;int count=-1,capacity=-1;
         if(!Read(match+kMatchPlayerDict,dictionary)||!Read(dictionary+kDictCount,count)||
@@ -275,7 +316,7 @@ int PlayerModesUpdate(uint64_t base){
         }
     }
     std::array<bool,MODES_CAPACITY+1> installed{};
-    uint64_t localClass=0;if(wanted&2u)Read(local,localClass);
+    uint64_t localClass=0;if(wanted&(PlayerModesControl::Burrow|PlayerModesControl::Teleport))Read(local,localClass);
     for(size_t i=0;i<classCount;++i){
         int result=Install(classes[i]);
         if(result==8){installed[i]=true;continue;}
@@ -292,6 +333,17 @@ int PlayerModesUpdate(uint64_t base){
     }
     if(!(wanted&2u)&&input.count&&!accepted){Clear();retryAt=CACurrentMediaTime()+1;return lastResult=9;}
     input.count=accepted;
+    if(pendingTeleport.match==match&&pendingTeleport.local==local)ConsumeCommandResult();
+    if(pendingTeleport.command&&(CACurrentMediaTime()>commandExpires||
+        pendingTeleport.match!=match||pendingTeleport.local!=local)){
+        pendingTeleport={};commandExpires=0;snapshot.teleport=3;
+    }
+    if(pendingTeleport.command){
+        input.command=pendingTeleport.command;input.commandLocalID=pendingTeleport.commandLocalID;
+        input.commandTarget=pendingTeleport.commandTarget;input.commandTargetID=pendingTeleport.commandTargetID;
+        input.commandCCT=pendingTeleport.commandCCT;input.commandCCTClass=pendingTeleport.commandCCTClass;
+        input.commandDeadline=pendingTeleport.commandDeadline;
+    }
     if(!snapshot.skipped)snapshot.detail="";
     input.epoch=epoch; // Adoption may have advanced an existing callback's epoch.
     if(!input.deadline){Clear();return lastResult=10;}
@@ -301,7 +353,8 @@ int PlayerModesUpdate(uint64_t base){
 }
 PlayerModesSnapshot PlayerModesRead(){std::lock_guard<std::recursive_mutex> guard(mutex);return snapshot;}
 #else
-void PlayerModesSetEnabled(bool,bool,bool,float){}
+void PlayerModesSetEnabled(bool,bool,bool,bool,float){}
+bool PlayerModesRequestTeleport(uint64_t,uint64_t,uint64_t){return false;}
 void PlayerModesCancel(){}
 int PlayerModesUpdate(uint64_t){return 9;}
 PlayerModesSnapshot PlayerModesRead(){return {};}

@@ -176,9 +176,12 @@ _PlayerModesRemoteStart:
     ldar w24, [x8]
     tbnz w24, #0, .Ldefer
     ldr w25, [x19, #MODES_FLAGS]
-    cbz w25, .Ldrop
     cmp w25, #3
     b.hi .Ldrop
+    cbnz w25, .Llease
+    ldr w8, [x19, #MODES_COMMAND]
+    cbz w8, .Ldrop
+.Llease:
     ldr x8, [x19, #MODES_CLOCK]
     blr x8
     ldr x8, [x19, #MODES_DEADLINE]
@@ -199,6 +202,13 @@ _PlayerModesRemoteStart:
     add x8, x28, #0x1000
     ldrb w8, [x8, #0x258]
     cbnz w8, .Ldrop
+    // One-shot commands run on the native local update, never on a UI thread.
+    cbnz w23, .LafterCommand
+    cmp x20, x28
+    b.ne .LafterCommand
+    bl .Lteleport
+.LafterCommand:
+    cbz w25, .Ldrop
     cmp x20, x28
     b.ne .Lenemy
     tbz w25, #1, .Ldrop
@@ -373,6 +383,134 @@ _PlayerModesRemoteStart:
     ldp x21, x22, [sp, #32]
     ldp x19, x20, [sp, #16]
     ldp x29, x30, [sp], #144
+    ret
+
+.Lteleport:
+    stp x29, x30, [sp, #-80]!
+    stp x23, x24, [sp, #16]
+    stp x25, x26, [sp, #32]
+    ldr w25, [x19, #MODES_COMMAND]
+    cbz w25, .LcommandReturn
+    ldr w8, [x19, #MODES_COMMAND_ACK]
+    cmp w8, w25
+    b.eq .LcommandReturn
+    ldr x8, [x19, #MODES_CLOCK]
+    blr x8
+    ldr x8, [x19, #MODES_COMMAND_DEADLINE]
+    cmp x0, x8
+    b.hi .LcommandReject
+    ldr w8, [x20, #0x60]
+    ldr w9, [x19, #MODES_COMMAND_LOCAL_ID]
+    cmp w8, w9
+    b.ne .LcommandReject
+    ldr x23, [x19, #MODES_COMMAND_TARGET]
+    cbz x23, .LcommandReject
+    cmp x23, x20
+    b.eq .LcommandReject
+    ldr w8, [x23, #0x60]
+    ldr w9, [x19, #MODES_COMMAND_TARGET_ID]
+    cmp w8, w9
+    b.ne .LcommandReject
+    add x8, x23, #0x1000
+    ldrb w8, [x8, #0x258]
+    cbnz w8, .LcommandReject
+    mov x0, x20
+    mov x1, #0
+    ldr x8, [x19, #MODES_HP]
+    blr x8
+    cmp w0, #0
+    b.le .LcommandReject
+    mov x0, x23
+    mov x1, #0
+    ldr x8, [x19, #MODES_HP]
+    blr x8
+    cmp w0, #0
+    b.le .LcommandReject
+    mov x0, x20
+    mov x1, #0
+    ldr x8, [x19, #MODES_VEHICLE]
+    blr x8
+    cbnz w0, .LcommandReject
+    mov x0, x20
+    mov x1, #0
+    ldr x8, [x19, #MODES_PARACHUTE]
+    blr x8
+    cbnz w0, .LcommandReject
+    mov x0, x20
+    mov x1, #0
+    ldr x8, [x19, #MODES_WAIT_SYNC]
+    blr x8
+    cbnz w0, .LcommandReject
+    ldr x26, [x20, #0x268]
+    cbz x26, .LcommandReject
+    ldr x8, [x19, #MODES_COMMAND_CCT]
+    cmp x26, x8
+    b.ne .LcommandReject
+    ldr x8, [x26]
+    ldr x9, [x19, #MODES_COMMAND_CCT_CLASS]
+    cmp x8, x9
+    b.ne .LcommandReject
+    ldr x8, [x26, #0x1c8]
+    cbz x8, .LcommandReject
+    mov x0, x23
+    mov x1, #0
+    ldr x8, [x19, #MODES_GET_POS]
+    blr x8
+    mov w8, #0x2400
+    movk w8, #0x4974, lsl #16
+    fmov s3, w8
+    fabs s4, s0
+    fcmp s4, s3
+    b.vs .LcommandReject
+    b.gt .LcommandReject
+    fabs s4, s1
+    fcmp s4, s3
+    b.vs .LcommandReject
+    b.gt .LcommandReject
+    fabs s4, s2
+    fcmp s4, s3
+    b.vs .LcommandReject
+    b.gt .LcommandReject
+    fmov w8, s0
+    fmov w9, s1
+    fmov w10, s2
+    orr w8, w8, w9
+    orr w8, w8, w10
+    and w8, w8, #0x7fffffff
+    cbz w8, .LcommandReject
+    stp s0, s1, [sp, #48]
+    str s2, [sp, #56]
+    add x8, x19, #MODES_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w24
+    b.ne .LcommandReturn
+    // Consume before calling either setter. A replay never teleports twice.
+    str w25, [x19, #MODES_COMMAND_ACK]
+    mov x0, x26
+    mov x1, #0
+    ldr x8, [x19, #MODES_FORCE_POS]
+    blr x8
+    mov x0, x20
+    mov x1, #0
+    ldp s0, s1, [sp, #48]
+    ldr s2, [sp, #56]
+    ldr x8, [x19, #MODES_SET_POS]
+    blr x8
+    mov w8, #1
+    str w8, [x19, #MODES_COMMAND_RESULT]
+    b .LcommandReturn
+.LcommandReject:
+    add x8, x19, #MODES_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w24
+    b.ne .LcommandReturn
+    str w25, [x19, #MODES_COMMAND_ACK]
+    mov w8, #2
+    str w8, [x19, #MODES_COMMAND_RESULT]
+.LcommandReturn:
+    ldp x25, x26, [sp, #32]
+    ldp x23, x24, [sp, #16]
+    ldp x29, x30, [sp], #80
     ret
 .org MODES_PAGE, 0
 _PlayerModesRemoteEnd:

@@ -23,6 +23,9 @@ int main() {
     assert(state.Flags(Burrow,false,13.01)==2);
     assert(state.Flags(Burrow|FakeLag,false,13.02)==3);
     state.Reset();assert(state.Flags(AimLag,false,13.03)==0);
+    assert(state.Flags(Teleport,false,14)==0);
+    assert(state.Flags(Teleport|FakeLag,false,14.1)==1);
+    assert(state.Flags(Teleport|Burrow,false,14.2)==2);
     // A long ADS session with intermittent false samples and feature toggles
     // must not produce release edges or recapture epochs.
     state.Reset();uint32_t old=1;

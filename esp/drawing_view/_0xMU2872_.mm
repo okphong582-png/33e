@@ -384,13 +384,13 @@ static const CGFloat kMenuButtonSize = 44.0f;
         dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadFloatingAuxButtonsFromPrefs]; });
         return;
     }
-    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Burrow", @"FakeLag"];
-    NSArray *titles = @[@"AimKill", @"Ghost", @"Độn thổ", @"FakeLag"];
-    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.down.to.line", @"pause.circle.fill"];
+    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Burrow", @"FakeLag", @"Teleport"];
+    NSArray *titles = @[@"AimKill", @"Ghost", @"Độn thổ", @"FakeLag", @"Dịch chuyển"];
+    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.down.to.line", @"pause.circle.fill", @"location.fill"];
     const NSUInteger rows = MAX(1, MIN(keys.count, (NSUInteger)MAX(1, std::floor((self.bounds.size.height - 12) / 88))));
     for (NSUInteger i = 0; i < keys.count; ++i) {
         NSString *key = keys[i], *shownKey = [key stringByAppendingString:@"Floating"];
-        const BOOL shown = ESPPrefsBool(shownKey, ESPPrefsBool(key, NO));
+        const BOOL shown = !ESPPrefsBool(@"HideFeatureButtons", NO) && ESPPrefsBool(shownKey, ESPPrefsBool(key, NO));
         FloatingFeatureControl *control = self.quickControls[key];
         if (!shown) { [control removeFromSuperview]; [self.quickControls removeObjectForKey:key]; continue; }
         if (!control) {
@@ -412,6 +412,11 @@ static const CGFloat kMenuButtonSize = 44.0f;
 - (void)quickPrefsChanged:(NSNotification *)notification { [self reloadFloatingAuxButtonsFromPrefs]; }
 - (void)toggleQuickFeature:(FloatingFeatureControl *)control {
     NSString *key = control.featureKey;
+    if ([key isEqualToString:@"Teleport"]) {
+        [control setFeatureActive:ESPTeleportToEnemy()];
+        control.accessibilityValue = @"Dịch chuyển một lần";
+        return;
+    }
     BOOL active = ESPPrefsBool(key, NO);
     if ([key isEqualToString:@"AutoFire"]) {
         active = active && ESPPrefsBool(@"SilentAim", NO);

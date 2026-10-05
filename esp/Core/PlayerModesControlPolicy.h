@@ -4,7 +4,7 @@
 #include <cstdint>
 
 namespace PlayerModesControl {
-constexpr uint32_t AimLag=1, Burrow=2, FakeLag=4;
+constexpr uint32_t AimLag=1, Burrow=2, FakeLag=4, Teleport=8;
 constexpr float DefaultDepth=2.0f, MinimumDepth=1.0f, MaximumDepth=2.25f;
 constexpr double ScopeGrace=0.18;
 constexpr uint64_t LeaseNanoseconds=1000000000ULL;

@@ -19,14 +19,24 @@
 #define MODES_COUNT 108
 #define MODES_DEPTH 112
 #define MODES_PLAYERS 120
-#define MODES_BUSY 632
-#define MODES_TICKS 640
-#define MODES_APPLIES 648
-#define MODES_RESTORES 656
-#define MODES_MAGIC 664
-#define MODES_POST_ORIGINAL 680
-#define MODES_POST_TICKS 688
-#define MODES_ROWS 696
+#define MODES_COMMAND 632
+#define MODES_COMMAND_LOCAL_ID 636
+#define MODES_COMMAND_TARGET 640
+#define MODES_COMMAND_TARGET_ID 648
+#define MODES_COMMAND_CCT 656
+#define MODES_COMMAND_CCT_CLASS 664
+#define MODES_COMMAND_DEADLINE 672
+#define MODES_BUSY 680
+#define MODES_TICKS 688
+#define MODES_APPLIES 696
+#define MODES_RESTORES 704
+#define MODES_MAGIC 712
+#define MODES_POST_ORIGINAL 728
+#define MODES_POST_TICKS 736
+#define MODES_COMMAND_ACK 744
+#define MODES_COMMAND_RESULT 748
+#define MODES_FORCE_POS 752
+#define MODES_ROWS 760
 #define MODES_CAPACITY 64
 #define MODES_ROW_SIZE 64
 #define ROW_PLAYER 0
@@ -41,7 +51,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453034ULL;
+constexpr uint64_t Magic = 0x504c4d4f44453035ULL;
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
@@ -54,6 +64,11 @@ struct Input {
     uint32_t epoch=0, count=0;
     float depth=2.0f; uint32_t reserved=0;
     uint64_t players[MODES_CAPACITY]={};
+    uint32_t command=0, commandLocalID=0;
+    uint64_t commandTarget=0;
+    uint32_t commandTargetID=0, commandPad=0;
+    uint64_t commandCCT=0, commandCCTClass=0;
+    uint64_t commandDeadline=0;
 } __attribute__((packed));
 struct State {
     uint64_t original=0, clock=0, currentMatch=0, getPos=0, setPos=0, hp=0;
@@ -63,11 +78,18 @@ struct State {
     uint32_t busy=0, pad=0;
     uint64_t ticks=0, applies=0, restores=0, magic=Magic, pad2=0;
     uint64_t originalPost=0, postTicks=0;
+    uint32_t commandAck=0, commandResult=0;
+    uint64_t forcePos=0;
     Row rows[MODES_CAPACITY];
 };
 static_assert(offsetof(State, input)==MODES_FLAGS);
 static_assert(offsetof(State, input)+offsetof(Input, players)==MODES_PLAYERS);
 static_assert(offsetof(State, input)+offsetof(Input, depth)==MODES_DEPTH);
+static_assert(offsetof(State, input)+offsetof(Input, command)==MODES_COMMAND);
+static_assert(offsetof(State, input)+offsetof(Input, commandTarget)==MODES_COMMAND_TARGET);
+static_assert(offsetof(State, input)+offsetof(Input, commandCCT)==MODES_COMMAND_CCT);
+static_assert(offsetof(State, input)+offsetof(Input, commandCCTClass)==MODES_COMMAND_CCT_CLASS);
+static_assert(offsetof(State, input)+offsetof(Input, commandDeadline)==MODES_COMMAND_DEADLINE);
 static_assert(offsetof(State, busy)==MODES_BUSY);
 static_assert(offsetof(State, ticks)==MODES_TICKS);
 static_assert(offsetof(State, applies)==MODES_APPLIES);
@@ -75,6 +97,8 @@ static_assert(offsetof(State, restores)==MODES_RESTORES);
 static_assert(offsetof(State, magic)==MODES_MAGIC);
 static_assert(offsetof(State, originalPost)==MODES_POST_ORIGINAL);
 static_assert(offsetof(State, postTicks)==MODES_POST_TICKS);
+static_assert(offsetof(State, commandAck)==MODES_COMMAND_ACK);
+static_assert(offsetof(State, forcePos)==MODES_FORCE_POS);
 static_assert(offsetof(State, rows)==MODES_ROWS);
 static_assert(sizeof(Row)==MODES_ROW_SIZE);
 static_assert(offsetof(Row, real)==ROW_REAL && offsetof(Row, shown)==ROW_SHOWN);

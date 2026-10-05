@@ -117,10 +117,43 @@ game mode/IFix replacement; those still require an iPhone test.
 
 ## Quick controls
 
-Each enabled AimKill, Ghost, Burrow or FakeLag menu row exposes one draggable glass-style
+Settings includes `Ẩn nút chức năng`. It hides all feature controls while leaving
+their switches, saved positions and running features intact; the menu button
+remains available. Disabling that setting restores the controls. The in-menu
+teleport action remains available while floating controls are hidden.
+
+Each enabled AimKill, Ghost, Burrow, FakeLag or Teleport menu row exposes one draggable glass-style
 control with a label below it. Tapping OFF keeps that quick control visible so
 it can be re-enabled; disabling its row in the menu hides the quick control.
 Positions persist and are clamped to the screen after rotation. Default placement
 uses another column when four controls do not fit vertically, preventing overlap
 on short landscape screens. Native UIKit
 and the standalone HUD's routed multi-touch path use the same control actions.
+
+## One-shot teleport (experimental)
+
+The separate Teleport action chooses the visible, alive, non-knocked enemy
+closest to the screen center, independent of aim/fire/ADS and target retention.
+The candidate expires after 200 ms. Each tap queues a serial-numbered command
+for the next eligible local OnUpdate; holding/toggling the button does not repeat
+it. Requests expire after 350 ms and are cancelled by lifecycle/owner changes,
+disabling Teleport or enabling Ghost. Native callbacks recheck match/local,
+both Entity.UniqueIDs, target health/knock, local health/movement, publication
+sequence and lease. Unsupported physical controllers reject the action.
+
+Read-only inspection confirms `Player.get_PhysicalCCT`, `0x56268C4`, reads +0x268.
+`PhysicalCCT.ForceSetPosition`, `0x646B648`, size 0xB0, FNV-1a 0x7C5E5F3F,
+writes its internal position at +0x164/+0x168/+0x16C and the transform at +0x1C8.
+The controller verifies the class name, transform and native fingerprints.
+The callback verifies the same object/class, fetches the target's current root
+position on the game thread, applies ForceSetPosition once then Entity.set_Position
+once. No setter runs from the overlay thread. A command is acknowledged before
+either setter, so a republished snapshot cannot replay it. Existing Burrow uses
+the new normal position afterward.
+
+Unicorn tests execute both actual object formats for one-shot/replay behavior,
+native phase, physics/visual alignment, Burrow coexistence, invalid identities,
+dead actors, unsupported controllers, expired/torn input and publication races.
+Local application does not prove server acceptance, collision-free landing or
+all-mode CCT availability. Device testing is required; UI success says only
+`đã áp dụng trên máy`.

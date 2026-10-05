@@ -42,7 +42,8 @@ HEADER = (pathlib.Path(__file__).parent.parent / 'esp/Core/PlayerModesLayout.h')
 OFF = {name: int(value, 0) for name, value in re.findall(r'^#define ((?:MODES|ROW)_\w+) (0x[\da-fA-F]+|\d+)$', HEADER, re.M)}
 BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x120000, 0x130000, 0x600000
 LOCAL, ENEMY, OTHER, MATCH = 0x200000, 0x210000, 0x220000, 0x400000
-FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC']
+FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS']
+CCT, CCT_CLASS = 0x430000, 0x431000
 
 
 def f32(value):
@@ -67,6 +68,7 @@ class Simulation:
         self.health, self.special = {}, {}
         self.events, self.original_seen, self.writes = [], [], []
         self.action = None
+        self.physics = False; self.cct_position = self.positions[LOCAL]; self.force_writes = []
         self.delta = (1, 0, 2)
         self.ptr(MATCH+0xd8, LOCAL)
         self.q('MATCH', MATCH); self.q('LOCAL', LOCAL); self.q('DEADLINE', 110)
@@ -101,19 +103,26 @@ class Simulation:
             self.original_seen.append(self.positions[player])
             # Local motion uses the normal transform. Remote interpolation uses
             # the continually advancing incoming state, independent of visuals.
-            source = self.positions[player] if player == LOCAL else self.authoritative[player]
+            source = (self.cct_position if self.physics else self.positions[player]) if player == LOCAL else self.authoritative[player]
             # PostUpdate has its own late incoming motion/vertical jump. Local
             # post timing only observes the pose; Burrow must not be undone.
             delta = (0, 0, 0) if self.post and player == LOCAL else self.delta
             normal = tuple(f32(v+d) for v, d in zip(source, delta))
             self.positions[player] = normal
+            if player == LOCAL and self.physics: self.cct_position = normal
             if player != LOCAL: self.authoritative[player] = normal
         elif name == 'CLOCK': uc.reg_write(UC_ARM64_REG_X0, self.now)
         elif name == 'CURRENT_MATCH':
             assert player == 0
             uc.reg_write(UC_ARM64_REG_X0, self.current_match)
+        elif name == 'FORCE_POS':
+            assert player == CCT and uc.reg_read(UC_ARM64_REG_X1) == 0
+            value = tuple(struct.unpack('<f', struct.pack('<I', uc.reg_read(reg)))[0]
+                          for reg in (UC_ARM64_REG_S0, UC_ARM64_REG_S1, UC_ARM64_REG_S2))
+            assert all(math.isfinite(v) for v in value)
+            self.cct_position = value; self.force_writes.append(value)
         else:
-            assert player == self.player and uc.reg_read(UC_ARM64_REG_X1) == 0, name
+            assert (player == self.player or (name in ('HP','GET_POS') and player == ENEMY)) and uc.reg_read(UC_ARM64_REG_X1) == 0, name
             if name == 'HP': uc.reg_write(UC_ARM64_REG_X0, self.health.get(player, 100) & 0xffffffff)
             elif name in ('VEHICLE', 'PARACHUTE', 'WAIT_SYNC'):
                 uc.reg_write(UC_ARM64_REG_X0, self.special.get((player, name), 0))
@@ -166,6 +175,16 @@ class Simulation:
         assert self.events[first_call:].count('POST_ORIGINAL' if post else 'ORIGINAL') == 1
         assert self.events[first_call:].count('ORIGINAL' if post else 'POST_ORIGINAL') == 0
         assert self.w('BUSY') == initial_busy
+
+    def teleport(self, serial=1):
+        self.physics = True
+        self.ptr(LOCAL+0x268, CCT); self.ptr(CCT, CCT_CLASS); self.ptr(CCT+0x1c8, 0x432000)
+        self.uc.mem_write(LOCAL+0x60, struct.pack('<I', 42))
+        self.uc.mem_write(ENEMY+0x60, struct.pack('<I', 73))
+        self.w('COMMAND', serial); self.w('COMMAND_LOCAL_ID', 42)
+        self.q('COMMAND_TARGET', ENEMY); self.w('COMMAND_TARGET_ID', 73)
+        self.q('COMMAND_CCT', CCT); self.q('COMMAND_CCT_CLASS', CCT_CLASS)
+        self.q('COMMAND_DEADLINE', 110)
 
 
 # No downward accumulation, full native movement, and return at current X/Z.
@@ -398,4 +417,44 @@ s.run(LOCAL); assert s.original_seen[-1][1] == 10 and s.positions[LOCAL][1] == 8
 # Unlisted teammates continue their ordinary PostUpdate.
 s = Simulation(flags=1); s.run(OTHER, post=True)
 assert not s.writes and s.positions[OTHER] == s.authoritative[OTHER]
-print('Player modes ARM64: two frame phases, running/jumping hold, depth, latest release, guards and ABI passed')
+# User command works independently of Burrow/FakeLag, applies once on local native tick.
+s = Simulation(flags=0); s.teleport(); s.run(ENEMY); assert not s.force_writes
+s.run(LOCAL, post=True); assert not s.force_writes
+s.run(LOCAL, interface=True)
+assert s.w('COMMAND_ACK') == 1 and s.w('COMMAND_RESULT') == 1
+assert s.positions[LOCAL] == s.cct_position == s.positions[ENEMY]
+assert len(s.force_writes) == 1 and s.events.index('FORCE_POS') < s.events.index('SET_POS')
+for _ in range(30): s.run(LOCAL)
+assert len(s.force_writes) == 1, 'No repeats from held buttons/republished snapshots'
+s.positions[ENEMY] = (100, 20, 200); s.teleport(2); s.run(LOCAL)
+assert len(s.force_writes) == 2 and s.positions[LOCAL] == (100, 20, 200)
+# A teleport and Burrow use the fresh new position, never an old activation pose.
+s = Simulation(flags=2); s.teleport(); s.run(LOCAL)
+assert s.cct_position == s.positions[ENEMY] and s.positions[LOCAL][1] == s.cct_position[1]-2
+s.w('FLAGS', 0); s.w('COMMAND', 0); s.run(LOCAL)
+assert s.positions[LOCAL] == s.cct_position
+# Recycled owners/targets, dead actors, special movement and bad physics are rejected.
+for reason in ['local_id','target_id','target_dead','target_knocked','cct','class','transform','vehicle','sync','parachute','off','lease','command_lease','match','torn','nan','zero']:
+    s = Simulation(flags=0); s.teleport()
+    if reason == 'local_id': s.w('COMMAND_LOCAL_ID', 99)
+    elif reason == 'target_id': s.w('COMMAND_TARGET_ID', 99)
+    elif reason == 'target_dead': s.health[ENEMY] = 0
+    elif reason == 'target_knocked': s.uc.mem_write(ENEMY+0x1258,b'\x01')
+    elif reason == 'cct': s.ptr(LOCAL+0x268, 0)
+    elif reason == 'class': s.ptr(CCT, CCT_CLASS+0x100)
+    elif reason == 'transform': s.ptr(CCT+0x1c8, 0)
+    elif reason in ['vehicle','sync','parachute']: s.special[(LOCAL,{'vehicle':'VEHICLE','sync':'WAIT_SYNC','parachute':'PARACHUTE'}[reason])] = 1
+    elif reason == 'off': s.w('COMMAND', 0)
+    elif reason == 'lease': s.now = 111
+    elif reason == 'command_lease': s.q('COMMAND_DEADLINE', 99)
+    elif reason == 'match': s.current_match = MATCH+0x2000
+    elif reason == 'torn': s.w('SEQUENCE',3)
+    elif reason == 'nan': s.positions[ENEMY] = (math.nan,10,20)
+    else: s.positions[ENEMY] = (0,0,0)
+    s.run(LOCAL); assert not s.force_writes and not s.writes, reason
+# Publication racing the target getter must defer, not consume a torn command.
+s = Simulation(flags=0); s.teleport()
+s.action = lambda name, sim: sim.w('SEQUENCE',4) if name == 'GET_POS' else None
+s.run(LOCAL); assert not s.force_writes and s.w('COMMAND_ACK') == 0
+s.action=None; s.w('SEQUENCE',6); s.run(LOCAL); assert len(s.force_writes)==1
+print('Player modes ARM64: presentation phases, one-shot physics teleport, expiry, identities, release and ABI passed')
