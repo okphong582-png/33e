@@ -185,6 +185,13 @@ for _ in range(100):
     assert s.positions[LOCAL] == (x+1.5, f32(9.55), z+2.5)
 s.w('FLAGS', 0); s.run(LOCAL, interface=True)
 assert s.positions[LOCAL][1] == 10
+for value in [math.nan, math.inf, -math.inf, 1000001]:
+    for axis in [0, 2]:
+        s = Simulation(flags=2); s.run(LOCAL)
+        position = list(s.positions[LOCAL]); position[axis] = value
+        s.positions[LOCAL] = tuple(position)
+        before = len(s.writes); s.run(LOCAL)
+        assert len(s.writes) == before, 'Height restore must not write invalid outside X/Z'
 
 # A scoped visual stays anchored; incoming state and original updates advance.
 s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]

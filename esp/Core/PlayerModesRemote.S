@@ -124,6 +124,17 @@ _PlayerModesRemoteStart:
     ldr w9, [x22, #(ROW_SHOWN+4)]
     cmp w8, w9
     b.ne .LresetAnchor
+    mov w8, #0x2400
+    movk w8, #0x4974, lsl #16 // bounded finite X/Z before restoring only Y
+    fmov s3, w8
+    fabs s4, s0
+    fcmp s4, s3
+    b.vs .LresetAnchor
+    b.gt .LresetAnchor
+    fabs s4, s2
+    fcmp s4, s3
+    b.vs .LresetAnchor
+    b.gt .LresetAnchor
     ldr s1, [x22, #(ROW_REAL+4)]
     mov x0, x20
     mov x1, #0
