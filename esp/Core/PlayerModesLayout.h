@@ -16,13 +16,14 @@
 #define MODES_LOCAL 96
 #define MODES_EPOCH 104
 #define MODES_COUNT 108
-#define MODES_PLAYERS 112
-#define MODES_BUSY 624
-#define MODES_TICKS 632
-#define MODES_APPLIES 640
-#define MODES_RESTORES 648
-#define MODES_MAGIC 656
-#define MODES_ROWS 672
+#define MODES_DEPTH 112
+#define MODES_PLAYERS 120
+#define MODES_BUSY 632
+#define MODES_TICKS 640
+#define MODES_APPLIES 648
+#define MODES_RESTORES 656
+#define MODES_MAGIC 664
+#define MODES_ROWS 680
 #define MODES_CAPACITY 64
 #define MODES_ROW_SIZE 64
 #define ROW_PLAYER 0
@@ -37,7 +38,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453032ULL;
+constexpr uint64_t Magic = 0x504c4d4f44453033ULL;
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
@@ -48,6 +49,7 @@ struct Input {
     uint32_t flags=0;
     uint64_t deadline=0, match=0, local=0;
     uint32_t epoch=0, count=0;
+    float depth=2.0f; uint32_t reserved=0;
     uint64_t players[MODES_CAPACITY]={};
 } __attribute__((packed));
 struct State {
@@ -61,6 +63,7 @@ struct State {
 };
 static_assert(offsetof(State, input)==MODES_FLAGS);
 static_assert(offsetof(State, input)+offsetof(Input, players)==MODES_PLAYERS);
+static_assert(offsetof(State, input)+offsetof(Input, depth)==MODES_DEPTH);
 static_assert(offsetof(State, busy)==MODES_BUSY);
 static_assert(offsetof(State, ticks)==MODES_TICKS);
 static_assert(offsetof(State, applies)==MODES_APPLIES);

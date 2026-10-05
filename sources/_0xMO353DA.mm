@@ -220,6 +220,8 @@
         y = [self toggle:@"Silent Aim" key:@"SilentAim" fallback:NO y:y];
         y = [self toggle:@"Aimlag" key:@"AimLag" fallback:NO y:y];
         y = [self note:@"Giữ vị trí địch khi ngắm · chỉ trên máy bạn." y:y];
+        y = [self toggle:@"FakeLag" key:@"FakeLag" fallback:NO y:y];
+        y = [self note:@"Giữ địch · không cần ngắm · chỉ máy bạn." y:y];
         y = [self slider:@"FOV" key:ESPPrefsBool(@"SilentAim", NO) ? @"SilentFovSize" : @"FovSize"
             min:5 max:48 fallback:ESPPrefsBool(@"SilentAim", NO) ? 18 : 40 y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
@@ -289,7 +291,8 @@
         y = [self toggle:@"Ghost Mode (thử nghiệm)" key:@"GhostMode" fallback:NO y:y];
         y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
         y = [self toggle:@"Độn thổ" key:@"Burrow" fallback:NO y:y];
-        y = [self note:@"Thử nghiệm · hạ nông 0,75 m." y:y];
+        if (ESPPrefsBool(@"Burrow", NO))
+            y = [self slider:@"Độ sâu" key:@"BurrowDepth" min:1 max:2.25 fallback:2 y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
@@ -310,7 +313,7 @@
     if ([key isEqualToString:@"SilentAim"] && !sender.on) ESPPrefsSetBool(@"AutoFire", NO);
     if ([key isEqualToString:@"CleanESP"] && sender.on) ESPPrefsSetBool(@"Box3D", NO);
     ESPPrefsSetBool(key, sender.on); ESPSyncFromPrefs();
-    if ([@[@"AutoFire", @"GhostMode", @"Burrow"] containsObject:key])
+    if ([@[@"AutoFire", @"GhostMode", @"Burrow", @"FakeLag"] containsObject:key])
         ESPPrefsSetBool([key stringByAppendingString:@"Floating"], sender.on);
     if ([key isEqualToString:@"AnLive"] && ![UIView applyCaptureProtectionToRegisteredViews:sender.on]) {
         sender.on = NO; ESPPrefsSetBool(key, NO);
@@ -320,7 +323,7 @@
     }
     if ([key isEqualToString:@"DarkTheme"] || [key isEqualToString:@"CleanESP"] ||
         [key isEqualToString:@"AutoFire"] || [key isEqualToString:@"SilentAim"] ||
-        [key isEqualToString:@"SilentAutoConfig"]) [self buildPage];
+        [key isEqualToString:@"SilentAutoConfig"] || [key isEqualToString:@"Burrow"]) [self buildPage];
 }
 - (void)applyMinimalESP {
     for (NSString *key in @[@"Box", @"Health", @"Name", @"Dis", @"CleanESP"])
@@ -360,6 +363,8 @@
         [key isEqualToString:@"SilentHeadPercent"] || [key isEqualToString:@"HealthYellowPercent"] ||
         [key isEqualToString:@"HealthRedPercent"]) {
         label.text = [NSString stringWithFormat:@"%@   %.0f%%", title, sender.value];
+    } else if ([key isEqualToString:@"BurrowDepth"]) {
+        label.text = [NSString stringWithFormat:@"%@   %.2f m", title, sender.value];
     } else if ([key isEqualToString:@"ESPMaxDistance"] || [key isEqualToString:@"SilentMaxDistance"]) {
         label.text = [NSString stringWithFormat:@"%@   %.0fm", title, sender.value];
     } else {

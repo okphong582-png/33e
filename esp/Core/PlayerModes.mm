@@ -2,6 +2,7 @@
 #if defined(__aarch64__) || defined(__arm64__)
 #include "PlayerModesLayout.h"
 #include "PlayerModesInstallPolicy.h"
+#include "PlayerModesControlPolicy.h"
 #include "SilentAimRemoteMapping.h"
 #include "GameLogic.h"
 #include "../drawing_view/offset.h"
@@ -35,6 +36,8 @@ mach_port_t task=MACH_PORT_NULL;
 int pid=-1;
 uint64_t module=0, ownerMatch=0, ownerLocal=0;
 uint32_t wanted=0, epoch=0, previousFlags=0;
+float depth=PlayerModesControl::DefaultDepth;
+PlayerModesControl::State control;
 bool verified=false;
 double retryAt=0;
 int lastResult=1;
@@ -62,6 +65,7 @@ void Clear(){
     PlayerModesRemote::Input off{};off.epoch=++epoch;
     for(auto &session:sessions)if(session.published&&Publish(session,off))session.published=false;
     ownerMatch=ownerLocal=0;previousFlags=0;
+    control.Reset();
     snapshot.burrow=snapshot.heldEnemies=0;snapshot.running=false;
     // Keep executable callbacks mapped while game threads may still use them.
     // Each callback restores its own held transform before its original update.
@@ -183,7 +187,8 @@ void Sample(){
     if(now-lastSample<0.2)return;
     lastSample=now;
     PlayerModesSnapshot next{};next.detail=snapshot.detail;next.failedOffset=snapshot.failedOffset;
-    next.scoped=previousFlags&1u;next.skipped=snapshot.skipped;
+    next.scoped=control.scoped;next.fakeLag=wanted&PlayerModesControl::FakeLag;
+    next.depth=depth;next.skipped=snapshot.skipped;
     for(const auto &session:sessions){
         PlayerModesRemote::State state{};
         if(!Read(session.state(),state))continue;
@@ -202,13 +207,15 @@ void Sample(){
 uint64_t Deadline(){
     mach_timebase_info_data_t timebase{};
     return mach_timebase_info(&timebase)==KERN_SUCCESS&&timebase.numer&&timebase.denom?
-        mach_absolute_time()+250000000ULL*timebase.denom/timebase.numer:0;
+        mach_absolute_time()+PlayerModesControl::LeaseNanoseconds*timebase.denom/timebase.numer:0;
 }
 }
-void PlayerModesSetEnabled(bool burrow,bool aimLag){
+void PlayerModesSetEnabled(bool burrow,bool aimLag,bool fakeLag,float requestedDepth){
     std::lock_guard<std::recursive_mutex> guard(mutex);
-    const uint32_t next=(burrow?2u:0u)|(aimLag?1u:0u);
-    if(next!=wanted){Clear();wanted=next;retryAt=0;}
+    const uint32_t next=(burrow?PlayerModesControl::Burrow:0u)|(aimLag?PlayerModesControl::AimLag:0u)|
+        (fakeLag?PlayerModesControl::FakeLag:0u);
+    depth=PlayerModesControl::Depth(requestedDepth);
+    if(next!=wanted){if(!next)Clear();wanted=next;retryAt=0;}
 }
 void PlayerModesCancel(){std::lock_guard<std::recursive_mutex> guard(mutex);Clear();}
 int PlayerModesUpdate(uint64_t base){
@@ -222,9 +229,11 @@ int PlayerModesUpdate(uint64_t base){
     snapshot.detail="";snapshot.failedOffset=0;snapshot.skipped=0;
     if(!Verify()){Clear();retryAt=CACurrentMediaTime()+1;return lastResult=9;}
     PlayerModesRemote::Input input{};
-    input.flags=(wanted&2u)|((wanted&1u)&&get_IsScoping(local)?1u:0u);
+    if(match!=ownerMatch||local!=ownerLocal)control.Reset();
+    input.flags=control.Flags(wanted,(wanted&PlayerModesControl::AimLag)&&get_IsScoping(local),CACurrentMediaTime());
+    input.depth=depth;
     input.match=match;input.local=local;input.deadline=Deadline();
-    if(match!=ownerMatch||local!=ownerLocal||input.flags!=previousFlags)++epoch;
+    if(PlayerModesControl::NewEpoch(ownerMatch,ownerLocal,previousFlags,match,local,input.flags))++epoch;
     ownerMatch=match;ownerLocal=local;previousFlags=input.flags;
     input.epoch=epoch;
     std::array<uint64_t,MODES_CAPACITY+1> classes{};size_t classCount=0;
@@ -235,7 +244,7 @@ int PlayerModesUpdate(uint64_t base){
         classes[classCount++]=klass;return true;
     };
     if((wanted&2u)&&!addClass(local)){Clear();return lastResult=9;}
-    if(wanted&1u){
+    if(wanted&(PlayerModesControl::AimLag|PlayerModesControl::FakeLag)){
         uint64_t dictionary=0,entries=0;int count=-1,capacity=-1;
         if(!Read(match+kMatchPlayerDict,dictionary)||!Read(dictionary+kDictCount,count)||
             !Read(dictionary+kDictEntries,entries)||!Read(entries+kIl2CppArrayMaxLength,capacity)||
@@ -279,7 +288,7 @@ int PlayerModesUpdate(uint64_t base){
 }
 PlayerModesSnapshot PlayerModesRead(){std::lock_guard<std::recursive_mutex> guard(mutex);return snapshot;}
 #else
-void PlayerModesSetEnabled(bool,bool){}
+void PlayerModesSetEnabled(bool,bool,bool,float){}
 void PlayerModesCancel(){}
 int PlayerModesUpdate(uint64_t){return 9;}
 PlayerModesSnapshot PlayerModesRead(){return {};}

@@ -97,29 +97,18 @@ _PlayerModesRemoteStart:
 .LnewPosition:
     // Fixed ticks/interpolation can move a remote transform BETWEEN OnUpdate
     // calls. Do not restore stale normal data or recapture on each such move.
-    // Large corrections/teleports recapture; ordinary motion keeps the anchor.
+    // Keep the anchor until explicit release. UniqueID/context checks above
+    // distinguish recycled entities; distance must not release a held enemy.
     ldr w8, [x22, #ROW_MODE]
     cmp w8, #2
     b.eq .LburrowMoved
     cmp w8, #1
     b.ne .LresetAnchor
-    ldp s3, s4, [x22, #ROW_REAL]
-    ldr s5, [x22, #(ROW_REAL+8)]
-    fsub s3, s0, s3
-    fsub s4, s1, s4
-    fsub s5, s2, s5
-    fmul s3, s3, s3
-    fmadd s3, s4, s4, s3
-    fmadd s3, s5, s5, s3
-    fmov s4, #16.0 // 4 m correction threshold, squared
-    fcmp s3, s4
-    b.vs .LresetAnchor
-    b.le .Loriginal
-    b .LresetAnchor
+    b .Loriginal
 .LburrowMoved:
     // An outside horizontal move can carry our lowered Y unchanged. Restore
     // only that owned height, keeping the fresh X/Z, before normal movement.
-    // Otherwise each such move would subtract another 0.75 m on the next tick.
+    // Otherwise each such move would subtract another depth on the next tick.
     fmov w8, s1
     ldr w9, [x22, #(ROW_SHOWN+4)]
     cmp w8, w9
@@ -163,7 +152,7 @@ _PlayerModesRemoteStart:
     str x8, [x19, #MODES_TICKS]
     add x8, x19, #MODES_SEQUENCE
     ldar w24, [x8]
-    tbnz w24, #0, .Ldrop
+    tbnz w24, #0, .Ldefer
     ldr w25, [x19, #MODES_FLAGS]
     cbz w25, .Ldrop
     cmp w25, #3
@@ -219,6 +208,10 @@ _PlayerModesRemoteStart:
     blr x8
     cmp w0, #0
     b.le .Ldrop
+    // Enemy holds are presentation-only. Continue native force sync/vehicle/
+    // parachute logic in the original, while retaining the same visual anchor.
+    cmp w25, #1
+    b.eq .Lposition
     mov x0, x20
     mov x1, #0
     ldr x8, [x19, #MODES_VEHICLE]
@@ -234,6 +227,7 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_WAIT_SYNC]
     blr x8
     cbnz w0, .Ldrop
+.Lposition:
     mov x0, x20
     mov x1, #0
     ldr x8, [x19, #MODES_GET_POS]
@@ -265,7 +259,7 @@ _PlayerModesRemoteStart:
     add x8, x19, #MODES_SEQUENCE
     ldar w8, [x8]
     cmp w8, w24
-    b.ne .Ldrop
+    b.ne .Ldefer
     cbnz x22, .LhaveRow
     cbz x26, .Lunlock
     mov x22, x26
@@ -295,7 +289,14 @@ _PlayerModesRemoteStart:
 .Lburrow:
     // Always offset the fresh normal position, never the previous lowered one.
     // Do not disable gravity or collisions, or replace the physics controller.
-    fmov s3, #0.75 // Shallow depth, applied once to the fresh normal position.
+    ldr s3, [x19, #MODES_DEPTH]
+    fmov s4, #1.0
+    fcmp s3, s4
+    b.vs .Ldrop
+    b.lo .Ldrop
+    fmov s4, #2.25
+    fcmp s3, s4
+    b.gt .Ldrop
     fsub s1, s1, s3
 .LcaptureShown:
     stp s0, s1, [x22, #ROW_SHOWN]
@@ -316,6 +317,10 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_APPLIES]
     add x8, x8, #1
     str x8, [x19, #MODES_APPLIES]
+    b .Lunlock
+.Ldefer:
+    // A concurrent HUD publication is transient, not a scope release. Do not
+    // apply a torn snapshot, but retain the owned anchor for the next tick.
     b .Lunlock
 .Ldrop:
     cbz x22, .Lunlock

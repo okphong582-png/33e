@@ -9,6 +9,7 @@
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
 #include "KabraxHide.h"
+#include <cmath>
 
 static const CGFloat kMenuButtonSize = 44.0f;
 
@@ -383,9 +384,10 @@ static const CGFloat kMenuButtonSize = 44.0f;
         dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadFloatingAuxButtonsFromPrefs]; });
         return;
     }
-    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Burrow"];
-    NSArray *titles = @[@"AimKill", @"Ghost", @"Độn thổ"];
-    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.down.to.line"];
+    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Burrow", @"FakeLag"];
+    NSArray *titles = @[@"AimKill", @"Ghost", @"Độn thổ", @"FakeLag"];
+    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.down.to.line", @"pause.circle.fill"];
+    const NSUInteger rows = MAX(1, MIN(keys.count, (NSUInteger)MAX(1, std::floor((self.bounds.size.height - 12) / 88))));
     for (NSUInteger i = 0; i < keys.count; ++i) {
         NSString *key = keys[i], *shownKey = [key stringByAppendingString:@"Floating"];
         const BOOL shown = ESPPrefsBool(shownKey, ESPPrefsBool(key, NO));
@@ -393,9 +395,9 @@ static const CGFloat kMenuButtonSize = 44.0f;
         if (!shown) { [control removeFromSuperview]; [self.quickControls removeObjectForKey:key]; continue; }
         if (!control) {
             control = [[FloatingFeatureControl alloc] initWithKey:key title:titles[i] symbol:symbols[i]];
-            CGFloat x = ESPPrefsFloat([key stringByAppendingString:@"FloatX"], MAX(8, self.bounds.size.width - 90));
-            CGFloat top = MAX(8, MIN(70, self.bounds.size.height - 3 * 88 - 12));
-            CGFloat y = ESPPrefsFloat([key stringByAppendingString:@"FloatY"], top + i * 88);
+            CGFloat x = ESPPrefsFloat([key stringByAppendingString:@"FloatX"], MAX(8, self.bounds.size.width - 90 - (i / rows) * 84));
+            CGFloat top = MAX(8, MIN(70, self.bounds.size.height - rows * 88 - 12));
+            CGFloat y = ESPPrefsFloat([key stringByAppendingString:@"FloatY"], top + (i % rows) * 88);
             control.frame = CGRectMake(x, y, 76, 80);
             [control addTarget:self action:@selector(toggleQuickFeature:) forControlEvents:UIControlEventTouchUpInside];
             self.quickControls[key] = control; [self addSubview:control];

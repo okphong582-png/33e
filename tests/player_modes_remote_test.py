@@ -50,7 +50,7 @@ def f32(value):
 
 
 class Simulation:
-    def __init__(self, flags=3):
+    def __init__(self, flags=3, depth=2.0):
         self.uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
         self.uc.mem_map(BASE, 0x40000)
         self.uc.mem_map(LOCAL, 0x240000)
@@ -72,6 +72,7 @@ class Simulation:
         self.q('MATCH', MATCH); self.q('LOCAL', LOCAL); self.q('DEADLINE', 110)
         self.w('SEQUENCE', 2); self.w('EPOCH', 1); self.w('FLAGS', flags)
         self.w('COUNT', 1); self.ptr(STATE+OFF['MODES_PLAYERS'], ENEMY)
+        self.uc.mem_write(STATE+OFF['MODES_DEPTH'], struct.pack('<f', depth))
         self.uc.hook_add(UC_HOOK_CODE, self.hook)
 
     def ptr(self, address, value):
@@ -160,7 +161,7 @@ class Simulation:
 s = Simulation(flags=2); s.run(LOCAL, interface=True, wrapped=False)
 assert s.q('TICKS') == 0 and s.q('APPLIES') == 0 and s.positions[LOCAL][1] == 10
 s.run(LOCAL, interface=True)
-assert s.q('TICKS') == 1 and s.q('APPLIES') == 1 and math.isclose(s.positions[LOCAL][1], 9.25, abs_tol=1e-6)
+assert s.q('TICKS') == 1 and s.q('APPLIES') == 1 and math.isclose(s.positions[LOCAL][1], 8.0, abs_tol=1e-6)
 s.w('FLAGS', 0); s.run(LOCAL, interface=True)
 assert s.positions[LOCAL][1] == 10, 'Interface release must restore normal height'
 
@@ -168,7 +169,7 @@ s = Simulation(flags=2)
 for step in range(100):
     s.run(LOCAL)
     assert s.original_seen[-1] == (step, 10, step*2), 'Physics update received a lowered transform'
-    assert math.isclose(s.positions[LOCAL][1], 9.25, abs_tol=1e-6)
+    assert math.isclose(s.positions[LOCAL][1], 8.0, abs_tol=1e-6)
     assert s.positions[LOCAL][0] == step+1 and s.positions[LOCAL][2] == (step+1)*2
 s.w('FLAGS', 0); s.run(LOCAL)
 assert s.positions[LOCAL] == (101, 10, 202) and s.q('APPLIES') == 100
@@ -182,9 +183,22 @@ for _ in range(100):
     s.positions[LOCAL] = (x+0.5, y, z+0.5)
     s.run(LOCAL, interface=True)
     assert s.original_seen[-1] == (x+0.5, 10, z+0.5)
-    assert s.positions[LOCAL] == (x+1.5, f32(9.25), z+2.5)
+    assert s.positions[LOCAL] == (x+1.5, 8.0, z+2.5)
 s.w('FLAGS', 0); s.run(LOCAL, interface=True)
 assert s.positions[LOCAL][1] == 10
+# Native application independently rejects corrupt/unbounded input depths.
+for depth in [1.0, 1.5, 2.0, 2.25]:
+    s = Simulation(flags=2, depth=depth)
+    for _ in range(100):
+        s.run(LOCAL)
+        assert s.original_seen[-1][1] == 10 and s.positions[LOCAL][1] == 10-depth
+    # Depth changes while ON restore the previous offset before applying the new.
+    s.uc.mem_write(STATE+OFF['MODES_DEPTH'], struct.pack('<f', 2.0)); s.run(LOCAL)
+    assert s.positions[LOCAL][1] == 8
+    s.w('FLAGS', 0); s.run(LOCAL); assert s.positions[LOCAL][1] == 10
+for depth in [math.nan, math.inf, -math.inf, -1.0, 0.75, 2.26, 1000.0]:
+    s = Simulation(flags=2, depth=depth); s.run(LOCAL)
+    assert not s.writes and s.q('APPLIES') == 0
 for value in [math.nan, math.inf, -math.inf, 1000001]:
     for axis in [0, 2]:
         s = Simulation(flags=2); s.run(LOCAL)
@@ -228,7 +242,7 @@ assert len(s.writes) == before+1
 
 # Both roles can coexist, and neither role spills to teammates/unlisted actors.
 s = Simulation(flags=3); s.run(LOCAL); s.run(ENEMY); s.run(OTHER)
-assert math.isclose(s.positions[LOCAL][1], 9.25, abs_tol=1e-6)
+assert math.isclose(s.positions[LOCAL][1], 8.0, abs_tol=1e-6)
 assert s.positions[OTHER] == (41, 10, 42) and not any(player == OTHER for player, _ in s.writes)
 s = Simulation(flags=1); s.run(LOCAL); assert not s.writes
 s = Simulation(flags=2); s.run(ENEMY); assert not s.writes
@@ -236,11 +250,47 @@ s = Simulation(flags=2); s.run(ENEMY); assert not s.writes
 # New corrections win over stale restore data, including local teleports.
 s = Simulation(flags=2); s.run(LOCAL); s.positions[LOCAL] = (100, 15, 100); s.run(LOCAL)
 assert s.original_seen[-1] == (100, 15, 100)
-assert s.positions[LOCAL][0] == 101 and math.isclose(s.positions[LOCAL][1], 14.25, abs_tol=1e-6)
-s = Simulation(flags=1); s.run(ENEMY)
+assert s.positions[LOCAL][0] == 101 and math.isclose(s.positions[LOCAL][1], 13.0, abs_tol=1e-6)
+s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
 s.positions[ENEMY] = (100, 10, 100); s.authoritative[ENEMY] = s.positions[ENEMY]
 writes = len(s.writes); s.run(ENEMY)
-assert s.positions[ENEMY] == (101, 10, 102) and len(s.writes) == writes+1, 'Changed live transform must recapture rather than revive a stale anchor'
+assert s.positions[ENEMY] == anchor and len(s.writes) == writes+1, 'Distance alone must not release the same held entity'
+s.w('FLAGS', 0); s.run(ENEMY)
+assert s.positions[ENEMY] == (102, 10, 104), 'Release still uses latest incoming state'
+
+# A publication race must skip torn data without forgetting a valid anchor.
+for native in [None, 'CLOCK', 'GET_POS']:
+    s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
+    if native is None: s.w('SEQUENCE', 3)
+    else:
+        stage = [False]
+        def publish_race(name, sim):
+            if name == 'ORIGINAL': stage[0] = True
+            if name == native and stage[0]: sim.w('SEQUENCE', 4)
+        s.action = publish_race
+    before = s.q('APPLIES'); s.run(ENEMY)
+    assert s.q('APPLIES') == before
+    s.action = None; s.w('SEQUENCE', 6); s.run(ENEMY)
+    assert s.positions[ENEMY] == anchor, 'Concurrent publication must not release the anchor'
+
+# Sustained large incoming motion and unrelated Burrow toggles keep one anchor.
+s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
+for step in range(200):
+    s.positions[ENEMY] = (100+step*10, 10, 100+step*10)
+    s.authoritative[ENEMY] = s.positions[ENEMY]
+    s.w('FLAGS', 3 if step % 2 else 1)
+    s.run(ENEMY, interface=True)
+    assert s.positions[ENEMY] == anchor
+s.w('FLAGS', 0); s.run(ENEMY)
+assert s.positions[ENEMY] == s.authoritative[ENEMY] and s.positions[ENEMY] != anchor
+
+# Native force sync and special movement continue while remote visuals stay held.
+for reason in ['VEHICLE', 'PARACHUTE', 'WAIT_SYNC']:
+    s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
+    s.special[(ENEMY, reason)] = 1
+    for _ in range(10): s.run(ENEMY); assert s.positions[ENEMY] == anchor
+    s.w('FLAGS', 0); s.run(ENEMY)
+    assert s.positions[ENEMY] == s.authoritative[ENEMY] and s.positions[ENEMY] != anchor
 
 # OFF, expired/odd snapshots and unsupported movement release a held override.
 for reason in ['off', 'lease', 'sequence', 'vehicle', 'parachute', 'sync']:

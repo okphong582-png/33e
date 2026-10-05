@@ -126,7 +126,8 @@ void ESPSyncFromPrefs(void) {
     gAutoFire = autoEnabled;
     gGhostMode = ESPPrefsBool(@"GhostMode", NO);
     GhostModeSetEnabled(gGhostMode);
-    PlayerModesSetEnabled(ESPPrefsBool(@"Burrow", NO), ESPPrefsBool(@"AimLag", NO));
+    PlayerModesSetEnabled(ESPPrefsBool(@"Burrow", NO), ESPPrefsBool(@"AimLag", NO),
+        ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"BurrowDepth", 2.0f));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
@@ -769,6 +770,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     NSMutableArray<NSString *> *modes = [NSMutableArray array];
     if (ESPPrefsBool(@"Burrow", NO)) [modes addObject:@"Độn thổ"];
     if (ESPPrefsBool(@"AimLag", NO)) [modes addObject:@"Aimlag"];
+    if (ESPPrefsBool(@"FakeLag", NO)) [modes addObject:@"FakeLag"];
     if (modes.count) {
         const auto current = PlayerModesRead();
         if (gPlayerModesInstall != 8) {
@@ -778,10 +780,16 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
         } else {
             if (ESPPrefsBool(@"Burrow", NO)) [lines addObject:current.burrow ?
-                @"Độn thổ · đang hạ 0,75 m" : (current.running ? @"Độn thổ · tạm dừng" : @"Độn thổ · chờ nhịp game")];
-            if (ESPPrefsBool(@"AimLag", NO)) [lines addObject:!current.scoped ? @"Aimlag · mở ngắm để giữ địch" :
-                (current.heldEnemies ? [NSString stringWithFormat:@"Aimlag · giữ %u địch", current.heldEnemies] :
-                (current.running ? @"Aimlag · chờ địch phù hợp" : @"Aimlag · chờ nhịp game"))];
+                [NSString stringWithFormat:@"Độn thổ · hạ %.2f m", current.depth] :
+                (current.running ? @"Độn thổ · tạm dừng" : @"Độn thổ · chờ nhịp game")];
+            const BOOL fakeLag = ESPPrefsBool(@"FakeLag", NO);
+            if (fakeLag || ESPPrefsBool(@"AimLag", NO)) {
+                NSString *name = fakeLag ? @"FakeLag" : @"Aimlag";
+                NSString *reason = !fakeLag && !current.scoped ? @"mở ngắm để giữ địch" :
+                    (current.heldEnemies ? [NSString stringWithFormat:@"giữ %u địch", current.heldEnemies] :
+                    (current.running ? @"chờ địch phù hợp" : @"chờ nhịp game"));
+                [lines addObject:[NSString stringWithFormat:@"%@ · %@", name, reason]];
+            }
         }
         if (gAimDiagnostics) [lines addObject:[NSString stringWithFormat:@"Nhịp %llu · áp dụng %llu · bỏ qua %u",
             (unsigned long long)current.ticks, (unsigned long long)current.applies, current.skipped]];

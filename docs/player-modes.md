@@ -15,7 +15,9 @@ second-slot writes roll back the first without overwriting another hook.
 
 ## Burrow
 
-The local player's root transform is lowered 0.75 m after the normal update.
+The local player's root transform is lowered 2 m by default after the normal
+update. The menu's depth control ranges from 1 to 2.25 m. Both controller and
+native callback reject non-finite or unbounded depths.
 On the next update, the wrapper restores its last normal position before the
 game runs movement/physics/animation, then applies one offset to the new normal
 position. Disabling leaves the normal update's current position, preserving
@@ -24,22 +26,26 @@ If an outside horizontal update carries the applied Y unchanged, the callback
 restores only its owned height offset while keeping the newly moved X/Z. This
 prevents repeated downward offsets when movement occurs between callbacks.
 
-This is a shallow root-transform prototype. It does not replace the game's
+This is a root-transform prototype. It does not replace the game's
 physical controller. Live collision/grounding, camera behavior, correction
 timing and server acceptance still need device testing. The emulator proves
 that the wrapper does not subtract height repeatedly across its own updates;
 it cannot prove that every native physics path always keeps a player grounded.
 The feature pauses for vehicles, parachuting and pending force sync.
 
-## Aimlag
+## Aimlag and FakeLag
 
 The HUD publishes only enemy entities from the current match, excluding the
-local player, teammates, dead and knocked entities. Scoping starts an epoch;
+local player, teammates, dead and knocked entities. Aimlag requires scoping;
+FakeLag holds enemies while enabled without requiring scoping. A hold starts an epoch;
 each enemy captures its displayed root position on its first eligible update.
 Before later updates, the wrapper restores the latest normal position, runs the
 original update, saves the newly interpolated position, and reapplies the
-captured visual position. Releasing scope discards the override after running
-the normal update. Animation, health and incoming interpolation continue.
+captured visual position. Aimlag tolerates false scope samples for 180 ms;
+an actual scope release ends the hold after that grace. Turning off FakeLag
+releases unless scoped Aimlag still owns the hold. Burrow/depth changes and
+switching between Aimlag/FakeLag during the same active hold preserve its epoch.
+Animation, health and incoming interpolation continue.
 
 This changes client transforms; it does not freeze an opponent on the server
 or on another player's device. Seeing a frozen target does not establish that
@@ -52,12 +58,14 @@ data for each supported class's original callback. A shared signed 16 KiB RX
 page contains no runtime relocations. The HUD writes only input snapshots;
 game callbacks exclusively own their output rows. Finite/nonzero position checks,
 native match/local ownership, health, knock, an even publication sequence and
-a 250 ms lease precede application. A changed/dead owner discards old state.
+a one-second lease precede application. A changed/dead owner discards old state.
 An incoming transform change is not overwritten with the previous saved normal
 position. Entity.UniqueID distinguishes recycled pointers, including replacement
 entities spawning nearby. Small external interpolation/fixed updates keep the
-scoped anchor without restoring stale normal data. Movement more than 4 m from
-the latest saved normal position starts a fresh anchor. OFF/expired leases allow
+anchor without restoring stale normal data. Distance alone does not release the
+same entity, including large native force sync/teleports. Special movement and
+force-sync guards apply only to local Burrow; enemy simulation continues normally
+while held visually. OFF/expired leases allow
 the next eligible entity update to restore a held override.
 
 `tests/player_modes_remote_test.py` emulates the actual Mach-O and ELF callback,
@@ -69,6 +77,16 @@ updates, reproducing the two failures missed by directly calling the wrapper.
 `tests/player_modes_install_test.cpp` checks paired installation, no per-frame
 rewrites, rejected conflicting hooks, rollback and preserved MethodInfo pointers.
 
+The lease is 1 s to tolerate brief host-frame stalls; lifecycle/permission/context
+cancellation still publishes OFF immediately. Concurrent/odd input publication
+skips applying a torn snapshot and retains the anchor for the next complete
+publication, instead of permanently dropping it. It may expose a normal position
+for that deferred frame; it does not prevent all client render-stage overwrites.
+`tests/player_modes_control_test.cpp` checks sustained scope with noisy samples,
+FakeLag without scope, overlapping holds, independent local switches, scope
+release and depth bounds. ARM64 tests check publication races after capture,
+200 large outside movements, special movement and latest-position release.
+
 The HUD samples native ticks/application counts and held rows at 5 Hz. Installing
 a slot alone no longer claims an effect: stopped ticks show "chờ nhịp game";
 Aimlag shows whether scoping/eligible enemies are available. Diagnostic mode
@@ -78,8 +96,10 @@ not cancel supported enemies or an installed local Burrow callback.
 
 ## Quick controls
 
-Each enabled AimKill, Ghost or Burrow menu row exposes one draggable glass-style
+Each enabled AimKill, Ghost, Burrow or FakeLag menu row exposes one draggable glass-style
 control with a label below it. Tapping OFF keeps that quick control visible so
 it can be re-enabled; disabling its row in the menu hides the quick control.
-Positions persist and are clamped to the screen after rotation. Native UIKit
+Positions persist and are clamped to the screen after rotation. Default placement
+uses another column when four controls do not fit vertically, preventing overlap
+on short landscape screens. Native UIKit
 and the standalone HUD's routed multi-touch path use the same control actions.
