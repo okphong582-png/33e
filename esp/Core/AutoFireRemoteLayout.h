@@ -23,7 +23,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495235ULL; // AUTOFIR5: native cadence carry + scoped Silent shots
+inline constexpr uint64_t Magic = 0x4155544f46495236ULL; // AUTOFIR6: native update before automatic shot
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;

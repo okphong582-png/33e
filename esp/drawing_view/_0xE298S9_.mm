@@ -123,7 +123,7 @@ void ESPSyncFromPrefs(void) {
     silentFovPercent = ESPPrefsFloat(@"SilentFovSize", 18);
     silentAutoConfig = ESPPrefsBool(@"SilentAutoConfig", YES);
     silentHeadPercent = SilentAimPolicy::HeadPercent(ESPPrefsFloat(@"SilentHeadPercent", 75));
-    activeSilentFov = silentAutoConfig ? 18 : silentFovPercent;
+    activeSilentFov = SilentAimPolicy::Resolve(false, silentAutoConfig, silentFovPercent, silentMaxDistance).fov;
     silentMaxDistance = ESPPrefsFloat(@"SilentMaxDistance", 100);
     if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 100;
     silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
@@ -701,7 +701,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         self.nextAimDiagnosticUpdate = now + 0.2;
         const uint64_t fireTicks = AutoFireTickCount(), fireStarts = AutoFireStartCount();
         self.aimDiagnosticLayer.string = isSilentAim ? [NSString stringWithFormat:
-            @"PRI21: %d · %@ · chuyển: %llu\nTự bắn: %@ · nhịp: %llu · lệnh: %llu", stats.firingRaw,
+            @"PRI21: %d · %@ · chuyển: %llu\nAimKill: %@ · nhịp: %llu · lệnh: %llu", stats.firingRaw,
             AimStateDescription(stats.aimState), (unsigned long long)SilentAimRedirectCount(),
             !gAutoFire ? @"tắt" : (stats.autoFireState == 8 ?
                 (fireStarts ? @"đã gửi bắn" : (fireTicks ? @"chờ súng" : @"chờ nhịp game")) :
@@ -828,9 +828,9 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     stats.firingRaw = get_FiringPRIState(local);
     stats.firing    = GamePRI::Firing(stats.firingRaw);
     stats.scoping   = get_IsScoping(local);
-    const auto automatic = SilentAimPolicy::Automatic(stats.scoping);
-    activeSilentFov = silentAutoConfig ? automatic.fov : silentFovPercent;
-    const float activeSilentDistance = silentAutoConfig ? automatic.distance : silentMaxDistance;
+    const auto silentConfig = SilentAimPolicy::Resolve(stats.scoping, silentAutoConfig, silentFovPercent, silentMaxDistance);
+    activeSilentFov = silentConfig.fov;
+    const float activeSilentDistance = silentConfig.distance;
     // Fire-only mode takes precedence over scope; releasing fire stops immediately.
     const bool triggerActive = !isSilentAim && !get_IsKnockedDown(local) &&
         AimSelection::Triggered(isAimbotFire, isAimbotScope, stats.firing,

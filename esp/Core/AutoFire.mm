@@ -36,12 +36,14 @@ constexpr UpdateFingerprint weaponUpdates[] = {
 struct Session {
     uint64_t slot=0, allocation=0, original=0;
     uint32_t sequence=0;
+    bool published=false;
     uint64_t state() const { return allocation+AUTO_PAGE; }
 };
 std::recursive_mutex mutex;
 mach_port_t task=MACH_PORT_NULL;
 int pid=-1;
 uint64_t module=0, activeSlot=0;
+bool codeVerified=false;
 std::vector<Session> sessions;
 double retryAt=0;
 int retryState=9;
@@ -57,11 +59,13 @@ bool WriteBytes(uint64_t a,const void *v,size_t n) {
 }
 template<class T> bool Write(uint64_t a,const T &v) { return WriteBytes(a,&v,sizeof(v)); }
 void Disable(Session &s) {
+    if (!s.published) return;
     const uint32_t odd=(s.sequence+1)|1u, off=0;
     s.sequence=odd+1;
-    Write(s.state()+AUTO_SEQUENCE,odd);
-    Write(s.state()+AUTO_ENABLED,off);
-    Write(s.state()+AUTO_SEQUENCE,s.sequence);
+    bool ok=Write(s.state()+AUTO_SEQUENCE,odd);
+    ok=Write(s.state()+AUTO_ENABLED,off)&&ok;
+    ok=Write(s.state()+AUTO_SEQUENCE,s.sequence)&&ok;
+    if(ok)s.published=false;
 }
 void Clear() {
     for (auto &s : sessions) Disable(s);
@@ -96,7 +100,7 @@ bool Attach(uint64_t base) {
     if(task==candidate && pid==candidatePID && module==base)return true;
     Clear();
     if(task!=MACH_PORT_NULL)mach_port_deallocate(mach_task_self(),task);
-    task=MACH_PORT_NULL;sessions.clear();retryAt=0;
+    task=MACH_PORT_NULL;sessions.clear();retryAt=0;codeVerified=false;
     if(mach_port_mod_refs(mach_task_self(),candidate,MACH_PORT_RIGHT_SEND,1)!=KERN_SUCCESS)return false;
     task=candidate;pid=candidatePID;module=base;return true;
 }
@@ -121,7 +125,7 @@ bool Adopt(uint64_t slot,uint64_t a) {
         !Read(a+AUTO_PAGE,state)||state.magic!=AutoFireRemote::Magic||!SupportedUpdate(state.original)||
         state.getter!=module+Getter||state.start!=module+Start||state.stop!=module+Stop||
         state.interval!=module+Interval||state.clock!=Clock())return false;
-    sessions.push_back({slot,a,state.original,state.sequence&~1u});
+    sessions.push_back({slot,a,state.original,state.sequence&~1u,true});
     Disable(sessions.back());
     return true;
 }
@@ -180,11 +184,12 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
     const uint64_t weapon=SilentAimWeapon::OnHand(local,[](uint64_t a,auto &v){return Read(a,v);},[](uint64_t a){return isVaildPtr(a);});
     if(!weapon||!Read(weapon,weaponClass)||!isVaildPtr(weaponClass)||
         !Read(weaponClass+StartSlot,start)||start!=base+Start||!Read(weaponClass+StopSlot,stop)||stop!=base+Stop||
-        !Fingerprint<0xCC>(base+Getter,0xC5E012EE)||!Fingerprint<0x5A8>(base+Start,0x9AD8096C)||
+        (!codeVerified && (!Fingerprint<0xCC>(base+Getter,0xC5E012EE)||!Fingerprint<0x5A8>(base+Start,0x9AD8096C)||
         !Fingerprint<0x1E4>(base+Stop,0xA2F105A1)||!Fingerprint<0xCC>(base+0x569C434,0x88A4BD15)||
-        !Fingerprint<0x210>(base+Interval,0x131E1130)||!Fingerprint<0x50>(base+0x5BA4054,0xA165FA4A)){
+        !Fingerprint<0x210>(base+Interval,0x131E1130)||!Fingerprint<0x50>(base+0x5BA4054,0xA165FA4A)))){
         Clear();retryAt=now+1;retryState=9;return 9;
     }
+    codeVerified=true; // Immutable signed code; reset when task/PID/base changes.
     Session *session=nullptr;
     const int result=Install(weaponClass+UpdateSlot,session);
     if(result!=8){Clear();retryAt=now+1;retryState=result;return result;}
@@ -194,8 +199,10 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
     mach_timebase_info_data_t tb{};
     if(mach_timebase_info(&tb)!=KERN_SUCCESS||!tb.numer||!tb.denom){Clear();return 9;}
     struct Publication {uint32_t enabled;uint64_t deadline,local,match,weapon;} __attribute__((packed));
-    const Publication p{1,mach_absolute_time()+100000000ULL*tb.denom/tb.numer,local,match,weapon};
+    // Match Silent's 150 ms freshness window, including 30 FPS HUD pacing.
+    const Publication p{1,mach_absolute_time()+150000000ULL*tb.denom/tb.numer,local,match,weapon};
     const uint32_t odd=(session->sequence+1)|1u;session->sequence=odd+1;
+    session->published=true; // Clear also handles an interrupted publication.
     const bool ok=Write(session->state()+AUTO_SEQUENCE,odd)&&
         WriteBytes(session->state()+AUTO_ENABLED,&p,sizeof(p))&&Write(session->state()+AUTO_SEQUENCE,session->sequence);
     if(!ok){Clear();return 10;}

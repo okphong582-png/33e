@@ -70,7 +70,7 @@
         UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
         button.tag = 200 + i; button.accessibilityLabel = names[i];
         [button setTitle:names[i] forState:UIControlStateNormal];
-        button.titleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
+        button.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
         button.layer.cornerRadius = 9;
         [button addTarget:self action:@selector(changePage:) forControlEvents:UIControlEventTouchUpInside];
         [self.panel addSubview:button]; [navigation addObject:button];
@@ -79,7 +79,7 @@
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dragHeader:)];
     pan.delegate = self; [self.header addGestureRecognizer:pan];
     self.scroll = [[UIScrollView alloc] initWithFrame:CGRectZero];
-    self.scroll.showsVerticalScrollIndicator = NO;
+    self.scroll.showsVerticalScrollIndicator = YES;
     self.scroll.bounces = NO;
     [self.panel addSubview:self.scroll];
     [self buildPage];
@@ -103,20 +103,21 @@
     [self.header viewWithTag:11].frame = CGRectMake(58, 35, MAX(10, w - 116), 13);
     
     UIView *closeBtn = [self.header viewWithTag:12];
-    if (closeBtn) closeBtn.frame = CGRectMake(MAX(0.0f, w - 50.0f), 11, 36, 36);
+    if (closeBtn) closeBtn.frame = CGRectMake(MAX(0.0f, w - 52.0f), 7, 44, 44);
     CGFloat navStep = (w - 28) / 4;
     for (NSInteger i = 0; i < 4; ++i)
-        self.navButtons[i].frame = CGRectMake(14 + i * navStep, 64, navStep - 4, 34);
-    self.scroll.frame = CGRectMake(14, 112, MAX(10, w - 28), MAX(10, h - 126));
+        self.navButtons[i].frame = CGRectMake(14 + i * navStep, 60, navStep - 4, 44);
+    self.scroll.frame = CGRectMake(14, 114, MAX(10, w - 28), MAX(10, h - 128));
     if (fabs(self.builtWidth - self.scroll.bounds.size.width) > 0.5) [self buildPage];
 }
 - (void)closeMenu { if (self.onCloseBlock) self.onCloseBlock(); }
 - (void)changePage:(UIButton *)sender {
     self.page = sender.tag - 200;
+    self.scroll.contentOffset = CGPointZero;
     [self buildPage];
 }
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gesture shouldReceiveTouch:(UITouch *)touch {
-    for (UIView *view = touch.view; view && view != self.header; view = view.superview)
+    for (UIView *view = touch.view; view && view != gesture.view; view = view.superview)
         if ([view isKindOfClass:UIControl.class]) return NO;
     return YES;
 }
@@ -141,29 +142,36 @@
 }
 - (CGFloat)toggle:(NSString *)title key:(NSString *)key fallback:(BOOL)fallback y:(CGFloat)y {
     CGFloat width = [self contentWidth];
-    UIView *row = [[UIView alloc] initWithFrame:CGRectMake(0, y, width, 50)];
+    UIView *row = [[UIView alloc] initWithFrame:CGRectMake(0, y, width, 54)];
     row.backgroundColor = MizzeRaised();
     row.layer.cornerRadius = 10;
-    UILabel *titleLabel = [self label:title frame:CGRectMake(14, 0, MAX(10, width - 80), 50) size:14];
+    UILabel *titleLabel = [self label:title frame:CGRectMake(14, 0, MAX(10, width - 86), 54) size:15];
     titleLabel.adjustsFontSizeToFitWidth = YES; titleLabel.minimumScaleFactor = 0.75;
     [row addSubview:titleLabel];
-    UISwitch *sw = [[UISwitch alloc] initWithFrame:CGRectMake(width - 59, 9, 51, 31)];
-    sw.transform = CGAffineTransformMakeScale(0.82, 0.82);
+    UISwitch *sw = [[UISwitch alloc] initWithFrame:CGRectMake(width - 65, 11, 51, 31)];
     sw.onTintColor = MizzeMint();
     sw.on = ESPPrefsBool(key, fallback);
     objc_setAssociatedObject(sw, "key", key, OBJC_ASSOCIATION_COPY_NONATOMIC);
     [sw addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(toggleRow:)];
+    tap.delegate = self;
+    objc_setAssociatedObject(tap, "switch", sw, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [row addGestureRecognizer:tap];
     [row addSubview:sw]; [self.controls addObject:sw]; [self.scroll addSubview:row];
-    return y + 56;
+    return y + 62;
+}
+- (void)toggleRow:(UITapGestureRecognizer *)tap {
+    UISwitch *sw = objc_getAssociatedObject(tap, "switch");
+    if (sw.enabled) { [sw setOn:!sw.on animated:YES]; [self toggleChanged:sw]; }
 }
 - (CGFloat)slider:(NSString *)title key:(NSString *)key min:(float)minimum max:(float)maximum fallback:(float)fallback y:(CGFloat)y {
     CGFloat width = [self contentWidth];
-    UIView *row = [[UIView alloc] initWithFrame:CGRectMake(0, y, width, 76)];
+    UIView *row = [[UIView alloc] initWithFrame:CGRectMake(0, y, width, 88)];
     row.backgroundColor = MizzeRaised();
     row.layer.cornerRadius = 10;
-    UILabel *label = [self label:title frame:CGRectMake(14, 8, width - 28, 20) size:12];
+    UILabel *label = [self label:title frame:CGRectMake(14, 10, width - 28, 22) size:14];
     [row addSubview:label];
-    UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(14, 36, width - 28, 30)];
+    UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(14, 36, width - 28, 44)];
     slider.minimumValue = minimum; slider.maximumValue = maximum;
     slider.value = ESPPrefsFloat(key, fallback);
     slider.minimumTrackTintColor = MizzeMint();
@@ -173,16 +181,23 @@
     objc_setAssociatedObject(slider, "label", label, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(slider, "title", title, OBJC_ASSOCIATION_COPY_NONATOMIC);
     [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
+    [slider addTarget:self action:@selector(fovSliderTouchUp:)
+        forControlEvents:UIControlEventTouchUpInside|UIControlEventTouchUpOutside|UIControlEventTouchCancel];
     [row addSubview:slider]; [self.controls addObject:slider]; [self.scroll addSubview:row];
     [self updateSliderLabel:slider];
-    return y + 86;
+    return y + 96;
 }
 - (CGFloat)note:(NSString *)text y:(CGFloat)y {
-    UILabel *label = [self label:text frame:CGRectMake(8, y, [self contentWidth] - 16, 44) size:11];
+    UILabel *label = [self label:text frame:CGRectMake(8, y, [self contentWidth] - 16, 36) size:13];
     label.textColor = [self mutedColor]; label.numberOfLines = 0;
-    [self.scroll addSubview:label]; return y + 48;
+    [self.scroll addSubview:label]; return y + 40;
+}
+- (CGFloat)section:(NSString *)title y:(CGFloat)y {
+    UILabel *label = [self label:title frame:CGRectMake(4, y + 6, [self contentWidth] - 8, 24) size:14];
+    label.textColor = MizzeMint(); [self.scroll addSubview:label]; return y + 38;
 }
 - (void)buildPage {
+    const CGFloat offset = self.scroll.contentOffset.y;
     for (UIView *v in self.scroll.subviews) [v removeFromSuperview];
     [self.controls removeAllObjects]; self.swatch = nil;
     self.builtWidth = [self contentWidth];
@@ -199,53 +214,41 @@
         button.backgroundColor = i == self.page ? [MizzeMint() colorWithAlphaComponent:0.1] : UIColor.clearColor;
         button.accessibilityValue = i == self.page ? @"Đang chọn" : @"";
     }
-    UIView *section = [[UIView alloc] initWithFrame:CGRectMake(0, 0, [self contentWidth], 64)];
-    NSArray *titles = @[@"Giữ đúng hướng ngắm", @"Nhìn rõ, ít nhiễu", @"Sắc độ của bạn", @"Chơi theo cách của bạn"];
-    NSArray *summaries = @[@"Chọn địch gần hướng tâm, ưu tiên khoảng cách.", @"Khung mảnh · màu dịu · nhịp vẽ đều.", @"Tùy chỉnh khung, đường nối và vòng ngắm.", @"Các lựa chọn được lưu tự động."];
-    [section addSubview:[self label:titles[self.page] frame:CGRectMake(0, 0, [self contentWidth], 26) size:18]];
-    UILabel *summary = [self label:summaries[self.page] frame:CGRectMake(0, 30, [self contentWidth], 25) size:11];
-    summary.textColor = [self mutedColor]; [section addSubview:summary]; [self.scroll addSubview:section];
-    CGFloat y = 74;
+    CGFloat y = 0;
     if (self.page == 0) {
-        y = [self toggle:@"Silent aim (thử nghiệm)" key:@"SilentAim" fallback:NO y:y];
-        y = [self note:@"Sống · thấy rõ · gần tâm." y:y];
-        y = [self toggle:@"Tự cân bằng Silent" key:@"SilentAutoConfig" fallback:YES y:y];
+        y = [self toggle:@"AimKill" key:@"AutoFire" fallback:NO y:y];
+        y = [self toggle:@"Silent Aim" key:@"SilentAim" fallback:NO y:y];
+        y = [self slider:@"FOV" key:ESPPrefsBool(@"SilentAim", NO) ? @"SilentFovSize" : @"FovSize"
+            min:5 max:48 fallback:ESPPrefsBool(@"SilentAim", NO) ? 18 : 40 y:y];
+        y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
+        y = [self slider:@"Tỷ lệ HS" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
+        y = [self toggle:@"Tự chọn tầm Silent" key:@"SilentAutoConfig" fallback:YES y:y];
         if (!ESPPrefsBool(@"SilentAutoConfig", YES)) {
-            y = [self slider:@"Vùng chọn Silent" key:@"SilentFovSize" min:5 max:30 fallback:18 y:y];
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
-        y = [self slider:@"Tỷ lệ HS" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
-        y = [self toggle:@"Tự bắn nhanh (2x)" key:@"AutoFire" fallback:NO y:y];
-        y = [self note:@"Bật là tự bắn theo Silent khi có mục tiêu." y:y];
-        y = [self note:@"Tỷ lệ đầu là phân bổ điểm ngắm, không phải cam kết số headshot." y:y];
-#ifndef MIZZE_INJECTED
-        y = [self note:@"TIPA: xem Chẩn đoán aim khi tự bắn không chạy." y:y];
-#endif
+        y = [self note:@"AimKill: tự bắn 2x vào mục tiêu trong FOV." y:y];
+        y = [self section:@"Aim thường" y:y];
         y = [self toggle:@"Aim thường" key:@"AimbotFire" fallback:YES y:y];
         UISegmentedControl *mode = [[UISegmentedControl alloc] initWithItems:@[@"Chỉ khi bắn", @"Luôn trong FOV"]];
-        mode.frame = CGRectMake(8, y, [self contentWidth] - 16, 34);
+        mode.frame = CGRectMake(0, y, [self contentWidth], 44);
         mode.tag = 102;
         mode.selectedSegmentIndex = ESPPrefsBool(@"AimHipAlways", NO) ? 1 : 0;
         [mode addTarget:self action:@selector(aimModeChanged:) forControlEvents:UIControlEventValueChanged];
-        [self.scroll addSubview:mode]; [self.controls addObject:mode]; y += 44;
-        y = [self note:@"Chỉ khi bắn · hoặc luôn trong FOV." y:y];
+        [self.scroll addSubview:mode]; [self.controls addObject:mode]; y += 54;
         y = [self toggle:@"Aim khi mở ngắm" key:@"AimbotScope" fallback:YES y:y];
         y = [self toggle:@"Aim cổ" key:@"AimNeck" fallback:NO y:y];
-        y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
-        y = [self slider:@"Kích thước FOV" key:@"FovSize" min:5 max:48 fallback:40 y:y + 6];
-        y = [self note:@"Aim cổ: điểm thấp hơn đầu." y:y];
+        y = [self section:@"Súng & trạng thái" y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
         y = [self toggle:@"Không thay đạn" key:@"ShootNoReload" fallback:NO y:y + 10];
         y = [self toggle:@"Bắn tay nhanh (2x)" key:@"FastFire" fallback:NO y:y];
-        y = [self note:@"Áp dụng trong trận." y:y];
     } else if (self.page == 1) {
         UIButton *preset = [UIButton buttonWithType:UIButtonTypeSystem];
-        preset.frame = CGRectMake(0, y, [self contentWidth], 42); preset.tag = 300;
+        preset.frame = CGRectMake(0, y, [self contentWidth], 48); preset.tag = 300;
         preset.layer.cornerRadius = 10; preset.backgroundColor = [MizzeMint() colorWithAlphaComponent:0.12];
         [preset setTitle:@"Áp dụng ESP tối giản" forState:UIControlStateNormal];
         [preset setTitleColor:MizzeMint() forState:UIControlStateNormal];
         [preset addTarget:self action:@selector(applyMinimalESP) forControlEvents:UIControlEventTouchUpInside];
-        [self.scroll addSubview:preset]; [self.controls addObject:preset]; y += 52;
+        [self.scroll addSubview:preset]; [self.controls addObject:preset]; y += 58;
         y = [self toggle:@"Khung góc mảnh" key:@"CleanESP" fallback:YES y:y];
         y = [self toggle:@"Tên người chơi" key:@"Name" fallback:YES y:y];
         y = [self toggle:@"Thanh máu" key:@"Health" fallback:YES y:y];
@@ -257,24 +260,24 @@
         UILabel *boxLabel = [self label:@"Kiểu khung" frame:CGRectMake(8, y + 4, [self contentWidth] - 16, 20) size:12];
         [self.scroll addSubview:boxLabel];
         UISegmentedControl *boxStyle = [[UISegmentedControl alloc] initWithItems:@[@"2D", @"3D"]];
-        boxStyle.frame = CGRectMake(8, y + 28, [self contentWidth] - 16, 30);
+        boxStyle.frame = CGRectMake(0, y + 28, [self contentWidth], 44);
         boxStyle.tag = 101;
         boxStyle.selectedSegmentIndex = ESPPrefsBool(@"Box3D", NO) ? 1 : 0;
         [boxStyle addTarget:self action:@selector(boxStyleChanged:) forControlEvents:UIControlEventValueChanged];
         [self.scroll addSubview:boxStyle]; [self.controls addObject:boxStyle];
-        y += 70;
+        y += 82;
         // Slider khoảng cách tối đa hiển thị ESP
         y = [self slider:@"Tầm hiển thị ESP" key:@"ESPMaxDistance" min:50 max:500 fallback:150 y:y + 6];
         y = [self slider:@"Vàng khi máu ≤" key:@"HealthYellowPercent" min:10 max:90 fallback:50 y:y];
         y = [self slider:@"Đỏ khi máu ≤" key:@"HealthRedPercent" min:5 max:80 fallback:25 y:y];
     } else if (self.page == 2) {
         UISegmentedControl *target = [[UISegmentedControl alloc] initWithItems:@[@"Box", @"Line", @"FOV"]];
-        target.frame = CGRectMake(8, y, [self contentWidth] - 16, 30); target.selectedSegmentIndex = self.colorTarget;
+        target.frame = CGRectMake(0, y, [self contentWidth], 44); target.selectedSegmentIndex = self.colorTarget;
         [target addTarget:self action:@selector(colorTargetChanged:) forControlEvents:UIControlEventValueChanged];
         [self.scroll addSubview:target]; [self.controls addObject:target];
-        self.swatch = [self label:@"" frame:CGRectMake(8, y + 42, [self contentWidth] - 16, 38) size:12];
+        self.swatch = [self label:@"" frame:CGRectMake(8, y + 54, [self contentWidth] - 16, 38) size:14];
         self.swatch.textAlignment = NSTextAlignmentCenter; self.swatch.layer.cornerRadius = 9; self.swatch.clipsToBounds = YES;
-        [self.scroll addSubview:self.swatch]; y += 92;
+        [self.scroll addSubview:self.swatch]; y += 104;
         NSString *prefix = [self colorPrefix];
         float defaults[3] = {0.46f, 0.86f, 0.73f};
         NSArray *names = @[@"Đỏ", @"Lục", @"Lam"], *suffixes = @[@"R", @"G", @"B"];
@@ -293,7 +296,7 @@
 #endif
     }
     self.scroll.contentSize = CGSizeMake([self contentWidth], y + 8);
-    self.scroll.contentOffset = CGPointZero;
+    self.scroll.contentOffset = CGPointMake(0, MAX(0, MIN(offset, y + 8 - self.scroll.bounds.size.height)));
 }
 - (void)toggleChanged:(UISwitch *)sender {
     NSString *key = objc_getAssociatedObject(sender, "key");
@@ -382,8 +385,6 @@
             if (!orig) {
                 ESPPrefsSetBool(@"ShowFov", YES);
             }
-            [sender addTarget:self action:@selector(fovSliderTouchUp:)
-                forControlEvents:UIControlEventTouchUpInside|UIControlEventTouchUpOutside];
         }
         // Keo FOV nho lai: nha aim lock, dich ra ngoai FOV se bi nha frame sau
         ESPClearAimLock();
@@ -441,7 +442,7 @@
             for (UIControl *c in self.controls) {
                 if (!c.enabled) continue;
                 CGRect hit = c.bounds;
-                if ([c isKindOfClass:UISwitch.class]) hit = CGRectMake(-MAX(0, [self contentWidth] - 65), -8, [self contentWidth], 48);
+                if ([c isKindOfClass:UISwitch.class]) hit = [c convertRect:c.superview.bounds fromView:c.superview];
                 if (CGRectContainsPoint(hit, [c convertPoint:point fromView:self.view])) { self.activeControl = c; break; }
             }
         }

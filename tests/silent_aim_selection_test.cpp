@@ -17,5 +17,9 @@ int main() {
     add(s,5,500,std::numeric_limits<float>::quiet_NaN()); assert(!s.target);
     s={}; add(s,2,510,20); add(s,1,510,20); assert(s.target==1);
     assert(SilentAimSelection::Radius(w,h,18)==radius);
-    assert(SilentAimSelection::Radius(w,h,100)==180);
+    assert(SilentAimSelection::Radius(w,h,100)==288);
+    Selection small, large;
+    small.consider(1,740,300,1,w,h,SilentAimSelection::Radius(w,h,18),10,limit,true);
+    large.consider(1,740,300,1,w,h,SilentAimSelection::Radius(w,h,48),10,limit,true);
+    assert(!small.target && large.target==1);
 }

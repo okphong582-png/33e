@@ -101,6 +101,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
             if a in [START,END]:
                 assert uc.reg_read(UC_ARM64_REG_X0)==WEAPON
                 assert uc.reg_read(UC_ARM64_REG_X1)==(0xABC if a==START else 0xDEF)
+                if a==START:
+                    assert calls[-1]=='update', 'Native weapon update must precede every automatic shot'
                 calls.append('start' if a==START else 'stop')
                 assert struct.unpack('<Q',uc.mem_read(SILENT_STATE+128,8))[0]==(WEAPON if a==START else 0)
                 # A native automatic shot may leave manual PRI21 idle.
@@ -144,14 +146,14 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         assert ticks == (steps if relevant and (enabled or held) else 0)
     return (calls,held_after,starts,bullets) if silent_percent is not None else (calls,held_after,starts)
 
-assert case()==(['start','update'],WEAPON,1)
+assert case()==(['update','start'],WEAPON,1)
 assert case(firing=2)==(['update'],0,0)  # do not claim a manual hold
 assert case(firing=2,held=WEAPON)==(['update'],WEAPON,0)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(knocked=1),
              dict(match_local=LOCAL+8),dict(snapshot_weapon=WEAPON+8),
              dict(clock_action=lambda w:w(STATE+40,4))]:
     assert case(**args)==(['update'],0,0), args
-    assert case(held=WEAPON,**args)==(['stop','update'],0,0), args
+    assert case(held=WEAPON,**args)==(['update','stop'],0,0), args
 assert case(owner=LOCAL+8,held=WEAPON)==(['update'],WEAPON,0)
 assert case(weapon=0,held=WEAPON)==(['update'],0,0)
 assert case(start=START+4)==(['update'],0,0)
@@ -160,10 +162,10 @@ assert case(gate=0)==(['update'],0,0)
 assert case(self=WEAPON+8,held=WEAPON)==(['update'],WEAPON,0)
 assert case(busy=1,held=WEAPON)==(['update'],WEAPON,0)
 assert case(weapon=WEAPON+0x100,held=WEAPON)==(['update'],0,0)
-assert case(steps=3)==(['start','update','update','update'],WEAPON,1)
+assert case(steps=3)==(['update','start','update','update'],WEAPON,1)
 calls, held, starts = case(steps=10)
 assert starts==3 and held==WEAPON and calls.count('update')==10
-assert [i for i,c in enumerate(calls) if c=='start']==[0,5,10]
+assert [i for i,c in enumerate(calls) if c=='start']==[1,6,11]
 assert case(steps=10,interval=1)[2]==1  # slow gun cannot inherit fast-gun cadence
 assert case(steps=40,interval=1)[2]==3  # repeat slow/one-shot gun, too
 assert case(steps=6,interval=0.125)[2]==3
@@ -171,15 +173,15 @@ assert case(steps=100,interval=0.1)[2]==62  # preserve cadence between uneven fr
 assert case(steps=100,interval=0.05)[2]==100  # 2x interval: bounded to one shot per tick
 assert case(steps=10,interval=0.01,dt=0.5)[2]==10  # no looped catch-up burst after a stalled tick
 assert case(firing=2,steps=10)==(['update']*10,0,0)  # never claim manual fire
-assert case(firing=2,held=WEAPON,elapsed=0.1875)==(['start','update'],WEAPON,1)
+assert case(firing=2,held=WEAPON,elapsed=0.1875)==(['update','start'],WEAPON,1)
 for interval in [0,-1,float('nan'),float('inf')]:
-    assert case(held=WEAPON,interval=interval)==(['stop','update'],0,0)
+    assert case(held=WEAPON,interval=interval)==(['update','stop'],0,0)
 for dt in [float('nan'),float('inf'),2]:
-    assert case(held=WEAPON,dt=dt)==(['stop','update'],0,0)
+    assert case(held=WEAPON,dt=dt)==(['update','stop'],0,0)
 assert case(held=WEAPON,dt=0)==(['update'],WEAPON,0)
-assert case(held=WEAPON,elapsed=0.25,interval_action=lambda w:w(STATE+40,4))==(['stop','update'],0,0)
+assert case(held=WEAPON,elapsed=0.25,interval_action=lambda w:w(STATE+40,4))==(['update','stop'],0,0)
 assert case(steps=3,before_step=lambda i,w:w(STATE+44,0) if i==1 else None)==(
-    ['start','update','stop','update','update'],0,1)
+    ['update','start','update','stop','update'],0,1)
 print('Auto fire sustained native cadence, manual fire, start/release, swaps, expiry and float ABI passed')
 if silent_code is not None:
     for percent in [0,25,75,100]:

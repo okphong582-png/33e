@@ -6,7 +6,7 @@ namespace SilentAimSelection {
 // than allowing a nearby player at the screen edge to steal the shot.
 inline float Radius(float width, float height, float percent) {
     if (!std::isfinite(percent)) percent = 18;
-    return AimSelection::Radius(width, height, std::fmax(5.0f, std::fmin(30.0f, percent)));
+    return AimSelection::Radius(width, height, percent);
 }
 struct Selection {
     uint64_t previous = 0, target = 0;

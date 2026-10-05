@@ -20,6 +20,10 @@ _AutoFireRemoteStart:
     adr x19, .LautoState
     mov x20, x0
     mov x21, x1
+    // Advance native gun/handler state before trying a shot. The start method
+    // can reject a command while the previous tick's state is still active.
+    ldr x8, [x19, #AUTO_ORIGINAL]
+    blr x8
     ldr x25, [x19, #AUTO_LOCAL]
     cbz x25, .LautoTail
     ldr x8, [x20, #0x60]
@@ -191,7 +195,6 @@ _AutoFireRemoteStart:
 .LautoReserved:
     clrex
 .LautoTail:
-    ldr x16, [x19, #AUTO_ORIGINAL]
     mov x0, x20
     mov x1, x21
     ldp d0, d1, [sp, #80]
@@ -200,7 +203,7 @@ _AutoFireRemoteStart:
     ldp x21, x22, [sp, #32]
     ldp x19, x20, [sp, #16]
     ldp x29, x30, [sp], #112
-    br x16
+    ret
     .org AUTO_PAGE, 0
 _AutoFireRemoteEnd:
 .LautoState:

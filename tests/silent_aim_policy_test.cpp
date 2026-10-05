@@ -16,5 +16,14 @@ int main() {
         assert(shots==percent);
     }
     auto cfg=SilentAimPolicy::Automatic(true); assert(cfg.fov==12 && cfg.distance==120);
+    for (bool automatic : {false,true}) {
+        for (bool scope : {false,true}) {
+            auto small=SilentAimPolicy::Resolve(scope,automatic,5,90);
+            auto large=SilentAimPolicy::Resolve(scope,automatic,48,90);
+            assert(small.fov==5 && large.fov==48);
+            assert(large.distance==(automatic ? (scope ? 120 : 80) : 90));
+        }
+    }
+    assert(SilentAimPolicy::Resolve(true,true,NAN,90).fov==18);
     auto body=SilentAimPolicy::Chest({0,10,0},{0,0,0}); assert(body.y>3.9f && body.y<4.1f);
 }

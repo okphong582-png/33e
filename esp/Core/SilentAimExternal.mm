@@ -19,6 +19,7 @@ constexpr uint64_t WeaponGetter = 0x5616118, HandlerMethod = 0x5C59B94;
 constexpr uint64_t HandlerSlot = 0x138 + 17 * 16;
 std::recursive_mutex controllerMutex;
 bool enabled = false;
+bool codeVerified = false;
 mach_port_t ownedTask = MACH_PORT_NULL;
 int ownedPID = -1;
 uint64_t module = 0, allocation = 0, installedSlot = 0;
@@ -109,6 +110,7 @@ void Detach() {
     ownedTask = MACH_PORT_NULL; ownedPID = -1;
     module = allocation = installedSlot = 0; sequence = 0;
     nextInstallAttempt = 0; installFailure = 0;
+    codeVerified = false;
 }
 bool Attach(uint64_t base) {
     int pid = -1;
@@ -233,9 +235,10 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t targ
     if (!Attach(base)) return 10;
     if (!isVaildPtr(base) || !isVaildPtr(local) || !isVaildPtr(match) ||
         getMatch(getMatchGame(base)) != match || getLocalPlayer(match) != local ||
-        !Fingerprint<0xCC>(base + WeaponGetter, 0xC5E012EE) ||
+        (!codeVerified && (!Fingerprint<0xCC>(base + WeaponGetter, 0xC5E012EE) ||
         !Fingerprint<0xA0>(base + SilentAimWeapon::ManagerGetter, 0x93FD3984) ||
-        !Fingerprint<0x16C>(base + HandlerMethod, 0xDFE8FAC6)) { Uninstall(); return 9; }
+        !Fingerprint<0x16C>(base + HandlerMethod, 0xDFE8FAC6)))) { Uninstall(); return 9; }
+    codeVerified = true;
     const uint64_t weapon = SilentAimWeapon::OnHand(local,
         [](uint64_t a, auto &v) { return Read(a, v); }, [](uint64_t a) { return isVaildPtr(a); });
     uint64_t handler = 0, klass = 0, info = 0, infoClass = 0;

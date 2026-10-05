@@ -8,6 +8,13 @@ inline uint32_t HeadPercent(float value) {
 }
 struct Config { float fov, distance; };
 inline Config Automatic(bool scoping) { return scoping ? Config{12,120} : Config{18,80}; }
+// Auto configuration adjusts range, while the user's visible FOV stays fixed.
+inline Config Resolve(bool scoping, bool automatic, float fov, float distance) {
+    if (!std::isfinite(fov)) fov = 18;
+    if (!std::isfinite(distance)) distance = 100;
+    return {std::clamp(fov, 5.0f, 48.0f), automatic ? Automatic(scoping).distance :
+        std::clamp(distance, 10.0f, 150.0f)};
+}
 // Balanced head/body distribution over actual eligible handler dispatches.
 // Render ticks, bypassed dispatches and stale snapshots never advance phase.
 inline bool Head(uint32_t percent, uint32_t phase, uint32_t &next) {
