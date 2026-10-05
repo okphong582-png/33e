@@ -73,7 +73,8 @@ def case(*, enabled=1, sequence=2, now=100, deadline=110, firing=2,
          knocked=0, busy=0, owner=LOCAL, match_local=LOCAL, handler=HANDLER,
          info_class=INFO_CLASS, head=(3., 4., 0.), origin=(0., 0., 0.),
          body=(0., 0., 2.), head_percent=100, phase=0,
-         direction=(0., 0., 1.), original_action=None, clock_action=None, dispatches=1, auto_weapon=0):
+         direction=(0., 0., 1.), original_action=None, clock_action=None, dispatches=1, auto_weapon=0,
+         live_name=b'CGKJLKPMGDJ\0', info_pointer=INFO):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000)
     uc.mem_map(LOCAL, 0x90000)
@@ -90,8 +91,9 @@ def case(*, enabled=1, sequence=2, now=100, deadline=110, firing=2,
     point(STATE+56, head); u32(STATE+80, busy); u64(STATE+96, MATCH)
     point(STATE+104, body); u32(STATE+116, head_percent); u32(STATE+120, phase)
     u64(STATE+128, auto_weapon)
-    u64(HANDLER+0x10, WEAPON); u64(HANDLER+0x28, INFO)
+    u64(HANDLER+0x10, WEAPON); u64(HANDLER+0x28, info_pointer)
     u64(WEAPON+0x60, owner); u64(WEAPON+0x80, HANDLER); u64(INFO, INFO_CLASS)
+    u64(INFO_CLASS+0x10, INFO_CLASS+0x100); uc.mem_write(INFO_CLASS+0x100, live_name)
     u64(MATCH+0xD8, match_local); uc.mem_write(LOCAL+0x1258, bytes([knocked]))
     u64(LOCAL+0x70, POOL); u64(POOL+0x10, ENTRIES); u64(ENTRIES+0xC8, ENTRY)
     uc.mem_write(ENTRY+0x18, struct.pack("<H", firing))
@@ -131,6 +133,9 @@ seen, restored, redirects = case(head_percent=0, body=(2., 0., 0.))
 assert seen == (1., 0., 0.) and restored == (0., 0., 1.) and redirects == 1
 seen, restored, redirects = case(firing=0, auto_weapon=WEAPON)
 assert redirects == 1 and restored == (0., 0., 1.)
+assert case(firing=0, auto_weapon=WEAPON, info_class=0)[2] == 1
+assert case(firing=0, auto_weapon=WEAPON, info_class=0, live_name=b'OTHERLAYOUT\0')[2] == 0
+assert case(firing=0, auto_weapon=WEAPON, info_class=0, info_pointer=0)[2] == 0
 assert case(firing=0, auto_weapon=WEAPON+8)[2] == 0
 for arguments in [dict(enabled=0), dict(sequence=3), dict(now=111), dict(firing=0),
                   dict(head_percent=101), dict(head_percent=0,body=(float("nan"),0.,0.)),

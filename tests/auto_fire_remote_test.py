@@ -47,7 +47,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          self=WEAPON, owner=LOCAL, weapon=WEAPON, snapshot_weapon=WEAPON,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
          steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
-         gate=SILENT_STATE+128, silent_percent=None):
+         gate=SILENT_STATE+128, silent_percent=None, cold_info=False):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -71,12 +71,13 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         uc.mem_write(SILENT_BASE,silent_code); uc.mem_write(SHOT,b'\xc0\x03\x5f\xd6')
         ptr(SILENT_STATE,SHOT); ptr(SILENT_STATE+8,CLOCK)
         word(SILENT_STATE+16,2); word(SILENT_STATE+20,1); ptr(SILENT_STATE+24,deadline)
-        ptr(SILENT_STATE+32,LOCAL); ptr(SILENT_STATE+40,HANDLER); ptr(SILENT_STATE+48,INFO_CLASS)
+        ptr(SILENT_STATE+32,LOCAL); ptr(SILENT_STATE+40,HANDLER); ptr(SILENT_STATE+48,0 if cold_info else INFO_CLASS)
         uc.mem_write(SILENT_STATE+56,struct.pack('<fff',3,4,0))
         ptr(SILENT_STATE+96,MATCH)
         uc.mem_write(SILENT_STATE+104,struct.pack('<fff',2,0,0))
         word(SILENT_STATE+116,silent_percent); word(SILENT_STATE+120,50)
-        ptr(WEAPON+0x80,HANDLER); ptr(HANDLER+0x10,WEAPON); ptr(HANDLER+0x28,INFO)
+        ptr(WEAPON+0x80,HANDLER); ptr(HANDLER+0x10,WEAPON); ptr(HANDLER+0x28,0 if cold_info else INFO)
+        ptr(INFO_CLASS+0x10,INFO_CLASS+0x100); uc.mem_write(INFO_CLASS+0x100,b'CGKJLKPMGDJ\0')
         ptr(INFO,INFO_CLASS); uc.mem_write(INFO+0x40,struct.pack('<fff',0,0,1))
     uc.reg_write(UC_ARM64_REG_X0,self); uc.reg_write(UC_ARM64_REG_X1,0x1234)
     uc.reg_write(UC_ARM64_REG_SP,STACK+0x8000); uc.reg_write(UC_ARM64_REG_X30,RETURN)
@@ -119,6 +120,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
                 bits, = struct.unpack('<I',struct.pack('<f',interval))
                 uc.reg_write(UC_ARM64_REG_S0,bits)
             if a==START and silent_percent is not None:
+                if cold_info: ptr(HANDLER+0x28,INFO) # native shot constructs its first aiming record
                 uc.reg_write(UC_ARM64_REG_X0,HANDLER); uc.reg_write(UC_ARM64_REG_X1,0x456)
                 uc.reg_write(UC_ARM64_REG_PC,SILENT_BASE)
         elif a==SHOT:
@@ -184,6 +186,8 @@ assert case(steps=3,before_step=lambda i,w:w(STATE+44,0) if i==1 else None)==(
     ['update','start','update','stop','update'],0,1)
 print('Auto fire sustained native cadence, manual fire, start/release, swaps, expiry and float ABI passed')
 if silent_code is not None:
+    cold_bullets = case(silent_percent=100,cold_info=True)[3]
+    assert len(cold_bullets)==1 and abs(cold_bullets[0][1]-.8)<1e-6, 'First native shot must redirect without a manual primer'
     for percent in [0,25,75,100]:
         calls,held,starts,bullets=case(steps=397,silent_percent=percent)
         assert starts==len(bullets)==100 and held==WEAPON

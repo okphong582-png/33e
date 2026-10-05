@@ -243,8 +243,11 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t targ
         [](uint64_t a, auto &v) { return Read(a, v); }, [](uint64_t a) { return isVaildPtr(a); });
     uint64_t handler = 0, klass = 0, info = 0, infoClass = 0;
     if (!weapon || !Read(weapon + 0x80, handler) || !ClassName(handler, "MDPBNKPCGNG") ||
-        !Read(handler, klass) || !Read(handler + 0x28, info) || !ClassName(info, "CGKJLKPMGDJ") ||
-        !Read(info, infoClass)) { Uninstall(); return 9; }
+        !Read(handler, klass) || !Read(handler + 0x28, info) ||
+        (info && (!ClassName(info, "CGKJLKPMGDJ") || !Read(info, infoClass)))) { Uninstall(); return 9; }
+    // The handler constructor leaves +0x28 null until the first native shot.
+    // Install before it exists; the callback checks its runtime class when the
+    // shot creates it, so AimKill does not depend on a manual primer per gun.
     if (installFailure && CACurrentMediaTime() < nextInstallAttempt) { Clear(); return installFailure; }
     const int result = Install(klass + HandlerSlot);
     if (result != 8) {

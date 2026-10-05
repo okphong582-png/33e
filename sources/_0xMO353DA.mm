@@ -306,6 +306,8 @@
     if ([key isEqualToString:@"SilentAim"] && !sender.on) ESPPrefsSetBool(@"AutoFire", NO);
     if ([key isEqualToString:@"CleanESP"] && sender.on) ESPPrefsSetBool(@"Box3D", NO);
     ESPPrefsSetBool(key, sender.on); ESPSyncFromPrefs();
+    if ([@[@"AutoFire", @"GhostMode", @"Burrow"] containsObject:key])
+        ESPPrefsSetBool([key stringByAppendingString:@"Floating"], sender.on);
     if ([key isEqualToString:@"AnLive"] && ![UIView applyCaptureProtectionToRegisteredViews:sender.on]) {
         sender.on = NO; ESPPrefsSetBool(key, NO);
         [UIView applyCaptureProtectionToRegisteredViews:NO];

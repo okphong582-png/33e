@@ -81,9 +81,30 @@ _SilentAimRemoteStart:
     ldr x22, [x20, #0x28]
     cbz x22, .Lnative
     ldr x8, [x22]
+    cbz x8, .Lnative
     ldr x9, [x19, #SILENT_REMOTE_INFO_CLASS]
+    cbz x9, .LfirstShotClass
     cmp x8, x9
     b.ne .Lnative
+    b .LinfoVerified
+.LfirstShotClass:
+    // CGKJLKPMGDJ metadata can become available during this first shot.
+    // Check the live class name rather than writing into an unknown layout.
+    ldr x9, [x8, #0x10]
+    cbz x9, .Lnative
+    ldr x10, [x9]
+    mov x11, #0x4743
+    movk x11, #0x4a4b, lsl #16
+    movk x11, #0x4b4c, lsl #32
+    movk x11, #0x4d50, lsl #48
+    cmp x10, x11
+    b.ne .Lnative
+    ldr w10, [x9, #8]
+    mov w11, #0x4447
+    movk w11, #0x004a, lsl #16
+    cmp w10, w11
+    b.ne .Lnative
+.LinfoVerified:
     add x8, x19, #SILENT_REMOTE_BUSY
     ldaxr w9, [x8]
     cbnz w9, .Lreserved

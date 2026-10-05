@@ -23,7 +23,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace SilentAimRemote {
-inline constexpr uint64_t Magic = 0x53494C454E543033ULL; // SILENT03: scoped automatic shots
+inline constexpr uint64_t Magic = 0x53494C454E543034ULL; // SILENT04: first-shot metadata validation
 struct alignas(8) State {
     uint64_t original = 0, clock = 0;
     uint32_t sequence = 0, enabled = 0;

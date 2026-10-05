@@ -3,6 +3,7 @@
 #import "ModMenuViewController.h"
 #import "ESPPrefs.h"
 #import "esp.h"
+#import "FloatingFeatureControl.h"
 #import "../../sources/MizzeTheme.h"
 #import "../../mahoa.h"
 #import <UIKit/UIKit.h>
@@ -19,6 +20,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
 @property (nonatomic, assign) CGPoint buttonDragStartCenter;
 @property (nonatomic, assign) CGPoint buttonDragStartPoint;
 @property (nonatomic, strong) _0xDEADBEEE *presentedModMenu;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, FloatingFeatureControl *> *quickControls;
 #ifdef MIZZE_INJECTED
 @property (nonatomic, assign) NSUInteger menuVisibilityGeneration;
 #endif
@@ -47,6 +49,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
     if (_presentedModMenu && _presentedModMenu.view) {
         _presentedModMenu.view.frame = self.bounds;
     }
+    for (FloatingFeatureControl *control in self.quickControls.allValues) [control clampToSuperview];
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -79,6 +82,10 @@ static const CGFloat kMenuButtonSize = 44.0f;
                                                    object:nil];
 
         [self setupMenuButton];
+        self.quickControls = [NSMutableDictionary dictionary];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(quickPrefsChanged:)
+            name:NSUserDefaultsDidChangeNotification object:nil];
+        [self reloadFloatingAuxButtonsFromPrefs];
 #ifdef MIZZE_INJECTED
         [self refreshInjectedMenuVisibility];
 #endif
@@ -146,6 +153,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
 }
 
 - (void)resetTouchState {
+    for (FloatingFeatureControl *control in self.quickControls.allValues) [control cancelTracking];
     _touchOnButton = NO;
     _buttonDragging = NO;
     _trackingPointerId = -1;
@@ -217,6 +225,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
         [self bringSubviewToFront:vc.view];
         
         self.menuButton.hidden = YES;
+        for (FloatingFeatureControl *control in self.quickControls.allValues) control.hidden = YES;
     });
 }
 
@@ -253,6 +262,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
         }
         
         [self bringSubviewToFront:self.menuButton];
+        [self reloadFloatingAuxButtonsFromPrefs];
         [self resetTouchState];
         [self setNeedsLayout];
     });
@@ -275,6 +285,8 @@ static const CGFloat kMenuButtonSize = 44.0f;
 - (BOOL)handleTouchAtWindowPoint:(CGPoint)windowPoint phase:(UITouchPhase)phase pointerId:(NSInteger)pointerId {
     if (self.hidden) return NO;
     CGPoint local = [self convertPoint:windowPoint fromView:self.window];
+    if (!_presentedModMenu) for (FloatingFeatureControl *control in self.quickControls.allValues)
+        if ([control handleRemotePoint:local phase:phase pointer:pointerId]) return YES;
     const CGFloat kInset = 12.0f;
     CGRect btnHit = CGRectInset(_menuButton.frame, -kInset, -kInset);
     BOOL insideBtn = CGRectContainsPoint(btnHit, local);
@@ -366,6 +378,46 @@ static const CGFloat kMenuButtonSize = 44.0f;
 }
 
 - (void)reloadFloatingAuxButtonsFromPrefs {
+    if (!NSThread.isMainThread) {
+        __weak _0xB1872A2 *weakSelf = self;
+        dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadFloatingAuxButtonsFromPrefs]; });
+        return;
+    }
+    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Burrow"];
+    NSArray *titles = @[@"AimKill", @"Ghost", @"Độn thổ"];
+    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.down.to.line"];
+    for (NSUInteger i = 0; i < keys.count; ++i) {
+        NSString *key = keys[i], *shownKey = [key stringByAppendingString:@"Floating"];
+        const BOOL shown = ESPPrefsBool(shownKey, ESPPrefsBool(key, NO));
+        FloatingFeatureControl *control = self.quickControls[key];
+        if (!shown) { [control removeFromSuperview]; [self.quickControls removeObjectForKey:key]; continue; }
+        if (!control) {
+            control = [[FloatingFeatureControl alloc] initWithKey:key title:titles[i] symbol:symbols[i]];
+            CGFloat x = ESPPrefsFloat([key stringByAppendingString:@"FloatX"], MAX(8, self.bounds.size.width - 90));
+            CGFloat y = ESPPrefsFloat([key stringByAppendingString:@"FloatY"], 70 + i * 88);
+            control.frame = CGRectMake(x, y, 76, 80);
+            [control addTarget:self action:@selector(toggleQuickFeature:) forControlEvents:UIControlEventTouchUpInside];
+            self.quickControls[key] = control; [self addSubview:control];
+        }
+        BOOL active = ESPPrefsBool(key, NO);
+        if ([key isEqualToString:@"AutoFire"]) active = active && ESPPrefsBool(@"SilentAim", NO);
+        [control setFeatureActive:active];
+        control.hidden = _presentedModMenu != nil;
+        [control clampToSuperview];
+    }
+}
+- (void)quickPrefsChanged:(NSNotification *)notification { [self reloadFloatingAuxButtonsFromPrefs]; }
+- (void)toggleQuickFeature:(FloatingFeatureControl *)control {
+    NSString *key = control.featureKey;
+    BOOL active = ESPPrefsBool(key, NO);
+    if ([key isEqualToString:@"AutoFire"]) {
+        active = active && ESPPrefsBool(@"SilentAim", NO);
+        if (!active) ESPPrefsSetBool(@"SilentAim", YES);
+    }
+    // Keep the quick button after tapping OFF so it can be turned back ON.
+    ESPPrefsSetBool([key stringByAppendingString:@"Floating"], YES);
+    ESPPrefsSetBool(key, !active); ESPSyncFromPrefs();
+    [self reloadFloatingAuxButtonsFromPrefs];
 }
 
 - (void)dealloc {
