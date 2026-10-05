@@ -20,6 +20,9 @@ On the next update, the wrapper restores its last normal position before the
 game runs movement/physics/animation, then applies one offset to the new normal
 position. Disabling leaves the normal update's current position, preserving
 horizontal movement rather than teleporting to an old activation point.
+If an outside horizontal update carries the applied Y unchanged, the callback
+restores only its owned height offset while keeping the newly moved X/Z. This
+prevents repeated downward offsets when movement occurs between callbacks.
 
 This is a shallow root-transform prototype. It does not replace the game's
 physical controller. Live collision/grounding, camera behavior, correction

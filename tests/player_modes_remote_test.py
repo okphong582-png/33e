@@ -174,6 +174,18 @@ s.w('FLAGS', 0); s.run(LOCAL)
 assert s.positions[LOCAL] == (101, 10, 202) and s.q('APPLIES') == 100
 s.run(LOCAL); assert s.positions[LOCAL] == (102, 10, 204)
 
+# Horizontal native movement between updates can carry the same lowered Y.
+# Restore only our height offset without losing the newly moved X/Z.
+s = Simulation(flags=2); s.run(LOCAL, interface=True)
+for _ in range(100):
+    x, y, z = s.positions[LOCAL]
+    s.positions[LOCAL] = (x+0.5, y, z+0.5)
+    s.run(LOCAL, interface=True)
+    assert s.original_seen[-1] == (x+0.5, 10, z+0.5)
+    assert s.positions[LOCAL] == (x+1.5, f32(9.55), z+2.5)
+s.w('FLAGS', 0); s.run(LOCAL, interface=True)
+assert s.positions[LOCAL][1] == 10
+
 # A scoped visual stays anchored; incoming state and original updates advance.
 s = Simulation(flags=1); s.run(ENEMY); anchor = s.positions[ENEMY]
 for _ in range(20): s.run(ENEMY); assert s.positions[ENEMY] == anchor

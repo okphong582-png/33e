@@ -99,6 +99,8 @@ _PlayerModesRemoteStart:
     // calls. Do not restore stale normal data or recapture on each such move.
     // Large corrections/teleports recapture; ordinary motion keeps the anchor.
     ldr w8, [x22, #ROW_MODE]
+    cmp w8, #2
+    b.eq .LburrowMoved
     cmp w8, #1
     b.ne .LresetAnchor
     ldp s3, s4, [x22, #ROW_REAL]
@@ -113,6 +115,24 @@ _PlayerModesRemoteStart:
     fcmp s3, s4
     b.vs .LresetAnchor
     b.le .Loriginal
+    b .LresetAnchor
+.LburrowMoved:
+    // An outside horizontal move can carry our lowered Y unchanged. Restore
+    // only that owned height, keeping the fresh X/Z, before normal movement.
+    // Otherwise each such move would subtract another 0.45 m on the next tick.
+    fmov w8, s1
+    ldr w9, [x22, #(ROW_SHOWN+4)]
+    cmp w8, w9
+    b.ne .LresetAnchor
+    ldr s1, [x22, #(ROW_REAL+4)]
+    mov x0, x20
+    mov x1, #0
+    ldr x8, [x19, #MODES_SET_POS]
+    blr x8
+    ldr x8, [x19, #MODES_RESTORES]
+    add x8, x8, #1
+    str x8, [x19, #MODES_RESTORES]
+    b .Loriginal
 .LresetAnchor:
     str wzr, [x22, #ROW_MODE]
     b .Loriginal
