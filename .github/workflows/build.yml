@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Check optional CSharp menu native adapter syntax
+        run: clang++ -std=c++17 -fobjc-arc -fsyntax-only -I. menu-csharp/NativeBridge.mm
       - name: Signed executable page mapping without unsigned code or debug flags
         run: |
           clang++ -std=c++17 -Wall -Wextra -Werror tests/silent_aim_mapping_test.cpp tests/silent_aim_mapping_fixture.S -o /tmp/silent-aim-mapping-test
