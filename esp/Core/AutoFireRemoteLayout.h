@@ -38,11 +38,12 @@
 #define AUTO_SWAP_FUNCTION 240
 #define AUTO_SWAP_SLOT 248
 #define AUTO_SWAP_WEAPON 256
+#define AUTO_SWAP_COOLDOWN 264
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495242ULL; // AUTOFIRB: native shot pipeline and gentle cadence
+inline constexpr uint64_t Magic = 0x4155544f46495243ULL; // AUTOFIRC: completed swaps and independent fire fallback
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;
@@ -63,6 +64,7 @@ struct State {
     uint64_t swapFunction=0;
     uint32_t swapSlot=0, padding4=0;
     uint64_t swapWeapon=0;
+    uint64_t swapCooldown=0;
 };
 static_assert(offsetof(State, sequence)==AUTO_SEQUENCE);
 static_assert(offsetof(State, enabled)==AUTO_ENABLED);
@@ -88,5 +90,6 @@ static_assert(offsetof(State, swapElapsed)==AUTO_SWAP_ELAPSED);
 static_assert(offsetof(State, swapFunction)==AUTO_SWAP_FUNCTION);
 static_assert(offsetof(State, swapSlot)==AUTO_SWAP_SLOT);
 static_assert(offsetof(State, swapWeapon)==AUTO_SWAP_WEAPON);
+static_assert(offsetof(State, swapCooldown)==AUTO_SWAP_COOLDOWN);
 }
 #endif

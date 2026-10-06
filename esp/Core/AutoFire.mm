@@ -133,7 +133,7 @@ bool Adopt(uint64_t slot,uint64_t a) {
         state.interval!=module+Interval||state.clock!=Clock()||state.effectOriginal!=module+FireEffect||
         state.tracerOriginal!=module+Tracer||state.metadataInit!=module+MetadataInit||
         state.tracerTypeInfo!=module+TracerTypeInfo||state.shotOriginal!=module+ShotPresentation||
-        state.shotHit!=module+ShotHit)return false;
+        state.shotHit!=module+ShotHit||state.swapCooldown!=module+0x5636E60)return false;
     sessions.push_back({slot,a,state.original,state.sequence&~1u,true});
     Disable(sessions.back());
     return true;
@@ -161,6 +161,7 @@ int Install(uint64_t slot,Session *&session) {
         state.tracerTypeInfo=module+TracerTypeInfo;
         state.shotOriginal=module+ShotPresentation;
         state.shotHit=module+ShotHit;
+        state.swapCooldown=module+0x5636E60;
         if(!Write(mapping.address+AUTO_PAGE,state)){mach_vm_deallocate(task,mapping.address,2*AUTO_PAGE);return 10;}
         sessions.push_back({slot,mapping.address,current,0});session=&sessions.back();
     }
@@ -266,7 +267,7 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,b
     if(!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 10;}
     uint64_t swapFunction=0,swapWeapon=0,localClass=0,manager=0,array=0;
     uint32_t swapSlot=0,length=0;
-    if(swap&&Read(local,localClass)&&Read(localClass+0xDC8,swapFunction)&&
+    if(swap&&Fingerprint<0xC0>(base+0x5636E60,0x8C40F08F)&&Read(local,localClass)&&Read(localClass+0xDC8,swapFunction)&&
         ((swapFunction==base+0x56B4EB4&&Fingerprint<0x5F8>(swapFunction,0x40924917))||
          (swapFunction==base+0x5A5C9D4&&Fingerprint<0x100>(swapFunction,0x538C5B13)))&&
         Read(local+0x740,manager)&&Read(manager+0x30,localClass)&&localClass==local&&

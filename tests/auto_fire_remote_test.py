@@ -148,7 +148,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
          steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
           gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False, presentation=False,
-          swap=False, swap_valid=True, swap_method=True):
+          swap=False, swap_valid=True, swap_method=True, swap_cooldown=0, swap_success=False):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -160,6 +160,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     word(STATE+224,int(presentation))
     swap_function,manager,inventory,next_weapon=0x120b00,0x275000,0x276000,0x277000
     if swap:
+        cooldown=0x120c00
+        uc.mem_write(cooldown,b'\xc0\x03\x5f\xd6');ptr(STATE+264,cooldown)
         uc.mem_write(swap_function,b'\xc0\x03\x5f\xd6')
         word(STATE+228,1);ptr(STATE+240,swap_function);word(STATE+248,1);ptr(STATE+256,next_weapon)
         ptr(LOCAL,CLASS);ptr(CLASS+0xdc8,swap_function if swap_method else START);ptr(CLASS+0xdd0,0x123ABC)
@@ -209,7 +211,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     getter_calls=[]
     metadata_calls=[]
     hit_calls=[];visual_calls=[]
+    getter_weapon=weapon
     def hook(uc,a,size,_):
+        nonlocal getter_weapon
         if a == METADATA_INIT:
             assert uc.reg_read(UC_ARM64_REG_X0)==TYPEINFO
             metadata_calls.append(a)
@@ -219,9 +223,13 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
             assert uc.reg_read(UC_ARM64_REG_X0)==self and uc.reg_read(UC_ARM64_REG_X1)==0x1234
             assert uc.reg_read(UC_ARM64_REG_D0)==dt_bits and uc.reg_read(UC_ARM64_REG_D1)==0x41200000
             calls.append('update')
+        elif swap and a==cooldown:
+            assert uc.reg_read(UC_ARM64_REG_X0)==LOCAL and uc.reg_read(UC_ARM64_REG_X1)==0
+            uc.reg_write(UC_ARM64_REG_X0,swap_cooldown)
         elif swap and a==swap_function:
-            assert tuple(uc.reg_read(r) for r in (UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_X3))==(LOCAL,1,0,0x123ABC)
+            assert tuple(uc.reg_read(r) for r in (UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_X3))==(LOCAL,1,1,0x123ABC)
             calls.append('swap')
+            if swap_success:getter_weapon=next_weapon
         elif a in [CLOCK,GETTER,START,END,INTERVAL]:
             if a==GETTER:
                 assert uc.reg_read(UC_ARM64_REG_X0)==LOCAL
@@ -242,7 +250,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
                 if interval_action: interval_action(word)
             uc.reg_write(UC_ARM64_REG_D0,0); uc.reg_write(UC_ARM64_REG_D1,0)
             uc.reg_write(UC_ARM64_REG_X1,0)
-            uc.reg_write(UC_ARM64_REG_X0,weapon if a==GETTER else now)
+            uc.reg_write(UC_ARM64_REG_X0,getter_weapon if a==GETTER else now)
             if a==INTERVAL:
                 bits, = struct.unpack('<I',struct.pack('<f',interval))
                 uc.reg_write(UC_ARM64_REG_S0,bits)
@@ -308,6 +316,12 @@ assert case(swap=True,steps=16,enabled=0,now=111)[0].count('swap')==0
 assert case(swap=True,steps=16,enabled=0,dt=float('nan'))[0].count('swap')==0
 swap_calls=case(swap=True,steps=16)[0]
 assert swap_calls[-2:]==['stop','swap']
+assert case(swap=True,steps=48)[2]>=7 # Simulated rejected swaps don't stop subsequent aim.
+changed_calls,changed_held,changed_starts=case(swap=True,steps=48,swap_success=True)
+assert changed_calls.count('swap')==1 and changed_held==0 and changed_starts==3
+for rejected in [dict(swap_valid=False),dict(swap_method=False),dict(swap_cooldown=1)]:
+    calls,held,starts=case(swap=True,steps=48,**rejected)
+    assert not calls.count('swap') and starts>=8 and held==WEAPON
 assert case(steps=10,warm=True)[2]==2
 assert case(steps=10,warm=True,enabled=0)==(['update']*10,0,0)
 assert case(firing=2)==(['update'],0,0)  # do not claim a manual hold

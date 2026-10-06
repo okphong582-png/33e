@@ -275,39 +275,51 @@ _AutoFireRemoteStart:
     str s0, [x19, #AUTO_SWAP_ELAPSED]
     fcmp s0, s1
     b.lt .LautoCheckFire
+    str wzr, [x19, #AUTO_SWAP_ELAPSED]
+    ldr x8, [x19, #AUTO_SWAP_COOLDOWN]
+    cbz x8, .LautoCheckFire
+    mov x0, x25
+    mov x1, #0
+    blr x8
+    cbnz w0, .LautoCheckFire
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRelease
     // Revalidate the published inventory entry on the game thread.
     ldr x8, [x25]
     ldr x9, [x8, #0xDC8]
     ldr x10, [x19, #AUTO_SWAP_FUNCTION]
     cmp x9, x10
-    b.ne .LautoRelease
-    cbz x9, .LautoRelease
+    b.ne .LautoCheckFire
+    cbz x9, .LautoCheckFire
     ldr x8, [x25, #0x740]
-    cbz x8, .LautoRelease
+    cbz x8, .LautoCheckFire
     ldr x9, [x8, #0x30]
     cmp x9, x25
-    b.ne .LautoRelease
+    b.ne .LautoCheckFire
     ldr x8, [x8, #0x88]
-    cbz x8, .LautoRelease
+    cbz x8, .LautoCheckFire
     ldr w9, [x19, #AUTO_SWAP_SLOT]
     cmp w9, #3
-    b.hs .LautoRelease
+    b.hs .LautoCheckFire
     ldr w10, [x8, #0x18]
     cmp w9, w10
-    b.hs .LautoRelease
+    b.hs .LautoCheckFire
     add x8, x8, x9, lsl #3
     ldr x8, [x8, #0x20]
     ldr x9, [x19, #AUTO_SWAP_WEAPON]
     cmp x8, x9
-    b.ne .LautoRelease
-    cbz x8, .LautoRelease
+    b.ne .LautoCheckFire
+    cbz x8, .LautoCheckFire
     cmp x8, x22
-    b.eq .LautoRelease
+    b.eq .LautoCheckFire
     ldr x8, [x8, #0x60]
     cmp x8, x25
-    b.ne .LautoRelease
+    b.ne .LautoCheckFire
     ldr x8, [x19, #AUTO_HELD]
     cmp x8, x22
+    cset w24, eq
     b.ne .LautoSwapExecute
     ldr x8, [x22]
     ldr x9, [x8, #0xE88]
@@ -331,11 +343,23 @@ _AutoFireRemoteStart:
     b.ne .LautoRelease
     mov x0, x25
     ldr w1, [x19, #AUTO_SWAP_SLOT]
-    mov w2, #0
+    // Complete the swap instead of queueing the request-only input path.
+    // The native cooldown was checked above before releasing our own fire.
+    mov w2, #1
     ldr x3, [x8, #0xDD0]
     str wzr, [x19, #AUTO_SWAP_ELAPSED]
     str wzr, [x19, #AUTO_ELAPSED]
     blr x9
+    mov x0, x25
+    mov x1, #0
+    ldr x8, [x19, #AUTO_GET_WEAPON]
+    blr x8
+    cmp x0, x22
+    b.ne .LautoForget
+    // Retain only our own cadence after a rejected swap. Wait for the next
+    // native update; don't issue a fresh start in the same tick as stop/swap.
+    cbz w24, .LautoUnlock
+    str x22, [x19, #AUTO_HELD]
     b .LautoUnlock
 .LautoNoSwap:
     str wzr, [x19, #AUTO_SWAP_ELAPSED]
