@@ -309,16 +309,16 @@
             min:5 max:48 fallback:ESPPrefsBool(@"SilentAim", NO) ? 18 : 40 y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
         y = [self slider:@"Tỷ lệ HS" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
+        y = [self section:@"Súng" y:y];
+        y = [self toggle:@"Bắn nhanh (2×)" key:@"FastFire" fallback:NO y:y];
+        y = [self toggle:@"Không nạp đạn" key:@"ShootNoReload" fallback:NO y:y];
         y = [self disclosure:@"Nâng cao" tag:702 expanded:self.advancedExpanded y:y];
         if(self.advancedExpanded) {
         y = [self toggle:@"Tự chọn tầm Silent" key:@"SilentAutoConfig" fallback:YES y:y];
         if (!ESPPrefsBool(@"SilentAutoConfig", YES)) {
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
-        y = [self section:@"Súng" y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
-        y = [self toggle:@"Không thay đạn" key:@"ShootNoReload" fallback:NO y:y + 10];
-        y = [self toggle:@"Bắn tay nhanh (2x)" key:@"FastFire" fallback:NO y:y];
         }
     } else if (self.page == 1) {
         UIButton *preset = [UIButton buttonWithType:UIButtonTypeSystem];

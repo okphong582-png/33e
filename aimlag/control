@@ -1,0 +1,8 @@
+Package: com.mizze.aimlag
+Name: Aimlag
+Version: 1.0
+Architecture: iphoneos-arm
+Description: Aimlag and FakeLag only
+Maintainer: Mizze
+Author: Mizze
+Section: Tweaks

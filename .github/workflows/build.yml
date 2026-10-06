@@ -1,4 +1,4 @@
-name: Build Mizze Dylib and TIPA
+name: Build Mizze Dylib, TIPA and Aimlag
 
 on:
   push:
@@ -62,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kind: [dylib, tipa]
+        kind: [dylib, tipa, aimlag]
 
     steps:
       - name: Checkout Repository
@@ -155,8 +155,17 @@ jobs:
           /tmp/offset-constants-test
 
       - name: Build selected package
+        if: matrix.kind != 'aimlag'
         run: |
           make clean package BUILD_KIND=${{ matrix.kind }} FINALPACKAGE=1 FOR_RELEASE=1
+
+      - name: Build Aimlag and FakeLag dylib only
+        if: matrix.kind == 'aimlag'
+        run: make -C aimlag clean package FINALPACKAGE=1 FOR_RELEASE=1
+
+      - name: Verify standalone Aimlag artifact scope
+        if: matrix.kind == 'aimlag'
+        run: python3 tools/verify_aimlag_dylib.py aimlag/packages/Aimlag.dylib
 
       - name: Injected dylib must have no prelaunch touch callbacks or private HUD dependencies
         if: matrix.kind == 'dylib'
@@ -185,6 +194,7 @@ jobs:
             packages/*.dylib
             packages/*.ipa
             packages/*.tipa
+            aimlag/packages/*.dylib
           if-no-files-found: error
 
       - name: Create Release

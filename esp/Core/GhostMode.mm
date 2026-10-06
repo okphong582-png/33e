@@ -229,9 +229,9 @@ int GhostModeUpdate(uint64_t base) {
     if(!wanted&&!returnPending)return lastResult=1;
     if(!isVaildPtr(base)||!Attach(base)){Cancel();return lastResult=10;}
     const uint64_t match=getMatch(getMatchGame(base)),local=getLocalPlayer(match);
-    uint8_t knock=1;
-    if(!isVaildPtr(match)||!isVaildPtr(local)||get_CurHP(local)<=0||
-        !Read(local+kKnocked,knock)||knock){Cancel();return lastResult=11;}
+    // The callback checks native HP/knock before capture and return. A missing
+    // HUD PRI-health snapshot must not keep an otherwise valid match unarmed.
+    if(!isVaildPtr(match)||!isVaildPtr(local)){Cancel();return lastResult=11;}
     if(!wanted){
         // A changed/dead owner cancels, never teleports a replacement player.
         if(input.match!=match||input.local!=local){Cancel();return lastResult=11;}
