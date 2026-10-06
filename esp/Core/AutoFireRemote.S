@@ -19,7 +19,11 @@ _AutoFireRemoteStart:
     mov w8, #0
     b .Lpresentation
 .LautoShot:
-    mov w8, #1
+    // Compatibility entry only. Preserve the complete native shot ABI and
+    // hotfix/setup/reporting path instead of dispatching the hit routine alone.
+    adr x16, .LautoState
+    ldr x16, [x16, #AUTO_SHOT_ORIGINAL]
+    br x16
 .Lpresentation:
     // NGMILJIELKA.JCCIMHDAPDB: visual shot presentation. Preserve all
     // argument registers for the unchanged tail-call (five args plus dt).
@@ -74,18 +78,10 @@ _AutoFireRemoteStart:
     ldar w8, [x8]
     cmp w8, w20
     b.ne .LtracerOriginal
-    cbnz w21, .LshotHit
     ldr x8, [x19, #AUTO_TRACER_SKIPS]
     add x8, x8, #1
     str x8, [x19, #AUTO_TRACER_SKIPS]
     mov x8, #0
-    b .LtracerReturn
-.LshotHit:
-    ldr x8, [x19, #AUTO_SHOT_SKIPS]
-    add x8, x8, #1
-    str x8, [x19, #AUTO_SHOT_SKIPS]
-    ldr x8, [x19, #AUTO_SHOT_HIT]
-    mov w21, #2
     b .LtracerReturn
 .LtracerOriginal:
     cbz w21, .LcomponentOriginal
@@ -106,10 +102,6 @@ _AutoFireRemoteStart:
     ldp x21, x22, [sp, #160]
     ldp x19, x20, [sp, #16]
     ldp x29, x30, [sp], #176
-    cmp w9, #2
-    b.ne .LpresentationDispatch
-    mov x2, #0               // LHNJLFOINDO(self, shotInfo, MethodInfo*)
-.LpresentationDispatch:
     cbz x8, .LtracerDone
     br x8
 .LtracerDone:
@@ -389,15 +381,17 @@ _AutoFireRemoteStart:
     fcmp s0, #0.0
     b.vs .LautoRelease
     b.le .LautoRelease
+    // Gentle automatic cadence: max(native interval, 0.35 seconds).
+    // A saved manual speed modifier cannot make AimKill issue rapid commands.
+    mov w8, #0x3333
+    movk w8, #0x3EB3, lsl #16
+    fmov s2, w8
+    fmax s0, s0, s2
     ldr s1, [x19, #AUTO_ELAPSED]
     fcmp s1, s0
     b.lt .LautoUnlock
-    // Keep the fractional firing time instead of
-    // discarding it every shot, capped at dt. Still at most one shot per tick.
-    fsub s1, s1, s0
-    ldr s2, [sp, #80]
-    fmin s1, s1, s2
-    str s1, [sp, #96]
+    // Discard overshoot: no shortened gap or catch-up burst on the next tick.
+    str wzr, [sp, #96]
     // The interval method may run a hotfix. Recheck publication after it.
     add x8, x19, #AUTO_SEQUENCE
     ldar w8, [x8]

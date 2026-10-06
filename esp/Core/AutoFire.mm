@@ -23,7 +23,7 @@ constexpr uint64_t Interval=0x5BF3B0C;
 constexpr uint64_t FireEffect=0x56AC3A8, EffectSlot=0x138+182*16;
 constexpr uint64_t Tracer=0x5C76890, TracerSlot=0x138+5*16;
 constexpr uint64_t MetadataInit=0xA11121C, TracerTypeInfo=0xBB4BEC8;
-constexpr uint64_t ShotPresentation=0x5C22FA8, ShotSlot=0x138+223*16, ShotHit=0x5C23B54;
+constexpr uint64_t ShotPresentation=0x5C22FA8, ShotHit=0x5C23B54;
 // Player.PostUpdate calls the current weapon's MAMFDNEJAPF(float,float)
 // through virtual slot 28 at 0x569C4E8. Player.OnUpdate is also called
 // directly, so replacing its virtual slot can install a callback with no ticks.
@@ -259,8 +259,8 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,b
         if(tracerResult!=7){retryAt=now+1;retryState=tracerResult;}
         return tracerResult;
     }
-    const int shotResult=InstallPresentation(*session,weaponClass+ShotSlot,ShotPresentation,AUTO_SHOT_ENTRY);
-    if(shotResult!=8){Clear();retryAt=now+1;retryState=shotResult;return shotResult;}
+    // Keep virtual-223 untouched: it runs shot setup and reporting before the
+    // hit routine. Calling only its final hit routine drops those native steps.
     if(activeSlot!=session->slot){for(auto &s:sessions)if(s.slot!=session->slot)Disable(s);activeSlot=session->slot;}
     const uint64_t silentGate=SilentAimAutoFireGate();
     if(!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 10;}

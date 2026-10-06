@@ -42,7 +42,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495241ULL; // AUTOFIRA: independent presentation and timed swap
+inline constexpr uint64_t Magic = 0x4155544f46495242ULL; // AUTOFIRB: native shot pipeline and gentle cadence
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;

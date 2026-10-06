@@ -20,7 +20,14 @@ checks; TIPA/dylib behavior on a physical device still needs verification.
 - Visual suppression has its own publication bit. Losing an aim target stops
   automatic shots without enabling the local fire-effect/tracer dispatch again.
   Remote players, stale publications, knocked players, and OFF use native paths.
-  The hit-only branch still receives Silent's redirected direction.
+  Virtual-223 is now left untouched so its native setup, hotfix, reporting and
+  hit stages all run with Silent's redirected direction. The prior hit-only
+  shortcut omitted preceding native work and has been removed.
+- AimKill no longer activates the 2x fire-interval modifier. Saved manual fast
+  fire is suspended while AimKill is enabled and restored afterward. Repeated
+  automatic commands wait `max(native interval, 0.35 seconds)` and discard
+  overshoot to avoid short gaps or catch-up commands. The first shot remains
+  immediate after a valid target is available.
 - Each floating-button visibility preference is independent of its feature.
   Enabling a feature initializes visibility only if no preference was saved.
 - The target line is rendered from screen center to the current selected enemy,
@@ -30,6 +37,7 @@ checks; TIPA/dylib behavior on a physical device still needs verification.
 
 Validation: ARM64 callback tests on both ELF and Mach-O objects cover timed swaps,
 invalid inventory/method/expiry/delta rejection, stop-before-swap ordering, native
-ABI preservation, target-independent suppression, and 100 hit-only Silent shots.
+ABI preservation, target-independent tracer suppression, and 100 full-native
+Silent shot dispatches. Cadence checks cover 30/60/120 FPS and slow weapons.
 `weapon_features_test.cpp` covers decimal speed values, OFF restoration retries,
 component ownership, context changes, and writes rejected after a player change.

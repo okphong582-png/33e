@@ -129,12 +129,12 @@ def tracer_case(enabled=1,fire_enabled=1,sequence=2,now=100,current=True,owner=T
 
 assert tracer_case()==([],1)
 assert tracer_case(fire_enabled=0)==([],1)
-assert tracer_case(shot=True,fire_enabled=0)==(['hit'],1)
+assert tracer_case(shot=True,fire_enabled=0)==(['tracer'],0)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(current=False),
              dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
     assert tracer_case(**args)==(['tracer'],0),args
     assert tracer_case(shot=True,**args)==(['tracer'],0),args
-assert tracer_case(shot=True)==(['hit'],1)
+assert tracer_case(shot=True)==(['tracer'],0)
 print('Local tracer suppression, OFF/remote/stale fallbacks and all argument registers passed')
 
 INTERVAL = 0x120600
@@ -264,7 +264,13 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
             assert uc.reg_read(UC_ARM64_REG_X2)==0
             assert struct.unpack('<fff',uc.mem_read(INFO+0x40,12))==bullets[-1]
             hit_calls.append(a)
-        elif presentation and a==visual:visual_calls.append(a)
+        elif presentation and a==visual:
+            # The compatibility entry reaches the complete native shot method
+            # with its original arguments. Simulate its eventual hit dispatch.
+            assert uc.reg_read(UC_ARM64_REG_X0)==WEAPON and uc.reg_read(UC_ARM64_REG_X1)==INFO
+            assert uc.reg_read(UC_ARM64_REG_X2)==0xABC
+            visual_calls.append(a)
+            uc.reg_write(UC_ARM64_REG_X2,0);uc.reg_write(UC_ARM64_REG_PC,hit)
     uc.hook_add(UC_HOOK_CODE,hook)
     for step in range(steps):
         if before_step: before_step(step,word)
@@ -280,8 +286,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     if not enabled and not held and not swap: assert not getter_calls
     assert len(metadata_calls)==int(warm)
     if presentation:
-        assert len(hit_calls)==len(bullets) and not visual_calls
-        assert struct.unpack('<Q',uc.mem_read(STATE+208,8))[0]==len(bullets)
+        assert len(hit_calls)==len(visual_calls)==len(bullets)
+        assert struct.unpack('<Q',uc.mem_read(STATE+208,8))[0]==0
     assert struct.unpack('<I',uc.mem_read(STATE+192,4))[0]==int(warm)
     assert struct.unpack('<I',uc.mem_read(STATE+88,4))[0]==busy
     held_after,=struct.unpack('<Q',uc.mem_read(STATE+80,8))
@@ -302,7 +308,7 @@ assert case(swap=True,steps=16,enabled=0,now=111)[0].count('swap')==0
 assert case(swap=True,steps=16,enabled=0,dt=float('nan'))[0].count('swap')==0
 swap_calls=case(swap=True,steps=16)[0]
 assert swap_calls[-2:]==['stop','swap']
-assert case(steps=10,warm=True)[2]==3
+assert case(steps=10,warm=True)[2]==2
 assert case(steps=10,warm=True,enabled=0)==(['update']*10,0,0)
 assert case(firing=2)==(['update'],0,0)  # do not claim a manual hold
 assert case(firing=2,held=WEAPON)==(['update'],WEAPON,0)
@@ -321,33 +327,41 @@ assert case(busy=1,held=WEAPON)==(['update'],WEAPON,0)
 assert case(weapon=WEAPON+0x100,held=WEAPON)==(['update'],0,0)
 assert case(steps=3)==(['update','start','update','update'],WEAPON,1)
 calls, held, starts = case(steps=10)
-assert starts==3 and held==WEAPON and calls.count('update')==10
-assert [i for i,c in enumerate(calls) if c=='start']==[1,6,11]
+assert starts==2 and held==WEAPON and calls.count('update')==10
+assert [i for i,c in enumerate(calls) if c=='start']==[1,8]
 assert case(steps=10,interval=1)[2]==1  # slow gun cannot inherit fast-gun cadence
 assert case(steps=40,interval=1)[2]==3  # repeat slow/one-shot gun, too
-assert case(steps=6,interval=0.125)[2]==3
-assert case(steps=100,interval=0.1)[2]==62  # preserve cadence between uneven frame/shot intervals
-assert case(steps=100,interval=0.05)[2]==100  # 2x interval: bounded to one shot per tick
+assert case(steps=6,interval=0.125)[2]==1
+assert case(steps=100,interval=0.1)[2]==17  # never shorten the gentle gap to catch up
+assert case(steps=100,interval=0.05)[2]==17  # fast guns respect the same minimum gap
 assert case(steps=10,interval=0.01,dt=0.5)[2]==10  # no looped catch-up burst after a stalled tick
 assert case(firing=2,steps=10)==(['update']*10,0,0)  # never claim manual fire
-assert case(firing=2,held=WEAPON,elapsed=0.1875)==(['update','start'],WEAPON,1)
+assert case(firing=2,held=WEAPON,elapsed=0.3125)==(['update','start'],WEAPON,1)
 for interval in [0,-1,float('nan'),float('inf')]:
     assert case(held=WEAPON,interval=interval)==(['update','stop'],0,0)
 for dt in [float('nan'),float('inf'),2]:
     assert case(held=WEAPON,dt=dt)==(['update','stop'],0,0)
 assert case(held=WEAPON,dt=0)==(['update'],WEAPON,0)
-assert case(held=WEAPON,elapsed=0.25,interval_action=lambda w:w(STATE+40,4))==(['update','stop'],0,0)
+assert case(held=WEAPON,elapsed=0.35,interval_action=lambda w:w(STATE+40,4))==(['update','stop'],0,0)
 assert case(steps=3,before_step=lambda i,w:w(STATE+44,0) if i==1 else None)==(
     ['update','start','update','stop','update'],0,1)
-print('Auto fire sustained native cadence, manual fire, start/release, swaps, expiry and float ABI passed')
+for delta in [1/120,1/60,1/30,0.1]:
+    timeline=case(steps=180,dt=delta,interval=0.05)[0]
+    tick=-1;last=None
+    for event in timeline:
+        if event=='update':tick+=1
+        elif event=='start':
+            if last is not None:assert (tick-last)*delta>=0.35-1e-6
+            last=tick
+print('Gentle auto cadence at 30/60/120 FPS, manual fire, swaps, expiry and float ABI passed')
 if silent_code is not None:
     cold_bullets = case(silent_percent=100,cold_info=True)[3]
     assert len(cold_bullets)==1 and abs(cold_bullets[0][1]-.8)<1e-6, 'First native shot must redirect without a manual primer'
     for percent in [0,25,75,100]:
-        calls,held,starts,bullets=case(steps=397,silent_percent=percent,presentation=True)
+        calls,held,starts,bullets=case(steps=595,silent_percent=percent,presentation=True)
         assert starts==len(bullets)==100 and held==WEAPON
         assert sum(p[1]>0.7 for p in bullets)==percent
         assert all(p==(1,0,0) or abs(p[0]-.6)<1e-6 and abs(p[1]-.8)<1e-6 for p in bullets)
     assert case(enabled=0,silent_percent=100)[3]==[]
     assert case(now=111,silent_percent=100)[3]==[]
-    print('AutoFire -> Silent -> hit-only integration: 100 hits, no visual dispatch, HS/body ratios and restored directions')
+    print('AutoFire -> Silent -> full native shot integration: 100 dispatches, HS/body ratios and restored directions')
