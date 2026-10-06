@@ -77,6 +77,8 @@ static bool isHipAlways  = NO;
 static bool isAimNeck    = NO;
 static bool isSilentAim  = NO;
 static bool gAutoFire = false;
+static bool gAutoSwap = false, gTargetLine = true, gRunSpeed = false;
+static float gRunSpeedValue = 6;
 static bool gGhostMode = false;
 static int gGhostInstall = 1;
 static int gPlayerModesInstall = 1;
@@ -125,6 +127,11 @@ void ESPSyncFromPrefs(void) {
     const bool autoEnabled = silentEnabled && ESPPrefsBool(@"AutoFire", NO);
     if (gAutoFire != autoEnabled) AutoFireClear();
     gAutoFire = autoEnabled;
+    gAutoSwap = ESPPrefsBool(@"AutoSwapWeapon", NO);
+    gTargetLine = ESPPrefsBool(@"AimTargetLine", YES);
+    gRunSpeed = ESPPrefsBool(@"RunSpeed", NO);
+    gRunSpeedValue = ESPPrefsFloat(@"RunSpeedValue", 6);
+    if(!gRunSpeed) UpdateRunSpeed(Moudule_Base,false,gRunSpeedValue);
     gGhostMode = ESPPrefsBool(@"GhostMode", NO);
     GhostModeSetEnabled(gGhostMode);
     if (!ESPPrefsBool(@"FlyHeightRaisedV1", NO)) {
@@ -511,7 +518,8 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.hpCriticalLayer = [self makeShapeLayer:nil fill:[UIColor colorWithRed:1 green:0.27 blue:0.32 alpha:1] lineWidth:0 zPos:5];
     self.hpHighlightLayer = [self makeShapeLayer:nil fill:[UIColor colorWithWhite:1 alpha:0.4] lineWidth:0 zPos:6];
 
-    for (CAShapeLayer *l in @[self.ghostLayer, self.hpWarningLayer, self.hpCriticalLayer, self.hpHighlightLayer, self.fovLayer, self.snaplineLayer, self.boneLayer, self.boxLayer,
+    self.aimAssistLayer = [self makeShapeLayer:[UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.9] fill:nil lineWidth:1.6 zPos:7];
+    for (CAShapeLayer *l in @[self.aimAssistLayer, self.ghostLayer, self.hpWarningLayer, self.hpCriticalLayer, self.hpHighlightLayer, self.fovLayer, self.snaplineLayer, self.boneLayer, self.boxLayer,
                                self.hpBackgroundLayer, self.hpFillLayer,
                             self.boxBotLayer, self.boxPlayerLayer, self.lineBotLayer, self.linePlayerLayer, self.lineKnockLayer, self.boxKnockLayer]) {
         [self.layer addSublayer:l];
@@ -948,6 +956,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     if (gGhostMode && gGhostSnapshot.active && gGhostSnapshot.match == match && gGhostSnapshot.local == local)
         [self drawGhostAnchor:gGhostSnapshot.anchor matrix:matrix width:vw height:vh vpWidth:vpW vpHeight:vpH];
     UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire, gAutoFire);
+    UpdateRunSpeed(Moudule_Base,gRunSpeed,gRunSpeedValue);
+    self.aimAssistLayer.path = nil;
 
     stats.firingRaw = get_FiringPRIState(local);
     stats.firing    = GamePRI::Firing(stats.firingRaw);
@@ -1025,14 +1035,24 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         }
     }
 
+    if(gTargetLine && (isSilentAim ? silentSelection.target : selection.target)) {
+        const Vector3 point=WorldToScreenLayer(targetHead,matrix,vpW,vpH,vw,vh);
+        if(std::isfinite(point.x)&&std::isfinite(point.y)&&point.z>0&&point.x>=0&&point.x<=vw&&point.y>=0&&point.y<=vh) {
+            UIBezierPath *line=[UIBezierPath bezierPath];
+            [line moveToPoint:CGPointMake(vw*0.5,vh*0.5)];
+            [line addLineToPoint:CGPointMake(point.x,point.y)];
+            self.aimAssistLayer.path=line.CGPath;
+        }
+    }
     if (isSilentAim) {
         // Re-arm after invalid match/window frames. The adapter rechecks firing
         // and player/weapon identity at the native handler, not at render time.
         SilentAimSetEnabled(true);
         stats.aimState = SilentAimUpdate(Moudule_Base, match, local,
             get_IsKnockedDown(local) ? 0 : silentSelection.target, targetHead, targetBody, silentHeadPercent);
-        if (gAutoFire && stats.aimState == 8)
-            stats.autoFireState = AutoFireUpdate(Moudule_Base, match, local, silentSelection.target);
+        if (gAutoFire)
+            stats.autoFireState = AutoFireUpdate(Moudule_Base, match, local,
+                stats.aimState == 8 ? silentSelection.target : 0,gAutoSwap);
         else AutoFireClear();
         silentFrame.published = true;
         gAimLockTarget = silentSelection.target;

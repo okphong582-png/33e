@@ -39,7 +39,7 @@ _AutoFireRemoteStart:
     add x8, x19, #AUTO_SEQUENCE
     ldar w20, [x8]
     tbnz w20, #0, .LtracerOriginal
-    ldr w8, [x19, #AUTO_ENABLED]
+    ldr w8, [x19, #AUTO_PRESENTATION]
     cbz w8, .LtracerOriginal
     ldr x8, [x19, #AUTO_WEAPON]
     cbz x8, .LtracerOriginal
@@ -125,7 +125,7 @@ _AutoFireRemoteStart:
     add x8, x19, #AUTO_SEQUENCE
     ldar w20, [x8]
     tbnz w20, #0, .LeffectOriginal
-    ldr w8, [x19, #AUTO_ENABLED]
+    ldr w8, [x19, #AUTO_PRESENTATION]
     cbz w8, .LeffectOriginal
     ldr x8, [x19, #AUTO_LOCAL]
     cmp x0, x8
@@ -215,6 +215,8 @@ _AutoFireRemoteStart:
     b.ne .LautoTail
 .LautoRelevant:
     ldr w8, [x19, #AUTO_ENABLED]
+    ldr w10, [x19, #AUTO_SWAP_ENABLED]
+    orr w8, w8, w10
     ldr x9, [x19, #AUTO_HELD]
     orr x8, x8, x9
     cbz x8, .LautoTail          // OFF with no owned hold: no native getter work
@@ -247,8 +249,6 @@ _AutoFireRemoteStart:
     add x8, x19, #AUTO_SEQUENCE
     ldar w23, [x8]
     tbnz w23, #0, .LautoRelease
-    ldr w8, [x19, #AUTO_ENABLED]
-    cbz w8, .LautoRelease
     ldr x8, [x19, #AUTO_WEAPON]
     cmp x8, x22
     b.ne .LautoRelease
@@ -269,6 +269,87 @@ _AutoFireRemoteStart:
     ldar w8, [x8]
     cmp w8, w23
     b.ne .LautoRelease
+    ldr w8, [x19, #AUTO_SWAP_ENABLED]
+    cbz w8, .LautoNoSwap
+    ldr s0, [sp, #80]
+    fcmp s0, #0.0
+    b.vs .LautoRelease
+    b.le .LautoCheckFire
+    fmov s1, #1.0
+    fcmp s0, s1
+    b.gt .LautoRelease
+    ldr s2, [x19, #AUTO_SWAP_ELAPSED]
+    fadd s0, s0, s2
+    str s0, [x19, #AUTO_SWAP_ELAPSED]
+    fcmp s0, s1
+    b.lt .LautoCheckFire
+    // Revalidate the published inventory entry on the game thread.
+    ldr x8, [x25]
+    ldr x9, [x8, #0xDC8]
+    ldr x10, [x19, #AUTO_SWAP_FUNCTION]
+    cmp x9, x10
+    b.ne .LautoRelease
+    cbz x9, .LautoRelease
+    ldr x8, [x25, #0x740]
+    cbz x8, .LautoRelease
+    ldr x9, [x8, #0x30]
+    cmp x9, x25
+    b.ne .LautoRelease
+    ldr x8, [x8, #0x88]
+    cbz x8, .LautoRelease
+    ldr w9, [x19, #AUTO_SWAP_SLOT]
+    cmp w9, #3
+    b.hs .LautoRelease
+    ldr w10, [x8, #0x18]
+    cmp w9, w10
+    b.hs .LautoRelease
+    add x8, x8, x9, lsl #3
+    ldr x8, [x8, #0x20]
+    ldr x9, [x19, #AUTO_SWAP_WEAPON]
+    cmp x8, x9
+    b.ne .LautoRelease
+    cbz x8, .LautoRelease
+    cmp x8, x22
+    b.eq .LautoRelease
+    ldr x8, [x8, #0x60]
+    cmp x8, x25
+    b.ne .LautoRelease
+    ldr x8, [x19, #AUTO_HELD]
+    cmp x8, x22
+    b.ne .LautoSwapExecute
+    ldr x8, [x22]
+    ldr x9, [x8, #0xE88]
+    ldr x10, [x19, #AUTO_STOP]
+    cmp x9, x10
+    b.ne .LautoRelease
+    str xzr, [x19, #AUTO_HELD]
+    mov x0, x22
+    ldr x1, [x8, #0xE90]
+    blr x9
+.LautoSwapExecute:
+    // Stop callbacks may run a hotfix; recheck publication and method.
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRelease
+    ldr x8, [x25]
+    ldr x9, [x8, #0xDC8]
+    ldr x10, [x19, #AUTO_SWAP_FUNCTION]
+    cmp x9, x10
+    b.ne .LautoRelease
+    mov x0, x25
+    ldr w1, [x19, #AUTO_SWAP_SLOT]
+    mov w2, #0
+    ldr x3, [x8, #0xDD0]
+    str wzr, [x19, #AUTO_SWAP_ELAPSED]
+    str wzr, [x19, #AUTO_ELAPSED]
+    blr x9
+    b .LautoUnlock
+.LautoNoSwap:
+    str wzr, [x19, #AUTO_SWAP_ELAPSED]
+.LautoCheckFire:
+    ldr w8, [x19, #AUTO_ENABLED]
+    cbz w8, .LautoRelease
     // A shot event is not a persistent trigger. Leave manual fire alone, but
     // repeat owned shots at Weapon.LDKCJEMDAMC's native interval, as the game's
     // firing-state ticks do. PRI21 == 2 must not suppress our next owned shot.
@@ -350,6 +431,7 @@ _AutoFireRemoteStart:
     b .LautoUnlock
 .LautoRelease:
     str wzr, [x19, #AUTO_ELAPSED]
+    // Keep a valid swap timer while waiting for an aim target.
     ldr x8, [x19, #AUTO_HELD]
     cmp x8, x22
     b.ne .LautoUnlock

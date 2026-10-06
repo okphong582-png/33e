@@ -2,6 +2,7 @@
 #include "AimSelection.h"
 #include "GamePRI.h"
 #include "WeaponFeatures.h"
+#include "RunSpeed.h"
 #import "../drawing_view/offset.h"
 #import <Foundation/Foundation.h>
 #import <math.h>
@@ -12,6 +13,7 @@
 
 static WeaponFeatures::Controller gWeaponFeatures;
 static uint64_t gWeaponModuleBase = 0;
+static RunSpeed::Controller gRunSpeed;
 static_assert(kPlayerAttributes == WeaponFeatures::PlayerAttributesOffset, "PlayerAttributes layout");
 static_assert(kShootNoReload == WeaponFeatures::ShootNoReloadOffset, "ShootNoReload layout");
 static_assert(kFastFireOff == WeaponFeatures::FireIntervalScaleOffset, "FireIntervalScale layout");
@@ -55,6 +57,24 @@ void SyncWeaponFeatureSwitches(uint64_t moduleBase, bool noReload, bool fastFire
 
 void ResetWeaponFeatures(void) {
     UpdateWeaponFeatures(gWeaponModuleBase, false, false);
+    UpdateRunSpeed(gWeaponModuleBase,false,6);
+}
+
+void UpdateRunSpeed(uint64_t moduleBase,bool enabled,float metersPerSecond) {
+    if(!enabled&&!gRunSpeed.Changed())return;
+    gWeaponModuleBase=moduleBase;
+    auto read=[](uint64_t a,void *p,size_t n){return _read((long)a,p,(int)n);};
+    auto valid=[](uint64_t a){return isVaildPtr(a);};
+    if(enabled) {
+        uint32_t words[3]={};
+        // GetSpeedByType: positive ForceRunAndDashSpeedValue at +0x3c8
+        // overrides ordinary run/dash, without changing other movement modes.
+        if(!read(moduleBase+0x6482AA0,words,sizeof(words))||words[0]!=0xBD43CA80||
+            words[1]!=0x1E202008||words[2]!=0x5400036C)return;
+    }
+    gRunSpeed.Update(CurrentWeaponContext(),enabled,metersPerSecond,read,
+        [](uint64_t a,const void *p,size_t n){return _write((long)a,p,(int)n);},valid,
+        []{return CurrentWeaponContext();});
 }
 
 static uint64_t ReadMatchGameFromGameFacadeStatics(uint64_t GameFacade_Static) {

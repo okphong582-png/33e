@@ -32,11 +32,17 @@
 #define AUTO_SHOT_ORIGINAL 200
 #define AUTO_SHOT_SKIPS 208
 #define AUTO_SHOT_HIT 216
+#define AUTO_PRESENTATION 224
+#define AUTO_SWAP_ENABLED 228
+#define AUTO_SWAP_ELAPSED 232
+#define AUTO_SWAP_FUNCTION 240
+#define AUTO_SWAP_SLOT 248
+#define AUTO_SWAP_WEAPON 256
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495239ULL; // AUTOFIR9: hit-only automatic shot presentation
+inline constexpr uint64_t Magic = 0x4155544f46495241ULL; // AUTOFIRA: independent presentation and timed swap
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;
@@ -51,6 +57,12 @@ struct State {
     uint64_t tracerOriginal=0, tracerSkips=0, metadataInit=0, tracerTypeInfo=0;
     uint32_t metadataReady=0, padding2=0;
     uint64_t shotOriginal=0, shotSkips=0, shotHit=0;
+    uint32_t presentation=0, swapEnabled=0;
+    float swapElapsed=0;
+    uint32_t padding3=0;
+    uint64_t swapFunction=0;
+    uint32_t swapSlot=0, padding4=0;
+    uint64_t swapWeapon=0;
 };
 static_assert(offsetof(State, sequence)==AUTO_SEQUENCE);
 static_assert(offsetof(State, enabled)==AUTO_ENABLED);
@@ -71,5 +83,10 @@ static_assert(offsetof(State, metadataReady)==AUTO_METADATA_READY);
 static_assert(offsetof(State, shotOriginal)==AUTO_SHOT_ORIGINAL);
 static_assert(offsetof(State, shotSkips)==AUTO_SHOT_SKIPS);
 static_assert(offsetof(State, shotHit)==AUTO_SHOT_HIT);
+static_assert(offsetof(State, presentation)==AUTO_PRESENTATION);
+static_assert(offsetof(State, swapElapsed)==AUTO_SWAP_ELAPSED);
+static_assert(offsetof(State, swapFunction)==AUTO_SWAP_FUNCTION);
+static_assert(offsetof(State, swapSlot)==AUTO_SWAP_SLOT);
+static_assert(offsetof(State, swapWeapon)==AUTO_SWAP_WEAPON);
 }
 #endif

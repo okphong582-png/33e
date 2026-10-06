@@ -384,9 +384,9 @@ static const CGFloat kMenuButtonSize = 44.0f;
         dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadFloatingAuxButtonsFromPrefs]; });
         return;
     }
-    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Fly", @"FakeLag"];
-    NSArray *titles = @[@"AimKill", @"Ghost", @"Fly", @"FakeLag"];
-    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.up.to.line", @"pause.circle.fill"];
+    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Fly", @"FakeLag", @"RunSpeed"];
+    NSArray *titles = @[@"AimKill", @"Ghost", @"Fly", @"FakeLag", @"Speed"];
+    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.up.to.line", @"pause.circle.fill", @"figure.walk"];
     const NSUInteger rows = MAX(1, MIN(keys.count, (NSUInteger)MAX(1, std::floor((self.bounds.size.height - 12) / 88))));
     for (NSUInteger i = 0; i < keys.count; ++i) {
         NSString *key = keys[i], *shownKey = [key stringByAppendingString:@"Floating"];

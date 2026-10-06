@@ -1,4 +1,5 @@
 #include "../esp/Core/WeaponFeatures.h"
+#include "../esp/Core/RunSpeed.h"
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -277,5 +278,23 @@ int main() {
             [](uint64_t) { return true; }));
         assert(!readCalled);
     }
-    std::cout << "Weapon features: ownership, reversible values and failed I/O checks passed\n";
+    {
+        Fixture f;RunSpeed::Controller speed;bool fail=false,race=false;
+        const uint64_t address=Fixture::Attributes+RunSpeed::Offset;
+        f.put<float>(address,0);
+        auto update=[&](bool on,float value){speed.Update(f.context,on,value,
+            [&](uint64_t a,void *p,size_t n){if(!f.valid(a)||!f.valid(a+n-1))return false;std::memcpy(p,f.memory.data()+a-Fixture::Base,n);return true;},
+            [&](uint64_t a,const void *p,size_t n){assert(a==address&&n==4);if(fail)return false;std::memcpy(f.memory.data()+a-Fixture::Base,p,n);return true;},
+            [&](uint64_t a){return f.valid(a);},[&]{auto c=f.context;if(race)++c.player;return c;});};
+        update(true,0.1f);assert(f.get<float>(address)==0.1f);
+        update(true,1.1f);assert(f.get<float>(address)==1.1f);
+        ++f.context.match;update(true,9); // Same component keeps its baseline.
+        fail=true;update(false,9);assert(speed.Changed()&&f.get<float>(address)==9);
+        fail=false;update(false,9);update(false,9);assert(!speed.Changed()&&f.get<float>(address)==0);
+        race=true;update(true,12);assert(f.get<float>(address)==0&&!speed.Changed());
+        race=false;f.put(Fixture::Attributes+AttributesPlayerOffset,Fixture::Player+8);
+        update(true,12);assert(f.get<float>(address)==0);
+        assert(RunSpeed::Value(-1)==0.1f&&RunSpeed::Value(40)==30&&RunSpeed::Value(std::numeric_limits<float>::quiet_NaN())==6);
+    }
+    std::cout << "Weapon features and run speed: ownership, reversible values and failed I/O checks passed\n";
 }

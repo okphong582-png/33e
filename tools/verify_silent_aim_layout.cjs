@@ -48,6 +48,9 @@ assert.equal(fingerprint(0x5C1E910,0x30),0xC285FA0E);
 assert.equal(fingerprint(0x5C22FA8,0x30C),0x76159E8D);
 assert.equal(fingerprint(0x5C23B54,0x1B08),0xF0BC2099);
 assert.equal(fingerprint(0x5C222EC, 0x1E4), 0xA2F105A1);
+words(0x6482AA0,[0xBD43CA80,0x1E202008,0x5400036C]);
+assert.equal(fingerprint(0x56B4EB4,0x5F8),0x40924917);
+assert.equal(fingerprint(0x5A5C9D4,0x100),0x538C5B13);
 assert.equal(fingerprint(0x5660700, 0x100), 0xC902032E);
 assert.equal(fingerprint(0x5A4BEC0, 0x100), 0x4B4A9AE9);
 // Weapon input calls Player.StartFiring / Player.StopFire, then its own

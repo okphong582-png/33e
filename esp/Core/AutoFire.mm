@@ -68,6 +68,8 @@ void Disable(Session &s) {
     s.sequence=odd+1;
     bool ok=Write(s.state()+AUTO_SEQUENCE,odd);
     ok=Write(s.state()+AUTO_ENABLED,off)&&ok;
+    ok=Write(s.state()+AUTO_PRESENTATION,off)&&ok;
+    ok=Write(s.state()+AUTO_SWAP_ENABLED,off)&&ok;
     ok=Write(s.state()+AUTO_SEQUENCE,s.sequence)&&ok;
     if(ok)s.published=false;
 }
@@ -222,15 +224,14 @@ uint64_t Count(uint64_t offset) {
 void AutoFireClear(){std::lock_guard<std::recursive_mutex> guard(mutex);Clear();}
 uint64_t AutoFireStartCount(){std::lock_guard<std::recursive_mutex> guard(mutex);return Count(AUTO_STARTS);}
 uint64_t AutoFireTickCount(){std::lock_guard<std::recursive_mutex> guard(mutex);return Count(AUTO_TICKS);}
-int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
+int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,bool swap){
     std::lock_guard<std::recursive_mutex> guard(mutex);
-    if(!target){Clear();return 7;}
     if(!Attach(base)){Clear();return 10;}
     uint8_t localKnock=1, targetKnock=1;
     if(getMatch(getMatchGame(base))!=match||getLocalPlayer(match)!=local||
-        get_CurHP(local)<=0||get_CurHP(target)<=0||
-        !Read(local+kKnocked,localKnock)||localKnock||!Read(target+kKnocked,targetKnock)||targetKnock||
-        isLocalTeamMate(local,target)||!getAimVisibility(target)){Clear();return 7;}
+        get_CurHP(local)<=0||!Read(local+kKnocked,localKnock)||localKnock){Clear();return 7;}
+    const bool fire=target&&get_CurHP(target)>0&&Read(target+kKnocked,targetKnock)&&!targetKnock&&
+        !isLocalTeamMate(local,target)&&getAimVisibility(target);
     const double now=CACurrentMediaTime();
     if(now<retryAt)return retryState;
     uint64_t weaponClass=0,start=0,stop=0;
@@ -262,22 +263,42 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target){
     if(shotResult!=8){Clear();retryAt=now+1;retryState=shotResult;return shotResult;}
     if(activeSlot!=session->slot){for(auto &s:sessions)if(s.slot!=session->slot)Disable(s);activeSlot=session->slot;}
     const uint64_t silentGate=SilentAimAutoFireGate();
-    if(!silentGate||!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 7;}
+    if(!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 10;}
+    uint64_t swapFunction=0,swapWeapon=0,localClass=0,manager=0,array=0;
+    uint32_t swapSlot=0,length=0;
+    if(swap&&Read(local,localClass)&&Read(localClass+0xDC8,swapFunction)&&
+        ((swapFunction==base+0x56B4EB4&&Fingerprint<0x5F8>(swapFunction,0x40924917))||
+         (swapFunction==base+0x5A5C9D4&&Fingerprint<0x100>(swapFunction,0x538C5B13)))&&
+        Read(local+0x740,manager)&&Read(manager+0x30,localClass)&&localClass==local&&
+        Read(manager+0x88,array)&&Read(array+0x18,length)&&length>=2&&length<=67) {
+        // Cycle only occupied firearm slots. Keep the native cooldown and sync.
+        int current=-1;
+        for(uint32_t i=0;i<std::min(length,3u);++i){uint64_t w=0;if(Read(array+0x20+i*8,w)&&w==weapon)current=(int)i;}
+        if(current>=0)for(uint32_t d=1;d<3;++d){
+            const uint32_t i=(current+d)%3;uint64_t w=0,owner=0,klass=0,method=0;
+            if(i<length&&Read(array+0x20+i*8,w)&&w&&w!=weapon&&Read(w+0x60,owner)&&owner==local&&
+                Read(w,klass)&&Read(klass+StartSlot,method)&&method==base+Start){swapWeapon=w;swapSlot=i;break;}
+        }
+    }
+    const uint32_t swapEnabled=swapWeapon?1:0,presentation=1;
     mach_timebase_info_data_t tb{};
     if(mach_timebase_info(&tb)!=KERN_SUCCESS||!tb.numer||!tb.denom){Clear();return 9;}
     struct Publication {uint32_t enabled;uint64_t deadline,local,match,weapon;} __attribute__((packed));
     // Match Silent's 150 ms freshness window, including 30 FPS HUD pacing.
-    const Publication p{1,mach_absolute_time()+150000000ULL*tb.denom/tb.numer,local,match,weapon};
+    const Publication p{fire&&silentGate?1u:0u,mach_absolute_time()+150000000ULL*tb.denom/tb.numer,local,match,weapon};
     const uint32_t odd=(session->sequence+1)|1u;session->sequence=odd+1;
     session->published=true; // Clear also handles an interrupted publication.
     const bool ok=Write(session->state()+AUTO_SEQUENCE,odd)&&
-        WriteBytes(session->state()+AUTO_ENABLED,&p,sizeof(p))&&Write(session->state()+AUTO_SEQUENCE,session->sequence);
+        WriteBytes(session->state()+AUTO_ENABLED,&p,sizeof(p))&&
+        Write(session->state()+AUTO_PRESENTATION,presentation)&&Write(session->state()+AUTO_SWAP_ENABLED,swapEnabled)&&
+        Write(session->state()+AUTO_SWAP_FUNCTION,swapFunction)&&Write(session->state()+AUTO_SWAP_SLOT,swapSlot)&&
+        Write(session->state()+AUTO_SWAP_WEAPON,swapWeapon)&&Write(session->state()+AUTO_SEQUENCE,session->sequence);
     if(!ok){Clear();return 10;}
-    return 8;
+    return fire?8:7;
 }
 #else
 void AutoFireClear(){}
 uint64_t AutoFireStartCount(){return 0;}
 uint64_t AutoFireTickCount(){return 0;}
-int AutoFireUpdate(uint64_t,uint64_t,uint64_t,uint64_t){return 9;}
+int AutoFireUpdate(uint64_t,uint64_t,uint64_t,uint64_t,bool){return 9;}
 #endif

@@ -4,6 +4,7 @@
 #import <objc/runtime.h>
 #import "UIView+SecureView.h"
 #import "MizzeTheme.h"
+#include <cmath>
 
 @interface MizzeCheckBox : UIButton
 @property(nonatomic,assign) BOOL on;
@@ -32,6 +33,8 @@
 @property (nonatomic, assign) NSInteger page;
 @property (nonatomic, assign) NSInteger colorTarget;
 @property (nonatomic, assign) BOOL aimExpanded;
+@property (nonatomic, assign) BOOL floatingExpanded;
+@property (nonatomic, assign) BOOL advancedExpanded;
 @property (nonatomic, assign) NSInteger pointer;
 @property (nonatomic, assign) CGPoint began;
 @property (nonatomic, assign) CGPoint panelOrigin;
@@ -219,6 +222,46 @@
     label.textColor = MizzeMint(); [self.scroll addSubview:label]; return y + 38;
 }
 - (void)chooseAim { self.aimExpanded=!self.aimExpanded;[self buildPage]; }
+- (CGFloat)numberInput:(NSString *)title key:(NSString *)key fallback:(float)fallback y:(CGFloat)y {
+    UIView *row=[[UIView alloc] initWithFrame:CGRectMake(0,y,[self contentWidth],58)];
+    row.backgroundColor=MizzeRaised();row.layer.cornerRadius=10;
+    [row addSubview:[self label:title frame:CGRectMake(14,0,[self contentWidth]-132,58) size:15]];
+    UITextField *field=[[UITextField alloc] initWithFrame:CGRectMake([self contentWidth]-110,9,96,40)];
+    field.text=[NSString stringWithFormat:@"%.2f",ESPPrefsFloat(key,fallback)];
+    field.keyboardType=UIKeyboardTypeDecimalPad;field.textAlignment=NSTextAlignmentCenter;
+    field.textColor=MizzeMint();field.backgroundColor=MizzeSurface();field.layer.cornerRadius=8;
+    field.accessibilityLabel=title;
+    objc_setAssociatedObject(field,"key",key,OBJC_ASSOCIATION_COPY_NONATOMIC);
+    [field addTarget:self action:@selector(numberChanged:) forControlEvents:UIControlEventEditingChanged];
+    UIToolbar *toolbar=[[UIToolbar alloc] initWithFrame:CGRectMake(0,0,[self contentWidth],44)];
+    toolbar.items=@[[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil],
+        [[UIBarButtonItem alloc] initWithTitle:@"Xong" style:UIBarButtonItemStyleDone target:self action:@selector(finishNumber)]];
+    field.inputAccessoryView=toolbar;
+    [row addSubview:field];[self.controls addObject:field];[self.scroll addSubview:row];return y+66;
+}
+- (void)finishNumber { [self.view endEditing:YES]; }
+- (CGFloat)disclosure:(NSString *)title tag:(NSInteger)tag expanded:(BOOL)expanded y:(CGFloat)y {
+    UIButton *button=[UIButton buttonWithType:UIButtonTypeSystem];
+    button.frame=CGRectMake(0,y,[self contentWidth],48);button.tag=tag;
+    button.backgroundColor=MizzeSurface();button.layer.cornerRadius=10;
+    [button setTitle:[NSString stringWithFormat:@"%@  %@",title,expanded?@"−":@"+"] forState:UIControlStateNormal];
+    [button setTitleColor:MizzeMint() forState:UIControlStateNormal];
+    button.titleLabel.font=[UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+    [button addTarget:self action:@selector(disclosureChanged:) forControlEvents:UIControlEventTouchUpInside];
+    [self.scroll addSubview:button];[self.controls addObject:button];return y+58;
+}
+- (void)disclosureChanged:(UIButton *)button {
+    if(button.tag==701)self.floatingExpanded=!self.floatingExpanded;
+    else self.advancedExpanded=!self.advancedExpanded;
+    [self buildPage];
+}
+- (void)numberChanged:(UITextField *)field {
+    NSString *text=[field.text stringByReplacingOccurrencesOfString:@"," withString:@"."];
+    NSScanner *scanner=[NSScanner scannerWithString:text];scanner.locale=[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    double value=0;
+    if (![scanner scanDouble:&value] || !scanner.isAtEnd || !std::isfinite(value) || value<0.1 || value>30) return;
+    ESPPrefsSetFloat(objc_getAssociatedObject(field,"key"),(float)value);ESPSyncFromPrefs();
+}
 - (CGFloat)aimChooser:(CGFloat)y {
     NSArray *keys=@[@"AimbotFire",@"AimbotScope",@"AimHipAlways",@"AimNeck",@"SilentAim",@"AutoFire",@"AimLag",@"FakeLag"];
     NSArray *names=@[@"Aim khi bắn",@"Aim khi ngắm",@"Aim luôn",@"Aim cổ",@"Silent Aim",@"AimKill",@"Aimlag",@"FakeLag"];
@@ -260,18 +303,23 @@
     CGFloat y = 0;
     if (self.page == 0) {
         y = [self aimChooser:y];
+        y = [self toggle:@"Đổi súng AimKill" key:@"AutoSwapWeapon" fallback:NO y:y];
+        y = [self toggle:@"Dây tới mục tiêu" key:@"AimTargetLine" fallback:YES y:y];
         y = [self slider:@"FOV" key:ESPPrefsBool(@"SilentAim", NO) ? @"SilentFovSize" : @"FovSize"
             min:5 max:48 fallback:ESPPrefsBool(@"SilentAim", NO) ? 18 : 40 y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
         y = [self slider:@"Tỷ lệ HS" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
+        y = [self disclosure:@"Nâng cao" tag:702 expanded:self.advancedExpanded y:y];
+        if(self.advancedExpanded) {
         y = [self toggle:@"Tự chọn tầm Silent" key:@"SilentAutoConfig" fallback:YES y:y];
         if (!ESPPrefsBool(@"SilentAutoConfig", YES)) {
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
-        y = [self section:@"Súng & trạng thái" y:y];
+        y = [self section:@"Súng" y:y];
         y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
         y = [self toggle:@"Không thay đạn" key:@"ShootNoReload" fallback:NO y:y + 10];
         y = [self toggle:@"Bắn tay nhanh (2x)" key:@"FastFire" fallback:NO y:y];
+        }
     } else if (self.page == 1) {
         UIButton *preset = [UIButton buttonWithType:UIButtonTypeSystem];
         preset.frame = CGRectMake(0, y, [self contentWidth], 48); preset.tag = 300;
@@ -316,21 +364,24 @@
         [self updateSwatch];
     } else {
         y = [self toggle:@"Ẩn nút chức năng" key:@"HideFeatureButtons" fallback:NO y:y];
+        y = [self disclosure:@"Chọn nút nổi" tag:701 expanded:self.floatingExpanded y:y];
+        if(self.floatingExpanded) {
+        NSArray *buttonKeys=@[@"AutoFire",@"GhostMode",@"Fly",@"FakeLag",@"RunSpeed"];
+        NSArray *buttonTitles=@[@"Nút AimKill",@"Nút Ghost",@"Nút Fly",@"Nút FakeLag",@"Nút Speed"];
+        for(NSUInteger i=0;i<buttonKeys.count;++i)
+            y=[self toggle:buttonTitles[i] key:[buttonKeys[i] stringByAppendingString:@"Floating"]
+                fallback:ESPPrefsBool(buttonKeys[i],NO) y:y];
+        }
+        y = [self section:@"Di chuyển" y:y];
+        y = [self toggle:@"Speed" key:@"RunSpeed" fallback:NO y:y];
+        y = [self numberInput:@"Tốc độ (m/s)" key:@"RunSpeedValue" fallback:6 y:y];
         y = [self toggle:@"Ghost Mode (thử nghiệm)" key:@"GhostMode" fallback:NO y:y];
-        y = [self note:@"Bật: lưu vị trí. Tắt: quay về." y:y];
         y = [self toggle:@"Fly" key:@"Fly" fallback:NO y:y];
         if (ESPPrefsBool(@"Fly", NO))
             y = [self slider:@"Độ cao" key:@"FlyHeight" min:1 max:6 fallback:4 y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
-        y = [self note:@"Ẩn menu và ESP khi quay màn hình." y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
         y = [self toggle:@"Tiết kiệm pin (30 FPS)" key:@"BalancedRender" fallback:NO y:y];
-        y = [self note:@"30 FPS · nhẹ pin." y:y];
-#ifdef MIZZE_INJECTED
-        y = [self note:@"Nút menu hiện khi có dữ liệu trận và ẩn khi về sảnh." y:y];
-#else
-        y = [self note:@"Menu hiện ngay sau xác thực. ESP và aim hoạt động khi có dữ liệu trận." y:y];
-#endif
     }
     self.scroll.contentSize = CGSizeMake([self contentWidth], y + 8);
     self.scroll.contentOffset = CGPointMake(0, MAX(0, MIN(offset, y + 8 - self.scroll.bounds.size.height)));
@@ -353,8 +404,9 @@
     if ([key isEqualToString:@"SilentAim"] && !sender.on) ESPPrefsSetBool(@"AutoFire", NO);
     if ([key isEqualToString:@"CleanESP"] && sender.on) ESPPrefsSetBool(@"Box3D", NO);
     ESPPrefsSetBool(key, sender.on); ESPSyncFromPrefs();
-    if ([@[@"AutoFire", @"GhostMode", @"Fly", @"FakeLag"] containsObject:key])
-        ESPPrefsSetBool([key stringByAppendingString:@"Floating"], sender.on);
+    if ([@[@"AutoFire", @"GhostMode", @"Fly", @"FakeLag", @"RunSpeed"] containsObject:key] &&
+        !AppSettingsObjectForKey([key stringByAppendingString:@"Floating"]))
+        ESPPrefsSetBool([key stringByAppendingString:@"Floating"], YES);
     if ([key isEqualToString:@"AnLive"] && ![UIView applyCaptureProtectionToRegisteredViews:sender.on]) {
         sender.on = NO; ESPPrefsSetBool(key, NO);
         [UIView applyCaptureProtectionToRegisteredViews:NO];

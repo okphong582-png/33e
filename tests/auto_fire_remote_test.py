@@ -37,7 +37,7 @@ def read_code(path, section):
 code = read_code(sys.argv[1], b'__autofire')
 silent_code = read_code(sys.argv[2], b'__silent') if len(sys.argv)>2 else None
 
-def effect_case(enabled=1, sequence=2, now=100, local=True, current=True, owner=True,
+def effect_case(enabled=1, fire_enabled=1, sequence=2, now=100, local=True, current=True, owner=True,
                 match=True, knocked=0, race=False):
     uc=Uc(UC_ARCH_ARM64,UC_MODE_ARM)
     uc.mem_map(0x100000,0x40000);uc.mem_map(0x200000,0x50000);uc.mem_map(0x300000,0x10000)
@@ -47,6 +47,7 @@ def effect_case(enabled=1, sequence=2, now=100, local=True, current=True, owner=
     state,clock,original=0x104000,0x120100,0x120800
     uc.mem_write(clock,b'\xc0\x03\x5f\xd6');uc.mem_write(original,b'\xc0\x03\x5f\xd6')
     ptr(state+8,clock);ptr(state+144,original);word(state+40,sequence);word(state+44,enabled)
+    word(state+224,enabled);word(state+44,fire_enabled)
     ptr(state+48,110);ptr(state+56,0x200000);ptr(state+64,0x230000);ptr(state+72,0x210000)
     ptr(0x2300d8,0x200000 if match else 0x200008)
     ptr(0x210060,0x200000 if owner else 0x200008)
@@ -71,13 +72,14 @@ def effect_case(enabled=1, sequence=2, now=100, local=True, current=True, owner=
     return calls,skips
 
 assert effect_case()==([],1)
+assert effect_case(fire_enabled=0)==([],1)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(local=False),dict(current=False),
              dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
     assert effect_case(**args)==(['effect'],0),args
 
 BASE, STATE, ORIGINAL, CLOCK, GETTER, START, END, RETURN = 0x100000, 0x104000, 0x120000, 0x120100, 0x120200, 0x120300, 0x120400, 0x120500
 
-def tracer_case(enabled=1,sequence=2,now=100,current=True,owner=True,
+def tracer_case(enabled=1,fire_enabled=1,sequence=2,now=100,current=True,owner=True,
                 match=True,knocked=0,race=False,shot=False):
     uc=Uc(UC_ARCH_ARM64,UC_MODE_ARM)
     uc.mem_map(0x100000,0x40000);uc.mem_map(0x200000,0x80000);uc.mem_map(0x300000,0x10000)
@@ -90,6 +92,7 @@ def tracer_case(enabled=1,sequence=2,now=100,current=True,owner=True,
     ptr(STATE+8,CLOCK);ptr(STATE+160,original)
     ptr(STATE+200,original);ptr(STATE+216,hit)
     word(STATE+40,sequence);word(STATE+44,enabled)
+    word(STATE+224,enabled);word(STATE+44,fire_enabled)
     for a,v in [(48,110),(56,0x200000),(64,0x230000),(72,0x210000)]:ptr(STATE+a,v)
     ptr(0x210530,0x273000 if current else 0x273008)
     ptr(0x210060,0x200000 if owner else 0x200008)
@@ -125,6 +128,8 @@ def tracer_case(enabled=1,sequence=2,now=100,current=True,owner=True,
     return calls,struct.unpack('<Q',uc.mem_read(STATE+(208 if shot else 168),8))[0]
 
 assert tracer_case()==([],1)
+assert tracer_case(fire_enabled=0)==([],1)
+assert tracer_case(shot=True,fire_enabled=0)==(['hit'],1)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(current=False),
              dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
     assert tracer_case(**args)==(['tracer'],0),args
@@ -142,7 +147,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          self=WEAPON, owner=LOCAL, weapon=WEAPON, snapshot_weapon=WEAPON,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
          steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
-         gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False, presentation=False):
+          gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False, presentation=False,
+          swap=False, swap_valid=True, swap_method=True):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -151,6 +157,15 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     def word(a,v): uc.mem_write(a,struct.pack('<I',v))
     for i,v in enumerate([ORIGINAL,CLOCK,GETTER,START,END]): ptr(STATE+i*8,v)
     word(STATE+40,sequence); word(STATE+44,enabled)
+    word(STATE+224,int(presentation))
+    swap_function,manager,inventory,next_weapon=0x120b00,0x275000,0x276000,0x277000
+    if swap:
+        uc.mem_write(swap_function,b'\xc0\x03\x5f\xd6')
+        word(STATE+228,1);ptr(STATE+240,swap_function);word(STATE+248,1);ptr(STATE+256,next_weapon)
+        ptr(LOCAL,CLASS);ptr(CLASS+0xdc8,swap_function if swap_method else START);ptr(CLASS+0xdd0,0x123ABC)
+        ptr(LOCAL+0x740,manager);ptr(manager+0x30,LOCAL);ptr(manager+0x88,inventory)
+        word(inventory+0x18,3);ptr(inventory+0x28,next_weapon if swap_valid else WEAPON)
+        ptr(next_weapon+0x60,LOCAL)
     for a,v in [(48,deadline),(56,LOCAL),(64,MATCH),(72,snapshot_weapon),(80,held)]: ptr(STATE+a,v)
     word(STATE+88,busy)
     ptr(STATE+120,INTERVAL)
@@ -204,6 +219,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
             assert uc.reg_read(UC_ARM64_REG_X0)==self and uc.reg_read(UC_ARM64_REG_X1)==0x1234
             assert uc.reg_read(UC_ARM64_REG_D0)==dt_bits and uc.reg_read(UC_ARM64_REG_D1)==0x41200000
             calls.append('update')
+        elif swap and a==swap_function:
+            assert tuple(uc.reg_read(r) for r in (UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_X3))==(LOCAL,1,0,0x123ABC)
+            calls.append('swap')
         elif a in [CLOCK,GETTER,START,END,INTERVAL]:
             if a==GETTER:
                 assert uc.reg_read(UC_ARM64_REG_X0)==LOCAL
@@ -259,7 +277,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         assert struct.unpack('<Q',uc.mem_read(SILENT_STATE+128,8))[0]==0, 'Automatic-shot marker leaked'
         if silent_percent is not None:
             assert struct.unpack('<fff',uc.mem_read(INFO+0x40,12))==(0,0,1)
-    if not enabled and not held: assert not getter_calls
+    if not enabled and not held and not swap: assert not getter_calls
     assert len(metadata_calls)==int(warm)
     if presentation:
         assert len(hit_calls)==len(bullets) and not visual_calls
@@ -271,10 +289,19 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     ticks,=struct.unpack('<Q',uc.mem_read(STATE+112,8))
     if not before_step:
         relevant = self == WEAPON and owner == LOCAL and (snapshot_weapon == WEAPON or held == WEAPON)
-        assert ticks == (steps if relevant and (enabled or held) else 0)
+        assert ticks == (steps if relevant and (enabled or held or swap) else 0)
     return (calls,held_after,starts,bullets) if silent_percent is not None else (calls,held_after,starts)
 
 assert case()==(['update','start'],WEAPON,1)
+assert case(swap=True,steps=15,enabled=0)[0].count('swap')==0
+assert case(swap=True,steps=16,enabled=0)[0].count('swap')==1
+assert case(swap=True,steps=32,enabled=0)[0].count('swap')==2
+assert case(swap=True,steps=16,enabled=0,swap_valid=False)[0].count('swap')==0
+assert case(swap=True,steps=16,enabled=0,swap_method=False)[0].count('swap')==0
+assert case(swap=True,steps=16,enabled=0,now=111)[0].count('swap')==0
+assert case(swap=True,steps=16,enabled=0,dt=float('nan'))[0].count('swap')==0
+swap_calls=case(swap=True,steps=16)[0]
+assert swap_calls[-2:]==['stop','swap']
 assert case(steps=10,warm=True)[2]==3
 assert case(steps=10,warm=True,enabled=0)==(['update']*10,0,0)
 assert case(firing=2)==(['update'],0,0)  # do not claim a manual hold

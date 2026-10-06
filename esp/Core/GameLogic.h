@@ -43,5 +43,6 @@ bool isLocalTeamMate(uint64_t localPlayer, uint64_t Player);
 void UpdateWeaponFeatures(uint64_t moduleBase, bool noReload, bool fastFire, bool ammoFree=false);
 void SyncWeaponFeatureSwitches(uint64_t moduleBase, bool noReload, bool fastFire, bool ammoFree=false);
 void ResetWeaponFeatures(void);
+void UpdateRunSpeed(uint64_t moduleBase,bool enabled,float metersPerSecond);
 
 #endif

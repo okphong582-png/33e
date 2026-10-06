@@ -1,8 +1,8 @@
 #pragma once
 #include <cstdint>
-// Only arm after the Silent adapter has accepted the same target. Native
-// weapon input runs on the game's update thread, never on the HUD thread.
-int AutoFireUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t target);
+// Shoot only after Silent accepts the target. Presentation and optional swaps
+// stay active without a target. Native input runs on the game's update thread.
+int AutoFireUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t target, bool swap=false);
 void AutoFireClear();
 uint64_t AutoFireStartCount();
 uint64_t AutoFireTickCount();
