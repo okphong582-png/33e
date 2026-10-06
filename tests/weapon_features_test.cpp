@@ -1,5 +1,6 @@
 #include "../esp/Core/WeaponFeatures.h"
 #include "../esp/Core/RunSpeed.h"
+#include "../esp/Core/SwapInventory.h"
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -296,5 +297,20 @@ int main() {
         update(true,12);assert(f.get<float>(address)==0);
         assert(RunSpeed::Value(-1)==0.1f&&RunSpeed::Value(40)==30&&RunSpeed::Value(std::numeric_limits<float>::quiet_NaN())==6);
     }
-    std::cout << "Weapon features and run speed: ownership, reversible values and failed I/O checks passed\n";
+    {
+        Fixture f;const uint64_t manager=Fixture::Base+0x8000,array=Fixture::Base+0x8500;
+        const uint64_t active=Fixture::Base+0x9000,other=Fixture::Base+0x9800,klass=Fixture::Base+0xA000,start=0x123456;
+        f.put(manager+0x30,Fixture::Player);f.put(manager+0x88,array);f.put(manager+0xA0,active);
+        f.put<uint32_t>(array+0x18,67);f.put(array+0x20+15*8,active);f.put(array+0x20+66*8,other);
+        f.put(other,klass);f.put(klass+0xC98,start);f.put<uint64_t>(other+0x60,0);
+        auto next=[&]{return AutoSwap::Next(manager,Fixture::Player,active,start,
+            [&](uint64_t a,auto &v){if(!f.valid(a)||!f.valid(a+sizeof(v)-1))return false;std::memcpy(&v,f.memory.data()+a-Fixture::Base,sizeof(v));return true;},
+            [&](uint64_t a){return f.valid(a);});};
+        assert(next().weapon==other&&next().slot==66); // Holstered gun and a late slot.
+        f.put(other+0x60,Fixture::Player+8);assert(next().weapon==0); // Foreign owner rejected.
+        f.put(other+0x60,Fixture::Player);assert(next().weapon==other);
+        f.put<uint32_t>(array+0x18,68);assert(next().weapon==0); // Invalid managed array.
+        f.put<uint32_t>(array+0x18,67);f.put<uint64_t>(klass+0xC98,0);assert(next().weapon==0);
+    }
+    std::cout << "Weapon features, run speed and full inventory selection checks passed\n";
 }

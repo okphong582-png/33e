@@ -151,10 +151,10 @@ void ESPSyncFromPrefs(void) {
     if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 100;
     silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
     gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
-    gNoReload = ESPPrefsBool(@"ShootNoReload", NO);
+    gNoReload = !gAutoFire && ESPPrefsBool(@"ShootNoReload", NO);
     // AimKill must use ordinary weapon timing even if manual fast fire is saved.
     gFastFire = !gAutoFire && ESPPrefsBool(@"FastFire", NO);
-    SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire, gAutoFire);
+    SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire, false);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
     if (!std::isfinite(gESPMaxDistance)) gESPMaxDistance = 150;
@@ -953,7 +953,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     SetMatchReady(YES);
     if (gGhostMode && gGhostSnapshot.active && gGhostSnapshot.match == match && gGhostSnapshot.local == local)
         [self drawGhostAnchor:gGhostSnapshot.anchor matrix:matrix width:vw height:vh vpWidth:vpW vpHeight:vpH];
-    UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire, gAutoFire);
+    UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire, false);
     UpdateRunSpeed(Moudule_Base,gRunSpeed,gRunSpeedValue);
     self.aimAssistLayer.path = nil;
 

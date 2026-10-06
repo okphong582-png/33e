@@ -16,152 +16,17 @@ _AutoFireRemoteStart:
     .p2align 4
     b .LautoShot
 .LautoTracer:
-    mov w8, #0
-    b .Lpresentation
+    adr x16, .LautoState
+    ldr x16, [x16, #AUTO_TRACER_ORIGINAL]
+    br x16
 .LautoShot:
-    // Compatibility entry only. Preserve the complete native shot ABI and
-    // hotfix/setup/reporting path instead of dispatching the hit routine alone.
     adr x16, .LautoState
     ldr x16, [x16, #AUTO_SHOT_ORIGINAL]
     br x16
-.Lpresentation:
-    // NGMILJIELKA.JCCIMHDAPDB: visual shot presentation. Preserve all
-    // argument registers for the unchanged tail-call (five args plus dt).
-    stp x29, x30, [sp, #-176]!
-    stp x21, x22, [sp, #160]
-    mov w21, w8
-    stp x19, x20, [sp, #16]
-    stp x0, x1, [sp, #32]
-    stp x2, x3, [sp, #48]
-    stp x4, x5, [sp, #64]
-    stp x6, x7, [sp, #80]
-    stp d0, d1, [sp, #96]
-    stp d2, d3, [sp, #112]
-    stp d4, d5, [sp, #128]
-    stp d6, d7, [sp, #144]
-    adr x19, .LautoState
-    add x8, x19, #AUTO_SEQUENCE
-    ldar w20, [x8]
-    tbnz w20, #0, .LtracerOriginal
-    ldr w8, [x19, #AUTO_PRESENTATION]
-    cbz w8, .LtracerOriginal
-    ldr x8, [x19, #AUTO_WEAPON]
-    cbz x8, .LtracerOriginal
-    cbz w21, .LcomponentIdentity
-    cmp x8, x0
-    b.ne .LtracerOriginal
-    b .LpresentationOwner
-.LcomponentIdentity:
-    ldr x9, [x8, #0x530]
-    cmp x9, x0
-    b.ne .LtracerOriginal
-.LpresentationOwner:
-    ldr x9, [x19, #AUTO_LOCAL]
-    cbz x9, .LtracerOriginal
-    ldr x8, [x8, #0x60]
-    cmp x8, x9
-    b.ne .LtracerOriginal
-    ldr x8, [x19, #AUTO_MATCH]
-    cbz x8, .LtracerOriginal
-    ldr x8, [x8, #0xd8]
-    cmp x8, x9
-    b.ne .LtracerOriginal
-    add x8, x9, #0x1000
-    ldrb w8, [x8, #0x258]
-    cbnz w8, .LtracerOriginal
-    ldr x8, [x19, #AUTO_CLOCK]
-    blr x8
-    ldr x8, [x19, #AUTO_DEADLINE]
-    cmp x0, x8
-    b.hi .LtracerOriginal
-    add x8, x19, #AUTO_SEQUENCE
-    ldar w8, [x8]
-    cmp w8, w20
-    b.ne .LtracerOriginal
-    ldr x8, [x19, #AUTO_TRACER_SKIPS]
-    add x8, x8, #1
-    str x8, [x19, #AUTO_TRACER_SKIPS]
-    mov x8, #0
-    b .LtracerReturn
-.LtracerOriginal:
-    cbz w21, .LcomponentOriginal
-    ldr x8, [x19, #AUTO_SHOT_ORIGINAL]
-    b .LtracerReturn
-.LcomponentOriginal:
-    ldr x8, [x19, #AUTO_TRACER_ORIGINAL]
-.LtracerReturn:
-    ldp d0, d1, [sp, #96]
-    ldp d2, d3, [sp, #112]
-    ldp d4, d5, [sp, #128]
-    ldp d6, d7, [sp, #144]
-    ldp x0, x1, [sp, #32]
-    ldp x2, x3, [sp, #48]
-    ldp x4, x5, [sp, #64]
-    ldp x6, x7, [sp, #80]
-    mov w9, w21
-    ldp x21, x22, [sp, #160]
-    ldp x19, x20, [sp, #16]
-    ldp x29, x30, [sp], #176
-    cbz x8, .LtracerDone
-    br x8
-.LtracerDone:
-    ret
-    // Player.PlayFireEffect(self, weapon, MethodInfo*). This virtual method
-    // triggers presentation; native shot dispatch remains in the weapon path.
 .LautoEffect:
-    stp x29, x30, [sp, #-64]!
-    stp x19, x20, [sp, #16]
-    stp x0, x1, [sp, #32]
-    str x2, [sp, #48]
-    adr x19, .LautoState
-    add x8, x19, #AUTO_SEQUENCE
-    ldar w20, [x8]
-    tbnz w20, #0, .LeffectOriginal
-    ldr w8, [x19, #AUTO_PRESENTATION]
-    cbz w8, .LeffectOriginal
-    ldr x8, [x19, #AUTO_LOCAL]
-    cmp x0, x8
-    b.ne .LeffectOriginal
-    ldr x8, [x19, #AUTO_WEAPON]
-    cmp x1, x8
-    b.ne .LeffectOriginal
-    cbz x1, .LeffectOriginal
-    ldr x8, [x1, #0x60]
-    cmp x8, x0
-    b.ne .LeffectOriginal
-    ldr x8, [x19, #AUTO_MATCH]
-    cbz x8, .LeffectOriginal
-    ldr x8, [x8, #0xd8]
-    cmp x8, x0
-    b.ne .LeffectOriginal
-    add x8, x0, #0x1000
-    ldrb w8, [x8, #0x258]
-    cbnz w8, .LeffectOriginal
-    ldr x8, [x19, #AUTO_CLOCK]
-    blr x8
-    ldr x8, [x19, #AUTO_DEADLINE]
-    cmp x0, x8
-    b.hi .LeffectOriginal
-    add x8, x19, #AUTO_SEQUENCE
-    ldar w8, [x8]
-    cmp w8, w20
-    b.ne .LeffectOriginal
-    ldr x8, [x19, #AUTO_EFFECT_SKIPS]
-    add x8, x8, #1
-    str x8, [x19, #AUTO_EFFECT_SKIPS]
-    mov x8, #0
-    b .LeffectReturn
-.LeffectOriginal:
-    ldr x8, [x19, #AUTO_EFFECT_ORIGINAL]
-.LeffectReturn:
-    ldp x0, x1, [sp, #32]
-    ldr x2, [sp, #48]
-    ldp x19, x20, [sp, #16]
-    ldp x29, x30, [sp], #64
-    cbz x8, .LeffectDone
-    br x8
-.LeffectDone:
-    ret
+    adr x16, .LautoState
+    ldr x16, [x16, #AUTO_EFFECT_ORIGINAL]
+    br x16
 .LautoMain:
     // Weapon.MAMFDNEJAPF(self, float dt, float time, MethodInfo*).
     // Player.PostUpdate calls this virtual slot even while the gun is idle.
@@ -301,7 +166,7 @@ _AutoFireRemoteStart:
     ldr x8, [x8, #0x88]
     cbz x8, .LautoCheckFire
     ldr w9, [x19, #AUTO_SWAP_SLOT]
-    cmp w9, #3
+    cmp w9, #67
     b.hs .LautoCheckFire
     ldr w10, [x8, #0x18]
     cmp w9, w10
@@ -315,8 +180,10 @@ _AutoFireRemoteStart:
     cmp x8, x22
     b.eq .LautoCheckFire
     ldr x8, [x8, #0x60]
+    cbz x8, .LswapInventoryOwned
     cmp x8, x25
     b.ne .LautoCheckFire
+.LswapInventoryOwned:
     ldr x8, [x19, #AUTO_HELD]
     cmp x8, x22
     cset w24, eq

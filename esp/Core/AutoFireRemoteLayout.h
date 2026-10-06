@@ -43,7 +43,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495243ULL; // AUTOFIRC: completed swaps and independent fire fallback
+inline constexpr uint64_t Magic = 0x4155544f46495244ULL; // AUTOFIRD: native ammo/effects and full inventory scan
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;

@@ -71,8 +71,8 @@ def effect_case(enabled=1, fire_enabled=1, sequence=2, now=100, local=True, curr
     skips,=struct.unpack('<Q',uc.mem_read(state+152,8))
     return calls,skips
 
-assert effect_case()==([],1)
-assert effect_case(fire_enabled=0)==([],1)
+assert effect_case()==(['effect'],0)
+assert effect_case(fire_enabled=0)==(['effect'],0)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(local=False),dict(current=False),
              dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
     assert effect_case(**args)==(['effect'],0),args
@@ -127,15 +127,15 @@ def tracer_case(enabled=1,fire_enabled=1,sequence=2,now=100,current=True,owner=T
     assert uc.reg_read(UC_ARM64_REG_X21)==0x777 and uc.reg_read(UC_ARM64_REG_X22)==0x666
     return calls,struct.unpack('<Q',uc.mem_read(STATE+(208 if shot else 168),8))[0]
 
-assert tracer_case()==([],1)
-assert tracer_case(fire_enabled=0)==([],1)
+assert tracer_case()==(['tracer'],0)
+assert tracer_case(fire_enabled=0)==(['tracer'],0)
 assert tracer_case(shot=True,fire_enabled=0)==(['tracer'],0)
 for args in [dict(enabled=0),dict(sequence=3),dict(now=111),dict(current=False),
              dict(owner=False),dict(match=False),dict(knocked=1),dict(race=True)]:
     assert tracer_case(**args)==(['tracer'],0),args
     assert tracer_case(shot=True,**args)==(['tracer'],0),args
 assert tracer_case(shot=True)==(['tracer'],0)
-print('Local tracer suppression, OFF/remote/stale fallbacks and all argument registers passed')
+print('Native shot/effect/tracer methods always receive their original argument registers')
 
 INTERVAL = 0x120600
 METADATA_INIT, TYPEINFO = 0x120900, 0x274000
@@ -148,7 +148,8 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          match_local=LOCAL, knocked=0, busy=0, start=START, stop=END, clock_action=None,
          steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
           gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False, presentation=False,
-          swap=False, swap_valid=True, swap_method=True, swap_cooldown=0, swap_success=False):
+          swap=False, swap_valid=True, swap_method=True, swap_cooldown=0, swap_success=False,
+          swap_slot=1, inactive_owner=LOCAL):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -163,11 +164,11 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         cooldown=0x120c00
         uc.mem_write(cooldown,b'\xc0\x03\x5f\xd6');ptr(STATE+264,cooldown)
         uc.mem_write(swap_function,b'\xc0\x03\x5f\xd6')
-        word(STATE+228,1);ptr(STATE+240,swap_function);word(STATE+248,1);ptr(STATE+256,next_weapon)
+        word(STATE+228,1);ptr(STATE+240,swap_function);word(STATE+248,swap_slot);ptr(STATE+256,next_weapon)
         ptr(LOCAL,CLASS);ptr(CLASS+0xdc8,swap_function if swap_method else START);ptr(CLASS+0xdd0,0x123ABC)
         ptr(LOCAL+0x740,manager);ptr(manager+0x30,LOCAL);ptr(manager+0x88,inventory)
-        word(inventory+0x18,3);ptr(inventory+0x28,next_weapon if swap_valid else WEAPON)
-        ptr(next_weapon+0x60,LOCAL)
+        word(inventory+0x18,67);ptr(inventory+0x20+swap_slot*8,next_weapon if swap_valid else WEAPON)
+        ptr(next_weapon+0x60,inactive_owner)
     for a,v in [(48,deadline),(56,LOCAL),(64,MATCH),(72,snapshot_weapon),(80,held)]: ptr(STATE+a,v)
     word(STATE+88,busy)
     ptr(STATE+120,INTERVAL)
@@ -227,7 +228,7 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
             assert uc.reg_read(UC_ARM64_REG_X0)==LOCAL and uc.reg_read(UC_ARM64_REG_X1)==0
             uc.reg_write(UC_ARM64_REG_X0,swap_cooldown)
         elif swap and a==swap_function:
-            assert tuple(uc.reg_read(r) for r in (UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_X3))==(LOCAL,1,1,0x123ABC)
+            assert tuple(uc.reg_read(r) for r in (UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_X3))==(LOCAL,swap_slot,1,0x123ABC)
             calls.append('swap')
             if swap_success:getter_weapon=next_weapon
         elif a in [CLOCK,GETTER,START,END,INTERVAL]:
@@ -319,6 +320,10 @@ assert swap_calls[-2:]==['stop','swap']
 assert case(swap=True,steps=48)[2]>=7 # Simulated rejected swaps don't stop subsequent aim.
 changed_calls,changed_held,changed_starts=case(swap=True,steps=48,swap_success=True)
 assert changed_calls.count('swap')==1 and changed_held==0 and changed_starts==3
+assert case(swap=True,steps=16,enabled=0,swap_slot=15,inactive_owner=0)[0].count('swap')==1
+assert case(swap=True,steps=16,enabled=0,swap_slot=66)[0].count('swap')==1
+assert case(swap=True,steps=48,swap_slot=67)[2]>=8
+assert case(swap=True,steps=48,inactive_owner=LOCAL+8)[0].count('swap')==0
 for rejected in [dict(swap_valid=False),dict(swap_method=False),dict(swap_cooldown=1)]:
     calls,held,starts=case(swap=True,steps=48,**rejected)
     assert not calls.count('swap') and starts>=8 and held==WEAPON

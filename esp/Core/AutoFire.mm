@@ -4,6 +4,7 @@
 #include "AutoFireRemoteLayout.h"
 #include "SilentAimRemoteMapping.h"
 #include "SilentAimWeapon.h"
+#include "SwapInventory.h"
 #include "GameLogic.h"
 #include "../drawing_view/offset.h"
 #include <mach/mach_time.h>
@@ -194,7 +195,7 @@ int InstallPresentation(Session &session,uint64_t slot,uint64_t native,uint64_t 
     task_resume(task);return ok?8:10;
 #endif
 }
-int InstallEffect(Session &session,uint64_t local) {
+[[maybe_unused]] int InstallEffect(Session &session,uint64_t local) {
     uint64_t klass=0;
     if(!Read(local,klass)||!isVaildPtr(klass))return 9;
     return InstallPresentation(session,klass+EffectSlot,FireEffect,AUTO_EFFECT_ENTRY);
@@ -203,7 +204,7 @@ template<size_t N> bool ClassText(uint64_t address,const char (&expected)[N]) {
     uint64_t p=0;std::array<char,N> text{};
     return Read(address,p)&&Read(p,text)&&!std::memcmp(text.data(),expected,N);
 }
-int InstallTracer(Session &session,uint64_t weapon) {
+[[maybe_unused]] int InstallTracer(Session &session,uint64_t weapon) {
     uint32_t ready=0;
     if(!Read(session.state()+AUTO_METADATA_READY,ready))return 10;
     // The signed weapon callback resolves this metadata usage on a game thread.
@@ -252,36 +253,24 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,b
     Session *session=nullptr;
     const int result=Install(weaponClass+UpdateSlot,session);
     if(result!=8){Clear();retryAt=now+1;retryState=result;return result;}
-    const int effectResult=InstallEffect(*session,local);
-    if(effectResult!=8){Clear();retryAt=now+1;retryState=effectResult;return effectResult;}
-    const int tracerResult=InstallTracer(*session,weapon);
-    if(tracerResult!=8){
-        Clear();
-        if(tracerResult!=7){retryAt=now+1;retryState=tracerResult;}
-        return tracerResult;
-    }
+    // Keep fire effects and projectile presentation untouched. These native
+    // methods can contain hotfix/state work beyond rendering; skipping an
+    // entire method isn't a verified way to hide only a tracer.
     // Keep virtual-223 untouched: it runs shot setup and reporting before the
     // hit routine. Calling only its final hit routine drops those native steps.
     if(activeSlot!=session->slot){for(auto &s:sessions)if(s.slot!=session->slot)Disable(s);activeSlot=session->slot;}
     const uint64_t silentGate=SilentAimAutoFireGate();
     if(!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 10;}
-    uint64_t swapFunction=0,swapWeapon=0,localClass=0,manager=0,array=0;
-    uint32_t swapSlot=0,length=0;
+    uint64_t swapFunction=0,swapWeapon=0,localClass=0,manager=0;
+    uint32_t swapSlot=0;
     if(swap&&Fingerprint<0xC0>(base+0x5636E60,0x8C40F08F)&&Read(local,localClass)&&Read(localClass+0xDC8,swapFunction)&&
         ((swapFunction==base+0x56B4EB4&&Fingerprint<0x5F8>(swapFunction,0x40924917))||
-         (swapFunction==base+0x5A5C9D4&&Fingerprint<0x100>(swapFunction,0x538C5B13)))&&
-        Read(local+0x740,manager)&&Read(manager+0x30,localClass)&&localClass==local&&
-        Read(manager+0x88,array)&&Read(array+0x18,length)&&length>=2&&length<=67) {
-        // Cycle only occupied firearm slots. Keep the native cooldown and sync.
-        int current=-1;
-        for(uint32_t i=0;i<std::min(length,3u);++i){uint64_t w=0;if(Read(array+0x20+i*8,w)&&w==weapon)current=(int)i;}
-        if(current>=0)for(uint32_t d=1;d<3;++d){
-            const uint32_t i=(current+d)%3;uint64_t w=0,owner=0,klass=0,method=0;
-            if(i<length&&Read(array+0x20+i*8,w)&&w&&w!=weapon&&Read(w+0x60,owner)&&owner==local&&
-                Read(w,klass)&&Read(klass+StartSlot,method)&&method==base+Start){swapWeapon=w;swapSlot=i;break;}
-        }
+         (swapFunction==base+0x5A5C9D4&&Fingerprint<0x100>(swapFunction,0x538C5B13)))&&Read(local+0x740,manager)) {
+        const auto next=AutoSwap::Next(manager,local,weapon,base+Start,
+            [](uint64_t a,auto &v){return Read(a,v);},[](uint64_t a){return isVaildPtr(a);});
+        swapWeapon=next.weapon;swapSlot=next.slot;
     }
-    const uint32_t swapEnabled=swapWeapon?1:0,presentation=1;
+    const uint32_t swapEnabled=swapWeapon?1:0,presentation=0;
     mach_timebase_info_data_t tb{};
     if(mach_timebase_info(&tb)!=KERN_SUCCESS||!tb.numer||!tb.denom){Clear();return 9;}
     struct Publication {uint32_t enabled;uint64_t deadline,local,match,weapon;} __attribute__((packed));
