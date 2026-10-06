@@ -17,8 +17,9 @@ function inspect(buffer){
  });
  function method(){const generic=bool(),owner=type(),name=string();
   const args=generic?Array.from({length:count()},type):[];
-  const parameters=Array.from({length:count()},()=>generic?(bool()?string():type()):type());
-  return {owner,name,args,parameters};
+  const parameterIsGeneric=[];
+  const parameters=Array.from({length:count()},()=>{const match=generic&&bool();parameterIsGeneric.push(match);return match?string():type();});
+  return {generic,owner,name,args,parameters,parameterIsGeneric};
  }
  const externMethods=Array.from({length:count()},method),strings=Array.from({length:count()},string);
  const fields=Array.from({length:count()},()=>{const isNew=bool(),owner=type(),name=string();return isNew?{isNew,owner,name,type:type(),method:i32()}:{isNew,owner,name};});

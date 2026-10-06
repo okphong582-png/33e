@@ -57,13 +57,14 @@ File không chứa callback của bộ nạp bản vá. Cần kiểm tra loader 
 hoặc thử thực tế để xác nhận tên file, vị trí, thời điểm nạp và kiểm tra tương thích.
 Chưa thực thi file mẫu hoặc thay file trong Documents của game.
 
-## Nối với backend hiện có
+## Chuyển logic vào một file độc lập
 
-Giao diện mới gọi hợp đồng `IMenuBackend`; adapter native đọc/ghi `ESPPrefs`,
-gọi `ESPSyncFromPrefs`. Backend hiện có tiếp tục đọc dữ liệu game và xử lý chức
-năng. Không gọi các setter gameplay hoặc danh sách địch của bytecode mẫu.
-Phần native adapter cần cùng tiến trình; TIPA cần giao tiếp giữa hai tiến trình.
-Hiện source và adapter là vật liệu tích hợp, chưa phải bản vá chạy được.
+Theo yêu cầu đã sửa, menu và logic đọc dữ liệu phải nằm trong chính file IFix.
+Phương án `IMenuBackend`/native bridge đã bỏ. Không cần dylib/TIPA hay P/Invoke.
+Logic từ dự án C++ cần chuyển sang getter/field và opcode IFix tương ứng;
+không thể dùng nguyên hàm đọc bộ nhớ/ARM64 của app khác bên trong file.
+Bộ ghi mới có thể tái tạo định dạng mẫu, nhưng chưa có payload mới đã chuyển
+đủ logic của dự án và chưa xác nhận việc chạy trên thiết bị.
 
 Tham khảo cấu trúc loader gốc:
 [Tencent InjectFix FileVirtualMachineBuilder.cs](https://github.com/Tencent/InjectFix/blob/master/Source/VSProj/Src/Builder/FileVirtualMachineBuilder.cs),
