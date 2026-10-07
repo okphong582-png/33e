@@ -1,6 +1,7 @@
 #pragma once
 #define MODES_PAGE 0x4000
 #define MODES_POST_ENTRY 16
+#define MODES_LATE_ENTRY 32
 #define MODES_ORIGINAL 0
 #define MODES_CLOCK 8
 #define MODES_CURRENT_MATCH 16
@@ -50,7 +51,12 @@
 #define MODES_SET_SPEED 4952
 #define MODES_GET_ENABLED 4960
 #define MODES_SET_ENABLED 4968
-#define MODES_POSES 4976
+#define MODES_LATE_SHARED 4976
+#define MODES_LATE_ORIGINAL 4984
+#define MODES_LATE_TICKS 4992
+#define MODES_SPIN_APPLIES 5000
+#define MODES_SPIN_STATUS 5008
+#define MODES_POSES 5016
 #define MODES_STATE_SIZE 0x94000
 #define POSE_CAPACITY 128
 #define POSE_SIZE 9264
@@ -83,7 +89,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f4445303aULL;
+constexpr uint64_t Magic = 0x504c4d4f4445303bULL;
 struct BonePose {
     uint64_t transform=0;
     float anchorRotation[4]={},anchorPosition[3]={};uint32_t pad=0;
@@ -126,6 +132,8 @@ struct State {
     float spinReal[4]={},spinShown[4]={};
     uint64_t model=0,localPos=0,setLocalPos=0,childCount=0,getChild=0;
     uint64_t getSpeed=0,setSpeed=0,getEnabled=0,setEnabled=0;
+    uint64_t lateShared=0,lateOriginal=0,lateTicks=0,spinApplies=0;
+    uint32_t spinStatus=0,spinStatusPad=0;
 };
 static_assert(offsetof(State, input)==MODES_FLAGS);
 static_assert(offsetof(State, input)+offsetof(Input, players)==MODES_PLAYERS);
@@ -150,6 +158,7 @@ static_assert(offsetof(Row, real)==ROW_REAL && offsetof(Row, shown)==ROW_SHOWN);
 static_assert(offsetof(Row, identity)==ROW_ID);
 static_assert(sizeof(State)<MODES_PAGE);
 static_assert(sizeof(State)==MODES_POSES && offsetof(State,model)==MODES_MODEL);
+static_assert(offsetof(State,lateShared)==MODES_LATE_SHARED && offsetof(State,spinStatus)==MODES_SPIN_STATUS);
 static_assert(sizeof(Pose)==POSE_SIZE && offsetof(Pose,bones)==POSE_BONES);
 static_assert(sizeof(BonePose)==BONE_SIZE && offsetof(BonePose,realRotation)==BONE_REAL_ROT);
 static_assert(MODES_POSES+MODES_CAPACITY*sizeof(Pose)<MODES_STATE_SIZE);

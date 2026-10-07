@@ -42,7 +42,9 @@ HEADER = (pathlib.Path(__file__).parent.parent / 'esp/Core/PlayerModesLayout.h')
 OFF = {name: int(value, 0) for name, value in re.findall(r'^#define ((?:MODES|ROW)_\w+) (0x[\da-fA-F]+|\d+)$', HEADER, re.M)}
 BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x1a0000, 0x1b0000, 0x600000
 LOCAL, ENEMY, OTHER, MATCH = 0x200000, 0x210000, 0x220000, 0x400000
-FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS', 'GET_ROT', 'SET_ROT', 'IS_CHILD', 'MODEL', 'LOCAL_POS', 'SET_LOCAL_POS', 'CHILD_COUNT', 'GET_CHILD', 'GET_SPEED', 'SET_SPEED', 'GET_ENABLED', 'SET_ENABLED']
+FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS', 'GET_ROT', 'SET_ROT', 'IS_CHILD', 'MODEL', 'LOCAL_POS', 'SET_LOCAL_POS', 'CHILD_COUNT', 'GET_CHILD', 'GET_SPEED', 'SET_SPEED', 'GET_ENABLED', 'SET_ENABLED', 'LATE_ORIGINAL']
+GAME=0x470000
+LATE_BASE=0x480000
 CCT,CCT_CLASS=0x430000,0x431000
 MODEL,NODE,ROOT=0x433000,0x434000,0x435000
 E_MODEL,E_ROOT,E_NODE,ANIMATOR,ANIM_SYSTEM=0x438000,0x439000,0x43a000,0x43b000,0x43c000
@@ -58,13 +60,18 @@ class Simulation:
         self.uc.mem_map(BASE, 0xc0000)
         self.uc.mem_map(LOCAL, 0x280000)
         self.uc.mem_map(STACK, 0x10000)
+        self.uc.mem_map(LATE_BASE,0x8000)
         self.uc.mem_write(BASE, CODE)
+        self.uc.mem_write(LATE_BASE,CODE)
         self.functions = {name: NATIVE+i*0x100 for i, name in enumerate(FUNCTIONS)}
         self.native = {address: name for name, address in self.functions.items()}
         for name, address in self.functions.items():
             self.uc.mem_write(address, b'\xc0\x03\x5f\xd6')
             self.q(name, address)
         self.current_match, self.current_local, self.now = MATCH, LOCAL, 100
+        self.q('LATE_SHARED',STATE);self.late_rotation=None
+        self.ptr(LATE_BASE+0x4000+OFF['MODES_LATE_SHARED'],STATE)
+        self.ptr(LATE_BASE+0x4000+OFF['MODES_LATE_ORIGINAL'],self.functions['LATE_ORIGINAL'])
         self.positions = {LOCAL: (0, 10, 0), ENEMY: (20, 10, 20), OTHER: (40, 10, 40)}
         self.authoritative = dict(self.positions)
         self.health, self.special = {}, {}
@@ -123,7 +130,12 @@ class Simulation:
         self.events.append(name)
         if self.action: self.action(name, self)
         player = uc.reg_read(UC_ARM64_REG_X0)
-        if name in ('ORIGINAL', 'POST_ORIGINAL'):
+        if name=='LATE_ORIGINAL':
+            assert player==GAME and uc.reg_read(UC_ARM64_REG_X1)==0x1234
+            self.native_rotations.append(self.rotation)
+            # The native late animation can overwrite a pose applied at PostUpdate.
+            if self.late_rotation is not None:self.rotation=self.late_rotation
+        elif name in ('ORIGINAL', 'POST_ORIGINAL'):
             assert name == ('POST_ORIGINAL' if self.post else 'ORIGINAL'), 'Correct original for each phase'
             assert player == self.player and uc.reg_read(UC_ARM64_REG_X1) == 0x1234
             assert uc.reg_read(UC_ARM64_REG_D0) == 0x3d800000 and uc.reg_read(UC_ARM64_REG_D1) == 0x41200000
@@ -220,20 +232,20 @@ class Simulation:
         for reg in (UC_ARM64_REG_X8, UC_ARM64_REG_X9, UC_ARM64_REG_X10, UC_ARM64_REG_X11, UC_ARM64_REG_X12, UC_ARM64_REG_X13):
             uc.reg_write(reg, 0xdeadbeef)
 
-    def run(self, player, interface=False, wrapped=True, post=False):
+    def run(self, player, interface=False, wrapped=True, post=False, late=False):
         self.player = player
         self.post = post
         if player not in self.positions:
             self.positions[player] = (50, 10, 50); self.authoritative[player] = self.positions[player]
         initial_busy, first_call = self.w('BUSY'), len(self.events)
-        self.uc.reg_write(UC_ARM64_REG_X0, player); self.uc.reg_write(UC_ARM64_REG_X1, 0x1234)
+        self.uc.reg_write(UC_ARM64_REG_X0, GAME if late else player); self.uc.reg_write(UC_ARM64_REG_X1, 0x1234)
         self.uc.reg_write(UC_ARM64_REG_D0, 0x3d800000); self.uc.reg_write(UC_ARM64_REG_D1, 0x41200000)
         self.uc.reg_write(UC_ARM64_REG_SP, STACK+0x8000); self.uc.reg_write(UC_ARM64_REG_X30, RETURN)
         saved = {reg: 0xfff000+i for i, reg in enumerate((UC_ARM64_REG_X19, UC_ARM64_REG_X20, UC_ARM64_REG_X21,
             UC_ARM64_REG_X22, UC_ARM64_REG_X23, UC_ARM64_REG_X24, UC_ARM64_REG_X25, UC_ARM64_REG_X26,
             UC_ARM64_REG_X27, UC_ARM64_REG_X28, UC_ARM64_REG_X29))}
         for reg, value in saved.items(): self.uc.reg_write(reg, value)
-        entry = BASE+OFF['MODES_POST_ENTRY'] if post else BASE
+        entry = LATE_BASE+OFF['MODES_LATE_ENTRY'] if late else (BASE+OFF['MODES_POST_ENTRY'] if post else BASE)
         if interface or post:
             # Actual metadata: IEntityTicker starts at class vtable slot 4;
             # OnUpdate is interface method 1, hence class slot 5 (0x188).
@@ -254,8 +266,10 @@ class Simulation:
         assert self.uc.reg_read(UC_ARM64_REG_PC) == RETURN, 'Callback did not return'
         assert self.uc.reg_read(UC_ARM64_REG_SP) == STACK+0x8000
         assert all(self.uc.reg_read(reg) == value for reg, value in saved.items()), 'Callee-saved ABI'
-        assert self.events[first_call:].count('POST_ORIGINAL' if post else 'ORIGINAL') == 1
-        assert self.events[first_call:].count('ORIGINAL' if post else 'POST_ORIGINAL') == 0
+        expected='LATE_ORIGINAL' if late else ('POST_ORIGINAL' if post else 'ORIGINAL')
+        assert self.events[first_call:].count(expected)==1
+        assert not any(name in self.events[first_call:] for name in ('ORIGINAL','POST_ORIGINAL','LATE_ORIGINAL') if name!=expected)
+        assert self.uc.reg_read(UC_ARM64_REG_X0)==(GAME if late else player)
         assert self.w('BUSY') == initial_busy
 
 
@@ -506,23 +520,29 @@ print('Player modes ARM64: two frame phases, running/jumping hold, height, lates
 
 # Local spin must be a render-only child pose, restored before native updates.
 s=Simulation(flags=4);s.run(LOCAL);assert not s.rotation_writes
-s.run(LOCAL,post=True)
+s.run(LOCAL,post=True);assert not s.rotation_writes, 'PostUpdate is not the final animation phase'
+s.late_rotation=(0,0,0,1)
+s.run(LOCAL,late=True)
 assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(0,math.sqrt(.5),0,math.sqrt(.5))))
 assert not s.writes and not s.force_writes
-for _ in range(20):s.run(LOCAL);s.run(LOCAL,post=True)
+for _ in range(20):s.run(LOCAL);s.run(LOCAL,late=True)
 assert all(pose==(0,0,0,1) for pose in s.native_rotations)
 s.w('FLAGS',0);s.run(LOCAL)
 assert s.rotation==(0,0,0,1) and not s.q('SPIN_PLAYER')
 s=Simulation(flags=4);s.rotation=(math.sqrt(.5),0,0,math.sqrt(.5))
-s.run(LOCAL,post=True)
+s.run(LOCAL,late=True)
 assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(.5,.5,.5,.5)))
 # Unity may normalize or negate the same quaternion representation.
 s.rotation=tuple(-v for v in s.rotation);s.w('FLAGS',0);s.run(LOCAL)
 assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(math.sqrt(.5),0,0,math.sqrt(.5))))
 s=Simulation(flags=4)
 s.uc.mem_write(STATE+OFF['MODES_SPIN_SIN'],struct.pack('<ff',float('nan'),1))
-s.run(LOCAL,post=True);assert not s.rotation_writes
+s.run(LOCAL,late=True);assert not s.rotation_writes
 s=Simulation(flags=4);s.run(ENEMY,post=True);assert not s.rotation_writes
+s.run(LOCAL,late=True);assert s.q('LATE_TICKS')==1 and s.q('SPIN_APPLIES')==1 and s.w('SPIN_STATUS')==4
+s=Simulation(flags=4);s.w('BUSY',1);s.run(LOCAL,late=True);assert not s.rotation_writes and s.q('LATE_TICKS')==0
+s=Simulation(flags=4);s.w('SEQUENCE',3);s.run(LOCAL,late=True);assert not s.rotation_writes
+s=Simulation(flags=4);s.q('LOCAL',0);s.run(LOCAL,late=True);assert not s.rotation_writes
 for reason in ['root','missing','not_child','dead','knocked','lease','match','race','nan']:
     s=Simulation(flags=4)
     if reason=='root':s.ptr(NODE+0x10,ROOT)
@@ -537,14 +557,14 @@ for reason in ['root','missing','not_child','dead','knocked','lease','match','ra
         def spin_race(name,sim):
             if name=='GET_ROT':sim.w('SEQUENCE',4)
         s.action=spin_race
-    s.run(LOCAL,post=True);assert not s.rotation_writes,reason
-s=Simulation(flags=4);s.run(LOCAL,post=True);s.rotation=(0,0,0,-1)
+    s.run(LOCAL,late=True);assert not s.rotation_writes,reason
+s=Simulation(flags=4);s.run(LOCAL,late=True);s.rotation=(0,0,0,-1)
 s.w('FLAGS',0);s.run(LOCAL);assert s.rotation==(0,0,0,-1) # Native animation wins.
-s=Simulation(flags=4);s.run(LOCAL,post=True);before=len(s.rotation_writes)
+s=Simulation(flags=4);s.run(LOCAL,late=True);before=len(s.rotation_writes)
 s.uc.mem_write(LOCAL+0x60,struct.pack('<I',1));s.w('FLAGS',0);s.run(LOCAL)
 assert len(s.rotation_writes)==before # Recycled player does not receive saved pose.
 for flags in [5,6,7]:
-    s=Simulation(flags=flags);s.run(LOCAL);s.run(LOCAL,post=True)
+    s=Simulation(flags=flags);s.run(LOCAL);s.run(LOCAL,late=True)
     assert s.rotation_writes
     if flags&1:s.run(ENEMY,post=True);assert s.writes
 print('Visual spin ARM64: child-only render phase, native restoration, independent modes and guards passed')

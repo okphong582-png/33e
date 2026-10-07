@@ -15,6 +15,9 @@ _PlayerModesRemoteStart:
 .org MODES_POST_ENTRY, 0
     mov w16, #1
     b .Lentry
+.org MODES_LATE_ENTRY, 0
+    mov w16, #2
+    b .Lentry
 .Lentry:
     stp x29, x30, [sp, #-144]!
     stp x19, x20, [sp, #16]
@@ -27,6 +30,15 @@ _PlayerModesRemoteStart:
     mov w23, w16 // Same state/anchor, distinct original for each frame phase.
     mov x20, x0
     mov x21, x1
+    str x20, [sp, #120]
+    cmp w23, #2
+    b.ne .Llock
+    // MatchGame.OnLateUpdate owns a separate signed mapping/original, but uses
+    // the local Player session's pose state so OnUpdate can restore it first.
+    ldr x8, [x19, #MODES_LATE_ORIGINAL]
+    str x8, [sp, #128]
+    ldr x19, [x19, #MODES_LATE_SHARED]
+    cbz x19, .LlateTail
 .Llock:
     add x8, x19, #MODES_BUSY
     ldaxr w9, [x8]
@@ -34,6 +46,11 @@ _PlayerModesRemoteStart:
     mov w9, #1
     stxr w10, w9, [x8]
     cbnz w10, .Ltail
+    cmp w23, #2
+    b.ne .LrestoreSpin
+    ldr x20, [x19, #MODES_LOCAL]
+    cbz x20, .LlateOriginal
+.LrestoreSpin:
     // Undo our previous render pose before native gameplay/network updates.
     // Only restore the identical living model; never write a recycled object.
     ldr x8, [x19, #MODES_SPIN_PLAYER]
@@ -79,6 +96,8 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_SET_ROT]
     blr x8
 .LspinRestored:
+    cmp w23, #2
+    b.eq .LlateOriginal
     mov x22, #0
     mov x26, #0
     add x8, x19, #MODES_ROWS
@@ -435,14 +454,26 @@ _PlayerModesRemoteStart:
     str wzr, [x22, #ROW_MODE]
 .Lunlock:
     bl .LposeAfter
-    // Presentation only: apply after PostUpdate, to a child model transform.
+    b .LspinDone
+.LlateOriginal:
+    ldr x0, [sp, #120]
+    mov x1, x21
+    ldr x8, [sp, #128]
+    blr x8
+    ldr x8, [x19, #MODES_LATE_TICKS]
+    add x8, x8, #1
+    str x8, [x19, #MODES_LATE_TICKS]
+    ldr x20, [x19, #MODES_LOCAL]
+    cbz x20, .LspinDone
+    // Presentation only: apply after the game's complete LateUpdate chain.
     // Entity/physics root, camera, aim quaternions and packet fields are untouched.
-    cbz w23, .LspinDone
     add x8, x19, #MODES_SEQUENCE
     ldar w24, [x8]
     tbnz w24, #0, .LspinDone
     ldr w8, [x19, #MODES_FLAGS]
     tbz w8, #2, .LspinDone
+    mov w8, #1 // Awaiting a living local match / valid lease.
+    str w8, [x19, #MODES_SPIN_STATUS]
     ldr x8, [x19, #MODES_LOCAL]
     cmp x8, x20
     b.ne .LspinDone
@@ -470,6 +501,8 @@ _PlayerModesRemoteStart:
     blr x8
     cmp w0, #0
     b.le .LspinDone
+    mov w8, #2 // Awaiting a visual rig distinct from the physical root.
+    str w8, [x19, #MODES_SPIN_STATUS]
     mov x0, x20
     mov x1, #0
     ldr x8, [x19, #MODES_MODEL]
@@ -490,6 +523,8 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_IS_CHILD]
     blr x8
     cbz w0, .LspinDone // A camera/root/sibling cannot be our visual pivot.
+    mov w8, #3 // Awaiting a stable, finite quaternion publication.
+    str w8, [x19, #MODES_SPIN_STATUS]
     mov x0, x27
     mov x1, #0
     ldr x8, [x19, #MODES_GET_ROT]
@@ -550,6 +585,11 @@ _PlayerModesRemoteStart:
     mov x1, #0
     ldr x8, [x19, #MODES_SET_ROT]
     blr x8
+    ldr x8, [x19, #MODES_SPIN_APPLIES]
+    add x8, x8, #1
+    str x8, [x19, #MODES_SPIN_APPLIES]
+    mov w8, #4
+    str w8, [x19, #MODES_SPIN_STATUS]
 .LspinDone:
     add x8, x19, #MODES_BUSY
     stlr wzr, [x8]
@@ -557,6 +597,8 @@ _PlayerModesRemoteStart:
 .Lreserved:
     clrex
 .Ltail:
+    cmp w23, #2
+    b.eq .LlateTail
     mov x0, x20
     mov x1, x21
     ldp d0, d1, [sp, #96]
@@ -565,8 +607,14 @@ _PlayerModesRemoteStart:
     ldr x8, [x19, #MODES_POST_ORIGINAL]
 .LcallTail:
     blr x8
+    b .Lreturn
+.LlateTail:
+    ldr x0, [sp, #120]
+    mov x1, x21
+    ldr x8, [sp, #128]
+    blr x8
 .Lreturn:
-    mov x0, x20
+    ldr x0, [sp, #120]
     mov x1, x21
     ldp d0, d1, [sp, #96]
     ldp x27, x28, [sp, #80]

@@ -45,3 +45,23 @@ Changed identities, replaced avatars, reparented nodes, invalid native pointers,
 NaN pose values, cycles, oversized hierarchies and torn input prevent pose writes.
 Private RW pose storage is separately sized; the shared signed code stays RX.
 Physical-device animation ordering remains unverified.
+# Final-frame spin regression
+
+Spin no longer applies at Player.PostUpdate: the supplied game still has a
+separate native late chain. MatchGame.OnLateUpdate occupies virtual slot 18;
+BaseGameManager.LateUpdate calls that entry at 0x6B32BB0. The base implementation
+0x5A9A654 invokes its late delegate before returning. Six supplied game-mode
+overrides retain that slot and call the base implementation. Each accepted
+native entry is fingerprinted before binding.
+
+The signed late callback has its own immutable native-original pointer and a
+link to the local Player callback's state. It runs the native late chain first,
+then applies visual yaw; the next Player.OnUpdate restores the owned yaw before
+gameplay runs. Old callback mappings remain alive for in-flight game calls.
+BoneRoot must be a live child distinct from the physical root; missing or
+unsupported rigs produce a short status inside the menu, never a play-screen log.
+
+The ARM64 regression now executes a separate late mapping and simulates a native
+late animation that resets the model rotation. It checks the final displayed
+rotation, native restoration, independent originals, guards and saved registers.
+This is emulator/static evidence; visibility on a physical iPhone remains unverified.

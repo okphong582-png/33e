@@ -37,6 +37,16 @@ constexpr Signature signatures[] = {
     {0x8D58C18,0x50,0x3655F88D},{0x8D58C68,0x64,0x43B62F71},
     {0x8CDCAF4,0x50,0xD78D78BD},{0x8CDCB44,0x64,0x154D9667}
 };
+// Metadata: MatchGame.OnLateUpdate and its supplied game-mode overrides all
+// occupy BaseGame slot 18, ABI (self, MethodInfo), after the native late chain.
+constexpr Signature lateSignatures[] = {
+    {0x5A9A654,0x78,0x01F24198},{0x635594C,0x54,0xFB5E72CE},
+    {0x63706CC,0x54,0x3010A312},{0x63733EC,0x54,0x2EFCAE4E},
+    {0x6374918,0x54,0x482878B5},{0x66E0A24,0x54,0x19ABE41A},
+    {0x66F031C,0x54,0xCDA7586C}
+};
+constexpr uint64_t LateSlot=0x138+18*16;
+struct LateSession { uint64_t slot=0,allocation=0,original=0,shared=0; };
 struct Session {
     uint64_t slot=0, allocation=0, original=0, originalPost=0;
     uint32_t sequence=0;
@@ -59,6 +69,7 @@ PlayerModesSnapshot snapshot{};
 double lastSample=0, lastTickAt=0, lastPostAt=0;
 uint64_t sampledTicks=0, sampledPostTicks=0;
 std::vector<Session> sessions;
+std::vector<LateSession> lateSessions;
 bool ReadBytes(uint64_t address,void *value,size_t size){
     mach_vm_size_t actual=0;
     return task!=MACH_PORT_NULL&&isVaildPtr(address)&&
@@ -81,7 +92,7 @@ void Clear(){
     ownerMatch=ownerLocal=0;previousFlags=0;
     control.Reset();
     spinPhase.Reset();
-    snapshot.fly=snapshot.heldEnemies=0;snapshot.running=false;
+    snapshot.fly=snapshot.heldEnemies=0;snapshot.running=false;snapshot.spinStatus=0;
     // Keep executable callbacks mapped while game threads may still use them.
     // Each callback restores its own held transform before its original update.
 }
@@ -96,7 +107,7 @@ bool Attach(uint64_t base){
     if(task==candidate&&pid==candidatePID&&module==base)return true;
     Clear();
     if(task!=MACH_PORT_NULL)mach_port_deallocate(mach_task_self(),task);
-    task=MACH_PORT_NULL;sessions.clear();verified=false;retryAt=0;
+    task=MACH_PORT_NULL;sessions.clear();lateSessions.clear();verified=false;retryAt=0;
     snapshot={};lastSample=lastTickAt=lastPostAt=0;sampledTicks=sampledPostTicks=0;
     if(mach_port_mod_refs(mach_task_self(),candidate,MACH_PORT_RIGHT_SEND,1)!=KERN_SUCCESS)return false;
     task=candidate;pid=candidatePID;module=base;return true;
@@ -217,6 +228,48 @@ int Install(uint64_t klass){
     if(!ok){snapshot.detail="không ghi được nhịp nhân vật";return 10;}
     return 8;
 }
+int InstallLate(uint64_t game,uint64_t shared){
+    uint64_t klass=0,current=0;
+    if(!Read(game,klass)||!isVaildPtr(klass)||!Read(klass+LateSlot,current))return 9;
+    const uint64_t slot=klass+LateSlot;
+    uint64_t original=current;
+    for(auto it=lateSessions.rbegin();it!=lateSessions.rend();++it){
+        if(it->slot!=slot||current!=it->allocation+MODES_LATE_ENTRY)continue;
+        if(it->shared==shared)return 8;
+        original=it->original;break;
+    }
+    const Signature *signature=nullptr;
+    for(const auto &candidate:lateSignatures)
+        if(original==module+candidate.offset){signature=&candidate;break;}
+    std::array<uint8_t,0x78> bytes{};
+    if(!signature||!ReadBytes(original,bytes.data(),signature->size)){
+        snapshot.detail="Spin: nhịp cuối của chế độ này chưa hỗ trợ";return 9;
+    }
+    uint32_t hash=0x811C9DC5;
+    for(size_t i=0;i<signature->size;++i)hash=(hash^bytes[i])*0x01000193u;
+    if(hash!=signature->hash){snapshot.detail="Spin: nhịp cuối khác bản đã kiểm tra";snapshot.failedOffset=signature->offset;return 9;}
+    if(!Writable(slot)||lateSessions.size()>=64){snapshot.detail="Spin: không cài được nhịp cuối";return 10;}
+    const auto mapping=SilentAimMapping::Map(task,PlayerModesRemoteStart,PlayerModesRemoteEnd);
+    if(!mapping.address){snapshot.detail=mapping.operation;return 10;}
+    PlayerModesRemote::State state{};state.lateShared=shared;state.lateOriginal=original;
+    if(!Write(mapping.address+MODES_PAGE,state)){
+        mach_vm_deallocate(task,mapping.address,MODES_PAGE*2);return 10;
+    }
+    const uint64_t callback=mapping.address+MODES_LATE_ENTRY;
+    bool bound=false;
+#ifdef MIZZE_INJECTED
+    bound=__atomic_compare_exchange_n((uint64_t *)slot,&current,callback,false,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST);
+#else
+    if(task_suspend(task)==KERN_SUCCESS){
+        uint64_t live=0;bound=Read(slot,live)&&live==current&&Write(slot,callback);
+        task_resume(task);
+    }
+#endif
+    if(!bound){mach_vm_deallocate(task,mapping.address,MODES_PAGE*2);snapshot.detail="Spin: nhịp cuối đã thay đổi";return 10;}
+    // Keep old mappings alive for callbacks already on a game thread's stack.
+    // Each mapping keeps its own native original and immutable shared-state link.
+    lateSessions.push_back({slot,mapping.address,original,shared});return 8;
+}
 void Sample(){
     const double now=CACurrentMediaTime();
     if(now-lastSample<0.2)return;
@@ -229,6 +282,8 @@ void Sample(){
         if(!Read(session.state(),state))continue;
         next.ticks+=state.ticks;next.applies+=state.applies;next.restores+=state.restores;
         next.postTicks+=state.postTicks;
+        next.lateTicks+=state.lateTicks;next.spinApplies+=state.spinApplies;
+        if(state.input.local==ownerLocal&&(state.input.flags&4u))next.spinStatus=state.spinStatus;
         for(const auto &row:state.rows){
             if(row.match!=ownerMatch||row.local!=ownerLocal||row.epoch!=epoch||!row.player)continue;
             if(row.mode==2&&(previousFlags&2u))++next.fly;
@@ -267,7 +322,7 @@ int PlayerModesUpdate(uint64_t base){
     std::lock_guard<std::recursive_mutex> guard(mutex);
     if(!wanted)return lastResult=1;
     if(!isVaildPtr(base)||!Attach(base)){Clear();return lastResult=10;}
-    const uint64_t match=getMatch(getMatchGame(base)),local=getLocalPlayer(match);
+    const uint64_t game=getMatchGame(base),match=getMatch(game),local=getLocalPlayer(match);
     uint8_t knocked=1;
     if(!isVaildPtr(match)||!isVaildPtr(local)||get_CurHP(local)<=0||!Read(local+kKnocked,knocked)||knocked){Clear();return lastResult=11;}
     if(CACurrentMediaTime()<retryAt)return lastResult;
@@ -325,6 +380,11 @@ int PlayerModesUpdate(uint64_t base){
         // other supported enemies. Memory/permission failures still abort.
         if(result==9&&classes[i]!=localClass)continue;
         Clear();retryAt=CACurrentMediaTime()+1;return lastResult=result;
+    }
+    if(wanted&PlayerModesControl::Spin){
+        Session *localSession=Find(localClass+Slot);
+        const int result=localSession?InstallLate(game,localSession->state()):9;
+        if(result!=8){Clear();retryAt=CACurrentMediaTime()+1;return lastResult=result;}
     }
     uint32_t accepted=0;
     for(uint32_t i=0;i<input.count;++i){

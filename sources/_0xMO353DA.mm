@@ -6,6 +6,7 @@
 #import "MizzeTheme.h"
 #import "MizzeMenuPrefs.h"
 #include <cmath>
+#include "../esp/Core/PlayerModes.h"
 
 @interface MizzeCheckBox : UIButton
 @property(nonatomic,assign) BOOL on;
@@ -86,6 +87,8 @@
 @property (nonatomic, assign) BOOL dragging;
 @property (nonatomic, assign) BOOL scrolling;
 @property (nonatomic, strong) UIControl *activeControl;
+@property (nonatomic, strong) UILabel *spinStatusLabel;
+@property (nonatomic, strong) NSTimer *spinStatusTimer;
 @end
 
 @implementation _0xDEADBEEE
@@ -94,6 +97,12 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     MizzePrepareMenuPrefs();
+    __weak typeof(self) weakSelf=self;
+    self.spinStatusTimer=[NSTimer scheduledTimerWithTimeInterval:.5 repeats:YES block:^(NSTimer *timer){
+        _0xDEADBEEE *owner=weakSelf;
+        if(owner.isViewLoaded&&owner.view.window&&!owner.view.hidden&&owner.spinStatusLabel)
+            [owner updateSpinStatus];
+    }];
     self.view.backgroundColor = UIColor.clearColor;
     self.pointer = -1;
     self.controls = [NSMutableArray array];
@@ -387,7 +396,7 @@
 - (void)buildPage {
     const CGFloat offset = self.scroll.contentOffset.y;
     for (UIView *v in self.scroll.subviews) [v removeFromSuperview];
-    [self.controls removeAllObjects]; self.swatch = nil;
+    [self.controls removeAllObjects]; self.swatch = nil; self.spinStatusLabel=nil;
     self.builtWidth = [self contentWidth];
     self.panel.backgroundColor = MizzeSurface();
     self.panel.layer.borderColor = MizzeBorder().CGColor;
@@ -488,8 +497,12 @@
         y = [self numberInput:@"Tốc độ (m/s)" key:@"RunSpeedValue" fallback:6 y:y];
         y = [self section:@"Hiệu ứng nhân vật" y:y];
         y = [self toggle:@"Spin · chỉ mình thấy" key:@"VisualSpin" fallback:NO y:y];
-        if (ESPPrefsBool(@"VisualSpin",NO))
+        if (ESPPrefsBool(@"VisualSpin",NO)) {
             y = [self slider:@"Vòng / giây" key:@"VisualSpinSpeed" min:0.1 max:3 fallback:0.5 y:y];
+            self.spinStatusLabel=[self label:@"" frame:CGRectMake(8,y,[self contentWidth]-16,38) size:12];
+            self.spinStatusLabel.textColor=MizzeMuted();self.spinStatusLabel.numberOfLines=2;
+            [self.scroll addSubview:self.spinStatusLabel];[self updateSpinStatus];y+=44;
+        }
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
         y = [self toggle:@"Tiết kiệm pin (30 FPS)" key:@"BalancedRender" fallback:NO y:y];
@@ -535,6 +548,17 @@
                 ((UISegmentedControl *)control).selectedSegmentIndex=0;
     if ([@[@"DarkTheme",@"SilentAutoConfig",@"AutoFireFloating",@"FlyFloating",@"VisualSpin"] containsObject:key]) [self rebuildAnimated];
 }
+- (void)updateSpinStatus {
+    const auto state=PlayerModesRead();
+    NSString *text=@"Spin: chờ nhịp cuối của game";
+    if(state.detail&&state.detail[0])text=[NSString stringWithUTF8String:state.detail];
+    else if(state.spinStatus==1)text=@"Spin: chờ nhân vật trong trận";
+    else if(state.spinStatus==2)text=@"Spin: chưa có mô hình xoay phù hợp";
+    else if(state.spinStatus==3)text=@"Spin: chờ góc xoay ổn định";
+    else if(state.spinStatus==4)text=[NSString stringWithFormat:@"Spin: đã áp dụng · %llu",(unsigned long long)state.spinApplies];
+    self.spinStatusLabel.text=text;
+}
+- (void)dealloc { [self.spinStatusTimer invalidate]; }
 - (void)applyMinimalESP {
     for (NSString *key in @[@"ESPEnabled", @"Box", @"Health", @"Name", @"Dis", @"CleanESP"])
         ESPPrefsSetBool(key, YES);

@@ -53,6 +53,12 @@ assert.equal(fingerprint(0x8D58C68,0x64),0x43B62F71);
 assert.equal(fingerprint(0x8CDCAF4,0x50),0xD78D78BD);
 assert.equal(fingerprint(0x8CDCB44,0x64),0x154D9667);
 assert.equal(fingerprint(0x8D6C860,0x78),0xD1FEABDC);
+// Final presentation: GameEntry -> BaseGameManager -> virtual slot 18.
+words(0x6B32BB0,[0xF9412D02,0xF9413101,0xAA1303E0]);
+assert.equal(fingerprint(0x5A9A654,0x78),0x01F24198);
+for(const [address,hash] of [[0x635594C,0xFB5E72CE],[0x63706CC,0x3010A312],
+    [0x63733EC,0x2EFCAE4E],[0x6374918,0x482878B5],[0x66E0A24,0x19ABE41A],[0x66F031C,0xCDA7586C]])
+    assert.equal(fingerprint(address,0x54),hash);
 assert.equal(fingerprint(0x5AC970C, 0xA0), 0x93FD3984);
 assert.equal(fingerprint(0x5C59B94, 0x16C), 0xDFE8FAC6);
 // Native weapon input: begin/end methods, and the two allowed player updates.
