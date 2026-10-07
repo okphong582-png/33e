@@ -241,14 +241,16 @@ class Simulation:
             # Stable distinct dispatch thunks: Unicorn caches translated code,
             # so rewriting one thunk from Update to PostUpdate can execute the
             # previous phase even though memory contains the new instruction.
-            klass, entry = 0x420000, BASE+0x18000+(0x10 if post else 0)
+            klass, entry = 0x420000, BASE+0xb8000+(0x10 if post else 0)
             self.ptr(player, klass)
             self.ptr(klass+0x188, BASE if wrapped else self.functions['ORIGINAL'])
             self.ptr(klass+0x2d8, BASE)
             self.ptr(klass+0xc18, BASE+OFF['MODES_POST_ENTRY'] if wrapped else self.functions['POST_ORIGINAL'])
             load = 0xf9460d08 if post else 0xf940c508 # ldr x8,[x8,#0xc18] / #0x188
             self.uc.mem_write(entry, struct.pack('<III', 0xf9400008, load, 0xd61f0100))
-        self.uc.emu_start(entry, RETURN, count=10000)
+        # Full subtree capture performs bounded duplicate checks for up to 128
+        # nodes; keep a finite budget, scaled for that intentionally larger path.
+        self.uc.emu_start(entry, RETURN, count=250000 if self.pose_enabled else 10000)
         assert self.uc.reg_read(UC_ARM64_REG_PC) == RETURN, 'Callback did not return'
         assert self.uc.reg_read(UC_ARM64_REG_SP) == STACK+0x8000
         assert all(self.uc.reg_read(reg) == value for reg, value in saved.items()), 'Callee-saved ABI'
