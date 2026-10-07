@@ -29,37 +29,40 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
-// Tính clip-space thuần (x_c, y_c, w_c) từ VP matrix (column-major 4x4)
-// Không chia w — giữ nguyên dấu để phát hiện behind-camera (w_c < 0)
-static void WorldToClip(const Vector3 &world, const float *m,
-                        float &xc, float &yc, float &wc) {
-    xc = m[0]*world.x + m[4]*world.y + m[8]*world.z  + m[12];
-    yc = m[1]*world.x + m[5]*world.y + m[9]*world.z  + m[13];
-    wc = m[3]*world.x + m[7]*world.y + m[11]*world.z + m[15];
+#include "WorldAxes.h"
+
+void RenderXYZAxes(ESPGeometryBuffers *buffers, const Vector3 &origin,
+                   const float *matrix, float width, float height) {
+    if (!isLine || !buffers) return;
+    const auto triad=WorldAxes::Project({origin.x,origin.y,origin.z},matrix,width,height);
+    if (!triad.valid) return;
+    CGMutablePathRef paths[]={buffers->axisXPath,buffers->axisYPath,buffers->axisZPath};
+    bool *dirty[]={&buffers->axisXDirty,&buffers->axisYDirty,&buffers->axisZDirty};
+    for (int i=0;i<3;++i) {
+        const auto &axis=triad.axes[i];
+        if (!paths[i] || !axis.valid) continue;
+        const CGPoint a=CGPointMake(axis.from.x,axis.from.y),b=CGPointMake(axis.to.x,axis.to.y);
+        AddLine(paths[i],a,b,width,height);
+        const double dx=b.x-a.x,dy=b.y-a.y,len=std::hypot(dx,dy);
+        if (len>8) {
+            const double ux=dx/len,uy=dy/len;
+            AddLine(paths[i],b,CGPointMake(b.x-ux*4+uy*2,b.y-uy*4-ux*2),width,height);
+            AddLine(paths[i],b,CGPointMake(b.x-ux*4-uy*2,b.y-uy*4+ux*2),width,height);
+        } else if (len<2) {
+            CGPathAddEllipseInRect(paths[i],nullptr,CGRectMake(b.x-1.2,b.y-1.2,2.4,2.4));
+        }
+        // Stroke the labels into the three shared paths: no per-enemy text layers.
+        const CGFloat x=std::max(2.0,std::min((double)width-8,b.x+4));
+        const CGFloat y=std::max(2.0,std::min((double)height-10,b.y+(len<2 ? 5 : -3)));
+        auto line=[&](double x0,double y0,double x1,double y1) {
+            AddLine(paths[i],CGPointMake(x+x0,y+y0),CGPointMake(x+x1,y+y1),width,height);
+        };
+        if (i==0) { line(0,0,4,6);line(4,0,0,6); }
+        else if (i==1) { line(0,0,2,3);line(4,0,2,3);line(2,3,2,6); }
+        else { line(0,0,4,0);line(4,0,0,6);line(0,6,4,6); }
+        *dirty[i]=true;
+    }
 }
-
-// Chiếu line từ tâm màn hình ra mép theo hướng (dirX,dirY) screen-space
-static CGPoint ClipToEdge(CGFloat ox, CGFloat oy,
-                          CGFloat dirX, CGFloat dirY,
-                          CGFloat w,   CGFloat h) {
-    if (dirX == 0 && dirY == 0) return CGPointMake(ox, oy);
-    const CGFloat margin = 14.0f;
-    CGFloat t = std::numeric_limits<CGFloat>::max();
-    if (dirX > 0) t = std::min(t, (w - margin - ox) / dirX);
-    else if (dirX < 0) t = std::min(t, (margin - ox) / dirX);
-    if (dirY > 0) t = std::min(t, (h - margin - oy) / dirY);
-    else if (dirY < 0) t = std::min(t, (margin - oy) / dirY);
-    if (t <= 0 || !std::isfinite(t)) return CGPointMake(ox, oy);
-    return CGPointMake(ox + dirX * t, oy + dirY * t);
-}
-
-// Snapline: KHÔNG dùng lerp — lerp gây dây trôi xuống đất khi địch biến mất
-// Endpoint được tính trực tiếp mỗi frame → mượt tự nhiên, không delay
-static inline CGPoint SmoothedEndpoint(uint64_t /*pawn*/, CGPoint target) {
-    return target; // instant, không cache
-}
-
-
 
 static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,
                         const Vector3 &head, const Vector3 &hip, float *matrix,
@@ -122,45 +125,6 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
     const bool headOnScreen  = ValidPosition(headScreen) && headScreen.z > 0.001f &&
                                headScreen.x >= 0 && headScreen.x <= width &&
                                headScreen.y >= 0 && headScreen.y <= height;
-    const bool headInFront   = ValidPosition(headScreen) && headScreen.z > 0.001f;
-
-    // --- Snapline: luôn vẽ, kể cả khi địch sau lưng ---
-    if (isLine && headOnScreen) {
-        CGMutablePathRef linePath = knocked
-            ? buffers->lineKnockPath
-            : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
-        if (linePath) {
-            const CGFloat cx = width * 0.5f;
-            const CGFloat cy = height * 0.08f;
-            CGPoint rawEnd;
-            bool drawLine = false;
-
-            if (headInFront) {
-                // Địch phía trước: line đến đầu
-                rawEnd   = CGPointMake(headScreen.x, headScreen.y - 4);
-                drawLine = true;
-            } else {
-                // Địch sau lưng: dùng clip-space thật
-                float xc, yc, wc;
-                WorldToClip(head, matrix, xc, yc, wc);
-                if (std::isfinite(xc) && std::isfinite(yc) && std::isfinite(wc) && wc != 0) {
-                    const CGFloat ndx =  (CGFloat)(xc / wc);
-                    const CGFloat ndy = -(CGFloat)(yc / wc);
-                    rawEnd   = ClipToEdge(cx, cy, ndx * width, ndy * height, width, height);
-                    drawLine = true;
-                }
-            }
-
-            if (drawLine) {
-                // Lerp endpoint để line không giật khi xoay 360°
-                CGPoint endPt = SmoothedEndpoint(pawn, rawEnd);
-                AddLine(linePath, CGPointMake(cx, cy), endPt, width, height);
-                if (knocked) buffers->lineKnockDirty = true;
-                else if (bot) buffers->lineBotDirty  = true;
-                else          buffers->linePlayerDirty = true;
-            }
-        }
-    }
 
     // Phần còn lại chỉ vẽ khi đầu địch thực sự trong FOV
     if (!headOnScreen) return;
@@ -265,17 +229,6 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         CGPathAddEllipseInRect(buffers->boxKnockPath, nullptr,
             CGRectMake(headScreen.x - radius, headScreen.y - radius, radius * 2, radius * 2));
         buffers->boxKnockDirty = true;
-    }
-    if (isLine) {
-        CGMutablePathRef linePath = knocked
-            ? buffers->lineKnockPath
-            : (bot ? buffers->lineBotPath : buffers->linePlayerPath);
-        if (linePath) {
-            // Line đã vẽ ở trên (kể cả off-screen), chỉ mark dirty nếu chưa
-            if (!knocked && !bot && !buffers->linePlayerDirty) buffers->linePlayerDirty = true;
-            else if (bot && !buffers->lineBotDirty) buffers->lineBotDirty = true;
-            else if (knocked && !buffers->lineKnockDirty) buffers->lineKnockDirty = true;
-        }
     }
     if (isHealth && buffers->hpBackgroundPath) {
         float ratio = 0;

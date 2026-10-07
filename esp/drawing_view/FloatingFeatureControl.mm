@@ -52,7 +52,7 @@
     [_glass addSubview:_icon]; [self addSubview:_glass];
     _caption = [[UILabel alloc] initWithFrame:CGRectMake(0, 59, 76, 20)];
     _caption.text = title; _caption.textColor = UIColor.whiteColor;
-    _caption.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
+    _caption.font = MizzeFont(12,UIFontWeightSemibold);
     _caption.textAlignment = NSTextAlignmentCenter;
     _caption.shadowColor = [UIColor colorWithWhite:0 alpha:0.85]; _caption.shadowOffset = CGSizeMake(0, 1);
     _caption.userInteractionEnabled = NO; [self addSubview:_caption];

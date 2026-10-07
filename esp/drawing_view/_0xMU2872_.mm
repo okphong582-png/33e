@@ -384,9 +384,13 @@ static const CGFloat kMenuButtonSize = 44.0f;
         dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadFloatingAuxButtonsFromPrefs]; });
         return;
     }
-    NSArray *keys = @[@"AutoFire", @"GhostMode", @"Fly", @"FakeLag", @"RunSpeed"];
-    NSArray *titles = @[@"AimKill", @"Ghost", @"Fly", @"FakeLag", @"Speed"];
-    NSArray *symbols = @[@"scope", @"person.fill", @"arrow.up.to.line", @"pause.circle.fill", @"figure.walk"];
+    NSArray *keys = @[@"GhostMode", @"FakeLag", @"RunSpeed"];
+    NSArray *titles = @[@"Ghost", @"FakeLag", @"Speed"];
+    NSArray *symbols = @[@"person.fill", @"pause.circle.fill", @"figure.walk"];
+    for (NSString *key in self.quickControls.allKeys)
+        if (![keys containsObject:key]) {
+            [self.quickControls[key] removeFromSuperview];[self.quickControls removeObjectForKey:key];
+        }
     const NSUInteger rows = MAX(1, MIN(keys.count, (NSUInteger)MAX(1, std::floor((self.bounds.size.height - 12) / 88))));
     for (NSUInteger i = 0; i < keys.count; ++i) {
         NSString *key = keys[i], *shownKey = [key stringByAppendingString:@"Floating"];
@@ -403,7 +407,6 @@ static const CGFloat kMenuButtonSize = 44.0f;
             self.quickControls[key] = control; [self addSubview:control];
         }
         BOOL active = ESPPrefsBool(key, NO);
-        if ([key isEqualToString:@"AutoFire"]) active = active && ESPPrefsBool(@"SilentAim", NO);
         [control setFeatureActive:active];
         control.hidden = _presentedModMenu != nil;
         [control clampToSuperview];
@@ -413,10 +416,6 @@ static const CGFloat kMenuButtonSize = 44.0f;
 - (void)toggleQuickFeature:(FloatingFeatureControl *)control {
     NSString *key = control.featureKey;
     BOOL active = ESPPrefsBool(key, NO);
-    if ([key isEqualToString:@"AutoFire"]) {
-        active = active && ESPPrefsBool(@"SilentAim", NO);
-        if (!active) ESPPrefsSetBool(@"SilentAim", YES);
-    }
     // Keep the quick button after tapping OFF so it can be turned back ON.
     ESPPrefsSetBool([key stringByAppendingString:@"Floating"], YES);
     ESPPrefsSetBool(key, !active); ESPSyncFromPrefs();

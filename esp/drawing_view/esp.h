@@ -21,19 +21,19 @@ typedef struct {
 CGMutablePathRef boxBotPath;
 CGMutablePathRef boxPlayerPath;
 
-CGMutablePathRef lineBotPath;
-CGMutablePathRef linePlayerPath;
+CGMutablePathRef axisYPath;
+CGMutablePathRef axisXPath;
 
 CGMutablePathRef boxKnockPath;
-CGMutablePathRef lineKnockPath;
+CGMutablePathRef axisZPath;
 
 bool boxBotDirty;
 bool boxPlayerDirty;
 bool boxKnockDirty;
 
-bool lineBotDirty;
-bool linePlayerDirty;
-bool lineKnockDirty;
+bool axisYDirty;
+bool axisXDirty;
+bool axisZDirty;
 
 
     bool boxDirty;
@@ -95,6 +95,9 @@ BOOL RenderFOVCirclePath(
     BOOL aimbotEnabled,
     float fovRadius
 );
+
+void RenderXYZAxes(ESPGeometryBuffers *buffers, const Vector3 &origin,
+                   const float *matrix, float width, float height);
 
 void _0x35572DA(
     ESPGeometryBuffers *buffers,

@@ -1,5 +1,6 @@
 
 #include "../Core/AimSelection.h"
+#include "../../sources/MizzeMenuPrefs.h"
 #include "../Core/SilentAimSelection.h"
 #include "../Core/AutoFire.h"
 #include "../Core/GhostMode.h"
@@ -71,9 +72,8 @@ static float silentMaxDistance = 100.0f;
 static bool silentAutoConfig = true;
 static uint32_t silentHeadPercent = 75;
 static float activeSilentFov = 18;
-static bool isAimbotFire = YES;
-static bool isAimbotScope = YES;
-static bool isHipAlways  = NO;
+static AimModePolicy::Type gAimType = AimModePolicy::Type::Head;
+static AimModePolicy::Activation gAimActivation = AimModePolicy::Activation::Off;
 static bool isAimNeck    = NO;
 static bool isSilentAim  = NO;
 static bool gAutoFire = false;
@@ -104,30 +104,33 @@ static bool gFastFire = false;
 // ✅ SYNC PREFS - ESP & AIMBOT
 // ============================================================
 void ESPSyncFromPrefs(void) {
-    isBox        = ESPPrefsBool(KH_NS("Box"),        YES);
-    isBone       = ESPPrefsBool(@"Skeleton", NO);
-    isHealth     = ESPPrefsBool(KH_NS("Health"),     YES);
-    isName       = ESPPrefsBool(KH_NS("Name"),       YES);
-    isDis        = ESPPrefsBool(KH_NS("Dis"),        YES);
-    isLine       = ESPPrefsBool(KH_NS("Line"),       NO);
-    isHeadRedDot = ESPPrefsBool(KH_NS("HeadRedDot"), NO);
+    MizzePrepareMenuPrefs();
+    const bool espEnabled = ESPPrefsBool(@"ESPEnabled", YES);
+    isBox        = espEnabled && ESPPrefsBool(KH_NS("Box"),        YES);
+    isBone       = espEnabled && ESPPrefsBool(@"Skeleton", NO);
+    isHealth     = espEnabled && ESPPrefsBool(KH_NS("Health"),     YES);
+    isName       = espEnabled && ESPPrefsBool(KH_NS("Name"),       YES);
+    isDis        = espEnabled && ESPPrefsBool(KH_NS("Dis"),        YES);
+    isLine       = espEnabled && ESPPrefsBool(KH_NS("Line"),       NO);
+    isHeadRedDot = espEnabled && ESPPrefsBool(KH_NS("HeadRedDot"), NO);
     isBox3D = ESPPrefsBool(@"Box3D", NO);
     isCleanESP = !isBox3D && ESPPrefsBool(@"CleanESP", YES);
-    isAimbotFire  = ESPPrefsBool(KH_NS("AimbotFire"), YES);
-    isAimbotScope = ESPPrefsBool(KH_NS("AimbotScope"), YES);
-    isHipAlways   = ESPPrefsBool(@"AimHipAlways", NO);
-    isAimNeck     = ESPPrefsBool(@"AimNeck", NO);
-    const bool silentEnabled = ESPPrefsBool(@"SilentAim", NO);
+    const auto type = AimModePolicy::ReadType(ESPPrefsFloat(@"AimType", 0));
+    const auto activation = AimModePolicy::ReadActivation(ESPPrefsFloat(@"AimActivation", 0));
+    if (type != gAimType || activation != gAimActivation) ESPClearAimLock();
+    gAimType = type;
+    gAimActivation = activation;
+    isAimNeck = type == AimModePolicy::Type::Neck;
+    const bool silentEnabled = type == AimModePolicy::Type::Silent && ESPPrefsBool(@"SilentAim", NO);
     if (silentEnabled != isSilentAim) {
         gAimLockTarget = 0;
         gAimSmoothedValid = false;
         SilentAimSetEnabled(silentEnabled);
     }
     isSilentAim = silentEnabled;
-    const bool autoEnabled = silentEnabled && ESPPrefsBool(@"AutoFire", NO);
-    if (gAutoFire != autoEnabled) AutoFireClear();
-    gAutoFire = autoEnabled;
-    gAutoSwap = ESPPrefsBool(@"AutoSwapWeapon", NO);
+    if (gAutoFire) AutoFireClear();
+    gAutoFire = false;
+    gAutoSwap = false;
     gTargetLine = ESPPrefsBool(@"AimTargetLine", YES);
     gRunSpeed = ESPPrefsBool(@"RunSpeed", NO);
     gRunSpeedValue = ESPPrefsFloat(@"RunSpeedValue", 6);
@@ -138,7 +141,7 @@ void ESPSyncFromPrefs(void) {
         ESPPrefsSetFloat(@"FlyHeight", PlayerModesControl::Height(ESPPrefsFloat(@"FlyHeight", 3.0f) + 1.0f));
         ESPPrefsSetBool(@"FlyHeightRaisedV1", YES);
     }
-    PlayerModesSetEnabled(ESPPrefsBool(@"Fly", NO), ESPPrefsBool(@"AimLag", NO),
+    PlayerModesSetEnabled(false, ESPPrefsBool(@"AimLag", NO),
         ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"FlyHeight", PlayerModesControl::DefaultHeight));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
@@ -248,9 +251,9 @@ static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
     }
     if (isBox || isHeadRedDot) b.boxKnockPath = CGPathCreateMutable();
     if (isLine) {
-        b.lineKnockPath = CGPathCreateMutable();
-        b.lineBotPath = CGPathCreateMutable();
-        b.linePlayerPath = CGPathCreateMutable();
+        b.axisZPath = CGPathCreateMutable();
+        b.axisYPath = CGPathCreateMutable();
+        b.axisXPath = CGPathCreateMutable();
     }
     if (isHealth) {
         b.hpBackgroundPath = CGPathCreateMutable();
@@ -259,7 +262,7 @@ static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
         b.hpCriticalPath = CGPathCreateMutable();
     }
 
-    b.boxBotDirty = b.boneDirty = b.lineBotDirty = NO;
+    b.boxBotDirty = b.boneDirty = b.axisYDirty = NO;
     b.hpBackgroundDirty = b.hpFillDirty          = NO;
     b.aimAssistDirty = b.alertDirty              = NO;
     return b;
@@ -268,11 +271,11 @@ static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
 static inline void ESPGeometryBuffersRelease(ESPGeometryBuffers *b) {
     if (!b) return;
     ESPReleasePath(b->boxBotPath);
-    ESPReleasePath(b->lineBotPath);
+    ESPReleasePath(b->axisYPath);
     ESPReleasePath(b->boxPlayerPath);
-    ESPReleasePath(b->linePlayerPath);
+    ESPReleasePath(b->axisXPath);
     ESPReleasePath(b->boxKnockPath);
-    ESPReleasePath(b->lineKnockPath);
+    ESPReleasePath(b->axisZPath);
 
     ESPReleasePath(b->bonePath);
     ESPReleasePath(b->snaplinePath);
@@ -361,10 +364,10 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 
 @property (nonatomic, strong) CAShapeLayer *boxBotLayer;
 @property (nonatomic, strong) CAShapeLayer *boxPlayerLayer;
-@property (nonatomic, strong) CAShapeLayer *lineBotLayer;
-@property (nonatomic, strong) CAShapeLayer *linePlayerLayer;
+@property (nonatomic, strong) CAShapeLayer *axisYLayer;
+@property (nonatomic, strong) CAShapeLayer *axisXLayer;
 @property (nonatomic, strong) CAShapeLayer *boxKnockLayer;
-@property (nonatomic, strong) CAShapeLayer *lineKnockLayer;
+@property (nonatomic, strong) CAShapeLayer *axisZLayer;
 @property (nonatomic, assign) CFTimeInterval nextProcessCheck;
 @property (nonatomic, assign) CFTimeInterval nextRenderTime;
 @property (nonatomic, assign) NSUInteger appliedRenderRevision;
@@ -482,11 +485,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     UIColor *hpGreen = [UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.9];
     UIColor *red     = [UIColor colorWithRed:0.9 green:0.55 blue:0.55 alpha:0.8];
 
-    self.lineKnockLayer  = [self makeShapeLayer:red fill:nil lineWidth:0.5f zPos:1];
+    self.axisZLayer  = [self makeShapeLayer:red fill:nil lineWidth:0.5f zPos:1];
     self.boxKnockLayer   = [self makeShapeLayer:red fill:nil lineWidth:0.5f zPos:1];
 
-    self.lineBotLayer    = [self makeShapeLayer:yellow fill:nil lineWidth:1.0f zPos:1];
-    self.linePlayerLayer = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:1];
+    self.axisYLayer    = [self makeShapeLayer:yellow fill:nil lineWidth:1.0f zPos:1];
+    self.axisXLayer = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:1];
 
     self.boxBotLayer     = [self makeShapeLayer:yellow fill:nil lineWidth:1.0f zPos:3];
     self.boxPlayerLayer  = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:3];
@@ -519,7 +522,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.aimAssistLayer = [self makeShapeLayer:[UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.9] fill:nil lineWidth:1.6 zPos:7];
     for (CAShapeLayer *l in @[self.aimAssistLayer, self.ghostLayer, self.hpWarningLayer, self.hpCriticalLayer, self.hpHighlightLayer, self.fovLayer, self.snaplineLayer, self.boneLayer, self.boxLayer,
                                self.hpBackgroundLayer, self.hpFillLayer,
-                            self.boxBotLayer, self.boxPlayerLayer, self.lineBotLayer, self.linePlayerLayer, self.lineKnockLayer, self.boxKnockLayer]) {
+                            self.boxBotLayer, self.boxPlayerLayer, self.axisYLayer, self.axisXLayer, self.axisZLayer, self.boxKnockLayer]) {
         [self.layer addSublayer:l];
     }
 
@@ -597,17 +600,18 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     if (self.appliedRenderRevision == gRenderPrefsRevision) return;
     self.appliedRenderRevision = gRenderPrefsRevision;
     UIColor *boxColor = ESPColor(@"BoxColor", 0.46, 0.86, 0.73);
-    UIColor *lineColor = ESPColor(@"LineColor", 0.46, 0.86, 0.73);
     self.boxBotLayer.strokeColor = self.boxPlayerLayer.strokeColor = self.boxKnockLayer.strokeColor = boxColor.CGColor;
-    self.lineBotLayer.strokeColor = self.linePlayerLayer.strokeColor = self.lineKnockLayer.strokeColor = lineColor.CGColor;
+    self.axisXLayer.strokeColor = [UIColor colorWithRed:1 green:.36 blue:.4 alpha:1].CGColor;
+    self.axisYLayer.strokeColor = [UIColor colorWithRed:.46 green:.86 blue:.73 alpha:1].CGColor;
+    self.axisZLayer.strokeColor = [UIColor colorWithRed:.36 green:.65 blue:1 alpha:1].CGColor;
     self.fovLayer.strokeColor = ESPColor(@"FovColor", 0.46, 0.86, 0.73).CGColor;
     for (CAShapeLayer *layer in @[self.boxBotLayer, self.boxPlayerLayer, self.boxKnockLayer]) {
         layer.lineWidth = isCleanESP ? 1.35 : 1.5;
         layer.opacity = 0.95;
     }
-    for (CAShapeLayer *layer in @[self.lineBotLayer, self.linePlayerLayer, self.lineKnockLayer]) {
-        layer.lineWidth = 1.0;
-        layer.opacity = isCleanESP ? 0.65 : 0.85;
+    for (CAShapeLayer *layer in @[self.axisYLayer, self.axisXLayer, self.axisZLayer]) {
+        layer.lineWidth = 1.35;
+        layer.opacity = .9;
     }
     self.boneLayer.lineWidth = 1.0;
     self.boneLayer.opacity = 0.85;
@@ -621,7 +625,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 - (void)updateFovCircle {
     const CGFloat vw = self.bounds.size.width, vh = self.bounds.size.height;
     if (!showFov || vw <= 0 || vh <= 0) { self.fovLayer.path = nil; return; }
-    const float radius = isSilentAim ? SilentAimSelection::Radius(vw, vh, activeSilentFov) :
+    const float radius = gAimType == AimModePolicy::Type::Silent ? SilentAimSelection::Radius(vw, vh, activeSilentFov) :
         AimSelection::Radius(vw, vh, fovPercent);
     if (self.fovLayer.path && CGSizeEqualToSize(self.lastFovSize, self.bounds.size) && self.lastFovRadius == radius) return;
     CGMutablePathRef path = CGPathCreateMutable();
@@ -690,11 +694,11 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         ApplyPath(self.hpFillLayer,       buffers.hpFillPath,       buffers.hpFillDirty);
 
         ApplyPath(self.boxKnockLayer,     buffers.boxKnockPath,     buffers.boxKnockDirty);
-        ApplyPath(self.lineKnockLayer,    buffers.lineKnockPath,    buffers.lineKnockDirty);
+        ApplyPath(self.axisZLayer,    buffers.axisZPath,    buffers.axisZDirty);
         ApplyPath(self.boxBotLayer,       buffers.boxBotPath,       buffers.boxBotDirty);
         ApplyPath(self.boxPlayerLayer,    buffers.boxPlayerPath,    buffers.boxPlayerDirty);
-        ApplyPath(self.lineBotLayer,      buffers.lineBotPath,      buffers.lineBotDirty);
-        ApplyPath(self.linePlayerLayer,   buffers.linePlayerPath,   buffers.linePlayerDirty);
+        ApplyPath(self.axisYLayer,      buffers.axisYPath,      buffers.axisYDirty);
+        ApplyPath(self.axisXLayer,   buffers.axisXPath,   buffers.axisXDirty);
 
         ApplyPath(self.hpWarningLayer, buffers.hpWarningPath, buffers.hpWarningDirty);
         ApplyPath(self.hpCriticalLayer, buffers.hpCriticalPath, buffers.hpCriticalDirty);
@@ -749,20 +753,14 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     }
     if (self.aimDiagnosticLayer.hidden || now >= self.nextAimDiagnosticUpdate) {
         self.nextAimDiagnosticUpdate = now + 0.2;
-        const uint64_t fireTicks = AutoFireTickCount(), fireStarts = AutoFireStartCount();
         self.aimDiagnosticLayer.string = isSilentAim ? [NSString stringWithFormat:
-            @"PRI21: %d · %@ · chuyển: %llu\nAimKill: %@ · nhịp: %llu · lệnh: %llu", stats.firingRaw,
-            AimStateDescription(stats.aimState), (unsigned long long)SilentAimRedirectCount(),
-            !gAutoFire ? @"tắt" : (stats.autoFireState == 8 ?
-                (fireStarts ? @"đã gửi bắn" : (fireTicks ? @"chờ súng" : @"chờ nhịp game")) :
-                (stats.autoFireState == 10 ? @"iOS từ chối cài" :
-                    (stats.autoFireState == 9 ? @"súng/bản game chưa hỗ trợ" : @"chờ mục tiêu ổn định"))),
-            (unsigned long long)fireTicks, (unsigned long long)fireStarts] :
+            @"PRI21: %d · %@ · chuyển: %llu", stats.firingRaw,
+            AimStateDescription(stats.aimState), (unsigned long long)SilentAimRedirectCount()] :
             [NSString stringWithFormat:@"Bắn: %d · PRI21: %d · Ngắm: %@ · %@", stats.firing,
                 stats.firingRaw, stats.scoping ? @"có" : @"không", AimStateDescription(stats.aimState)];
     }
     self.aimDiagnosticLayer.wrapped = YES;
-    self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), isSilentAim ? 34 : 18);
+    self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
     self.aimDiagnosticLayer.hidden = NO;
 }
 
@@ -784,7 +782,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     }
     if (gGhostMode) [lines addObject:[@"Ghost · " stringByAppendingString:status]];
     NSMutableArray<NSString *> *modes = [NSMutableArray array];
-    if (ESPPrefsBool(@"Fly", NO)) [modes addObject:@"Fly"];
     if (ESPPrefsBool(@"AimLag", NO)) [modes addObject:@"Aimlag"];
     if (ESPPrefsBool(@"FakeLag", NO)) [modes addObject:@"FakeLag"];
     if (modes.count) {
@@ -795,10 +792,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             if (current.detail && current.detail[0]) reason = [NSString stringWithUTF8String:current.detail];
             [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
         } else {
-            if (ESPPrefsBool(@"Fly", NO)) [lines addObject:current.fly ?
-                [NSString stringWithFormat:@"Fly · cao %.2f m", current.height] :
-                (current.detail && current.detail[0] ? [NSString stringWithUTF8String:current.detail] :
-                (current.running ? @"Fly · tạm dừng" : @"Fly · chờ nhịp game"))];
             const BOOL fakeLag = ESPPrefsBool(@"FakeLag", NO);
             if (fakeLag || ESPPrefsBool(@"AimLag", NO)) {
                 NSString *name = fakeLag ? @"FakeLag" : @"Aimlag";
@@ -853,9 +846,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     gAimSmoothedValid   = false;
     self.statusLayer.hidden = YES;
     self.aimDiagnosticLayer.hidden = YES;
-    self.boxKnockLayer.path = self.lineKnockLayer.path = self.fovLayer.path = nil;
+    self.boxKnockLayer.path = self.axisZLayer.path = self.fovLayer.path = nil;
     self.hpWarningLayer.path = self.hpCriticalLayer.path = self.hpHighlightLayer.path = nil;
-    self.boxLayer.path = self.boneLayer.path = self.snaplineLayer.path = self.lineBotLayer.path = self.linePlayerLayer.path = self.boxBotLayer.path = self.boxPlayerLayer.path = nil;
+    self.boxLayer.path = self.boneLayer.path = self.snaplineLayer.path = self.axisYLayer.path = self.axisXLayer.path = self.boxBotLayer.path = self.boxPlayerLayer.path = nil;
     self.hpBackgroundLayer.path = self.hpFillLayer.path                 = nil;
     self.aimAssistLayer.path = self.alertLayer.path = nil;
     [self resetTextLayers];
@@ -963,10 +956,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     const auto silentConfig = SilentAimPolicy::Resolve(stats.scoping, silentAutoConfig, silentFovPercent, silentMaxDistance);
     activeSilentFov = silentConfig.fov;
     const float activeSilentDistance = silentConfig.distance;
-    // Fire-only mode takes precedence over scope; releasing fire stops immediately.
-    const bool triggerActive = !isSilentAim && !get_IsKnockedDown(local) &&
-        AimSelection::Triggered(isAimbotFire, isAimbotScope, stats.firing,
-                                stats.scoping, isHipAlways);
+    const bool triggerActive = gAimType != AimModePolicy::Type::Silent && !get_IsKnockedDown(local) &&
+        AimModePolicy::Triggered(gAimActivation, stats.firing, stats.scoping);
     stats.aimState = triggerActive ? 2 : 1;
 
     const bool sameLocal = sameMatch && (local == gAimLocalPlayer);
@@ -1024,6 +1015,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
             }
         }
 
+        if (isLine && distance <= gESPMaxDistance)
+            RenderXYZAxes(buffers, hip, matrix, vw, vh);
         if ((visible || knocked) && distance <= gESPMaxDistance) {
             const bool bot = get_IsBot(pawn);
             if (bot) ++stats.botCount;
