@@ -3,6 +3,7 @@
 #import <CommonCrypto/CommonDigest.h>
 #import <Security/Security.h>
 #include <cmath>
+#include "LicenseEventStream.h"
 #ifdef MIZZE_INJECTED
 #import "InjectedProtection.h"
 #endif
@@ -15,7 +16,9 @@ typedef void (^LicenseCompletion)(BOOL, NSString *);
 - (NSUUID *)identifierForVendor;
 @end
 
-@interface LicenseSession () <NSURLSessionDelegate, NSURLSessionTaskDelegate>
+@interface LicenseSession () <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDataDelegate> {
+    LicenseEvents::Parser _events;
+}
 @property(nonatomic,strong) NSURLSession *session;
 @property(nonatomic,strong) NSDictionary *config;
 @property(nonatomic,strong) NSTimer *timer;
@@ -32,11 +35,21 @@ typedef void (^LicenseCompletion)(BOOL, NSString *);
 @property(nonatomic,copy) NSString *deviceHash;
 @property(nonatomic,assign) BOOL attemptedBinding;
 @property(nonatomic,assign) BOOL allowBinding;
+@property(nonatomic,strong) NSURLSession *eventSession;
+@property(nonatomic,strong) NSURLSessionDataTask *eventTask;
+@property(nonatomic,copy) NSString *eventHash;
+@property(nonatomic,assign) NSUInteger eventGeneration;
+@property(nonatomic,assign) BOOL eventDirty;
+@property(nonatomic,assign) BOOL recoverPending;
+@property(nonatomic,assign) BOOL retryBinding;
+@property(atomic,assign,readwrite) BOOL locked;
+@property(nonatomic,assign) NSTimeInterval lockRetryAt;
 @end
 
 @implementation LicenseSession
 
 NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"LicenseSessionDidBecomeUnauthorizedNotification";
+NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification = @"LicenseSessionDidBecomeAuthorizedNotification";
 
 + (instancetype)shared {
     static LicenseSession *instance;
@@ -68,6 +81,9 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
         queue.maxConcurrentOperationCount = 1;
         queue.qualityOfService = NSQualityOfServiceUtility;
         self.session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:queue];
+        NSURLSessionConfiguration *events=[configuration copy];
+        events.timeoutIntervalForRequest=60;events.timeoutIntervalForResource=86400;
+        self.eventSession=[NSURLSession sessionWithConfiguration:events delegate:self delegateQueue:NSOperationQueue.mainQueue];
     }
     return self;
 }
@@ -128,10 +144,22 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
 
 - (NSURL *)databaseURLForHash:(NSString *)licenseHash {
     NSString *base = [self.config[@"DatabaseURL"] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"/"]];
-    return [NSURL URLWithString:[NSString stringWithFormat:@"%@/licensesV2/%@.json", base, licenseHash]];
+    return [NSURL URLWithString:[NSString stringWithFormat:@"%@/licensesV3/%@.json", base, licenseHash]];
 }
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest *))completionHandler {
+    if(task==self.eventTask&&response.statusCode==307){
+        NSURL *origin=[NSURL URLWithString:self.config[@"DatabaseURL"]],*next=request.URL;
+        // Firebase streaming can move to another shard of the same database.
+        NSString *database=[origin.host componentsSeparatedByString:@"."].firstObject;
+        BOOL firebaseHost=[next.host hasSuffix:@".firebaseio.com"]||[next.host hasSuffix:@".firebasedatabase.app"];
+        BOOL sameDatabase=[[next.host componentsSeparatedByString:@"."].firstObject isEqualToString:database]||
+            [[NSURLComponents componentsWithURL:next resolvingAgainstBaseURL:NO].queryItems filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"name == 'ns' AND value == %@",database]].count>0;
+        if([next.scheme isEqualToString:@"https"]&&!next.user&&!next.password&&firebaseHost&&sameDatabase){
+            NSMutableURLRequest *redirect=[request mutableCopy];[redirect setValue:@"text/event-stream" forHTTPHeaderField:@"Accept"];
+            completionHandler(redirect);return;
+        }
+    }
     completionHandler(nil);
 }
 
@@ -141,15 +169,18 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
 }
 
 - (void)revokeWithMessage:(NSString *)message reason:(NSString *)reason {
-    BOOL notify = self.hadAuthorizedSession;
+    BOOL notify = self.hadAuthorizedSession||(self.locked&&![self.lastMessage isEqualToString:message]);
     self.hadAuthorizedSession = NO;
     self.validUntilUptime = 0;
     self.expiresAt = 0;
     self.lastMessage = message;
     self.lastReason = reason;
+    self.locked=[reason isEqualToString:@"locked"];
     if ([@[@"missing", @"disabled", @"expired", @"invalid_record", @"device_mismatch", @"invalid_binding", @"binding_released"] containsObject:reason])
         [NSUserDefaults.standardUserDefaults removeObjectForKey:@"LicenseHash"];
     [self stopTimers];
+    if(self.locked){[self monitor];[self watchSavedKey];}
+    else if(!self.hasSavedKey){self.recoverPending=NO;self.retryBinding=NO;[self stopWatching];}
     if (notify) {
         [NSNotificationCenter.defaultCenter postNotificationName:LicenseSessionDidBecomeUnauthorizedNotification
                                                          object:self userInfo:@{@"message": message, @"reason": reason}];
@@ -187,26 +218,37 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     self.busy = NO; self.activeTask = nil;
     NSArray *callbacks = [self takeCompletions];
     BOOL valid = LicenseSessionPolicy::Authorized(deadline, NSProcessInfo.processInfo.systemUptime);
+    BOOL recovered=valid&&self.recoverPending;
     if (valid) {
         if (![[NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"] isEqualToString:licenseHash]) {
             [NSUserDefaults.standardUserDefaults setObject:licenseHash forKey:@"LicenseHash"];
             [NSUserDefaults.standardUserDefaults synchronize];
         }
         self.validUntilUptime = deadline;
+        [NSUserDefaults.standardUserDefaults setInteger:3 forKey:@"LicenseSavedProtocolVersion"];
         self.expiresAt = expiry;
         self.hadAuthorizedSession = YES;
         self.lastMessage = message;
         self.lastReason = @"valid";
+        self.locked=NO;self.lockRetryAt=0;
         [self scheduleLeaseExpiry];
-    } else if (transient && self.authorized) {
+    } else if (transient && (self.authorized||self.locked)) {
         // Keep only the time granted by the last successful server response.
         // Retries and failed requests must never extend this deadline.
         self.lastMessage = message;
         self.lastReason = reason;
     } else {
+        if([reason isEqualToString:@"locked"]){
+            [NSUserDefaults.standardUserDefaults setObject:licenseHash forKey:@"LicenseHash"];
+            self.recoverPending=YES;
+            self.retryBinding=self.retryBinding||self.allowBinding;
+        }
         [self revokeWithMessage:message reason:reason];
     }
     for (LicenseCompletion callback in callbacks) callback(valid, message);
+    if(valid){[self watchSavedKey];[self monitor];}
+    if(recovered){self.recoverPending=NO;self.retryBinding=NO;[NSNotificationCenter.defaultCenter postNotificationName:LicenseSessionDidBecomeAuthorizedNotification object:self];}
+    if(self.eventDirty){self.eventDirty=NO;dispatch_async(dispatch_get_main_queue(),^{[self refresh:nil];});}
 }
 
 - (void)claimHash:(NSString *)licenseHash generation:(NSUInteger)generation {
@@ -258,7 +300,7 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
             ? @"Không kết nối được máy chủ. Kiểm tra mạng và thử lại."
             : @"Máy chủ tạm thời chưa phản hồi. Vui lòng thử lại.";
         NSTimeInterval expiry = 0, deadline = 0;
-        BOOL needsBinding=NO;
+        BOOL needsBinding=NO;NSTimeInterval lockRetry=0;
         if (!transient) {
             if (status == 401 || status == 403) {
                 message = @"Firebase từ chối truy cập. Hãy kiểm tra Rules của database."; reason = @"permission_denied";
@@ -277,8 +319,11 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
                     CFGetTypeID((__bridge CFTypeRef)expiryValue) != CFBooleanGetTypeID() &&
                     std::isfinite([expiryValue doubleValue]);
                 if (object == NSNull.null) {
-                    message = @"Key không tồn tại hoặc đã bị xóa."; reason = @"missing";
-                } else if (!record || !enabledIsBoolean || !expiryIsNumber || ![record[@"protocol"] isEqual:@2]) {
+                    BOOL awaitingMigration=[[NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"] isEqualToString:licenseHash]&&
+                        [NSUserDefaults.standardUserDefaults integerForKey:@"LicenseSavedProtocolVersion"]<3;
+                    message=awaitingMigration ? @"Key cũ đang chờ chuyển sang bản mới. Admin cần bấm Áp dụng Rules trên web key." : @"Key không tồn tại hoặc đã bị xóa.";
+                    reason=awaitingMigration ? @"migration_pending" : @"missing";
+                } else if (!record || !enabledIsBoolean || !expiryIsNumber || ![record[@"protocol"] isEqual:@3]) {
                     message = @"Dữ liệu key không hợp lệ. Liên hệ người cấp key."; reason = @"invalid_record";
                 } else if (![enabled boolValue]) {
                     message = @"Key đã bị khóa."; reason = @"disabled";
@@ -291,6 +336,7 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
                     formatter.dateFormat = @"EEE, dd MMM yyyy HH:mm:ss zzz";
                     NSDate *serverDate = [formatter dateFromString:[http valueForHTTPHeaderField:@"Date"] ?: @""];
                     NSTimeInterval serverNow = serverDate ? serverDate.timeIntervalSince1970 + 1 : NSDate.date.timeIntervalSince1970;
+                    NSTimeInterval lockServerNow=serverDate?serverDate.timeIntervalSince1970:serverNow;
                     expiry = [expiryValue doubleValue] / 1000.0;
                     deadline = LicenseSessionPolicy::Deadline(requestStarted, [expiryValue doubleValue], serverNow);
                     BOOL valid = LicenseSessionPolicy::Authorized(deadline, NSProcessInfo.processInfo.systemUptime);
@@ -314,12 +360,32 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
                             deadline=0;message=@"Key này đã được kích hoạt trên máy khác.";reason=@"device_mismatch";
                         }
                     }
+                    if([reason isEqualToString:@"valid"]||needsBinding){
+                        id lockValue=record[@"lock"];
+                        if(lockValue&&lockValue!=NSNull.null){
+                            NSDictionary *lock=[lockValue isKindOfClass:NSDictionary.class]?lockValue:nil;
+                            id until=lock[@"until"],notice=lock[@"message"];
+                            BOOL wellFormed=[until isKindOfClass:NSNumber.class]&&CFGetTypeID((__bridge CFTypeRef)until)!=CFBooleanGetTypeID()&&
+                                std::isfinite([until doubleValue])&&[until doubleValue]>=0&&[notice isKindOfClass:NSString.class]&&[notice length]<=500;
+                            if(!wellFormed){deadline=0;needsBinding=NO;message=@"Dữ liệu khóa key không hợp lệ.";reason=@"invalid_record";}
+                            else if([until doubleValue]==0||[until doubleValue]/1000.0>lockServerNow){
+                                deadline=0;reason=@"locked";needsBinding=NO;
+                                message=[notice length]?notice:@"Key đang bị khóa. Liên hệ admin.";
+                                if([until doubleValue]>0){
+                                    NSDateFormatter *display=[NSDateFormatter new];display.dateFormat=@"HH:mm dd/MM/yyyy";
+                                    message=[message stringByAppendingFormat:@"\nTự mở: %@",[display stringFromDate:[NSDate dateWithTimeIntervalSince1970:[until doubleValue]/1000.0]]];
+                                    lockRetry=requestStarted+MAX(.1,[until doubleValue]/1000.0-lockServerNow);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             if (generation != self.generation || !self.busy) return;
             self.activeTask = nil;
+            self.lockRetryAt=lockRetry;
             if (needsBinding) { [self claimHash:licenseHash generation:generation]; return; }
             if (transient && attempt + 1 < LicenseSessionPolicy::MaximumAttempts) {
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 750 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
@@ -354,6 +420,7 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     NSString *normalized = [[key stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] uppercaseString];
     if (normalized.length < 8 || normalized.length > 128) { if (completion) completion(NO, @"Key không hợp lệ."); return; }
     [self stopTimers]; self.validUntilUptime = 0; self.expiresAt = 0; self.hadAuthorizedSession = NO;
+    [self stopWatching];self.locked=NO;self.recoverPending=NO;self.retryBinding=NO;
     ++self.generation;
     self.allowBinding=YES;
     [self beginHash:[self hash:normalized] completion:completion];
@@ -375,7 +442,8 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
         if (completion) completion(NO, message);
         return;
     }
-    self.allowBinding=NO;
+    self.allowBinding=(self.recoverPending&&self.retryBinding)||
+        [NSUserDefaults.standardUserDefaults integerForKey:@"LicenseSavedProtocolVersion"]<3;
     [self beginHash:licenseHash completion:completion];
 }
 
@@ -383,17 +451,62 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     if (!NSThread.isMainThread) {
         dispatch_async(dispatch_get_main_queue(), ^{ [self monitor]; }); return;
     }
-    if (self.timer || !self.authorized) return;
+    if (self.timer || (!self.authorized&&!self.locked)) return;
     __weak LicenseSession *weakSelf = self;
     self.timer = [NSTimer timerWithTimeInterval:LicenseSessionPolicy::RefreshSeconds repeats:YES block:^(NSTimer *timer) {
         LicenseSession *strongSelf = weakSelf;
         if (!strongSelf) return;
+        if(strongSelf.locked){[strongSelf refresh:nil];return;}
         if (!strongSelf.authorized) { [strongSelf leaseExpired]; return; }
         [strongSelf refresh:nil];
     }];
     // Default-mode timers stop during touch tracking; both timers must keep
     // running while the user drags a slider or the floating menu button.
     [NSRunLoop.mainRunLoop addTimer:self.timer forMode:NSRunLoopCommonModes];
+    if(self.locked&&self.lockRetryAt>0){
+        __weak LicenseSession *retrySelf=self;
+        self.leaseTimer=[NSTimer timerWithTimeInterval:MAX(.1,self.lockRetryAt-NSProcessInfo.processInfo.systemUptime) repeats:NO block:^(NSTimer *timer){[retrySelf refresh:nil];}];
+        [NSRunLoop.mainRunLoop addTimer:self.leaseTimer forMode:NSRunLoopCommonModes];
+    }
+}
+
+- (void)stopWatching {
+    ++self.eventGeneration;[self.eventTask cancel];self.eventTask=nil;
+    self.eventHash=nil;self.eventDirty=NO;_events.pending.clear();
+}
+- (void)watchSavedKey {
+    if(!self.hasSavedKey||![self configured])return;
+    NSString *hash=[NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"];
+    if(self.eventTask&&[self.eventHash isEqualToString:hash])return;
+    [self stopWatching];self.eventHash=hash;
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:[self databaseURLForHash:hash]];
+    [request setValue:@"text/event-stream" forHTTPHeaderField:@"Accept"];
+    [request setValue:@"no-cache" forHTTPHeaderField:@"Cache-Control"];
+    self.eventTask=[self.eventSession dataTaskWithRequest:request];[self.eventTask resume];
+}
+- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completion {
+    if(task!=self.eventTask){completion(NSURLSessionResponseAllow);return;}
+    const NSInteger status=[response isKindOfClass:NSHTTPURLResponse.class]?((NSHTTPURLResponse *)response).statusCode:0;
+    completion(status==200?NSURLSessionResponseAllow:NSURLSessionResponseCancel);
+    if(status==401||status==403){[self stopWatching];[self revokeWithMessage:@"Key hoặc phiên bản này không còn được cấp quyền." reason:@"missing"];}
+}
+- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    if(task!=self.eventTask)return;
+    const unsigned result=_events.Feed((const char *)data.bytes,data.length);
+    if(result&LicenseEvents::Parser::Denied){[self stopWatching];[self revokeWithMessage:@"Key hoặc phiên bản này không còn được cấp quyền." reason:@"missing"];return;}
+    if(result&LicenseEvents::Parser::Reconnect){[self.eventTask cancel];return;}
+    if(!(result&LicenseEvents::Parser::Refresh))return;
+    // Check the initial snapshot too: an admin edit can occur between GET and
+    // subscribing. Never lose an invalidation while a read is in flight.
+    if(self.busy)self.eventDirty=YES;else [self refresh:nil];
+}
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    if(task!=self.eventTask)return;
+    self.eventTask=nil;const NSUInteger generation=self.eventGeneration;
+    __weak LicenseSession *weakSelf=self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,5*NSEC_PER_SEC),dispatch_get_main_queue(),^{
+        LicenseSession *owner=weakSelf;if(owner&&generation==owner.eventGeneration&&owner.hasSavedKey)[owner watchSavedKey];
+    });
 }
 
 - (void)logout {
@@ -405,8 +518,10 @@ NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification = @"Lic
     NSArray *callbacks = [self takeCompletions];
     self.validUntilUptime = 0; self.expiresAt = 0; self.hadAuthorizedSession = NO;
     self.lastMessage = @"Đã đăng xuất.";
+    self.locked=NO;self.recoverPending=NO;self.retryBinding=NO;[self stopWatching];
     [self stopTimers];
     [NSUserDefaults.standardUserDefaults removeObjectForKey:@"LicenseHash"];
+    [NSUserDefaults.standardUserDefaults removeObjectForKey:@"LicenseSavedProtocolVersion"];
     for (LicenseCompletion callback in callbacks) callback(NO, self.lastMessage);
 }
 

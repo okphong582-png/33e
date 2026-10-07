@@ -3,18 +3,20 @@
     ".read": false,
     ".write": false,
     "licenses": {
-      "$keyHash": {
-        ".read": true,
-        ".write": false
-      }
+      ".read": false,
+      ".write": false
     },
     "licensesV2": {
+      ".read": false,
+      ".write": false
+    },
+    "licensesV3": {
       "$keyHash": {
         ".read": "$keyHash.matches(/^[a-f0-9]{64}$/)",
         ".write": false,
-        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 2",
+        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 3",
         "binding": {
-          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 2 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && newData.exists()",
+          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 3 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && (!data.parent().child('lock').exists() || (data.parent().child('lock').child('until').isNumber() && data.parent().child('lock').child('until').val() > 0 && data.parent().child('lock').child('until').val() <= now)) && newData.exists()",
           ".validate": "newData.hasChildren(['deviceHash', 'version', 'claimedAt'])",
           "deviceHash": {
             ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{64}$/)"
@@ -24,6 +26,18 @@
           },
           "claimedAt": {
             ".validate": "newData.isNumber() && newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "lock": {
+          ".validate": "newData.hasChildren(['until', 'message']) && newData.child('until').isNumber() && newData.child('until').val() >= 0 && newData.child('message').isString() && newData.child('message').val().length <= 500",
+          "until": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "message": {
+            ".validate": "newData.isString() && newData.val().length <= 500"
           },
           "$other": {
             ".validate": false

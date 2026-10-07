@@ -12,7 +12,7 @@
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *subtitle;
 @property (nonatomic, strong) UILabel *fieldLabel;
-@property (nonatomic, strong) UILabel *status;
+@property (nonatomic, strong) UITextView *status;
 @property (nonatomic, strong) UILabel *footer;
 @property (nonatomic, strong) UILabel *brand;
 @property (nonatomic, strong) UILabel *monogram;
@@ -92,8 +92,11 @@
     self.submit = [self button:@"Đăng nhập" action:@selector(login)];
     self.start = [self button:@"Mở bảng điều khiển" action:@selector(startMenu)];
     self.logoutButton = [self button:@"Đăng xuất" action:@selector(logout)];
-    self.status = [self label:@"Kết nối mạng để xác thực key." size:12 weight:UIFontWeightRegular];
-    self.status.numberOfLines = 0;
+    self.status=[UITextView new];self.status.text=@"Kết nối mạng để xác thực key.";
+    self.status.font=[UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
+    self.status.editable=NO;self.status.selectable=YES;self.status.backgroundColor=UIColor.clearColor;
+    self.status.textContainerInset=UIEdgeInsetsZero;self.status.textContainer.lineFragmentPadding=0;
+    [self.card addSubview:self.status];
     self.footer = [UILabel new]; self.footer.text = @"Ít nhiễu hơn. Nhiều tập trung hơn.";
     self.footer.font = [UIFont systemFontOfSize:9 weight:UIFontWeightMedium]; self.footer.textAlignment = NSTextAlignmentCenter;
     [self.scroll addSubview:self.footer];
@@ -109,6 +112,7 @@
     [NSUserDefaults.standardUserDefaults removeObjectForKey:@"wasAuthenticated"];
     NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
     [center addObserver:self selector:@selector(licenseBecameInvalid:) name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
+    [center addObserver:self selector:@selector(licenseRestored:) name:LicenseSessionDidBecomeAuthorizedNotification object:nil];
     [center addObserver:self selector:@selector(keyboardChanged:) name:UIKeyboardWillChangeFrameNotification object:nil];
     [center addObserver:self selector:@selector(keyboardChanged:) name:UIKeyboardWillHideNotification object:nil];
     [self applyAppearance]; [self updateControls];
@@ -137,7 +141,7 @@
     self.scroll.frame = UIEdgeInsetsInsetRect(self.view.bounds, safe);
     CGFloat availableWidth = self.scroll.bounds.size.width;
     CGFloat w = MAX(220, MIN(420, availableWidth - 36));
-    CGFloat h = self.loggedIn ? 472 : 528;
+    CGFloat h = self.loggedIn ? 472 : 568;
     CGFloat keyboardInset = MAX(0, self.keyboardOverlap - safe.bottom);
     CGFloat usableHeight = self.scroll.bounds.size.height - keyboardInset;
     CGFloat cardY = MAX(76, (usableHeight - h) * 0.5);
@@ -162,7 +166,7 @@
     self.submit.frame = CGRectMake(inset, 414, content, 48);
     self.start.frame = CGRectMake(inset, 330, content, 48);
     self.logoutButton.frame = CGRectMake(inset, 386, content, 30);
-    self.status.frame = CGRectMake(inset, self.loggedIn ? 424 : 476, content, 40);
+    self.status.frame = CGRectMake(inset, self.loggedIn ? 424 : 476, content, self.loggedIn ? 40 : 80);
     self.theme.frame = CGRectMake(cardX + w - 51, 18, 51, 31);
     self.themeLabel.frame = CGRectMake(self.theme.frame.origin.x - 112, 18, 103, 31);
     self.footer.frame = CGRectMake(cardX, CGRectGetMaxY(self.card.frame) + 20, w, 20);
@@ -334,6 +338,11 @@
     self.submit.enabled = self.keyField.enabled = YES; [self updateControls];
 }
 - (void)licenseBecameInvalid:(NSNotification *)notification {
+    if([notification.userInfo[@"reason"] isEqualToString:@"locked"]){
+        ++self.requestGeneration;self.starting=NO;self.restoringKey=NO;self.loggedIn=NO;
+        self.status.text=notification.userInfo[@"message"];
+        self.submit.enabled=self.keyField.enabled=YES;[self updateControls];return;
+    }
     // A parent app can be suspended long enough for its short local lease to
     // expire while the separate HUD process is still refreshing online. Wait
     // for the next foreground refresh before clearing the login screen; hard
@@ -351,6 +360,11 @@
     self.submit.enabled = self.keyField.enabled = YES;
     self.status.text = notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage ?: @"Phiên truy cập đã kết thúc. Vui lòng nhập lại key.";
     [self updateControls];
+}
+- (void)licenseRestored:(NSNotification *)notification {
+    if(![LicenseSession shared].authorized)return;
+    self.loggedIn=YES;self.restoringKey=NO;self.status.text=@"Admin đã mở khóa key.";
+    [self updateControls];[self showLicenseExpiry];
 }
 - (void)_0xDAH2863 {
     if (!self.isViewLoaded || self.starting || self.restoringKey) return;

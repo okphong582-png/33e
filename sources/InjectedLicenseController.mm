@@ -11,7 +11,7 @@
 @property(nonatomic,strong) UIButton *loginButton;
 @property(nonatomic,strong) UIView *keyPanel;
 @property(nonatomic,strong) UITextField *keyField;
-@property(nonatomic,strong) UILabel *keyStatus;
+@property(nonatomic,strong) UITextView *keyStatus;
 @property(nonatomic,strong) UIButton *submitButton;
 @property(nonatomic,strong) UIButton *closeButton;
 @property(nonatomic,strong) UIView *espView;
@@ -34,6 +34,7 @@
     [self.loginButton addTarget:self action:@selector(prompt) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:self.loginButton];
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(revoked:) name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(restored:) name:LicenseSessionDidBecomeAuthorizedNotification object:nil];
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(foreground:) name:UIApplicationDidBecomeActiveNotification object:nil];
 }
 - (void)viewDidLayoutSubviews {
@@ -41,11 +42,11 @@
     self.loginButton.frame = CGRectMake(self.view.safeAreaInsets.left + 12, self.view.safeAreaInsets.top + 16, 164, 38);
     const CGRect bounds=UIEdgeInsetsInsetRect(self.view.bounds,self.view.safeAreaInsets);
     const CGFloat width=MIN(320,MAX(0,bounds.size.width-24));
-    self.keyPanel.frame=CGRectMake(CGRectGetMidX(bounds)-width*.5,CGRectGetMidY(bounds)-106,width,212);
-    self.keyStatus.frame=CGRectMake(16,14,MAX(0,width-66),54);
+    self.keyPanel.frame=CGRectMake(CGRectGetMidX(bounds)-width*.5,CGRectGetMidY(bounds)-136,width,272);
+    self.keyStatus.frame=CGRectMake(16,14,MAX(0,width-54),126);
     self.closeButton.frame=CGRectMake(MAX(0,width-42),4,38,38);
-    self.keyField.frame=CGRectMake(16,76,MAX(0,width-32),44);
-    self.submitButton.frame=CGRectMake(16,136,MAX(0,width-32),44);
+    self.keyField.frame=CGRectMake(16,152,MAX(0,width-32),44);
+    self.submitButton.frame=CGRectMake(16,212,MAX(0,width-32),44);
 }
 // Match the Unity host's orientation mask. A portrait-only overlay becoming
 // key over a landscape-only host can cause UIApplication's rotation exception.
@@ -74,7 +75,8 @@
         self.keyPanel.layer.cornerRadius=20;
         self.keyPanel.layer.borderWidth=0.7;
         self.keyPanel.layer.borderColor=[UIColor colorWithRed:.35 green:.9 blue:.73 alpha:.6].CGColor;
-        self.keyStatus=[UILabel new];self.keyStatus.numberOfLines=2;
+        self.keyStatus=[UITextView new];self.keyStatus.editable=NO;self.keyStatus.selectable=YES;
+        self.keyStatus.backgroundColor=UIColor.clearColor;self.keyStatus.textContainerInset=UIEdgeInsetsZero;
         self.keyStatus.textColor=UIColor.whiteColor;
         self.keyStatus.font=[UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
         self.keyField=[UITextField new];self.keyField.delegate=self;
@@ -158,6 +160,10 @@
     self.message = notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage;
     [self lock];
     [self.view endEditing:YES];[self restoreGameFocus];[self prompt];
+}
+- (void)restored:(NSNotification *)notification {
+    self.message=[LicenseSession shared].lastMessage;
+    [self unlock];[self restoreGameFocus];
 }
 - (void)foreground:(NSNotification *)notification {
     if (![LicenseSession shared].authorized) [self lock];

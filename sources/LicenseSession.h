@@ -2,6 +2,7 @@
 #import <Foundation/Foundation.h>
 
 FOUNDATION_EXPORT NSNotificationName const LicenseSessionDidBecomeUnauthorizedNotification;
+FOUNDATION_EXPORT NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification;
 // Unauthorized notifications carry NSString values under "message" and "reason".
 
 @interface LicenseSession : NSObject
@@ -9,6 +10,7 @@ FOUNDATION_EXPORT NSNotificationName const LicenseSessionDidBecomeUnauthorizedNo
 @property (nonatomic, readonly) BOOL authorized;
 @property (atomic, copy, readonly) NSString *lastMessage;
 @property (atomic, readonly) NSTimeInterval expiresAt;
+@property (atomic, readonly) BOOL locked;
 - (BOOL)configured;
 - (BOOL)hasSavedKey;
 - (void)loginWithKey:(NSString *)key completion:(void (^)(BOOL, NSString *))completion;

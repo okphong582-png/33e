@@ -252,8 +252,9 @@ self.window.bounds = targetFrame;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary <UIApplicationLaunchOptionsKey, id> *)launchOptions {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(licenseBecameInvalid:) name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(licenseRestored:) name:LicenseSessionDidBecomeAuthorizedNotification object:nil];
     [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
-        if (!ok) { RequestExitHUDWithMessage(message); return; }
+        if (!ok) { if([LicenseSession shared].locked)return;RequestExitHUDWithMessage(message); return; }
         [self buildHUDWindow];
         [[LicenseSession shared] monitor];
     }];
@@ -386,7 +387,12 @@ self.window.bounds = targetFrame;
 }
 
 - (void)licenseBecameInvalid:(NSNotification *)notification {
+    if([notification.userInfo[@"reason"] isEqualToString:@"locked"]){self.window.hidden=YES;return;}
     RequestExitHUDWithMessage(notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage);
+}
+- (void)licenseRestored:(NSNotification *)notification {
+    if(![LicenseSession shared].authorized)return;
+    [self buildHUDWindow];self.window.hidden=NO;
 }
 
 - (void)dealloc {

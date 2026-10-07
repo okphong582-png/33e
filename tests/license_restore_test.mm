@@ -8,13 +8,24 @@
 static NSInteger mode = 0; // valid, missing, offline, expired, race, denied, invalid binding, old protocol
 static NSDictionary *serverBinding;
 static NSUInteger claims;
+@class LicenseTestProtocol;
+static NSDictionary *serverLock;
+static LicenseTestProtocol *streamProtocol;
+static BOOL streamEventsEnabled;
 @interface LicenseTestProtocol : NSURLProtocol
 @end
 @implementation LicenseTestProtocol
 + (BOOL)canInitWithRequest:(NSURLRequest *)request { return [request.URL.host isEqualToString:@"license.test"]; }
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request { return request; }
 - (void)startLoading {
-    assert([self.request.URL.path hasPrefix:@"/licensesV2/"]);
+    assert([self.request.URL.path hasPrefix:@"/licensesV3/"]);
+    if([[self.request valueForHTTPHeaderField:@"Accept"] isEqualToString:@"text/event-stream"]){
+        streamProtocol=self;
+        NSHTTPURLResponse *response=[[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"text/event-stream"}];
+        [self.client URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageNotAllowed];
+        if(streamEventsEnabled)[self.client URLProtocol:self didLoadData:[@"event: put\ndata: {}\n\n" dataUsingEncoding:NSUTF8StringEncoding]];
+        return;
+    }
     if (mode == 2) {
         [self.client URLProtocol:self didFailWithError:[NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorNotConnectedToInternet userInfo:nil]];
         return;
@@ -43,16 +54,17 @@ static NSUInteger claims;
     }
     NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:status HTTPVersion:@"HTTP/1.1" headerFields:@{}];
     [self.client URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-    NSMutableDictionary *license=[@{@"enabled":@YES,@"protocol":mode==7 ? @1 : @2,
+    NSMutableDictionary *license=[@{@"enabled":@YES,@"protocol":mode==7 ? @2 : @3,
         @"expiresAt":@((NSDate.date.timeIntervalSince1970 + (mode == 3 ? -60 : 3600)) * 1000)} mutableCopy];
     if (serverBinding) license[@"binding"]=serverBinding;
+    if(serverLock)license[@"lock"]=serverLock;
     if (mode==6)license[@"binding"]=@{@"deviceHash":@"broken",@"version":@1};
     id record = mode == 1 ? (id)NSNull.null : (id)license;
     NSData *data = [NSJSONSerialization dataWithJSONObject:record options:NSJSONWritingFragmentsAllowed error:nil];
     [self.client URLProtocol:self didLoadData:data];
     [self.client URLProtocolDidFinishLoading:self];
 }
-- (void)stopLoading {}
+- (void)stopLoading {if(streamProtocol==self)streamProtocol=nil;}
 @end
 
 static LicenseSession *NewSession() {
@@ -61,6 +73,8 @@ static LicenseSession *NewSession() {
     NSURLSessionConfiguration *configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration;
     configuration.protocolClasses = @[LicenseTestProtocol.class];
     [session setValue:[NSURLSession sessionWithConfiguration:configuration] forKey:@"session"];
+    [(NSURLSession *)[session valueForKey:@"eventSession"] invalidateAndCancel];
+    [session setValue:[NSURLSession sessionWithConfiguration:configuration delegate:(id<NSURLSessionDelegate>)session delegateQueue:NSOperationQueue.mainQueue] forKey:@"eventSession"];
     [session setValue:@{@"DatabaseURL":@"https://license.test"} forKey:@"config"];
     [session setValue:[@"a" stringByPaddingToLength:64 withString:@"a" startingAtIndex:0] forKey:@"deviceHash"];
     return session;
@@ -76,6 +90,16 @@ static void Verify(LicenseSession *session, BOOL login, BOOL expected) {
     while (!finished && NSProcessInfo.processInfo.systemUptime < end)
         [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
     assert(finished);
+}
+static void Event(NSString *event) {
+    assert(streamProtocol);
+    [streamProtocol.client URLProtocol:streamProtocol didLoadData:[event dataUsingEncoding:NSUTF8StringEncoding]];
+}
+static void WaitState(LicenseSession *session,BOOL locked,BOOL authorized){
+    const double end=NSProcessInfo.processInfo.systemUptime+3;
+    while((session.locked!=locked||session.authorized!=authorized)&&NSProcessInfo.processInfo.systemUptime<end)
+        [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+    assert(session.locked==locked&&session.authorized==authorized);
 }
 int main() {
     @autoreleasepool {
@@ -114,6 +138,31 @@ int main() {
         serverBinding=nil;mode=5;Verify(first,YES,NO);assert(!first.authorized);
         mode=6;Verify(first,YES,NO);assert(!first.authorized);
         mode=7;Verify(first,YES,NO);assert(!first.authorized && claims==2);
-        puts("License V2: first claim, same device, second device denial, activation race, denied writes, old protocol, offline and expiry passed.");
+        mode=0;serverBinding=nil;streamProtocol=nil;streamEventsEnabled=YES;Verify(first,YES,YES);
+        const double ready=NSProcessInfo.processInfo.systemUptime+1;
+        while(!streamProtocol&&NSProcessInfo.processInfo.systemUptime<ready)[NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+        const NSUInteger beforeLock=claims;
+        serverLock=@{@"until":@0,@"message":@"Admin: kiểm tra lại tài khoản."};
+        Event(@"event: patch\ndata: {\"path\":\"/lock\"}\n\n");WaitState(first,YES,NO);
+        assert(first.hasSavedKey&&[first.lastMessage containsString:@"kiểm tra"]);
+        __block NSUInteger restored=0;
+        id observer=[NSNotificationCenter.defaultCenter addObserverForName:LicenseSessionDidBecomeAuthorizedNotification object:first queue:nil usingBlock:^(NSNotification *){++restored;}];
+        serverLock=nil;Event(@"event: patch\ndata: {\"path\":\"/lock\",\"data\":null}\n\n");WaitState(first,NO,YES);
+        assert(first.hasSavedKey&&claims==beforeLock&&restored==1);
+        serverLock=@{@"until":@((NSDate.date.timeIntervalSince1970-.1)*1000),@"message":@"Đã hết giờ khóa"};
+        Verify(first,NO,YES);assert(!first.locked);
+        serverLock=@{@"until":@((NSDate.date.timeIntervalSince1970+.5)*1000),@"message":@"Khóa tạm"};
+        Verify(first,NO,NO);assert(first.locked&&first.hasSavedKey);
+        WaitState(first,NO,YES);assert(restored==2&&claims==beforeLock);
+        serverLock=@{@"until":@(-1),@"message":@"invalid"};Verify(first,NO,NO);assert(!first.hasSavedKey);
+        [NSNotificationCenter.defaultCenter removeObserver:observer];[first logout];
+        // Upgrading before the admin migration must not erase the cached V2 key.
+        NSString *oldHash=[@"f" stringByPaddingToLength:64 withString:@"f" startingAtIndex:0];
+        [NSUserDefaults.standardUserDefaults setObject:oldHash forKey:@"LicenseHash"];
+        mode=1;Verify(first,NO,NO);assert(first.hasSavedKey&&!first.authorized);
+        assert([first.lastMessage containsString:@"chờ chuyển"]);
+        mode=0;serverLock=nil;serverBinding=nil;Verify(first,NO,YES);
+        assert(first.hasSavedKey&&claims==beforeLock+1);[first logout];
+        puts("License V3: first claim, device binding, protocol isolation, locks, live unlock, messages, expiry and offline guards passed.");
     }
 }

@@ -21,12 +21,12 @@ function denied(response){assert([401,403].includes(response.status),`Expected d
   const applied=await request('.settings/rules','PUT',rules,true);
   assert(applied.ok,`Rules did not compile: ${await applied.text()}`);
   assert((await request('','DELETE',undefined,true)).ok);
-  const path=`licensesV2/${hash}`;
-  const license={enabled:true,expiresAt:Date.now()+3600000,protocol:2};
+  const path=`licensesV3/${hash}`;
+  const license={enabled:true,expiresAt:Date.now()+3600000,protocol:3};
   denied(await request(path,'PUT',license));
   assert((await request(path,'PUT',license,true)).ok);
-  denied(await request('licensesV2'));
-  const legacy=await request(`licenses/${hash}`);assert(legacy.ok);assert.equal(await legacy.json(),null);
+  denied(await request('licensesV3'));
+  denied(await request(`licenses/${hash}`));denied(await request(`licensesV2/${hash}`));
   // Two physical-device IDs attempting first activation simultaneously.
   const contenders=await Promise.all([deviceA,deviceB].map(id=>request(path+'/binding','PUT',binding(id),false,true)));
   assert.equal(contenders.filter(r=>r.ok).length,1);
@@ -48,5 +48,16 @@ function denied(response){assert([401,403].includes(response.status),`Expected d
   assert((await request(path,'PATCH',{expiresAt:Date.now()+3600000},true)).ok);
   assert((await request(path+'/binding','PUT',binding(deviceB),false,true)).ok);
   assert.equal((await (await request(path)).json()).binding.deviceHash,deviceB);
-  console.log('Firebase V2 rules: one concurrent winner, immutable binding, denied public administration, expired/disabled denial and legacy isolation passed.');
+  assert((await request(path+'/binding','DELETE',undefined,true)).ok);
+  for(const until of [0,Date.now()+3600000]){
+    assert((await request(path,'PATCH',{lock:{until,message:'Bảo trì'}},true)).ok);
+    denied(await request(path+'/binding','PUT',binding(deviceA),false,true));
+    denied(await request(path+'/lock','DELETE'));
+    denied(await request(path+'/lock','PUT',{until:0,message:'self unlock'}));
+  }
+  assert((await request(path,'PATCH',{lock:{until:Date.now()-1000,message:'Hết khóa'}},true)).ok);
+  assert((await request(path+'/binding','PUT',binding(deviceA),false,true)).ok);
+  assert((await request(path,'PATCH',{lock:null},true)).ok);
+  assert.equal((await (await request(path)).json()).binding.deviceHash,deviceA);
+  console.log('Firebase V3 rules: one concurrent winner, immutable binding, denied public administration, expired/disabled denial and legacy isolation passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
