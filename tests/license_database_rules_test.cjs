@@ -1,7 +1,9 @@
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
 const host=process.env.FIREBASE_DATABASE_EMULATOR_HOST;
 assert(host,'Run through the Firebase Database emulator; never point this test at production.');
 const base=`http://${host}/`,namespace='demo-mizze-device';
+assert(['localhost','127.0.0.1','[::1]'].includes(new URL(base).hostname),'Only a local emulator is allowed.');
 const hash='a'.repeat(64),deviceA='b'.repeat(64),deviceB='c'.repeat(64);
 async function request(path,method='GET',body,admin=false,conditional=false) {
   const url=new URL(path+'.json',base);url.searchParams.set('ns',namespace);
@@ -13,6 +15,11 @@ async function request(path,method='GET',body,admin=false,conditional=false) {
 function binding(deviceHash){return {deviceHash,version:1,claimedAt:{'.sv':'timestamp'}};}
 function denied(response){assert([401,403].includes(response.status),`Expected denial, got ${response.status}`);}
 (async()=>{
+  // Explicitly load the canonical rules into the namespace used by this test.
+  // Firebase CLI versions differ in their default database namespace suffix.
+  const rules=JSON.parse(fs.readFileSync('firebase/database.rules.json','utf8'));
+  const applied=await request('.settings/rules','PUT',rules,true);
+  assert(applied.ok,`Rules did not compile: ${await applied.text()}`);
   assert((await request('','DELETE',undefined,true)).ok);
   const path=`licensesV2/${hash}`;
   const license={enabled:true,expiresAt:Date.now()+3600000,protocol:2};
