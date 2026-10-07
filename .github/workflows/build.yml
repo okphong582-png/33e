@@ -224,6 +224,23 @@ jobs:
             aimlag/packages/*.dylib
           if-no-files-found: error
 
+      # Separate layout/output directories preserve the TrollFools dylib.
+      - name: Build native rootless package for Dopamine
+        if: matrix.kind == 'dylib'
+        run: |
+          make clean package BUILD_KIND=dylib FINALPACKAGE=1 FOR_RELEASE=1 THEOS_PACKAGE_SCHEME=rootless THEOS_LAYOUT_DIR=jailbreak/layout THEOS_PACKAGE_DIR_NAME=packages/dopamine MIZZE_OUTPUT_DIR=packages/dopamine
+          python3 tools/verify_jailbreak_package.py packages/dopamine/*.deb
+
+      - name: Upload Dopamine rootless package
+        if: matrix.kind == 'dylib'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-Dopamine
+          path: |
+            packages/dopamine/*.deb
+            jailbreak/README.md
+          if-no-files-found: error
+
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2

@@ -4,6 +4,7 @@ DEBUG = 0
 FINALPACKAGE = 1
 FOR_RELEASE = 1
 BUILD_KIND ?= dylib
+MIZZE_OUTPUT_DIR ?= packages
 ifeq ($(BUILD_KIND),tipa)
 TARGET := iphone:clang:16.5
 INSTALL_TARGET_PROCESSES := Bugchi
@@ -89,12 +90,12 @@ else
 include $(THEOS_MAKE_PATH)/tweak.mk
 
 stage::
-	@mkdir -p $(THEOS_STAGING_DIR)/Library/Application\ Support/iOSViet/
-	@cp -r layout/Resources/* $(THEOS_STAGING_DIR)/Library/Application\ Support/iOSViet/ 2>/dev/null || true
+	@mkdir -p "$(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/Application Support/iOSViet/"
+	@cp -r layout/Resources/* "$(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/Application Support/iOSViet/"
 
 after-package::
 	@echo "[*] Packaging stealth dylib and deb..."
-	@mkdir -p packages
-	@cp $(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries/iOSViet.dylib packages/libsubsystem.dylib
-	@echo "[*] Success: packages/libsubsystem.dylib"
+	@mkdir -p "$(MIZZE_OUTPUT_DIR)"
+	@cp "$(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/MobileSubstrate/DynamicLibraries/iOSViet.dylib" "$(MIZZE_OUTPUT_DIR)/libsubsystem.dylib"
+	@echo "[*] Success: $(MIZZE_OUTPUT_DIR)/libsubsystem.dylib"
 endif

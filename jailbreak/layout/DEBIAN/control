@@ -1,0 +1,9 @@
+Package: com.mizze.gameoverlay
+Name: Mizze
+Version: 1.0.1
+Section: Tweaks
+Depends: firmware (>= 15.0), mobilesubstrate
+Architecture: iphoneos-arm64
+Author: Mizze
+Maintainer: Mizze
+Description: Mizze game overlay for rootless jailbreaks.
