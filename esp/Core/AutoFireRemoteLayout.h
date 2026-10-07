@@ -39,11 +39,23 @@
 #define AUTO_SWAP_SLOT 248
 #define AUTO_SWAP_WEAPON 256
 #define AUTO_SWAP_COOLDOWN 264
+#define AUTO_RAYCAST 272
+#define AUTO_HIT_COLLIDER 280
+#define AUTO_COMPONENT_TRANSFORM 288
+#define AUTO_IS_CHILD 296
+#define AUTO_ROOT_TRANSFORM 304
+#define AUTO_TARGET 312
+#define AUTO_ORIGIN 320
+#define AUTO_HEAD 332
+#define AUTO_BODY 344
+#define AUTO_HEAD_PERCENT 356
 #ifndef __ASSEMBLER__
 #include <cstddef>
 #include <cstdint>
 namespace AutoFireRemote {
-inline constexpr uint64_t Magic = 0x4155544f46495244ULL; // AUTOFIRD: native ammo/effects and full inventory scan
+inline constexpr uint64_t Magic = 0x4155544f46495245ULL; // AUTOFIRE: native physics visibility
+struct Point { float x=0, y=0, z=0; };
+struct Aim { uint64_t target=0; Point origin{}, head{}, body{}; uint32_t headPercent=100; };
 struct State {
     uint64_t original=0, clock=0, getter=0, start=0, stop=0;
     uint32_t sequence=0, enabled=0;
@@ -65,6 +77,8 @@ struct State {
     uint32_t swapSlot=0, padding4=0;
     uint64_t swapWeapon=0;
     uint64_t swapCooldown=0;
+    uint64_t raycast=0, hitCollider=0, componentTransform=0, isChild=0, rootTransform=0;
+    Aim aim{};
 };
 static_assert(offsetof(State, sequence)==AUTO_SEQUENCE);
 static_assert(offsetof(State, enabled)==AUTO_ENABLED);
@@ -91,5 +105,15 @@ static_assert(offsetof(State, swapFunction)==AUTO_SWAP_FUNCTION);
 static_assert(offsetof(State, swapSlot)==AUTO_SWAP_SLOT);
 static_assert(offsetof(State, swapWeapon)==AUTO_SWAP_WEAPON);
 static_assert(offsetof(State, swapCooldown)==AUTO_SWAP_COOLDOWN);
+static_assert(offsetof(State, raycast)==AUTO_RAYCAST);
+static_assert(offsetof(State, hitCollider)==AUTO_HIT_COLLIDER);
+static_assert(offsetof(State, componentTransform)==AUTO_COMPONENT_TRANSFORM);
+static_assert(offsetof(State, isChild)==AUTO_IS_CHILD);
+static_assert(offsetof(State, rootTransform)==AUTO_ROOT_TRANSFORM);
+static_assert(offsetof(State, aim)==AUTO_TARGET);
+static_assert(offsetof(State, aim)+offsetof(Aim, origin)==AUTO_ORIGIN);
+static_assert(offsetof(State, aim)+offsetof(Aim, head)==AUTO_HEAD);
+static_assert(offsetof(State, aim)+offsetof(Aim, body)==AUTO_BODY);
+static_assert(offsetof(State, aim)+offsetof(Aim, headPercent)==AUTO_HEAD_PERCENT);
 }
 #endif

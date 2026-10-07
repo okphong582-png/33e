@@ -119,16 +119,17 @@ void ESPSyncFromPrefs(void) {
     if (type != gAimType || activation != gAimActivation) ESPClearAimLock();
     gAimType = type;
     gAimActivation = activation;
-    isAimNeck = type == AimModePolicy::Type::Neck;
-    const bool silentEnabled = type == AimModePolicy::Type::Silent && ESPPrefsBool(@"SilentAim", NO);
+    const bool autoFire = ESPPrefsBool(@"AutoFire", NO);
+    if (gAutoFire && !autoFire) AutoFireClear();
+    gAutoFire = autoFire;
+    isAimNeck = !gAutoFire && type == AimModePolicy::Type::Neck;
+    const bool silentEnabled = gAutoFire || (type == AimModePolicy::Type::Silent && ESPPrefsBool(@"SilentAim", NO));
     if (silentEnabled != isSilentAim) {
         gAimLockTarget = 0;
         gAimSmoothedValid = false;
         SilentAimSetEnabled(silentEnabled);
     }
     isSilentAim = silentEnabled;
-    if (gAutoFire) AutoFireClear();
-    gAutoFire = false;
     gAutoSwap = false;
     gTargetLine = ESPPrefsBool(@"AimTargetLine", YES);
     gRunSpeed = ESPPrefsBool(@"RunSpeed", NO);
@@ -140,7 +141,7 @@ void ESPSyncFromPrefs(void) {
         ESPPrefsSetFloat(@"FlyHeight", PlayerModesControl::Height(ESPPrefsFloat(@"FlyHeight", 3.0f) + 1.0f));
         ESPPrefsSetBool(@"FlyHeightRaisedV1", YES);
     }
-    PlayerModesSetEnabled(false, ESPPrefsBool(@"AimLag", NO),
+    PlayerModesSetEnabled(ESPPrefsBool(@"Fly", NO), ESPPrefsBool(@"AimLag", NO),
         ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"FlyHeight", PlayerModesControl::DefaultHeight));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
@@ -152,10 +153,10 @@ void ESPSyncFromPrefs(void) {
     silentMaxDistance = ESPPrefsFloat(@"SilentMaxDistance", 100);
     if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 100;
     silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
-    gNoReload = !gAutoFire && ESPPrefsBool(@"ShootNoReload", NO);
+    gNoReload = gAutoFire || ESPPrefsBool(@"ShootNoReload", NO);
     // AimKill must use ordinary weapon timing even if manual fast fire is saved.
     gFastFire = !gAutoFire && ESPPrefsBool(@"FastFire", NO);
-    SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire, false);
+    SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire, gAutoFire);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
     if (!std::isfinite(gESPMaxDistance)) gESPMaxDistance = 150;
@@ -417,6 +418,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 
 - (void)applicationWillResignActive:(NSNotification *)notification {
     GhostModeCancel(); PlayerModesCancel();
+    AutoFireClear(); SilentAimClearTarget();
     [self clearAllContent];
 }
 
@@ -424,6 +426,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     [super didMoveToWindow];
     if (!self.window) {
         GhostModeCancel(); PlayerModesCancel();
+        AutoFireClear(); SilentAimClearTarget();
         [self.displayLink invalidate];
         self.displayLink = nil;
         [self clearAllContent];
@@ -814,7 +817,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     SetMatchReady(YES);
     if (gGhostMode && gGhostSnapshot.active && gGhostSnapshot.match == match && gGhostSnapshot.local == local)
         [self drawGhostAnchor:gGhostSnapshot.anchor matrix:matrix width:vw height:vh vpWidth:vpW vpHeight:vpH];
-    UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire, false);
+    UpdateWeaponFeatures(Moudule_Base, gNoReload, gFastFire, gAutoFire);
     UpdateRunSpeed(Moudule_Base,gRunSpeed,gRunSpeedValue);
     self.aimAssistLayer.path = nil;
 
@@ -911,7 +914,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
             get_IsKnockedDown(local) ? 0 : silentSelection.target, targetHead, targetBody, silentHeadPercent);
         if (gAutoFire)
             stats.autoFireState = AutoFireUpdate(Moudule_Base, match, local,
-                stats.aimState == 8 ? silentSelection.target : 0,gAutoSwap);
+                stats.aimState == 8 ? silentSelection.target : 0,
+                myLoc, targetHead, targetBody, silentHeadPercent, gAutoSwap);
         else AutoFireClear();
         silentFrame.published = true;
         gAimLockTarget = silentSelection.target;

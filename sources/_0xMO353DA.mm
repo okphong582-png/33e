@@ -406,18 +406,21 @@
     if (self.page == 0) {
         y = [self aimChooser:y];
         const BOOL silent=AimModePolicy::ReadType(ESPPrefsFloat(@"AimType",0))==AimModePolicy::Type::Silent;
+        const BOOL aimKill=ESPPrefsBool(@"AutoFire",NO);
         if (silent) {
             y = [self toggle:@"Bật Silent Aim" key:@"SilentAim" fallback:NO y:y];
-            y = [self slider:@"Tỷ lệ headshot" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
         } else {
             y=[self section:@"Kích hoạt" y:y];
             y=[self activationPicker:y];
         }
         y = [self toggle:@"Aimlag khi ngắm" key:@"AimLag" fallback:NO y:y];
         y = [self toggle:@"Dây tới mục tiêu" key:@"AimTargetLine" fallback:YES y:y];
-        y = [self slider:@"FOV" key:silent ? @"SilentFovSize" : @"FovSize"
-            min:5 max:48 fallback:silent ? 18 : 40 y:y];
+        y = [self slider:@"FOV" key:(silent || aimKill) ? @"SilentFovSize" : @"FovSize"
+            min:5 max:48 fallback:(silent || aimKill) ? 18 : 40 y:y];
         y = [self toggle:@"Hiện vòng FOV" key:@"ShowFov" fallback:YES y:y];
+        y = [self toggle:@"AimKill" key:@"AutoFireFloating" fallback:NO y:y];
+        if (silent || ESPPrefsBool(@"AutoFireFloating", NO))
+            y = [self slider:@"Tỷ lệ headshot" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
         y = [self section:@"Súng" y:y];
         y = [self toggle:@"Bắn nhanh (2×)" key:@"FastFire" fallback:NO y:y];
         y = [self toggle:@"Không nạp đạn" key:@"ShootNoReload" fallback:NO y:y];
@@ -475,9 +478,12 @@
         y = [self section:@"Nút nổi" y:y];
         y = [self toggle:@"Ghost" key:@"GhostModeFloating" fallback:NO y:y];
         y = [self toggle:@"FakeLag" key:@"FakeLagFloating" fallback:NO y:y];
+        y = [self toggle:@"Fly" key:@"FlyFloating" fallback:NO y:y];
         y = [self toggle:@"Ẩn nút chức năng" key:@"HideFeatureButtons" fallback:NO y:y];
         y = [self toggle:@"Nút Speed" key:@"RunSpeedFloating" fallback:ESPPrefsBool(@"RunSpeed",NO) y:y];
         y = [self section:@"Di chuyển" y:y];
+        if (ESPPrefsBool(@"FlyFloating", NO))
+            y = [self slider:@"Độ cao Fly" key:@"FlyHeight" min:1 max:6 fallback:4 y:y];
         y = [self toggle:@"Speed" key:@"RunSpeed" fallback:NO y:y];
         y = [self numberInput:@"Tốc độ (m/s)" key:@"RunSpeedValue" fallback:6 y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
@@ -497,7 +503,7 @@
 }
 - (void)toggleChanged:(MizzeCheckBox *)sender {
     NSString *key = objc_getAssociatedObject(sender, "key");
-    if ([@[@"GhostModeFloating",@"FakeLagFloating"] containsObject:key]) {
+    if ([@[@"GhostModeFloating",@"FakeLagFloating",@"AutoFireFloating",@"FlyFloating"] containsObject:key]) {
         NSString *feature=[key stringByReplacingOccurrencesOfString:@"Floating" withString:@""];
         ESPPrefsSetBool(feature,sender.on);
         if (sender.on) {
@@ -523,7 +529,7 @@
         for (UIControl *control in self.controls)
             if ([control isKindOfClass:UISegmentedControl.class] && control.tag==101)
                 ((UISegmentedControl *)control).selectedSegmentIndex=0;
-    if ([key isEqualToString:@"DarkTheme"] || [key isEqualToString:@"SilentAutoConfig"]) [self rebuildAnimated];
+    if ([@[@"DarkTheme",@"SilentAutoConfig",@"AutoFireFloating",@"FlyFloating"] containsObject:key]) [self rebuildAnimated];
 }
 - (void)applyMinimalESP {
     for (NSString *key in @[@"ESPEnabled", @"Box", @"Health", @"Name", @"Dis", @"CleanESP"])

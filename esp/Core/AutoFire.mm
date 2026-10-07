@@ -12,6 +12,7 @@
 #include <dlfcn.h>
 #include <array>
 #include <cstring>
+#include <cmath>
 #include <mutex>
 #include <vector>
 extern "C" const unsigned char AutoFireRemoteStart[], AutoFireRemoteEnd[];
@@ -21,6 +22,9 @@ constexpr uint64_t Getter=0x5616118, Start=0x5C179E8, Stop=0x5C222EC;
 // and weapon type. POFKDNELDJL.IPFONNHEKFA compares accumulated dt against it
 // before each virtual-182 shot (0x5BA4054..0x5BA40A4).
 constexpr uint64_t Interval=0x5BF3B0C;
+// Unity's standard Raycast overload, not the game's ExtraMask extension.
+constexpr uint64_t Raycast=0x8DE4904, HitCollider=0x8DF0730;
+constexpr uint64_t ComponentTransform=0x8D59C2C, IsChild=0x8D6ECE0, RootTransform=0x56182FC;
 constexpr uint64_t FireEffect=0x56AC3A8, EffectSlot=0x138+182*16;
 constexpr uint64_t Tracer=0x5C76890, TracerSlot=0x138+5*16;
 constexpr uint64_t MetadataInit=0xA11121C, TracerTypeInfo=0xBB4BEC8;
@@ -134,7 +138,10 @@ bool Adopt(uint64_t slot,uint64_t a) {
         state.interval!=module+Interval||state.clock!=Clock()||state.effectOriginal!=module+FireEffect||
         state.tracerOriginal!=module+Tracer||state.metadataInit!=module+MetadataInit||
         state.tracerTypeInfo!=module+TracerTypeInfo||state.shotOriginal!=module+ShotPresentation||
-        state.shotHit!=module+ShotHit||state.swapCooldown!=module+0x5636E60)return false;
+        state.shotHit!=module+ShotHit||state.swapCooldown!=module+0x5636E60||
+        state.raycast!=module+Raycast||state.hitCollider!=module+HitCollider||
+        state.componentTransform!=module+ComponentTransform||state.isChild!=module+IsChild||
+        state.rootTransform!=module+RootTransform)return false;
     sessions.push_back({slot,a,state.original,state.sequence&~1u,true});
     Disable(sessions.back());
     return true;
@@ -163,6 +170,9 @@ int Install(uint64_t slot,Session *&session) {
         state.shotOriginal=module+ShotPresentation;
         state.shotHit=module+ShotHit;
         state.swapCooldown=module+0x5636E60;
+        state.raycast=module+Raycast;state.hitCollider=module+HitCollider;
+        state.componentTransform=module+ComponentTransform;
+        state.isChild=module+IsChild;state.rootTransform=module+RootTransform;
         if(!Write(mapping.address+AUTO_PAGE,state)){mach_vm_deallocate(task,mapping.address,2*AUTO_PAGE);return 10;}
         sessions.push_back({slot,mapping.address,current,0});session=&sessions.back();
     }
@@ -226,13 +236,16 @@ uint64_t Count(uint64_t offset) {
 void AutoFireClear(){std::lock_guard<std::recursive_mutex> guard(mutex);Clear();}
 uint64_t AutoFireStartCount(){std::lock_guard<std::recursive_mutex> guard(mutex);return Count(AUTO_STARTS);}
 uint64_t AutoFireTickCount(){std::lock_guard<std::recursive_mutex> guard(mutex);return Count(AUTO_TICKS);}
-int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,bool swap){
+int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,
+                   const Vector3 &origin,const Vector3 &head,const Vector3 &body,uint32_t headPercent,bool swap){
     std::lock_guard<std::recursive_mutex> guard(mutex);
     if(!Attach(base)){Clear();return 10;}
     uint8_t localKnock=1, targetKnock=1;
     if(getMatch(getMatchGame(base))!=match||getLocalPlayer(match)!=local||
         get_CurHP(local)<=0||!Read(local+kKnocked,localKnock)||localKnock){Clear();return 7;}
-    const bool fire=target&&get_CurHP(target)>0&&Read(target+kKnocked,targetKnock)&&!targetKnock&&
+    const auto finite=[](const Vector3 &v){return std::isfinite(v.x)&&std::isfinite(v.y)&&std::isfinite(v.z);};
+    const bool fire=target&&finite(origin)&&finite(head)&&finite(body)&&headPercent<=100&&
+        get_CurHP(target)>0&&Read(target+kKnocked,targetKnock)&&!targetKnock&&
         !isLocalTeamMate(local,target)&&getAimVisibility(target);
     const double now=CACurrentMediaTime();
     if(now<retryAt)return retryState;
@@ -246,7 +259,10 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,b
         !Fingerprint<0x10>(base+0x6483C7C,0x572D5404)||!Fingerprint<0x1E8>(base+FireEffect,0x1EE7E697)||
         !Fingerprint<0x26B0>(base+Tracer,0x6D340948)||!Fingerprint<0x18>(base+MetadataInit,0x2FC932FA)||
         !Fingerprint<0x30>(base+0x5C1E910,0xC285FA0E)||!Fingerprint<0x30C>(base+ShotPresentation,0x76159E8D)||
-        !Fingerprint<0x1B08>(base+ShotHit,0xF0BC2099)))){
+        !Fingerprint<0x1B08>(base+ShotHit,0xF0BC2099)||
+        !Fingerprint<0x17C>(base+Raycast,0x8B3DCDAE)||!Fingerprint<0x1F0>(base+0x8DE4A80,0x8956580B)||
+        !Fingerprint<0xF4>(base+HitCollider,0xF884A08C)||!Fingerprint<0x50>(base+ComponentTransform,0xE5B7D25C)||
+        !Fingerprint<0x64>(base+IsChild,0xDECACF20)||!Fingerprint<0x154>(base+RootTransform,0x8E831156)))){
         Clear();retryAt=now+1;retryState=9;return 9;
     }
     codeVerified=true; // Immutable signed code; reset when task/PID/base changes.
@@ -278,11 +294,14 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,b
     const Publication p{fire&&silentGate?1u:0u,mach_absolute_time()+150000000ULL*tb.denom/tb.numer,local,match,weapon};
     const uint32_t odd=(session->sequence+1)|1u;session->sequence=odd+1;
     session->published=true; // Clear also handles an interrupted publication.
+    const AutoFireRemote::Aim aim{target,{origin.x,origin.y,origin.z},
+        {head.x,head.y,head.z},{body.x,body.y,body.z},headPercent};
     const bool ok=Write(session->state()+AUTO_SEQUENCE,odd)&&
         WriteBytes(session->state()+AUTO_ENABLED,&p,sizeof(p))&&
         Write(session->state()+AUTO_PRESENTATION,presentation)&&Write(session->state()+AUTO_SWAP_ENABLED,swapEnabled)&&
         Write(session->state()+AUTO_SWAP_FUNCTION,swapFunction)&&Write(session->state()+AUTO_SWAP_SLOT,swapSlot)&&
-        Write(session->state()+AUTO_SWAP_WEAPON,swapWeapon)&&Write(session->state()+AUTO_SEQUENCE,session->sequence);
+        Write(session->state()+AUTO_SWAP_WEAPON,swapWeapon)&&Write(session->state()+AUTO_TARGET,aim)&&
+        Write(session->state()+AUTO_SEQUENCE,session->sequence);
     if(!ok){Clear();return 10;}
     return fire?8:7;
 }
@@ -290,5 +309,5 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,b
 void AutoFireClear(){}
 uint64_t AutoFireStartCount(){return 0;}
 uint64_t AutoFireTickCount(){return 0;}
-int AutoFireUpdate(uint64_t,uint64_t,uint64_t,uint64_t,bool){return 9;}
+int AutoFireUpdate(uint64_t,uint64_t,uint64_t,uint64_t,const Vector3 &,const Vector3 &,const Vector3 &,uint32_t,bool){return 9;}
 #endif

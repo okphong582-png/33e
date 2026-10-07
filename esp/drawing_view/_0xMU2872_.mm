@@ -384,9 +384,9 @@ static const CGFloat kMenuButtonSize = 44.0f;
         dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadFloatingAuxButtonsFromPrefs]; });
         return;
     }
-    NSArray *keys = @[@"GhostMode", @"FakeLag", @"RunSpeed"];
-    NSArray *titles = @[@"Ghost", @"FakeLag", @"Speed"];
-    NSArray *symbols = @[@"person.fill", @"pause.circle.fill", @"figure.walk"];
+    NSArray *keys = @[@"GhostMode", @"FakeLag", @"RunSpeed", @"AutoFire", @"Fly"];
+    NSArray *titles = @[@"Ghost", @"FakeLag", @"Speed", @"AimKill", @"Fly"];
+    NSArray *symbols = @[@"person.fill", @"pause.circle.fill", @"figure.walk", @"scope", @"airplane"];
     for (NSString *key in self.quickControls.allKeys)
         if (![keys containsObject:key]) {
             [self.quickControls[key] removeFromSuperview];[self.quickControls removeObjectForKey:key];

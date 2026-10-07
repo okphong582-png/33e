@@ -37,12 +37,19 @@ checks; TIPA/dylib behavior on a physical device still needs verification.
   automatic commands wait `max(native interval, 0.35 seconds)` and discard
   overshoot to avoid short gaps or catch-up commands. The first shot remains
   immediate after a valid target is available.
-- AimKill no longer activates IsAmmoFree or ShootNoReload. Ammo and reload follow
-  the native game path. The previous client-only unlimited-ammo behavior was not
-  verified against server shot acceptance. This is a corrective change, not a
-  claim that server-side damage has been proven on a device.
-- Each floating-button visibility preference is independent of its feature.
-  Enabling a feature initializes visibility only if no preference was saved.
+- AimKill temporarily activates IsAmmoFree (`PlayerAttributes +0x194`) and
+  ShootNoReload (`+0x111`) at the user's request. The reversible controller
+  restores their prior values when AimKill is disabled and resumes saved manual
+  fast-fire/no-reload choices. This client-side behavior does not prove server
+  hit acceptance or server-side unlimited ammo.
+- AimKill and Fly are available again. Their menu checkboxes follow Ghost and
+  FakeLag: enable shows a floating control and enables the feature; disabling
+  removes that control and stops the feature. Tapping a floating control toggles
+  only the feature, keeping the button available. The global hide setting hides
+  the controls while retaining their current feature state.
+- AimKill chooses Silent's target path while enabled, without rewriting the
+  user's manual head/neck/Silent type or activation choices. Its active FOV and
+  headshot ratio remain adjustable on the Aim page. Fly height remains 1–6 m.
 - The target line is rendered from screen center to the current selected enemy,
   clears without a target, and follows selection changes rather than keeping an
   old enemy reference. Advanced aim and individual button controls are collapsed
@@ -59,3 +66,38 @@ the client's character controller; that specific report remains device-tested
 only by the user and needs retesting with the restored full shot pipeline.
 `weapon_features_test.cpp` covers decimal speed values, OFF restoration retries,
 component ownership, context changes, and writes rejected after a player change.
+
+## Solid-cover gate
+
+Verified native entry points in the supplied 1.132.1 image:
+
+| Method | Offset | Bytes | FNV-1a |
+| --- | --- | --- | --- |
+| Physics.Raycast(Vector3,Vector3,RaycastHit&,float,int,QueryTriggerInteraction) | 0x8DE4904 | 0x17C | 8B3DCDAE |
+| PhysicsScene.Raycast standard helper | 0x8DE4A80 | 0x1F0 | 8956580B |
+| RaycastHit.get_collider | 0x8DF0730 | 0xF4 | F884A08C |
+| Component.get_transform | 0x8D59C2C | 0x50 | E5B7D25C |
+| Transform.IsChildOf | 0x8D6ECE0 | 0x64 | DECACF20 |
+| Player.get_RootTransform | 0x56182FC | 0x154 | 8E831156 |
+
+The standard Physics wrapper accepts origin in s0–s2, direction in s3–s5,
+distance in s6, a 44-byte RaycastHit output pointer in x0, layer mask in w1,
+and trigger policy in w2. It uses `Internal_Raycast_Injected`, not the game's
+ExtraMask extension. The signed callback queries the full segment on the weapon
+update thread using all solid layers and ignoring triggers. No hit means clear;
+a hit passes only when its collider transform belongs to the selected player's
+root hierarchy. Missing/destroyed Unity objects, unknown ownership, invalid
+coordinates and changed/expired publications fail closed. A missing player root
+cache is rejected before entering the native getter that can throw.
+
+At a mixed headshot percentage both head and body paths must be clear. This is
+conservative around partial cover. At 0/100 only the selected path is checked.
+Cover releases an owned firing command; exposure permits a new command without
+manual input. ARM64 tests exercise clear/blocked segments, target/foreign
+colliders, missing objects, partial cover, expiry and publication races, resume
+after exposure, and preservation of native ABI/cadence/shot dispatch.
+
+Device limitations: a Unity raycast does not detect a collider containing its
+origin; physics timing, target hierarchy and native firing behavior require
+testing in the actual game. The query currently uses the published camera
+origin; it is not proof of server-authoritative visibility or damage.

@@ -3,6 +3,7 @@
 #import "InjectedOverlayOwnership.h"
 #import "InjectedWindowSelection.h"
 #import "InjectedProtection.h"
+#include "InjectedStartupPolicy.h"
 
 @interface MizzeOverlayWindow : UIWindow
 @end
@@ -18,16 +19,20 @@
 static BOOL setupPending = NO;
 static NSUInteger setupAttempts = 0;
 static const NSUInteger kMaxSetupAttempts = 30;
+static InjectedStartup::Gate startupGate;
 static void ScheduleInjectedOverlay(NSTimeInterval delay);
 
 static void SetupInjectedOverlayMenu() {
     NSCAssert(NSThread.isMainThread, @"Overlay setup requires the main thread");
     UIApplication *app = UIApplication.sharedApplication;
     if (!app || MizzeOverlayOwner(app)) return;
-    if (app.applicationState != UIApplicationStateActive) return;
-
     UIWindow *gameWindow = MizzeFindGameWindow(app);
-    if (!gameWindow) {
+    UIViewController *host = gameWindow.rootViewController;
+    const BOOL attached = host.isViewLoaded && host.view.window == gameWindow &&
+        !host.isBeingPresented && !host.isBeingDismissed && !host.transitionCoordinator;
+    if (!startupGate.ready(app.applicationState == UIApplicationStateActive, attached,
+        reinterpret_cast<uintptr_t>((__bridge void *)gameWindow), gameWindow.bounds.size.width,
+        gameWindow.bounds.size.height, NSProcessInfo.processInfo.systemUptime)) {
         if (++setupAttempts < kMaxSetupAttempts) ScheduleInjectedOverlay(1.0);
         return;
     }

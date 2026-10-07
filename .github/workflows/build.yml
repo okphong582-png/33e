@@ -109,6 +109,8 @@ jobs:
 
       - name: Test aim selection
         run: |
+          g++ -std=c++17 -Wall -Wextra -Werror tests/injected_startup_policy_test.cpp -o /tmp/injected-startup-policy-test
+          /tmp/injected-startup-policy-test
           g++ -std=c++17 -Wall -Wextra -Werror tests/aim_mode_policy_test.cpp -o /tmp/aim-mode-policy-test
           /tmp/aim-mode-policy-test
           g++ -std=c++17 -Wall -Wextra -Werror tests/world_axes_test.cpp -o /tmp/world-axes-test

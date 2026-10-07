@@ -138,6 +138,8 @@ assert tracer_case(shot=True)==(['tracer'],0)
 print('Native shot/effect/tracer methods always receive their original argument registers')
 
 INTERVAL = 0x120600
+RAYCAST, COLLIDER, TRANSFORM, CHILD, ROOT = 0x120d00, 0x120e00, 0x120f00, 0x121000, 0x121100
+TARGET, HIT_OBJECT, HIT_TRANSFORM, TARGET_ROOT = 0x278000, 0x279000, 0x27a000, 0x27b000
 METADATA_INIT, TYPEINFO = 0x120900, 0x274000
 SILENT_BASE, SILENT_STATE, SHOT = 0x110000, 0x114000, 0x120700
 HANDLER, INFO, INFO_CLASS = 0x270000, 0x271000, 0x272000
@@ -149,7 +151,9 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
          steps=1, before_step=None, dt=0.0625, interval=0.25, elapsed=0, interval_action=None,
           gate=SILENT_STATE+128, silent_percent=None, cold_info=False, warm=False, presentation=False,
           swap=False, swap_valid=True, swap_method=True, swap_cooldown=0, swap_success=False,
-          swap_slot=1, inactive_owner=LOCAL):
+           swap_slot=1, inactive_owner=LOCAL, cover=False, target_collider=False,
+           collider_missing=False, root_missing=False, physics_action=None,
+           aim_percent=100, head_cover=False, body_cover=False, aim_head=(3,4,0)):
     uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
     uc.mem_map(BASE, 0x30000); uc.mem_map(LOCAL, 0x80000); uc.mem_map(STACK, 0x10000)
     uc.mem_write(BASE, code)
@@ -174,6 +178,14 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     ptr(STATE+120,INTERVAL)
     uc.mem_write(STATE+128,struct.pack('<f',elapsed))
     ptr(STATE+136,gate)
+    for offset,address in [(272,RAYCAST),(280,COLLIDER),(288,TRANSFORM),(296,CHILD),(304,ROOT)]:
+        ptr(STATE+offset,address);uc.mem_write(address,b'\xc0\x03\x5f\xd6')
+    ptr(STATE+312,TARGET)
+    uc.mem_write(STATE+320,struct.pack('<fff',0,0,0))
+    uc.mem_write(STATE+332,struct.pack('<fff',*aim_head))
+    uc.mem_write(STATE+344,struct.pack('<fff',2,0,0));word(STATE+356,aim_percent)
+    ptr(TARGET+0x6c8,0 if root_missing else TARGET_ROOT)
+    for obj in [HIT_OBJECT,HIT_TRANSFORM,TARGET_ROOT]:ptr(obj+0x10,0x345678)
     visual,hit=0x120800,0x120a00
     if presentation:
         for a in [visual,hit]:uc.mem_write(a,b'\xc0\x03\x5f\xd6')
@@ -213,9 +225,33 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     metadata_calls=[]
     hit_calls=[];visual_calls=[]
     getter_weapon=weapon
+    ray_calls=[]
     def hook(uc,a,size,_):
         nonlocal getter_weapon
-        if a == METADATA_INIT:
+        if a == RAYCAST:
+            direction=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(r)))[0]
+                for r in [UC_ARM64_REG_S3,UC_ARM64_REG_S4,UC_ARM64_REG_S5])
+            distance=struct.unpack('<f',struct.pack('<I',uc.reg_read(UC_ARM64_REG_S6)))[0]
+            assert distance>0 and abs(distance-sum(v*v for v in direction)**.5)<1e-5
+            assert tuple(uc.reg_read(r) for r in [UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2])==(0,0,0)
+            assert uc.reg_read(UC_ARM64_REG_W1)==0xffffffff and uc.reg_read(UC_ARM64_REG_W2)==1
+            assert uc.reg_read(UC_ARM64_REG_X3)==0
+            is_head=direction[1]!=0;ray_calls.append(is_head)
+            if physics_action:physics_action(word)
+            blocked=cover(step,is_head) if callable(cover) else cover
+            uc.reg_write(UC_ARM64_REG_X0,int(blocked or target_collider or (head_cover if is_head else body_cover)))
+        elif a==COLLIDER:
+            uc.reg_write(UC_ARM64_REG_X0,0 if collider_missing else HIT_OBJECT)
+        elif a==TRANSFORM:
+            assert uc.reg_read(UC_ARM64_REG_X0)==HIT_OBJECT
+            uc.reg_write(UC_ARM64_REG_X0,HIT_TRANSFORM)
+        elif a==ROOT:
+            assert uc.reg_read(UC_ARM64_REG_X0)==TARGET
+            uc.reg_write(UC_ARM64_REG_X0,TARGET_ROOT)
+        elif a==CHILD:
+            assert uc.reg_read(UC_ARM64_REG_X0)==HIT_TRANSFORM and uc.reg_read(UC_ARM64_REG_X1)==TARGET_ROOT
+            uc.reg_write(UC_ARM64_REG_X0,int(target_collider and not cover))
+        elif a == METADATA_INIT:
             assert uc.reg_read(UC_ARM64_REG_X0)==TYPEINFO
             metadata_calls.append(a)
             uc.reg_write(UC_ARM64_REG_X0,0);uc.reg_write(UC_ARM64_REG_X1,0)
@@ -285,14 +321,14 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
         if before_step: before_step(step,word)
         uc.reg_write(UC_ARM64_REG_X0,self); uc.reg_write(UC_ARM64_REG_X1,0x1234)
         uc.reg_write(UC_ARM64_REG_X30,RETURN)
-        uc.emu_start(BASE,RETURN,count=1000)
+        uc.emu_start(BASE,RETURN,count=2000)
         assert uc.reg_read(UC_ARM64_REG_PC)==RETURN and calls.count('update')==step+1
         assert uc.reg_read(UC_ARM64_REG_SP)==STACK+0x8000
         assert all(uc.reg_read(r)==v for r,v in saved.items())
         assert struct.unpack('<Q',uc.mem_read(SILENT_STATE+128,8))[0]==0, 'Automatic-shot marker leaked'
         if silent_percent is not None:
             assert struct.unpack('<fff',uc.mem_read(INFO+0x40,12))==(0,0,1)
-    if not enabled and not held and not swap: assert not getter_calls
+    if not enabled and not held and not swap: assert not getter_calls and not ray_calls
     assert len(metadata_calls)==int(warm)
     if presentation:
         assert len(hit_calls)==len(visual_calls)==len(bullets)
@@ -308,6 +344,24 @@ def case(*, enabled=1, held=0, sequence=2, now=100, deadline=110, firing=0,
     return (calls,held_after,starts,bullets) if silent_percent is not None else (calls,held_after,starts)
 
 assert case()==(['update','start'],WEAPON,1)
+assert case(cover=True)==(['update'],0,0)
+assert case(cover=True,held=WEAPON)==(['update','stop'],0,0)
+assert case(target_collider=True)==(['update','start'],WEAPON,1)
+assert case(target_collider=True,collider_missing=True)==(['update'],0,0)
+assert case(target_collider=True,root_missing=True)==(['update'],0,0)
+assert case(head_cover=True,aim_percent=0)[2]==1
+assert case(body_cover=True,aim_percent=100)[2]==1
+assert case(body_cover=True,aim_percent=25)[2]==0
+assert case(head_cover=True,aim_percent=75)[2]==0
+assert case(physics_action=lambda w:w(STATE+40,4))==(['update'],0,0)
+assert case(physics_action=lambda w:w(STATE+48,99))==(['update'],0,0)
+for point in [(0,0,0),(float('nan'),4,0),(float('inf'),4,0)]:
+    assert case(aim_head=point)==(['update'],0,0)
+assert case(aim_percent=101)==(['update'],0,0)
+# Clearing cover in the next publication resumes firing without manual input.
+assert case(steps=3,cover=lambda step,head:step==0)==(['update','update','start','update'],WEAPON,1)
+assert case(steps=3,cover=lambda step,head:step==1)==(['update','start','update','stop','update','start'],WEAPON,2)
+print('Native physics: walls block, target colliders pass, mixed HS cover and query races reject shots')
 assert case(swap=True,steps=15,enabled=0)[0].count('swap')==0
 assert case(swap=True,steps=16,enabled=0)[0].count('swap')==1
 assert case(swap=True,steps=32,enabled=0)[0].count('swap')==2

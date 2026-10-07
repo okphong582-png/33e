@@ -16,7 +16,4 @@ static inline void MizzePrepareMenuPrefs(void) {
                 ESPPrefsSetBool([key stringByAppendingString:@"Floating"], ESPPrefsBool(key, NO));
         ESPPrefsSetBool(@"ExplicitAimMenuV1", YES);
     }
-    // These features are temporarily hidden, including saved active states.
-    for (NSString *key in @[@"AutoFire", @"Fly", @"AutoFireFloating", @"FlyFloating", @"AutoSwapWeapon"])
-        if (ESPPrefsBool(key, NO)) ESPPrefsSetBool(key, NO);
 }

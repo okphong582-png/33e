@@ -233,6 +233,40 @@ _AutoFireRemoteStart:
 .LautoCheckFire:
     ldr w8, [x19, #AUTO_ENABLED]
     cbz w8, .LautoRelease
+    // Query physics on the game's update thread. Camera visibility alone
+    // cannot distinguish an enemy behind solid cover.
+    ldr x8, [x19, #AUTO_TARGET]
+    cbz x8, .LautoRelease
+    ldr w8, [x19, #AUTO_HEAD_PERCENT]
+    cmp w8, #100
+    b.hi .LautoRelease
+    cbz w8, .LautoBodyRay
+    add x0, x19, #AUTO_HEAD
+    bl .LautoRay
+    cbz w0, .LautoRelease
+    ldr w8, [x19, #AUTO_HEAD_PERCENT]
+    cmp w8, #100
+    b.eq .LautoRayDone
+.LautoBodyRay:
+    add x0, x19, #AUTO_BODY
+    bl .LautoRay
+    cbz w0, .LautoRelease
+.LautoRayDone:
+    // Physics/transform getters can run game hotfixes. Never fire using a
+    // changed or expired publication after returning from native queries.
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRelease
+    ldr x8, [x19, #AUTO_CLOCK]
+    blr x8
+    ldr x24, [x19, #AUTO_DEADLINE]
+    cmp x0, x24
+    b.hi .LautoRelease
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRelease
     // A shot event is not a persistent trigger. Leave manual fire alone, but
     // repeat owned shots at Weapon.LDKCJEMDAMC's native interval, as the game's
     // firing-state ticks do. PRI21 == 2 must not suppress our next owned shot.
@@ -289,6 +323,15 @@ _AutoFireRemoteStart:
     cmp w8, w23
     b.ne .LautoRelease
 .LautoMethods:
+    ldr x8, [x19, #AUTO_CLOCK]
+    blr x8
+    ldr x24, [x19, #AUTO_DEADLINE]
+    cmp x0, x24
+    b.hi .LautoRelease
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRelease
     // Ensure the weapon still uses the statically verified input methods.
     ldr x8, [x22]
     ldr x9, [x8, #0xC98]       // virtual 182: ALJMFCJMDCF()
@@ -348,6 +391,97 @@ _AutoFireRemoteStart:
     ldp x21, x22, [sp, #32]
     ldp x19, x20, [sp, #16]
     ldp x29, x30, [sp], #112
+    ret
+
+// x0 points to the endpoint; x19 is our publication. Return 1 only when
+// the full segment is clear or its first solid collider belongs to the target.
+// The helper preserves every callee-saved register used by the main callback.
+.LautoRay:
+    stp x29, x30, [sp, #-96]!
+    stp x27, x28, [sp, #16]
+    ldp s3, s4, [x0]
+    ldr s5, [x0, #8]
+    ldr s0, [x19, #AUTO_ORIGIN]
+    ldr s1, [x19, #AUTO_ORIGIN+4]
+    ldr s2, [x19, #AUTO_ORIGIN+8]
+    fsub s3, s3, s0
+    fsub s4, s4, s1
+    fsub s5, s5, s2
+    fmul s6, s3, s3
+    fmadd s6, s4, s4, s6
+    fmadd s6, s5, s5, s6
+    fsqrt s6, s6
+    fmov w8, s6
+    ubfx w8, w8, #23, #8
+    cmp w8, #255
+    b.eq .LautoRayBlocked
+    fcmp s6, #0.0
+    b.le .LautoRayBlocked
+    // RaycastHit is 44 bytes, with collider instance ID at +0x28.
+    stp xzr, xzr, [sp, #48]
+    stp xzr, xzr, [sp, #64]
+    str xzr, [sp, #80]
+    str wzr, [sp, #88]
+    add x0, sp, #48
+    mov w1, #-1              // all solid layers
+    mov w2, #1               // QueryTriggerInteraction.Ignore
+    mov x3, #0
+    ldr x8, [x19, #AUTO_RAYCAST]
+    cbz x8, .LautoRayBlocked
+    blr x8
+    cbz w0, .LautoRayClear
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRayBlocked
+    add x0, sp, #48
+    mov x1, #0
+    ldr x8, [x19, #AUTO_HIT_COLLIDER]
+    cbz x8, .LautoRayBlocked
+    blr x8
+    cbz x0, .LautoRayBlocked
+    ldr x8, [x0, #0x10]       // Unity's native cached pointer
+    cbz x8, .LautoRayBlocked
+    mov x1, #0
+    ldr x8, [x19, #AUTO_COMPONENT_TRANSFORM]
+    cbz x8, .LautoRayBlocked
+    blr x8
+    cbz x0, .LautoRayBlocked
+    mov x27, x0
+    ldr x8, [x27, #0x10]
+    cbz x8, .LautoRayBlocked
+    ldr x0, [x19, #AUTO_TARGET]
+    cbz x0, .LautoRayBlocked
+    add x8, x19, #AUTO_SEQUENCE
+    ldar w8, [x8]
+    cmp w8, w23
+    b.ne .LautoRayBlocked
+    // An uninitialised/despawned target root can throw in the native getter.
+    ldr x8, [x0, #0x6C8]
+    cbz x8, .LautoRayBlocked
+    mov x1, #0
+    ldr x8, [x19, #AUTO_ROOT_TRANSFORM]
+    cbz x8, .LautoRayBlocked
+    blr x8
+    cbz x0, .LautoRayBlocked
+    mov x28, x0
+    ldr x8, [x28, #0x10]
+    cbz x8, .LautoRayBlocked
+    mov x0, x27
+    mov x1, x28
+    mov x2, #0
+    ldr x8, [x19, #AUTO_IS_CHILD]
+    cbz x8, .LautoRayBlocked
+    blr x8
+    b .LautoRayReturn
+.LautoRayClear:
+    mov w0, #1
+    b .LautoRayReturn
+.LautoRayBlocked:
+    mov w0, #0
+.LautoRayReturn:
+    ldp x27, x28, [sp, #16]
+    ldp x29, x30, [sp], #96
     ret
     .org AUTO_PAGE, 0
 _AutoFireRemoteEnd:

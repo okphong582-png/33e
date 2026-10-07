@@ -77,6 +77,18 @@ struct Fixture {
 
 int main() {
     {
+        Fixture f;
+        f.tick(true,false,true,true); // AimKill: no reload/ammo subtraction, normal interval.
+        assert(f.noReload()==1 && f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==1 && f.scale()==1);
+        f.tick(false,false);f.tick(false,false);
+        assert(f.noReload()==0 && f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==0 && !f.controller.HasChanges());
+        f.tick(true,true); // Existing manual settings survive an AimKill round trip.
+        f.tick(true,false,true,true);
+        assert(f.scale()==1 && f.noReload()==1);
+        f.tick(true,true);f.tick(true,true);
+        assert(f.scale()==.5f && f.noReload()==1 && f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==0);
+    }
+    {
         Fixture f;f.put<uint8_t>(Fixture::Attributes+0x193,0xA5);
         f.tick(false,false,true,true);
         assert(f.get<uint8_t>(Fixture::Attributes+IsAmmoFreeOffset)==1);

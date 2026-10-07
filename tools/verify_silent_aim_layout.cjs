@@ -32,6 +32,13 @@ function fingerprint(address, length) {
     return hash;
 }
 assert.equal(fingerprint(0x5616118, 0xCC), 0xC5E012EE);
+// Unity's standard raycast, solid-hit ownership, and target hierarchy getters.
+assert.equal(fingerprint(0x8DE4904,0x17C),0x8B3DCDAE);
+assert.equal(fingerprint(0x8DE4A80,0x1F0),0x8956580B);
+assert.equal(fingerprint(0x8DF0730,0xF4),0xF884A08C);
+assert.equal(fingerprint(0x8D59C2C,0x50),0xE5B7D25C);
+assert.equal(fingerprint(0x8D6ECE0,0x64),0xDECACF20);
+assert.equal(fingerprint(0x56182FC,0x154),0x8E831156);
 assert.equal(fingerprint(0x5AC970C, 0xA0), 0x93FD3984);
 assert.equal(fingerprint(0x5C59B94, 0x16C), 0xDFE8FAC6);
 // Native weapon input: begin/end methods, and the two allowed player updates.
