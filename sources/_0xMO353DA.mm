@@ -486,6 +486,10 @@
             y = [self slider:@"Độ cao Fly" key:@"FlyHeight" min:1 max:6 fallback:4 y:y];
         y = [self toggle:@"Speed" key:@"RunSpeed" fallback:NO y:y];
         y = [self numberInput:@"Tốc độ (m/s)" key:@"RunSpeedValue" fallback:6 y:y];
+        y = [self section:@"Hiệu ứng nhân vật" y:y];
+        y = [self toggle:@"Spin · chỉ mình thấy" key:@"VisualSpin" fallback:NO y:y];
+        if (ESPPrefsBool(@"VisualSpin",NO))
+            y = [self slider:@"Vòng / giây" key:@"VisualSpinSpeed" min:0.1 max:3 fallback:0.5 y:y];
         y = [self toggle:@"Ẩn khi chụp / quay" key:@"AnLive" fallback:NO y:y];
         y = [self toggle:@"Giao diện tối" key:@"DarkTheme" fallback:YES y:y];
         y = [self toggle:@"Tiết kiệm pin (30 FPS)" key:@"BalancedRender" fallback:NO y:y];
@@ -529,7 +533,7 @@
         for (UIControl *control in self.controls)
             if ([control isKindOfClass:UISegmentedControl.class] && control.tag==101)
                 ((UISegmentedControl *)control).selectedSegmentIndex=0;
-    if ([@[@"DarkTheme",@"SilentAutoConfig",@"AutoFireFloating",@"FlyFloating"] containsObject:key]) [self rebuildAnimated];
+    if ([@[@"DarkTheme",@"SilentAutoConfig",@"AutoFireFloating",@"FlyFloating",@"VisualSpin"] containsObject:key]) [self rebuildAnimated];
 }
 - (void)applyMinimalESP {
     for (NSString *key in @[@"ESPEnabled", @"Box", @"Health", @"Name", @"Dis", @"CleanESP"])
@@ -565,6 +569,8 @@
         [key isEqualToString:@"SilentHeadPercent"] || [key isEqualToString:@"HealthYellowPercent"] ||
         [key isEqualToString:@"HealthRedPercent"]) {
         label.text = [NSString stringWithFormat:@"%@   %.0f%%", title, sender.value];
+    } else if ([key isEqualToString:@"VisualSpinSpeed"]) {
+        label.text = [NSString stringWithFormat:@"%@   %.1f", title, sender.value];
     } else if ([key isEqualToString:@"FlyHeight"]) {
         label.text = [NSString stringWithFormat:@"%@   %.2f m", title, sender.value];
     } else if ([key isEqualToString:@"ESPMaxDistance"] || [key isEqualToString:@"SilentMaxDistance"]) {

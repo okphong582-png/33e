@@ -4,6 +4,7 @@
 #include "PlayerModesInstallPolicy.h"
 #include "PlayerModesControlPolicy.h"
 #include "PlayerModesControllerPolicy.h"
+#include "VisualSpinPolicy.h"
 #include "SilentAimRemoteMapping.h"
 #include "GameLogic.h"
 #include "../drawing_view/offset.h"
@@ -26,7 +27,10 @@ constexpr Signature signatures[] = {
     {0x561C7C8,0x6C,0x7958F6CC},{0x5636F20,0x60,0x6E4B75FE},
     {0x6B4A924,0x8,0x64A6725A},{0x569C1E4,0x2BAC,0x458F369A},
     {0x646B648,0xB0,0x7C5E5F3F},{0x5631D28,0x58,0xEBC9879D},
-    {0x56268B4,0x24,0xE7908BBE}
+    {0x56268B4,0x24,0xE7908BBE},
+    {0x8D6C788,0x60,0xAE8A72F8},{0x8D6C860,0x78,0xD1FEABDC},
+    {0x8D6ECE0,0x64,0xDECACF20},{0x6B49C14,0xF0,0x990FC153},
+    {0x56182FC,0x154,0x8E831156},{0x6B4964C,0x8,0x80D43BE2}
 };
 struct Session {
     uint64_t slot=0, allocation=0, original=0, originalPost=0;
@@ -41,6 +45,8 @@ uint64_t module=0, ownerMatch=0, ownerLocal=0;
 uint32_t wanted=0, epoch=0, previousFlags=0;
 float height=PlayerModesControl::DefaultHeight;
 PlayerModesControl::State control;
+VisualSpin::Phase spinPhase;
+float spinSpeed=VisualSpin::DefaultSpeed;
 bool verified=false;
 double retryAt=0;
 int lastResult=1;
@@ -69,6 +75,7 @@ void Clear(){
     for(auto &session:sessions)if(session.published&&Publish(session,off))session.published=false;
     ownerMatch=ownerLocal=0;previousFlags=0;
     control.Reset();
+    spinPhase.Reset();
     snapshot.fly=snapshot.heldEnemies=0;snapshot.running=false;
     // Keep executable callbacks mapped while game threads may still use them.
     // Each callback restores its own held transform before its original update.
@@ -127,7 +134,8 @@ bool Adopt(uint64_t slot,uint64_t address){
         state.clock!=Clock()||state.currentMatch!=module+0x591B898||state.getPos!=module+0x6B49D04||
         state.setPos!=module+0x6B49E10||state.hp!=module+0x56AA7C8||state.vehicle!=module+0x561CA30||
         state.parachute!=module+0x561C7C8||state.waitSync!=module+0x5636F20||
-        state.originalPost!=module+0x569C1E4||state.forcePos!=module+0x646B648)return false;
+        state.originalPost!=module+0x569C1E4||state.forcePos!=module+0x646B648||
+        state.getRot!=module+0x8D6C788||state.setRot!=module+0x8D6C860||state.isChild!=module+0x8D6ECE0)return false;
     sessions.push_back({slot,address,state.original,state.originalPost,state.sequence&~1u,true});
     epoch=state.input.epoch+1;
     PlayerModesRemote::Input off{};off.epoch=epoch;
@@ -158,6 +166,7 @@ int Install(uint64_t klass){
         state.vehicle=module+0x561CA30;state.parachute=module+0x561C7C8;state.waitSync=module+0x5636F20;
         state.originalPost=post;
         state.forcePos=module+0x646B648;
+        state.getRot=module+0x8D6C788;state.setRot=module+0x8D6C860;state.isChild=module+0x8D6ECE0;
         if(!Write(mapping.address+MODES_PAGE,state)){snapshot.detail="không ghi được trạng thái";mach_vm_deallocate(task,mapping.address,2*MODES_PAGE);return 10;}
         sessions.push_back({slot,mapping.address,current,post,0,false});session=&sessions.back();
     }
@@ -230,9 +239,15 @@ uint64_t Deadline(){
 void PlayerModesSetEnabled(bool fly,bool aimLag,bool fakeLag,float requestedHeight){
     std::lock_guard<std::recursive_mutex> guard(mutex);
     const uint32_t next=(fly?PlayerModesControl::Fly:0u)|(aimLag?PlayerModesControl::AimLag:0u)|
-        (fakeLag?PlayerModesControl::FakeLag:0u);
+        (fakeLag?PlayerModesControl::FakeLag:0u)|(wanted&PlayerModesControl::Spin);
     height=PlayerModesControl::Height(requestedHeight);
     if(next!=wanted){if(!next)Clear();wanted=next;retryAt=0;}
+}
+void PlayerModesSetSpin(bool enabled,float turnsPerSecond){
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    spinSpeed=VisualSpin::Speed(turnsPerSecond);
+    const uint32_t next=(wanted&~PlayerModesControl::Spin)|(enabled?PlayerModesControl::Spin:0u);
+    if(next!=wanted){spinPhase.Reset();if(!next)Clear();wanted=next;retryAt=0;}
 }
 void PlayerModesCancel(){std::lock_guard<std::recursive_mutex> guard(mutex);Clear();}
 int PlayerModesUpdate(uint64_t base){
@@ -246,9 +261,13 @@ int PlayerModesUpdate(uint64_t base){
     snapshot.detail="";snapshot.failedOffset=0;snapshot.skipped=0;
     if(!Verify()){Clear();retryAt=CACurrentMediaTime()+1;return lastResult=9;}
     PlayerModesRemote::Input input{};
-    if(match!=ownerMatch||local!=ownerLocal)control.Reset();
+    if(match!=ownerMatch||local!=ownerLocal){control.Reset();spinPhase.Reset();}
     input.flags=control.Flags(wanted,(wanted&PlayerModesControl::AimLag)&&get_IsScoping(local),CACurrentMediaTime());
     input.height=height;
+    if(wanted&PlayerModesControl::Spin){
+        spinPhase.Step(CACurrentMediaTime(),spinSpeed);
+        input.spinSin=spinPhase.Sin();input.spinCos=spinPhase.Cos();
+    }
     if(wanted&PlayerModesControl::Fly){
         PlayerModesController::Identity controller;
         if(PlayerModesController::Resolve(local,controller,ReadBytes,[](uint64_t a){return isVaildPtr(a);})){
@@ -266,7 +285,7 @@ int PlayerModesUpdate(uint64_t base){
         if(classCount==classes.size())return false;
         classes[classCount++]=klass;return true;
     };
-    if((wanted&2u)&&!addClass(local)){Clear();return lastResult=9;}
+    if((wanted&(PlayerModesControl::Fly|PlayerModesControl::Spin))&&!addClass(local)){Clear();return lastResult=9;}
     if(wanted&(PlayerModesControl::AimLag|PlayerModesControl::FakeLag)){
         uint64_t dictionary=0,entries=0;int count=-1,capacity=-1;
         if(!Read(match+kMatchPlayerDict,dictionary)||!Read(dictionary+kDictCount,count)||
@@ -285,7 +304,7 @@ int PlayerModesUpdate(uint64_t base){
         }
     }
     std::array<bool,MODES_CAPACITY+1> installed{};
-    uint64_t localClass=0;if(wanted&2u)Read(local,localClass);
+    uint64_t localClass=0;if(wanted&(PlayerModesControl::Fly|PlayerModesControl::Spin))Read(local,localClass);
     for(size_t i=0;i<classCount;++i){
         int result=Install(classes[i]);
         if(result==8){installed[i]=true;continue;}
@@ -300,7 +319,7 @@ int PlayerModesUpdate(uint64_t base){
         for(size_t j=0;j<classCount;++j)if(classes[j]==klass&&installed[j]){supported=true;break;}
         if(supported)input.players[accepted++]=input.players[i];else ++snapshot.skipped;
     }
-    if(!(wanted&2u)&&input.count&&!accepted){Clear();retryAt=CACurrentMediaTime()+1;return lastResult=9;}
+    if(!(wanted&(PlayerModesControl::Fly|PlayerModesControl::Spin))&&input.count&&!accepted){Clear();retryAt=CACurrentMediaTime()+1;return lastResult=9;}
     input.count=accepted;
     if(!snapshot.skipped&&(!(wanted&PlayerModesControl::Fly)||input.flyCCT))snapshot.detail="";
     input.epoch=epoch; // Adoption may have advanced an existing callback's epoch.
@@ -312,6 +331,7 @@ int PlayerModesUpdate(uint64_t base){
 PlayerModesSnapshot PlayerModesRead(){std::lock_guard<std::recursive_mutex> guard(mutex);return snapshot;}
 #else
 void PlayerModesSetEnabled(bool,bool,bool,float){}
+void PlayerModesSetSpin(bool,float){}
 void PlayerModesCancel(){}
 int PlayerModesUpdate(uint64_t){return 9;}
 PlayerModesSnapshot PlayerModesRead(){return {};}

@@ -143,6 +143,7 @@ void ESPSyncFromPrefs(void) {
     }
     PlayerModesSetEnabled(ESPPrefsBool(@"Fly", NO), ESPPrefsBool(@"AimLag", NO),
         ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"FlyHeight", PlayerModesControl::DefaultHeight));
+    PlayerModesSetSpin(ESPPrefsBool(@"VisualSpin", NO), ESPPrefsFloat(@"VisualSpinSpeed",0.5f));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);

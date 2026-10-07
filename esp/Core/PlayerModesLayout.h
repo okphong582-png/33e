@@ -22,15 +22,25 @@
 #define MODES_PLAYERS 120
 #define MODES_FLY_CCT 632
 #define MODES_FLY_CLASS 640
-#define MODES_BUSY 648
-#define MODES_TICKS 656
-#define MODES_APPLIES 664
-#define MODES_RESTORES 672
-#define MODES_MAGIC 680
-#define MODES_POST_ORIGINAL 696
-#define MODES_POST_TICKS 704
-#define MODES_FORCE_POS 712
-#define MODES_ROWS 720
+#define MODES_SPIN_SIN 648
+#define MODES_SPIN_COS 652
+#define MODES_BUSY 656
+#define MODES_TICKS 664
+#define MODES_APPLIES 672
+#define MODES_RESTORES 680
+#define MODES_MAGIC 688
+#define MODES_POST_ORIGINAL 704
+#define MODES_POST_TICKS 712
+#define MODES_FORCE_POS 720
+#define MODES_ROWS 728
+#define MODES_GET_ROT 4824
+#define MODES_SET_ROT 4832
+#define MODES_IS_CHILD 4840
+#define MODES_SPIN_PLAYER 4848
+#define MODES_SPIN_TRANSFORM 4856
+#define MODES_SPIN_ID 4864
+#define MODES_SPIN_REAL 4872
+#define MODES_SPIN_SHOWN 4888
 #define MODES_CAPACITY 64
 #define MODES_ROW_SIZE 64
 #define ROW_PLAYER 0
@@ -45,7 +55,7 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453038ULL;
+constexpr uint64_t Magic = 0x504c4d4f44453039ULL;
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
@@ -59,6 +69,7 @@ struct Input {
     float height=4.0f; uint32_t flyKind=0;
     uint64_t players[MODES_CAPACITY]={};
     uint64_t flyCCT=0, flyClass=0;
+    float spinSin=0,spinCos=1;
 } __attribute__((packed));
 struct State {
     uint64_t original=0, clock=0, currentMatch=0, getPos=0, setPos=0, hp=0;
@@ -70,6 +81,10 @@ struct State {
     uint64_t originalPost=0, postTicks=0;
     uint64_t forcePos=0;
     Row rows[MODES_CAPACITY];
+    uint64_t getRot=0,setRot=0,isChild=0;
+    uint64_t spinPlayer=0,spinTransform=0;
+    uint32_t spinID=0,spinPad=0;
+    float spinReal[4]={},spinShown[4]={};
 };
 static_assert(offsetof(State, input)==MODES_FLAGS);
 static_assert(offsetof(State, input)+offsetof(Input, players)==MODES_PLAYERS);
@@ -85,6 +100,10 @@ static_assert(offsetof(State, magic)==MODES_MAGIC);
 static_assert(offsetof(State, originalPost)==MODES_POST_ORIGINAL);
 static_assert(offsetof(State, postTicks)==MODES_POST_TICKS);
 static_assert(offsetof(State, rows)==MODES_ROWS);
+static_assert(offsetof(State, input)+offsetof(Input,spinSin)==MODES_SPIN_SIN);
+static_assert(offsetof(State,getRot)==MODES_GET_ROT);
+static_assert(offsetof(State,spinPlayer)==MODES_SPIN_PLAYER);
+static_assert(offsetof(State,spinReal)==MODES_SPIN_REAL && offsetof(State,spinShown)==MODES_SPIN_SHOWN);
 static_assert(sizeof(Row)==MODES_ROW_SIZE);
 static_assert(offsetof(Row, real)==ROW_REAL && offsetof(Row, shown)==ROW_SHOWN);
 static_assert(offsetof(Row, identity)==ROW_ID);

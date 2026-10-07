@@ -147,6 +147,8 @@ jobs:
           /tmp/player-modes-install-test
           g++ -std=c++17 -Wall -Wextra -Werror tests/player_modes_control_test.cpp -o /tmp/player-modes-control-test
           /tmp/player-modes-control-test
+          g++ -std=c++17 -Wall -Wextra -Werror tests/visual_spin_policy_test.cpp -o /tmp/visual-spin-policy-test
+          /tmp/visual-spin-policy-test
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/silent_aim_direction_test.cpp -o /tmp/silent-aim-direction-test
           /tmp/silent-aim-direction-test
           g++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-function -Wno-error=attributes -Wno-error=parentheses -I. -fsanitize=address,undefined tests/game_pri_test.cpp -o /tmp/game-pri-test

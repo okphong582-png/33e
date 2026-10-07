@@ -39,6 +39,11 @@ assert.equal(fingerprint(0x8DF0730,0xF4),0xF884A08C);
 assert.equal(fingerprint(0x8D59C2C,0x50),0xE5B7D25C);
 assert.equal(fingerprint(0x8D6ECE0,0x64),0xDECACF20);
 assert.equal(fingerprint(0x56182FC,0x154),0x8E831156);
+// Local visual spin: separate skeleton child and Unity local quaternion access.
+assert.equal(fingerprint(0x6B4964C,0x8),0x80D43BE2);
+assert.equal(fingerprint(0x6B49C14,0xF0),0x990FC153);
+assert.equal(fingerprint(0x8D6C788,0x60),0xAE8A72F8);
+assert.equal(fingerprint(0x8D6C860,0x78),0xD1FEABDC);
 assert.equal(fingerprint(0x5AC970C, 0xA0), 0x93FD3984);
 assert.equal(fingerprint(0x5C59B94, 0x16C), 0xDFE8FAC6);
 // Native weapon input: begin/end methods, and the two allowed player updates.

@@ -8,6 +8,7 @@ struct PlayerModesSnapshot {
     const char *detail="";
 };
 void PlayerModesSetEnabled(bool fly, bool aimLag, bool fakeLag, float height);
+void PlayerModesSetSpin(bool enabled,float turnsPerSecond);
 void PlayerModesCancel();
 int PlayerModesUpdate(uint64_t module);
 PlayerModesSnapshot PlayerModesRead();

@@ -42,8 +42,9 @@ HEADER = (pathlib.Path(__file__).parent.parent / 'esp/Core/PlayerModesLayout.h')
 OFF = {name: int(value, 0) for name, value in re.findall(r'^#define ((?:MODES|ROW)_\w+) (0x[\da-fA-F]+|\d+)$', HEADER, re.M)}
 BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x120000, 0x130000, 0x600000
 LOCAL, ENEMY, OTHER, MATCH = 0x200000, 0x210000, 0x220000, 0x400000
-FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS']
+FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS', 'GET_ROT', 'SET_ROT', 'IS_CHILD']
 CCT,CCT_CLASS=0x430000,0x431000
+MODEL,NODE,ROOT=0x433000,0x434000,0x435000
 
 
 def f32(value):
@@ -79,6 +80,10 @@ class Simulation:
         self.q('FLY_CCT',CCT);self.q('FLY_CLASS',CCT_CLASS)
         self.w('FLY_KIND',1 if physical else 2)
         self.uc.mem_write(LOCAL+0x260,bytes([int(physical)]))
+        self.ptr(LOCAL+0x6c8,NODE);self.ptr(NODE+0x10,MODEL)
+        self.ptr(LOCAL+0x58,ROOT);self.ptr(MODEL+0x10,0x436000);self.ptr(ROOT+0x10,0x437000)
+        self.rotation=(0.0,0.0,0.0,1.0);self.rotation_writes=[];self.native_rotations=[];self.child=True
+        self.uc.mem_write(STATE+OFF['MODES_SPIN_SIN'],struct.pack('<ff',math.sqrt(.5),math.sqrt(.5)))
         self.ptr(LOCAL+0x4d8,CCT);self.ptr(CCT+0x10,0x432000)
         self.uc.hook_add(UC_HOOK_CODE, self.hook)
 
@@ -106,6 +111,7 @@ class Simulation:
             assert player == self.player and uc.reg_read(UC_ARM64_REG_X1) == 0x1234
             assert uc.reg_read(UC_ARM64_REG_D0) == 0x3d800000 and uc.reg_read(UC_ARM64_REG_D1) == 0x41200000
             self.original_seen.append(self.positions[player])
+            if player==LOCAL:self.native_rotations.append(self.rotation)
             # Local motion uses the normal transform. Remote interpolation uses
             # the continually advancing incoming state, independent of visuals.
             source = self.positions[player] if player == LOCAL else self.authoritative[player]
@@ -127,6 +133,18 @@ class Simulation:
                         for reg in (UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2))
             assert all(math.isfinite(v) for v in value)
             self.cct_position=value;self.force_writes.append(value)
+        elif name == 'IS_CHILD':
+            assert player==MODEL and uc.reg_read(UC_ARM64_REG_X1)==ROOT
+            uc.reg_write(UC_ARM64_REG_X0,int(self.child))
+        elif name in ('GET_ROT','SET_ROT'):
+            assert player==MODEL and uc.reg_read(UC_ARM64_REG_X1)==0
+            if name=='GET_ROT':
+                for reg,value in zip((UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2,UC_ARM64_REG_S3),self.rotation):
+                    uc.reg_write(reg,struct.unpack('<I',struct.pack('<f',value))[0])
+            else:
+                self.rotation=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(reg)))[0]
+                    for reg in (UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2,UC_ARM64_REG_S3))
+                self.rotation_writes.append(self.rotation)
         else:
             assert player == self.player and uc.reg_read(UC_ARM64_REG_X1) == 0, name
             if name == 'HP': uc.reg_write(UC_ARM64_REG_X0, self.health.get(player, 100) & 0xffffffff)
@@ -142,7 +160,7 @@ class Simulation:
                 self.writes.append((player, value))
                 self.positions[player] = value
                 if player==LOCAL and self.w('FLY_KIND')==2:self.cct_position=value
-        if name not in ('GET_POS', 'SET_POS'):
+        if name not in ('GET_POS', 'SET_POS', 'GET_ROT'):
             uc.reg_write(UC_ARM64_REG_D0, 0); uc.reg_write(UC_ARM64_REG_D1, 0)
         for reg in (UC_ARM64_REG_X8, UC_ARM64_REG_X9, UC_ARM64_REG_X10, UC_ARM64_REG_X11, UC_ARM64_REG_X12, UC_ARM64_REG_X13):
             uc.reg_write(reg, 0xdeadbeef)
@@ -428,3 +446,48 @@ assert s.positions[LOCAL][1]==13
 s = Simulation(flags=1); s.run(OTHER, post=True)
 assert not s.writes and s.positions[OTHER] == s.authoritative[OTHER]
 print('Player modes ARM64: two frame phases, running/jumping hold, height, latest release, guards and ABI passed')
+
+# Local spin must be a render-only child pose, restored before native updates.
+s=Simulation(flags=4);s.run(LOCAL);assert not s.rotation_writes
+s.run(LOCAL,post=True)
+assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(0,math.sqrt(.5),0,math.sqrt(.5))))
+assert not s.writes and not s.force_writes
+for _ in range(20):s.run(LOCAL);s.run(LOCAL,post=True)
+assert all(pose==(0,0,0,1) for pose in s.native_rotations)
+s.w('FLAGS',0);s.run(LOCAL)
+assert s.rotation==(0,0,0,1) and not s.q('SPIN_PLAYER')
+s=Simulation(flags=4);s.rotation=(math.sqrt(.5),0,0,math.sqrt(.5))
+s.run(LOCAL,post=True)
+assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(.5,.5,.5,.5)))
+# Unity may normalize or negate the same quaternion representation.
+s.rotation=tuple(-v for v in s.rotation);s.w('FLAGS',0);s.run(LOCAL)
+assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(math.sqrt(.5),0,0,math.sqrt(.5))))
+s=Simulation(flags=4)
+s.uc.mem_write(STATE+OFF['MODES_SPIN_SIN'],struct.pack('<ff',float('nan'),1))
+s.run(LOCAL,post=True);assert not s.rotation_writes
+s=Simulation(flags=4);s.run(ENEMY,post=True);assert not s.rotation_writes
+for reason in ['root','missing','not_child','dead','knocked','lease','match','race','nan']:
+    s=Simulation(flags=4)
+    if reason=='root':s.ptr(NODE+0x10,ROOT)
+    elif reason=='missing':s.ptr(MODEL+0x10,0)
+    elif reason=='not_child':s.child=False
+    elif reason=='dead':s.health[LOCAL]=0
+    elif reason=='knocked':s.uc.mem_write(LOCAL+0x1258,b'\x01')
+    elif reason=='lease':s.now=111
+    elif reason=='match':s.current_match=MATCH+0x2000
+    elif reason=='nan':s.rotation=(float('nan'),0,0,1)
+    else:
+        def spin_race(name,sim):
+            if name=='GET_ROT':sim.w('SEQUENCE',4)
+        s.action=spin_race
+    s.run(LOCAL,post=True);assert not s.rotation_writes,reason
+s=Simulation(flags=4);s.run(LOCAL,post=True);s.rotation=(0,0,0,-1)
+s.w('FLAGS',0);s.run(LOCAL);assert s.rotation==(0,0,0,-1) # Native animation wins.
+s=Simulation(flags=4);s.run(LOCAL,post=True);before=len(s.rotation_writes)
+s.uc.mem_write(LOCAL+0x60,struct.pack('<I',1));s.w('FLAGS',0);s.run(LOCAL)
+assert len(s.rotation_writes)==before # Recycled player does not receive saved pose.
+for flags in [5,6,7]:
+    s=Simulation(flags=flags);s.run(LOCAL);s.run(LOCAL,post=True)
+    assert s.rotation_writes
+    if flags&1:s.run(ENEMY,post=True);assert s.writes
+print('Visual spin ARM64: child-only render phase, native restoration, independent modes and guards passed')

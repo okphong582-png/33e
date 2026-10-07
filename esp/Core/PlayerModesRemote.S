@@ -34,6 +34,51 @@ _PlayerModesRemoteStart:
     mov w9, #1
     stxr w10, w9, [x8]
     cbnz w10, .Ltail
+    // Undo our previous render pose before native gameplay/network updates.
+    // Only restore the identical living model; never write a recycled object.
+    ldr x8, [x19, #MODES_SPIN_PLAYER]
+    cmp x8, x20
+    b.ne .LspinRestored
+    str xzr, [x19, #MODES_SPIN_PLAYER]
+    ldr w8, [x20, #0x60]
+    ldr w9, [x19, #MODES_SPIN_ID]
+    cmp w8, w9
+    b.ne .LspinRestored
+    ldr x8, [x20, #0x6c8] // Cached skeleton root TransformNode.
+    cbz x8, .LspinRestored
+    ldr x27, [x8, #0x10]
+    ldr x9, [x19, #MODES_SPIN_TRANSFORM]
+    cmp x27, x9
+    b.ne .LspinRestored
+    cbz x27, .LspinRestored
+    ldr x8, [x27, #0x10]
+    cbz x8, .LspinRestored
+    mov x0, x27
+    mov x1, #0
+    ldr x8, [x19, #MODES_GET_ROT]
+    blr x8
+    add x16, x19, #1, lsl #12
+    add x16, x16, #(MODES_SPIN_REAL-4096)
+    ldp s4, s5, [x16, #16]
+    ldp s6, s7, [x16, #24]
+    fmul s4, s0, s4
+    fmadd s4, s1, s5, s4
+    fmadd s4, s2, s6, s4
+    fmadd s4, s3, s7, s4
+    fabs s4, s4
+    mov w8, #0xff58
+    movk w8, #0x3f7f, lsl #16 // 0.99999: tolerate Unity quaternion normalization.
+    fmov s5, w8
+    fcmp s4, s5
+    b.lt .LspinRestored // Animation/native correction wins over stale data.
+    b.vs .LspinRestored
+    ldp s0, s1, [x16]
+    ldp s2, s3, [x16, #8]
+    mov x0, x27
+    mov x1, #0
+    ldr x8, [x19, #MODES_SET_ROT]
+    blr x8
+.LspinRestored:
     mov x22, #0
     mov x26, #0
     add x8, x19, #MODES_ROWS
@@ -143,7 +188,7 @@ _PlayerModesRemoteStart:
     tbnz w24, #0, .Ldefer
     ldr w25, [x19, #MODES_FLAGS]
     cbz w25, .Ldrop
-    cmp w25, #3
+    cmp w25, #7
     b.hi .Ldrop
     ldr x8, [x19, #MODES_CLOCK]
     blr x8
@@ -388,6 +433,120 @@ _PlayerModesRemoteStart:
     str xzr, [x22, #ROW_PLAYER]
     str wzr, [x22, #ROW_MODE]
 .Lunlock:
+    // Presentation only: apply after PostUpdate, to a child model transform.
+    // Entity/physics root, camera, aim quaternions and packet fields are untouched.
+    cbz w23, .LspinDone
+    add x8, x19, #MODES_SEQUENCE
+    ldar w24, [x8]
+    tbnz w24, #0, .LspinDone
+    ldr w8, [x19, #MODES_FLAGS]
+    tbz w8, #2, .LspinDone
+    ldr x8, [x19, #MODES_LOCAL]
+    cmp x8, x20
+    b.ne .LspinDone
+    ldr x8, [x19, #MODES_CLOCK]
+    blr x8
+    ldr x8, [x19, #MODES_DEADLINE]
+    cmp x0, x8
+    b.hi .LspinDone
+    mov x0, #0
+    ldr x8, [x19, #MODES_CURRENT_MATCH]
+    blr x8
+    cbz x0, .LspinDone
+    ldr x8, [x19, #MODES_MATCH]
+    cmp x0, x8
+    b.ne .LspinDone
+    ldr x8, [x0, #0xd8]
+    cmp x8, x20
+    b.ne .LspinDone
+    add x8, x20, #0x1000
+    ldrb w8, [x8, #0x258]
+    cbnz w8, .LspinDone
+    mov x0, x20
+    mov x1, #0
+    ldr x8, [x19, #MODES_HP]
+    blr x8
+    cmp w0, #0
+    b.le .LspinDone
+    ldr x8, [x20, #0x6c8]
+    cbz x8, .LspinDone
+    ldr x27, [x8, #0x10]
+    cbz x27, .LspinDone
+    ldr x8, [x27, #0x10]
+    cbz x8, .LspinDone
+    ldr x28, [x20, #0x58] // GCommon.Entity cached physical root.
+    cbz x28, .LspinDone
+    cmp x27, x28
+    b.eq .LspinDone
+    ldr x8, [x28, #0x10]
+    cbz x8, .LspinDone
+    mov x0, x27
+    mov x1, x28
+    mov x2, #0
+    ldr x8, [x19, #MODES_IS_CHILD]
+    blr x8
+    cbz w0, .LspinDone // A camera/root/sibling cannot be our visual pivot.
+    mov x0, x27
+    mov x1, #0
+    ldr x8, [x19, #MODES_GET_ROT]
+    blr x8
+    // Require a finite normalized base quaternion.
+    fmul s4, s0, s0
+    fmadd s4, s1, s1, s4
+    fmadd s4, s2, s2, s4
+    fmadd s4, s3, s3, s4
+    fmov s5, #0.5
+    fcmp s4, s5
+    b.lt .LspinDone
+    b.vs .LspinDone
+    fmov s5, #1.5
+    fcmp s4, s5
+    b.gt .LspinDone
+    add x8, x19, #MODES_SEQUENCE
+    ldar w9, [x8]
+    cmp w9, w24
+    b.ne .LspinDone
+    add x16, x19, #MODES_SPIN_SIN
+    ldp s4, s5, [x16]
+    fmul s6, s4, s4
+    fmadd s6, s5, s5, s6
+    fmov s7, #0.5
+    fcmp s6, s7
+    b.lt .LspinDone
+    b.vs .LspinDone
+    fmov s7, #1.5
+    fcmp s6, s7
+    b.gt .LspinDone
+    add x16, x19, #1, lsl #12
+    add x16, x16, #(MODES_SPIN_REAL-4096)
+    stp s0, s1, [x16]
+    stp s2, s3, [x16, #8]
+    // base * local-Y yaw, preserving the native tilt/animation.
+    fmul s6, s0, s5
+    fmsub s7, s2, s4, s6
+    fmul s6, s1, s5
+    fmadd s1, s3, s4, s6
+    fmul s6, s2, s5
+    fmadd s2, s0, s4, s6
+    fmul s6, s3, s5
+    ldr s0, [x19, #(MODES_SPIN_REAL+4)]
+    fmsub s3, s0, s4, s6
+    fmov s0, s7
+    stp s0, s1, [x16, #16]
+    stp s2, s3, [x16, #24]
+    add x8, x19, #MODES_SEQUENCE
+    ldar w9, [x8]
+    cmp w9, w24
+    b.ne .LspinDone
+    str x20, [x19, #MODES_SPIN_PLAYER]
+    str x27, [x19, #MODES_SPIN_TRANSFORM]
+    ldr w8, [x20, #0x60]
+    str w8, [x19, #MODES_SPIN_ID]
+    mov x0, x27
+    mov x1, #0
+    ldr x8, [x19, #MODES_SET_ROT]
+    blr x8
+.LspinDone:
     add x8, x19, #MODES_BUSY
     stlr wzr, [x8]
     b .Lreturn
