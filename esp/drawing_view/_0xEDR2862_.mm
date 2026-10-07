@@ -33,9 +33,14 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
 
 void RenderXYZAxes(ESPGeometryBuffers *buffers, const Vector3 &origin,
                    const float *matrix, float width, float height) {
-    if (!isLine || !buffers) return;
+    if (!isLine || !buffers || !ValidPosition(origin)) return;
     const auto triad=WorldAxes::Project({origin.x,origin.y,origin.z},matrix,width,height);
     if (!triad.valid) return;
+    if (buffers->snaplinePath) {
+        const auto point=triad.axes[0].from;
+        AddLine(buffers->snaplinePath,CGPointMake(width*.5,height*.08),CGPointMake(point.x,point.y),width,height);
+        buffers->snaplineDirty=true;
+    }
     CGMutablePathRef paths[]={buffers->axisXPath,buffers->axisYPath,buffers->axisZPath};
     bool *dirty[]={&buffers->axisXDirty,&buffers->axisYDirty,&buffers->axisZDirty};
     for (int i=0;i<3;++i) {
@@ -51,15 +56,6 @@ void RenderXYZAxes(ESPGeometryBuffers *buffers, const Vector3 &origin,
         } else if (len<2) {
             CGPathAddEllipseInRect(paths[i],nullptr,CGRectMake(b.x-1.2,b.y-1.2,2.4,2.4));
         }
-        // Stroke the labels into the three shared paths: no per-enemy text layers.
-        const CGFloat x=std::max(2.0,std::min((double)width-8,b.x+4));
-        const CGFloat y=std::max(2.0,std::min((double)height-10,b.y+(len<2 ? 5 : -3)));
-        auto line=[&](double x0,double y0,double x1,double y1) {
-            AddLine(paths[i],CGPointMake(x+x0,y+y0),CGPointMake(x+x1,y+y1),width,height);
-        };
-        if (i==0) { line(0,0,4,6);line(4,0,0,6); }
-        else if (i==1) { line(0,0,2,3);line(4,0,2,3);line(2,3,2,6); }
-        else { line(0,0,4,0);line(4,0,0,6);line(0,6,4,6); }
         *dirty[i]=true;
     }
 }

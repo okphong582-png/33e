@@ -427,7 +427,6 @@
         if (silent && !ESPPrefsBool(@"SilentAutoConfig", YES)) {
             y = [self slider:@"Tầm chọn Silent" key:@"SilentMaxDistance" min:10 max:150 fallback:100 y:y];
         }
-        y = [self toggle:@"Chẩn đoán aim" key:@"AimDiagnostics" fallback:NO y:y];
         }
     } else if (self.page == 1) {
         y = [self toggle:@"Bật ESP" key:@"ESPEnabled" fallback:YES y:y];

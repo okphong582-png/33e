@@ -2,79 +2,2081 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Tạo license key</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản Lý License Key - Firebase RTDB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
   <style>
-    :root{color-scheme:dark;font:15px system-ui,sans-serif;background:#0e1015;color:#e9edf5}
-    body{max-width:720px;margin:32px auto;padding:0 18px}
-    main{background:#171a22;border:1px solid #343a48;border-radius:18px;padding:24px;box-shadow:0 14px 45px #0008}
-    h1{font-size:22px;margin:0 0 6px}p{color:#aab2c2;line-height:1.45}
-    label{display:block;margin:18px 0 7px;color:#cbd2df}input,button{font:inherit;border-radius:10px}
-    input{width:100%;box-sizing:border-box;background:#0e1015;color:#fff;border:1px solid #3a4252;padding:11px}
-    .quick{display:flex;gap:8px}.quick input.key{flex:1}.quick input.days{flex:0 0 92px}.quick button{margin:0}
-    button{border:0;background:#3277d8;color:#fff;padding:11px 15px;cursor:pointer}
-    button:disabled{opacity:.5;cursor:not-allowed}.warning{color:#ffbd72;font-size:13px}
-    #status{min-height:24px;margin-top:18px;color:#8fe3a0}
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover-border: rgba(56, 139, 253, 0.35);
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-glow: rgba(59, 130, 246, 0.25);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.2);
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --input-bg: #0d121f;
+      --input-border: #1e293b;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 50% -20%, #1e293b 0%, var(--bg) 70%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px var(--primary-glow);
+    }
+    .brand-icon svg { width: 24px; height: 24px; color: #fff; }
+    .brand h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .brand p { font-size: 13px; color: var(--text-muted); }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .connection-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .connection-badge.error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .connection-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      backdrop-filter: blur(12px);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card:hover {
+      border-color: var(--card-hover-border);
+      transform: translateY(-2px);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.total::before { background: #3b82f6; }
+    .stat-card.active::before { background: #10b981; }
+    .stat-card.expired::before { background: #f59e0b; }
+    .stat-card.disabled::before { background: #ef4444; }
+    .stat-title { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .stat-val { font-size: 28px; font-weight: 700; margin-top: 6px; letter-spacing: -0.02em; }
+
+    /* Main Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title svg { width: 19px; height: 19px; color: var(--primary); }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+    }
+    .input-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 5px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: inherit;
+      transition: var(--transition);
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    input.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    /* Duration Presets */
+    .duration-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .preset-btn {
+      background: #141b2a;
+      border: 1px solid var(--input-border);
+      color: var(--text-muted);
+      padding: 7px 4px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition);
+    }
+    .preset-btn:hover {
+      background: #1e293b;
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .preset-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 14px var(--primary-glow);
+      width: 100%;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    .btn-secondary:hover {
+      background: #283548;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .btn-danger:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Created Result Card */
+    .result-card {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .result-card.show { display: block; }
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .result-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .key-box {
+      background: #090e17;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #a7f3d0;
+      word-break: break-all;
+      user-select: all;
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+    }
+    .result-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* Key List & Filters */
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+    }
+    .search-box svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--text-dim);
+    }
+    .search-box input {
+      padding-left: 36px;
+    }
+    .filter-tabs {
+      display: flex;
+      background: #0f1523;
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--input-border);
+      overflow-x: auto;
+    }
+    .filter-tab {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+    .filter-tab.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .bulk-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 13px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    /* Table */
+    .table-responsive {
+      overflow-x: auto;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      background: #0c111c;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    th {
+      background: #111827;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 12px 14px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--card-border);
+    }
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .key-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .key-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+    .key-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: inherit;
+      display: block;
+      margin-top: 2px;
+    }
+    .copy-icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      transition: var(--transition);
+    }
+    .copy-icon-btn:hover {
+      color: var(--primary);
+      background: rgba(59, 130, 246, 0.1);
+    }
+    .copy-icon-btn svg { width: 14px; height: 14px; }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      font-weight: 500;
+    }
+    .badge.active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge.active .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+      animation: pulse 2s infinite;
+    }
+    .badge.expired {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge.disabled {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .time-left {
+      font-size: 12.5px;
+      color: var(--text-main);
+    }
+    .time-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Switch toggle */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #10b981; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-backdrop.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal {
+      background: #141b2a;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      transform: scale(0.95);
+      transition: transform 0.2s ease;
+    }
+    .modal-backdrop.show .modal { transform: scale(1); }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .modal-body { margin-bottom: 20px; font-size: 14px; color: var(--text-muted); }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 2000;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 260px;
+      animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: var(--transition);
+    }
+    .toast.success { border-color: rgba(16, 185, 129, 0.4); }
+    .toast.success svg { color: #34d399; }
+    .toast.error { border-color: rgba(239, 68, 68, 0.4); }
+    .toast.error svg { color: #f87171; }
+
+    /* Rules Banner */
+    .rules-banner {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      font-size: 13.5px;
+      color: #fde68a;
+    }
+    .rules-banner a {
+      color: #60a5fa;
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    pre code {
+      display: block;
+      background: #090e17;
+      border: 1px solid var(--card-border);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      color: #93c5fd;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      max-height: 220px;
+      overflow-y: auto;
+      margin: 10px 0;
+    }
+
+    .empty-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--text-dim);
+    }
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(20px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
   </style>
 </head>
 <body>
-<main>
-  <h1>Tạo license key online</h1>
-  <p>Nhập key và số ngày, bấm Tạo. Bản ghi sẽ được đồng bộ trực tiếp vào Realtime Database.</p>
-  <label for="keyInput">Key <span class="warning">(để trống để tự sinh)</span></label>
-  <div class="quick">
-    <input id="keyInput" class="key" autocomplete="off" placeholder="HH-...">
-    <input id="days" class="days" type="number" min="1" max="3650" value="30" title="Số ngày dùng">
-    <button id="generate">Tạo</button>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+        </svg>
+      </div>
+      <div>
+        <h1>Quản Lý License Key Online</h1>
+        <p>Hệ thống cấp phép trực tiếp qua Firebase Realtime Database cho iOS</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div id="connStatus" class="connection-badge" title="Bấm để kiểm tra kết nối">
+        <span class="dot"></span>
+        <span id="connText">Đang kết nối Firebase…</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btnOpenSettings" title="Cài đặt kết nối & Database Secret">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        Cài Đặt
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btnOpenRules">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Rules
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btnRefresh" title="Tải lại dữ liệu từ Firebase">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        Làm Mới
+      </button>
+    </div>
+  </header>
+
+  <!-- Rules Alert Banner (Hiển thị nếu Firebase từ chối truy cập) -->
+  <div id="rulesBanner" class="rules-banner" style="display:none">
+    <div>
+      <strong>⚠️ Firebase từ chối quyền đọc danh sách / xóa key (401 Permission Denied):</strong>
+      Vui lòng cập nhật Rules trên Firebase Console hoặc nhập Database Secret trong phần Cài Đặt.
+    </div>
+    <button class="btn btn-secondary btn-sm" id="btnBannerFix">Xem hướng dẫn cập nhật</button>
   </div>
-  <p id="status" role="status"></p>
-</main>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-title">Tổng Số Key</div>
+      <div class="stat-val" id="statTotal">0</div>
+    </div>
+    <div class="stat-card active">
+      <div class="stat-title">Đang Hoạt Động</div>
+      <div class="stat-val" id="statActive" style="color: #34d399">0</div>
+    </div>
+    <div class="stat-card expired">
+      <div class="stat-title">Đã Hết Hạn</div>
+      <div class="stat-val" id="statExpired" style="color: #fbbf24">0</div>
+    </div>
+    <div class="stat-card disabled">
+      <div class="stat-title">Đã Bị Khóa</div>
+      <div class="stat-val" id="statDisabled" style="color: #f87171">0</div>
+    </div>
+  </div>
+
+  <!-- Main Dashboard Grid -->
+  <div class="dashboard-grid">
+
+    <!-- Left Column: Form Tạo Key -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          Tạo Key Cho Bản Mới
+        </div>
+      </div>
+
+      <!-- Mode Selector (Single / Bulk) -->
+      <div class="form-group">
+        <div class="filter-tabs" style="width:100%">
+          <button class="filter-tab active" id="tabModeSingle" style="flex:1">Tạo 1 Key</button>
+          <button class="filter-tab" id="tabModeBulk" style="flex:1">Tạo Hàng Loạt</button>
+        </div>
+      </div>
+
+      <!-- Single Key Input -->
+      <div id="singleKeySection">
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+            <label for="keyInput" style="margin-bottom:0">Mã Key</label>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnRandomKey" style="padding:2px 8px; font-size:11px">
+              🎲 Sinh ngẫu nhiên
+            </button>
+          </div>
+          <input type="text" id="keyInput" class="mono" placeholder="HH-..." autocomplete="off">
+          <div class="input-hint">Key mới dùng cho bản này và các bản sau · 1 key / 1 máy</div>
+        </div>
+      </div>
+
+      <!-- Bulk Key Input -->
+      <div id="bulkKeySection" style="display:none">
+        <div class="form-group">
+          <label for="bulkCount">Số Lượng Key Cần Tạo</label>
+          <select id="bulkCount">
+            <option value="3">3 Key</option>
+            <option value="5" selected>5 Key</option>
+            <option value="10">10 Key</option>
+            <option value="20">20 Key</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="bulkPrefix">Tiền Tố (Prefix)</label>
+          <input type="text" id="bulkPrefix" class="mono" value="HH-" placeholder="HH-">
+        </div>
+      </div>
+
+      <!-- Duration -->
+      <div class="form-group">
+        <label>Thời Hạn Sử Dụng</label>
+        <div class="duration-presets">
+          <button type="button" class="preset-btn" data-days="1">1 Ngày</button>
+          <button type="button" class="preset-btn" data-days="3">3 Ngày</button>
+          <button type="button" class="preset-btn" data-days="7">7 Ngày</button>
+          <button type="button" class="preset-btn active" data-days="30">30 Ngày</button>
+          <button type="button" class="preset-btn" data-days="90">3 Tháng</button>
+          <button type="button" class="preset-btn" data-days="180">6 Tháng</button>
+          <button type="button" class="preset-btn" data-days="365">1 Năm</button>
+          <button type="button" class="preset-btn" data-days="3650">Vĩnh Viễn</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px">
+          <input type="number" id="customDays" min="1" max="3650" value="30" placeholder="Số ngày">
+          <span style="font-size:13px; color:var(--text-muted); white-space:nowrap">ngày</span>
+        </div>
+        <div id="expiryPreview" class="input-hint" style="color:#60a5fa">Hết hạn vào: Đang tính…</div>
+      </div>
+
+      <!-- Note / Client -->
+      <div class="form-group">
+        <label for="noteInput">Ghi Chú / Tên Khách Hàng</label>
+        <input type="text" id="noteInput" placeholder="Ví dụ: Anh Hùng - iPhone 14 Pro" autocomplete="off">
+      </div>
+
+      <button type="button" class="btn btn-primary" id="btnSubmitGenerate">
+        <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+        Tạo License Key
+      </button>
+
+      <!-- Kết quả sau khi tạo -->
+      <div id="resultCard" class="result-card">
+        <div class="result-header">
+          <div class="result-title">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+            Đã Tạo Thành Công!
+          </div>
+          <span id="resultExpiryBadge" class="badge active" style="font-size:11px">30 ngày</span>
+        </div>
+        <div id="resultKeyBox" class="key-box"></div>
+        <div class="result-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCopyKeyOnly">
+            📋 Sao Chép Key
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCopyFullMessage">
+            💬 Mẫu Gửi Khách
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Danh Sách & Quản Lý Key -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+          Danh Sách License Key Đã Tạo
+        </div>
+        <div style="display:flex; gap:6px">
+          <button class="btn btn-secondary btn-sm" id="btnExport" title="Xuất dữ liệu ra file">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Xuất File
+          </button>
+          <button class="btn btn-danger btn-sm" id="btnPurgeExpired" title="Xóa tất cả các key đã hết hạn">
+            🧹 Xóa Key Hết Hạn
+          </button>
+        </div>
+      </div>
+
+      <!-- Toolbar: Search & Filter -->
+      <div class="table-toolbar">
+        <select id="licenseNamespace" aria-label="Phiên bản key" style="max-width:170px">
+          <option value="licensesV2">Key bản mới</option><option value="licenses">Key bản cũ</option>
+        </select>
+        <div class="search-box">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input type="text" id="searchInput" placeholder="Tìm kiếm theo mã key hoặc ghi chú…">
+        </div>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">Tất Cả</button>
+          <button class="filter-tab" data-filter="active">Hoạt Động</button>
+          <button class="filter-tab" data-filter="expired">Hết Hạn</button>
+          <button class="filter-tab" data-filter="disabled">Đã Khóa</button>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div id="bulkBar" class="bulk-bar" style="display:none">
+        <div>Đã chọn: <strong id="selectedCount">0</strong> key</div>
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-secondary btn-sm" id="btnBulkExtend">+30 Ngày</button>
+          <button class="btn btn-secondary btn-sm" id="btnBulkDisable">Khóa</button>
+          <button class="btn btn-secondary btn-sm" id="btnBulkEnable">Mở Khóa</button>
+          <button class="btn btn-danger btn-sm" id="btnBulkDelete">Xóa Đã Chọn</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table id="keysTable">
+          <thead>
+            <tr>
+              <th style="width:38px"><input type="checkbox" id="selectAll"></th>
+              <th>Mã License Key</th>
+              <th>Ghi Chú</th>
+              <th>Trạng Thái</th>
+              <th>Hạn Sử Dụng</th>
+              <th style="text-align:right">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="keysTableBody">
+            <tr>
+              <td colspan="6" class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                <div>Đang tải danh sách license key từ Firebase…</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: Cài Đặt Kết Nối -->
+<div id="modalSettings" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Cấu Hình Firebase Realtime Database</div>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="cfgDatabaseUrl">Database URL</label>
+        <input type="text" id="cfgDatabaseUrl" value="https://appchatai-313e3-default-rtdb.firebaseio.com">
+        <div class="input-hint">URL Firebase Realtime Database kết nối với ứng dụng iOS</div>
+      </div>
+      <div class="form-group">
+        <label for="cfgDatabaseSecret">Database Secret / Admin Token</label>
+        <input type="password" id="cfgDatabaseSecret" placeholder="Nhập token quản trị để quản lý key">
+        <div class="input-hint">
+          Token chỉ giữ trong phiên trình duyệt. App và dylib không chứa token quản trị.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" id="btnTestConn">Kiểm Tra Kết Nối</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveSettings" style="width:auto">Lưu Cấu Hình</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Hướng Dẫn Rules -->
+<div id="modalRules" class="modal-backdrop">
+  <div class="modal" style="max-width: 600px">
+    <div class="modal-header">
+      <div class="modal-title">Cập Nhật Rules Cho Realtime Database</div>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Rules khóa máy đầu tiên kích hoạt key. Chỉ quản trị viên được tạo, sửa hoặc gỡ khóa máy. Sao lưu Rules hiện tại trước khi áp dụng.</p>
+      <ol style="margin-left: 20px; margin-top: 8px; margin-bottom: 12px; line-height: 1.6">
+        <li>Mở <a href="https://console.firebase.google.com/" target="_blank" style="color:#60a5fa">Firebase Console</a> &rarr; Chọn dự án của bạn.</li>
+        <li>Vào <strong>Build</strong> &rarr; <strong>Realtime Database</strong> &rarr; Chọn tab <strong>Rules</strong> (Quy tắc).</li>
+        <li>Dán nội dung rules bên dưới vào rồi bấm <strong>Publish</strong> (Xuất bản):</li>
+      </ol>
+      <pre><code id="rulesCodeText">{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "licenses": {
+      "$keyHash": {
+        ".read": true,
+        ".write": false
+      }
+    },
+    "licensesV2": {
+      "$keyHash": {
+        ".read": "$keyHash.matches(/^[a-f0-9]{64}$/)",
+        ".write": false,
+        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 2",
+        "binding": {
+          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 2 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && newData.exists()",
+          ".validate": "newData.hasChildren(['deviceHash', 'version', 'claimedAt'])",
+          "deviceHash": {
+            ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{64}$/)"
+          },
+          "version": {
+            ".validate": "newData.isNumber() && newData.val() === 1"
+          },
+          "claimedAt": {
+            ".validate": "newData.isNumber() && newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}</code></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" id="btnApplyRules">Áp dụng Rules</button>
+      <button class="btn btn-secondary btn-sm" id="btnCopyRules">📋 Sao Chép Rules</button>
+      <button class="btn btn-primary btn-sm" data-close style="width:auto">Đã Hiểu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Gia Hạn Key -->
+<div id="modalExtend" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Gia Hạn License Key</div>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px; margin-bottom:12px">Mã key: <strong id="extendKeyName" class="mono"></strong></div>
+      <div style="font-size:13px; margin-bottom:14px; color:var(--text-muted)">Hạn hiện tại: <span id="extendCurrentExpiry"></span></div>
+
+      <div class="form-group">
+        <label>Chọn Thời Gian Cộng Thêm:</label>
+        <div class="duration-presets" style="grid-template-columns: repeat(3, 1fr)">
+          <button type="button" class="preset-btn" data-extend-days="7">+7 Ngày</button>
+          <button type="button" class="preset-btn active" data-extend-days="30">+30 Ngày</button>
+          <button type="button" class="preset-btn" data-extend-days="90">+90 Ngày</button>
+          <button type="button" class="preset-btn" data-extend-days="180">+180 Ngày</button>
+          <button type="button" class="preset-btn" data-extend-days="365">+1 Năm</button>
+          <button type="button" class="preset-btn" data-extend-days="3650">+10 Năm</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="extendCustomDays">Hoặc nhập số ngày cộng thêm:</label>
+        <input type="number" id="extendCustomDays" min="1" max="3650" value="30">
+      </div>
+      <div id="extendNewExpiryPreview" style="font-size:13px; color:#34d399"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" data-close>Hủy</button>
+      <button class="btn btn-primary btn-sm" id="btnConfirmExtend" style="width:auto">Xác Nhận Gia Hạn</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Sửa Ghi Chú -->
+<div id="modalEditNote" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Chỉnh Sửa Ghi Chú</div>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px; margin-bottom:12px">Key: <strong id="editNoteKeyName" class="mono"></strong></div>
+      <div class="form-group">
+        <label for="editNoteInput">Ghi chú / Tên khách hàng</label>
+        <input type="text" id="editNoteInput" placeholder="Ví dụ: Khách hàng VIP...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" data-close>Hủy</button>
+      <button class="btn btn-primary btn-sm" id="btnConfirmEditNote" style="width:auto">Lưu Ghi Chú</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Xác Nhận Xóa -->
+<div id="modalConfirmDelete" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#f87171">Xác Nhận Xóa License Key</div>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteConfirmText">Bạn có chắc chắn muốn xóa key này vĩnh viễn khỏi Firebase Realtime Database?</p>
+      <p style="font-size:12.5px; color:#f87171; margin-top:8px">Lưu ý: Thiết bị đang sử dụng key này sẽ bị mất quyền kích hoạt khi mở ứng dụng.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" data-close>Hủy Bỏ</button>
+      <button class="btn btn-danger btn-sm" id="btnConfirmDelete">Đồng Ý Xóa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAmP7OU9mhsQruZ2BWXLzhK3HlWkKH-ftI",
-  databaseURL: "https://appchatai-313e3-default-rtdb.firebaseio.com"
-};
+// --- CẤU HÌNH & TRẠNG THÁI TOÀN CỤC ---
+const DEFAULT_DATABASE_URL = "https://appchatai-313e3-default-rtdb.firebaseio.com";
+let databaseURL = localStorage.getItem("license_db_url") || DEFAULT_DATABASE_URL;
+let databaseSecret = sessionStorage.getItem("license_db_secret") || localStorage.getItem("license_db_secret") || "";
+if (databaseSecret) sessionStorage.setItem("license_db_secret", databaseSecret);
+localStorage.removeItem("license_db_secret");
+let licenseNamespace = "licensesV2";
+
+// State
+let allLicenses = []; // mảng chứa các record key
+let selectedHashes = new Set();
+let currentFilter = "all";
+let currentSearch = "";
+let currentExtendTarget = null;
+let currentEditNoteTarget = null;
+let pendingDeleteAction = null;
+
+// DOM Helper
 const $ = id => document.getElementById(id);
-function hex(bytes){return [...bytes].map(x=>x.toString(16).padStart(2,"0")).join("")}
-async function digest(text){
+const $$ = sel => document.querySelectorAll(sel);
+
+// Crypto SHA-256 (Khớp tuyệt đối với CC_SHA256 trong iOS LicenseSession.mm)
+function hex(bytes) {
+  return [...bytes].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+async function digest(text) {
   const bytes = new TextEncoder().encode(text);
   return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
 }
-function randomKey(){
-  const bytes = new Uint8Array(32); crypto.getRandomValues(bytes);
-  return "HH-" + hex(bytes).toUpperCase();
+function randomKey(prefix = "HH-") {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return prefix + hex(bytes).toUpperCase();
 }
-function setStatus(text, error=false){ $('status').textContent=text; $('status').style.color=error ? "#ff8d8d" : "#8fe3a0"; }
-$("generate").onclick = async () => {
-  const typed = $("keyInput").value.trim().toUpperCase();
-  const key = typed || randomKey();
-  const days = Number($("days").value);
-  if(key.length < 8 || key.length > 128){setStatus("Key phải dài từ 8 đến 128 ký tự.", true);return}
-  if(!Number.isFinite(days) || days < 1 || days > 3650){setStatus("Thời lượng phải từ 1 đến 3650 ngày.", true);return}
-  $("generate").disabled = true; setStatus("Đang đồng bộ…");
+
+// Local Cache Helper (để bảo toàn key gốc & ghi chú)
+const CACHE_KEY = "firebase_license_cache_map";
+function readLocalCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "{}"); } catch { return {}; }
+}
+function getLocalCache() {
+  const result={};
+  for(const record of Object.values(readLocalCache())) {
+    const namespace=record.namespace || (record.protocol===2 ? "licensesV2" : "licenses");
+    if(namespace===licenseNamespace && record.hash)result[record.hash]=record;
+  }
+  return result;
+}
+function saveToLocalCache(hash, record) {
+  const cache=readLocalCache(),namespace=record.protocol===2 ? "licensesV2" : licenseNamespace;
+  const key=namespace+":"+hash;
+  cache[key]={...(cache[key] || {}),...record,hash,namespace};
+  localStorage.setItem(CACHE_KEY,JSON.stringify(cache));
+}
+function removeFromLocalCache(hash) {
+  const cache=readLocalCache();delete cache[licenseNamespace+":"+hash];
+  if(cache[hash] && (cache[hash].namespace || "licenses")===licenseNamespace)delete cache[hash];
+  localStorage.setItem(CACHE_KEY,JSON.stringify(cache));
+}
+
+// Toast Notification
+function showToast(msg, type = "success") {
+  const container = $("toastContainer");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  const icon = type === "success"
+    ? `<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+    : `<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+  el.innerHTML = icon;
+  const message = document.createElement("span"); message.textContent = msg; el.appendChild(message);
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transform = "translateY(10px)";
+    setTimeout(() => el.remove(), 250);
+  }, 3500);
+}
+
+// Clipboard Copy
+async function copyToClipboard(text, successMsg = "Đã sao chép vào bộ nhớ tạm!") {
   try {
-    const hash = await digest(key);
-    const url = `${firebaseConfig.databaseURL}/licenses/${hash}.json`;
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({enabled:true, expiresAt:Date.now() + Math.round(days * 86400000)})
-    });
-    if(!response.ok){
-      const detail = await response.text();
-      throw new Error(`HTTP ${response.status}${detail ? `: ${detail.slice(0,120)}` : ""}`);
+    await navigator.clipboard.writeText(text);
+    showToast(successMsg, "success");
+  } catch (err) {
+    // fallback
+    const t = document.createElement("textarea");
+    t.value = text;
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand("copy");
+    document.body.removeChild(t);
+    showToast(successMsg, "success");
+  }
+}
+
+// API URL Builder
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function getApiUrl(path, namespace = licenseNamespace) {
+  if (!databaseSecret) throw new Error("Nhập token quản trị trong Cài đặt để quản lý key.");
+  if (path === "licenses" || path.startsWith("licenses/")) path = path.replace(/^licenses/, namespace);
+  let base = databaseURL.replace(/\/+$/, "");
+  let url = `${base}/${path}.json`;
+  if (databaseSecret) {
+    url += `?auth=${encodeURIComponent(databaseSecret)}`;
+  }
+  return url;
+}
+
+// Date Formatters
+function formatDate(timestamp) {
+  if (!timestamp) return "—";
+  const d = new Date(timestamp);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())} ${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+function getTimeLeftInfo(expiresAt) {
+  const now = Date.now();
+  const diff = expiresAt - now;
+  if (diff <= 0) {
+    const passedDays = Math.floor(Math.abs(diff) / 86400000);
+    return {
+      expired: true,
+      text: passedDays === 0 ? "Đã hết hạn hôm nay" : `Đã hết hạn ${passedDays} ngày trước`,
+      class: "expired"
+    };
+  }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  let text = "";
+  if (days > 365) {
+    text = `Còn ~${Math.round(days/365)} năm`;
+  } else if (days > 0) {
+    text = `Còn ${days} ngày ${hours}h`;
+  } else {
+    text = `Còn ${hours} giờ`;
+  }
+  return { expired: false, text, class: "active" };
+}
+
+// --- FETCH & LOAD LICENSES ---
+async function fetchLicenses() {
+  const requestedNamespace=licenseNamespace;
+  const connStatus = $("connStatus");
+  const connText = $("connText");
+  const rulesBanner = $("rulesBanner");
+
+  connStatus.className = "connection-badge";
+  connText.textContent = "Đang đồng bộ…";
+
+  try {
+    const url = getApiUrl("licenses");
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        rulesBanner.style.display = "flex";
+        connStatus.className = "connection-badge error";
+        connText.textContent = "Lỗi Rules (401/403)";
+        throw new Error("401 Permission Denied");
+      }
+      throw new Error(`HTTP ${res.status}`);
     }
-    $("keyInput").value = key;
-    setStatus(`Đã tạo và đồng bộ key: ${key}`);
-  } catch(error) {
-    const message = String(error && error.message || "");
-    if(message.includes("401") || message.includes("403")) {
-      setStatus("Firebase từ chối ghi (401/403). Hãy deploy database.rules.json rồi thử lại.", true);
+    rulesBanner.style.display = "none";
+    connStatus.className = "connection-badge";
+    connText.textContent = "Đã kết nối Firebase";
+
+    const data = await res.json() || {};
+    if(requestedNamespace!==licenseNamespace)return;
+    const cache = getLocalCache();
+
+    // Ghép dữ liệu từ Firebase và cache cục bộ
+    const list = [];
+    for (const [hash, record] of Object.entries(data)) {
+      if (!/^[a-f0-9]{64}$/.test(hash) || !record || typeof record !== "object") continue;
+      const cached = cache[hash] || {};
+      const merged = {
+        hash,
+        key: record.key || cached.key || null,
+        enabled: record.enabled !== false,
+        expiresAt: Number(record.expiresAt) || 0,
+        createdAt: Number(record.createdAt || cached.createdAt) || Date.now(),
+        note: record.note || cached.note || "",
+        binding: record.binding || null,
+        protocol: record.protocol || 1
+      };
+      // Lưu lại vào cache để ghi nhớ key gốc
+      saveToLocalCache(hash, merged);
+      list.push(merged);
+    }
+
+    // Sắp xếp: mới nhất lên đầu
+    list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    allLicenses = list;
+    renderTable();
+    updateStats();
+  } catch (err) {
+    if(requestedNamespace!==licenseNamespace)return;
+    connStatus.className="connection-badge error";connText.textContent=databaseSecret ? "Chưa đồng bộ Firebase" : "Cần token quản trị";
+    // Cached notes remain available, but the connection badge never reports them as live.
+    console.warn("Fetch licenses error, falling back to cache:", err);
+    const cache = getLocalCache();
+    const list = Object.values(cache);
+    if (list.length > 0) {
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      allLicenses = list;
+      renderTable();
+      updateStats();
     } else {
-      setStatus(`Không ghi được vào Realtime Database: ${message || "kiểm tra kết nối mạng"}`, true);
+      allLicenses=[];renderTable();updateStats();
     }
-  } finally { $("generate").disabled = false; }
-};
+  }
+}
+
+// Cập nhật thống kê
+function updateStats() {
+  const now = Date.now();
+  let total = allLicenses.length;
+  let active = 0;
+  let expired = 0;
+  let disabled = 0;
+
+  allLicenses.forEach(item => {
+    if (!item.enabled) {
+      disabled++;
+    } else if (item.expiresAt < now) {
+      expired++;
+    } else {
+      active++;
+    }
+  });
+
+  $("statTotal").textContent = total;
+  $("statActive").textContent = active;
+  $("statExpired").textContent = expired;
+  $("statDisabled").textContent = disabled;
+}
+
+// Render Table
+function renderTable() {
+  const tbody = $("keysTableBody");
+  const now = Date.now();
+
+  // Filter & Search
+  let list = allLicenses.filter(item => {
+    const isExpired = item.expiresAt < now;
+    const isDisabled = !item.enabled;
+    const isActive = item.enabled && !isExpired;
+
+    if (currentFilter === "active" && !isActive) return false;
+    if (currentFilter === "expired" && !isExpired) return false;
+    if (currentFilter === "disabled" && !isDisabled) return false;
+
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      const matchKey = (item.key || "").toLowerCase().includes(q);
+      const matchHash = item.hash.toLowerCase().includes(q);
+      const matchNote = (item.note || "").toLowerCase().includes(q);
+      if (!matchKey && !matchHash && !matchNote) return false;
+    }
+    return true;
+  });
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="empty-state">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <div>Không tìm thấy license key nào phù hợp.</div>
+        </td>
+      </tr>
+    `;
+    updateBulkBar();
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const isExpired = item.expiresAt < now;
+    const timeInfo = getTimeLeftInfo(item.expiresAt);
+    const isSelected = selectedHashes.has(item.hash);
+    const displayKey = item.key || `${item.hash.slice(0, 10)}...${item.hash.slice(-6)}`;
+    const fullKeyToCopy = item.key || item.hash;
+
+    let statusBadge = "";
+    if (!item.enabled) {
+      statusBadge = `<span class="badge disabled">Đã Khóa</span>`;
+    } else if (isExpired) {
+      statusBadge = `<span class="badge expired">Hết Hạn</span>`;
+    } else {
+      statusBadge = `<span class="badge active"><span class="dot"></span>Hoạt Động</span>`;
+    }
+
+    return `
+      <tr data-hash="${item.hash}">
+        <td>
+          <input type="checkbox" class="row-checkbox" data-hash="${item.hash}" ${isSelected ? 'checked' : ''}>
+        </td>
+        <td>
+          <div class="key-cell">
+            <div>
+              <span class="key-text">${escapeHtml(displayKey)}</span>
+              ${!item.key ? '<span class="key-sub">(Key cũ - chỉ có Hash)</span>' : ''}
+            </div>
+            <button class="copy-icon-btn" data-copy-key="${item.hash}" title="Sao chép key">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            </button>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:6px">
+            <span style="color: ${item.note ? 'var(--text-main)' : 'var(--text-dim)'}">
+              ${escapeHtml(item.note || '—')}
+            </span>
+            <button class="copy-icon-btn" onclick="openEditNoteModal('${item.hash}')" title="Sửa ghi chú">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            </button>
+          </div>
+        </td>
+        <td>${statusBadge}<div class="time-sub">${item.binding ? 'Đã gắn 1 máy · '+escapeHtml(String(item.binding.deviceHash || '').slice(0,8)) : 'Chưa kích hoạt máy'}</div></td>
+        <td>
+          <div class="time-left">${timeInfo.text}</div>
+          <div class="time-sub">${formatDate(item.expiresAt)}</div>
+        </td>
+        <td>
+          <div class="action-group" style="justify-content: flex-end">
+            <!-- Toggle Active Switch -->
+            <label class="switch" title="${item.enabled ? 'Bấm để Khóa key' : 'Bấm để Mở khóa key'}">
+              <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="toggleKeyStatus('${item.hash}', this.checked)">
+              <span class="slider"></span>
+            </label>
+            ${licenseNamespace === 'licensesV2' && item.binding ? '<button class="btn btn-secondary btn-sm" data-reset-device="'+item.hash+'">Gỡ máy</button>' : ''}
+            ${licenseNamespace === 'licenses' ? '<button class="btn btn-secondary btn-sm" data-upgrade-key="'+item.hash+'">Chuyển bản mới</button>' : ''}
+            <!-- Nút Gia hạn -->
+            <button class="btn btn-secondary btn-sm" onclick="openExtendModal('${item.hash}')" title="Gia hạn thời gian sử dụng">
+              +Hạn
+            </button>
+            <!-- Nút Xóa -->
+            <button class="btn btn-danger btn-sm" onclick="confirmDeleteSingle('${item.hash}')" title="Xóa key vĩnh viễn">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  // Checkbox bindings
+  $$(".row-checkbox").forEach(cb => {
+    cb.addEventListener("change", e => {
+      const h = e.target.getAttribute("data-hash");
+      if (e.target.checked) selectedHashes.add(h);
+      else selectedHashes.delete(h);
+      updateBulkBar();
+    });
+  });
+
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = $("bulkBar");
+  const countEl = $("selectedCount");
+  const selectAll = $("selectAll");
+
+  countEl.textContent = selectedHashes.size;
+  if (selectedHashes.size > 0) {
+    bar.style.display = "flex";
+  } else {
+    bar.style.display = "none";
+  }
+
+  const allCheckboxes = $$(".row-checkbox");
+  if (allCheckboxes.length > 0 && selectedHashes.size === allCheckboxes.length) {
+    selectAll.checked = true;
+    selectAll.indeterminate = false;
+  } else if (selectedHashes.size > 0) {
+    selectAll.checked = false;
+    selectAll.indeterminate = true;
+  } else {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+  }
+}
+
+// Select All Handler
+$("selectAll").addEventListener("change", e => {
+  const isChecked = e.target.checked;
+  $$(".row-checkbox").forEach(cb => {
+    cb.checked = isChecked;
+    const h = cb.getAttribute("data-hash");
+    if (isChecked) selectedHashes.add(h);
+    else selectedHashes.delete(h);
+  });
+  updateBulkBar();
+});
+
+// --- THAO TÁC TẠO KEY (SINGLE & BULK) ---
+$("tabModeSingle").addEventListener("click", () => {
+  $("tabModeSingle").classList.add("active");
+  $("tabModeBulk").classList.remove("active");
+  $("singleKeySection").style.display = "block";
+  $("bulkKeySection").style.display = "none";
+});
+$("tabModeBulk").addEventListener("click", () => {
+  $("tabModeBulk").classList.add("active");
+  $("tabModeSingle").classList.remove("active");
+  $("singleKeySection").style.display = "none";
+  $("bulkKeySection").style.display = "block";
+});
+
+// Preset buttons
+$$(".duration-presets .preset-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    $$(".duration-presets .preset-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    $("customDays").value = btn.getAttribute("data-days");
+    updateExpiryPreview();
+  });
+});
+$("customDays").addEventListener("input", () => {
+  const val = $("customDays").value;
+  $$(".duration-presets .preset-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-days") === val);
+  });
+  updateExpiryPreview();
+});
+
+function updateExpiryPreview() {
+  const days = Number($("customDays").value) || 30;
+  const exp = Date.now() + Math.round(days * 86400000);
+  $("expiryPreview").textContent = `Hết hạn vào: ${formatDate(exp)} (${days} ngày)`;
+}
+updateExpiryPreview();
+
+$("btnRandomKey").addEventListener("click", () => {
+  $("keyInput").value = randomKey();
+});
+
+// Gửi tạo key
+let lastCreatedData = null;
+$("btnSubmitGenerate").addEventListener("click", async () => {
+  const isBulk = $("tabModeBulk").classList.contains("active");
+  const days = Number($("customDays").value);
+  const note = $("noteInput").value.trim();
+
+  if (!Number.isFinite(days) || days < 1 || days > 3650) {
+    showToast("Số ngày sử dụng phải từ 1 đến 3650 ngày!", "error");
+    return;
+  }
+
+  const btn = $("btnSubmitGenerate");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="dot"></span> Đang tạo key…`;
+
+  try {
+    const expiresAt = Date.now() + Math.round(days * 86400000);
+    const createdAt = Date.now();
+
+    if (!isBulk) {
+      // Single Key
+      let key = $("keyInput").value.trim().toUpperCase();
+      if (!key) key = randomKey();
+      if (key.length < 8 || key.length > 128) {
+        throw new Error("Key phải dài từ 8 đến 128 ký tự.");
+      }
+
+      const hash = await digest(key);
+      const payload = {
+        enabled: true,
+          protocol: 2,
+        expiresAt,
+        createdAt,
+        key,
+        note
+      };
+
+      const url = getApiUrl(`licensesV2/${hash}`);
+      const legacy = await fetch(getApiUrl(`licenses/${hash}`, "licenses"));
+      if (!legacy.ok) throw new Error(`Không kiểm tra được key cũ: HTTP ${legacy.status}`);
+      if (await legacy.json()) throw new Error("Key này thuộc bản cũ. Dùng Chuyển bản mới để khóa bản cũ trước.");
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "if-match": "null_etag" },
+        body: JSON.stringify(payload)
+      });
+      if (res.status === 412) throw new Error("Key đã tồn tại. Không ghi đè hoặc mất khóa máy.");
+      if (!res.ok) {
+        const detail = await res.text();
+        throw new Error(`Firebase từ chối: HTTP ${res.status} (${detail.slice(0, 80)})`);
+      }
+
+      saveToLocalCache(hash, payload);
+      lastCreatedData = { key, days, expiresAt, note };
+
+      // Hiển thị Result Card
+      $("resultKeyBox").textContent = key;
+      $("resultExpiryBadge").textContent = `${days} ngày`;
+      $("resultCard").classList.add("show");
+      $("keyInput").value = "";
+      showToast(`Đã tạo key thành công: ${key}`, "success");
+
+    } else {
+      // Bulk Keys
+      const count = Number($("bulkCount").value) || 5;
+      const prefix = $("bulkPrefix").value.trim().toUpperCase() || "HH-";
+      const createdKeys = [];
+
+      for (let i = 1; i <= count; i++) {
+        const key = randomKey(prefix);
+        const hash = await digest(key);
+        const itemNote = note ? `${note} (#${i})` : `Bulk #${i}`;
+        const payload = {
+          enabled: true,
+          protocol: 2,
+          expiresAt,
+          createdAt: createdAt + i,
+          key,
+          note: itemNote
+        };
+
+        const url = getApiUrl(`licensesV2/${hash}`);
+        const legacy = await fetch(getApiUrl(`licenses/${hash}`, "licenses"));
+        if (!legacy.ok || await legacy.json()) throw new Error("Không tạo được key mới độc lập với bản cũ.");
+        const res = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "if-match": "null_etag" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`Tạo key thất bại: HTTP ${res.status}`);
+        saveToLocalCache(hash, payload);
+        createdKeys.push(key);
+      }
+
+      lastCreatedData = { key: createdKeys.join("\n"), days, expiresAt, note, isBulk: true };
+      $("resultKeyBox").textContent = createdKeys.join("\n");
+      $("resultExpiryBadge").textContent = `${count} Keys (${days} ngày)`;
+      $("resultCard").classList.add("show");
+      showToast(`Đã tạo ${count} key thành công!`, "success");
+    }
+
+    licenseNamespace="licensesV2";$("licenseNamespace").value=licenseNamespace;
+    await fetchLicenses();
+  } catch (err) {
+    showToast(err.message || "Lỗi khi tạo key", "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg> Tạo License Key`;
+  }
+});
+
+// Copy Buttons in Result Card
+$("btnCopyKeyOnly").addEventListener("click", () => {
+  if (!lastCreatedData) return;
+  copyToClipboard(lastCreatedData.key, "Đã sao chép mã key!");
+});
+$("btnCopyFullMessage").addEventListener("click", () => {
+  if (!lastCreatedData) return;
+  const msg = `📱 THÔNG TIN KÍCH HOẠT BẢN QUYỀN
+🔑 Mã License Key:
+${lastCreatedData.key}
+⏳ Hạn sử dụng: ${lastCreatedData.days} ngày (Đến: ${formatDate(lastCreatedData.expiresAt)})
+${lastCreatedData.note ? `📝 Ghi chú: ${lastCreatedData.note}\n` : ''}---
+Vui lòng mở ứng dụng và nhập mã trên để kích hoạt quyền sử dụng. Cảm ơn bạn!`;
+  copyToClipboard(msg, "Đã sao chép mẫu tin nhắn gửi khách!");
+});
+
+// --- TOGGLE BẬT/TẮT KHÓA KEY ---
+async function toggleKeyStatus(hash, newStatus) {
+  try {
+    const url = getApiUrl(`licenses/${hash}`);
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: newStatus })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const item = allLicenses.find(x => x.hash === hash);
+    if (item) {
+      item.enabled = newStatus;
+      saveToLocalCache(hash, item);
+    }
+    showToast(newStatus ? "Đã mở khóa key thành công!" : "Đã khóa key thành công!", "success");
+    renderTable();
+    updateStats();
+  } catch (err) {
+    showToast("Không thể đổi trạng thái key: " + err.message, "error");
+    renderTable(); // revert UI switch
+  }
+}
+
+// --- GIA HẠN KEY (EXTEND) ---
+function openExtendModal(hash) {
+  const item = allLicenses.find(x => x.hash === hash);
+  if (!item) return;
+  currentExtendTarget = item;
+
+  $("extendKeyName").textContent = item.key || item.hash.slice(0, 16) + '...';
+  $("extendCurrentExpiry").textContent = formatDate(item.expiresAt);
+  $("extendCustomDays").value = 30;
+
+  // reset preset
+  $$("[data-extend-days]").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-extend-days") === "30");
+  });
+  updateExtendPreview();
+  $("modalExtend").classList.add("show");
+}
+
+function updateExtendPreview() {
+  if (!currentExtendTarget) return;
+  const addedDays = Number($("extendCustomDays").value) || 0;
+  const base = Math.max(Date.now(), currentExtendTarget.expiresAt);
+  const newExp = base + Math.round(addedDays * 86400000);
+  $("extendNewExpiryPreview").textContent = `Hạn mới sau gia hạn: ${formatDate(newExp)}`;
+}
+
+$$("[data-extend-days]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    $$("[data-extend-days]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    $("extendCustomDays").value = btn.getAttribute("data-extend-days");
+    updateExtendPreview();
+  });
+});
+$("extendCustomDays").addEventListener("input", updateExtendPreview);
+
+$("btnConfirmExtend").addEventListener("click", async () => {
+  if (!currentExtendTarget) return;
+  const addedDays = Number($("extendCustomDays").value);
+  if (!Number.isFinite(addedDays) || addedDays <= 0) {
+    showToast("Vui lòng nhập số ngày gia hạn hợp lệ!", "error");
+    return;
+  }
+
+  const base = Math.max(Date.now(), currentExtendTarget.expiresAt);
+  const newExpiresAt = base + Math.round(addedDays * 86400000);
+
+  try {
+    const url = getApiUrl(`licenses/${currentExtendTarget.hash}`);
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresAt: newExpiresAt, enabled: true })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    currentExtendTarget.expiresAt = newExpiresAt;
+    currentExtendTarget.enabled = true;
+    saveToLocalCache(currentExtendTarget.hash, currentExtendTarget);
+
+    showToast(`Đã gia hạn thêm ${addedDays} ngày!`, "success");
+    $("modalExtend").classList.remove("show");
+    renderTable();
+    updateStats();
+  } catch (err) {
+    showToast("Gia hạn thất bại: " + err.message, "error");
+  }
+});
+
+// --- CHỈNH SỬA GHI CHÚ ---
+function openEditNoteModal(hash) {
+  const item = allLicenses.find(x => x.hash === hash);
+  if (!item) return;
+  currentEditNoteTarget = item;
+  $("editNoteKeyName").textContent = item.key || item.hash.slice(0, 16) + '...';
+  $("editNoteInput").value = item.note || "";
+  $("modalEditNote").classList.add("show");
+}
+
+$("btnConfirmEditNote").addEventListener("click", async () => {
+  if (!currentEditNoteTarget) return;
+  const newNote = $("editNoteInput").value.trim();
+  try {
+    const url = getApiUrl(`licenses/${currentEditNoteTarget.hash}`);
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: newNote })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    currentEditNoteTarget.note = newNote;
+    saveToLocalCache(currentEditNoteTarget.hash, currentEditNoteTarget);
+    showToast("Đã cập nhật ghi chú!", "success");
+    $("modalEditNote").classList.remove("show");
+    renderTable();
+  } catch (err) {
+    showToast("Lỗi khi cập nhật ghi chú: " + err.message, "error");
+  }
+});
+
+// --- XÓA KEY (SINGLE, BULK & PURGE) ---
+function confirmDeleteSingle(hash) {
+  const item = allLicenses.find(x => x.hash === hash);
+  const name = item ? (item.key || item.hash.slice(0, 16) + '...') : hash;
+  $("deleteConfirmText").innerHTML = `Bạn có chắc chắn muốn xóa key: <strong class="mono" style="color:#f87171">${name}</strong>?`;
+  pendingDeleteAction = async () => {
+    await deleteKeyByHash(hash);
+    selectedHashes.delete(hash);
+  };
+  $("modalConfirmDelete").classList.add("show");
+}
+
+async function deleteKeyByHash(hash) {
+  const url = getApiUrl(`licenses/${hash}`);
+  const res = await fetch(url, { method: "DELETE" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  removeFromLocalCache(hash);
+  allLicenses = allLicenses.filter(x => x.hash !== hash);
+}
+
+$("btnConfirmDelete").addEventListener("click", async () => {
+  if (!pendingDeleteAction) return;
+  const btn = $("btnConfirmDelete");
+  btn.disabled = true;
+  btn.textContent = "Đang xóa…";
+  try {
+    await pendingDeleteAction();
+    showToast("Đã xóa license key thành công!", "success");
+    $("modalConfirmDelete").classList.remove("show");
+    renderTable();
+    updateStats();
+  } catch (err) {
+    showToast("Lỗi khi xóa: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Đồng Ý Xóa";
+    pendingDeleteAction = null;
+  }
+});
+
+// Bulk Delete
+$("btnBulkDelete").addEventListener("click", () => {
+  if (selectedHashes.size === 0) return;
+  $("deleteConfirmText").innerHTML = `Bạn có chắc chắn muốn xóa vĩnh viễn <strong>${selectedHashes.size}</strong> key đã chọn?`;
+  pendingDeleteAction = async () => {
+    for (const hash of selectedHashes) {
+      await deleteKeyByHash(hash);
+    }
+    selectedHashes.clear();
+  };
+  $("modalConfirmDelete").classList.add("show");
+});
+
+// Bulk Extend +30d
+$("btnBulkExtend").addEventListener("click", async () => {
+  if (selectedHashes.size === 0) return;
+  const count = selectedHashes.size;
+  try {
+    for (const hash of selectedHashes) {
+      const item = allLicenses.find(x => x.hash === hash);
+      if (!item) continue;
+      const base = Math.max(Date.now(), item.expiresAt);
+      const newExpiresAt = base + 30 * 86400000;
+      await fetch(getApiUrl(`licenses/${hash}`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresAt: newExpiresAt, enabled: true })
+      });
+      item.expiresAt = newExpiresAt;
+      item.enabled = true;
+      saveToLocalCache(hash, item);
+    }
+    showToast(`Đã gia hạn +30 ngày cho ${count} key!`, "success");
+    selectedHashes.clear();
+    renderTable();
+    updateStats();
+  } catch (err) {
+    showToast("Lỗi gia hạn hàng loạt: " + err.message, "error");
+  }
+});
+
+// Bulk Enable/Disable
+$("btnBulkDisable").addEventListener("click", async () => {
+  if (selectedHashes.size === 0) return;
+  for (const hash of selectedHashes) {
+    await toggleKeyStatus(hash, false);
+  }
+  selectedHashes.clear();
+});
+$("btnBulkEnable").addEventListener("click", async () => {
+  if (selectedHashes.size === 0) return;
+  for (const hash of selectedHashes) {
+    await toggleKeyStatus(hash, true);
+  }
+  selectedHashes.clear();
+});
+
+// Purge Expired Keys
+$("btnPurgeExpired").addEventListener("click", () => {
+  const now = Date.now();
+  const expired = allLicenses.filter(x => x.expiresAt < now);
+  if (expired.length === 0) {
+    showToast("Không có key nào đã hết hạn!", "success");
+    return;
+  }
+  $("deleteConfirmText").innerHTML = `Bạn có chắc muốn dọn dẹp và xóa <strong>${expired.length}</strong> key đã hết hạn?`;
+  pendingDeleteAction = async () => {
+    for (const item of expired) {
+      await deleteKeyByHash(item.hash);
+      selectedHashes.delete(item.hash);
+    }
+  };
+  $("modalConfirmDelete").classList.add("show");
+});
+
+// --- FILTER & SEARCH ---
+$$(".filter-tab[data-filter]").forEach(tab => {
+  tab.addEventListener("click", () => {
+    $$(".filter-tab[data-filter]").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentFilter = tab.getAttribute("data-filter");
+    renderTable();
+  });
+});
+$("searchInput").addEventListener("input", e => {
+  currentSearch = e.target.value.trim();
+  renderTable();
+});
+
+// --- EXPORT DATA ---
+$("btnExport").addEventListener("click", () => {
+  if (allLicenses.length === 0) {
+    showToast("Không có dữ liệu để xuất!", "error");
+    return;
+  }
+  let content = "MÃ KEY\tGHI CHÚ\tTRẠNG THÁI\tNGÀY TẠO\tHẠN DÙNG\n";
+  const now = Date.now();
+  allLicenses.forEach(item => {
+    const k = item.key || item.hash;
+    const n = item.note || "";
+    let s = "Hoạt Động";
+    if (!item.enabled) s = "Đã Khóa";
+    else if (item.expiresAt < now) s = "Hết Hạn";
+    content += `${k}\t${n}\t${s}\t${formatDate(item.createdAt)}\t${formatDate(item.expiresAt)}\n`;
+  });
+
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `licenses_${new Date().toISOString().slice(0, 10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Đã xuất file text thành công!", "success");
+});
+
+// --- CÀI ĐẶT & RULES MODALS ---
+$("btnOpenSettings").addEventListener("click", () => {
+  $("cfgDatabaseUrl").value = databaseURL;
+  $("cfgDatabaseSecret").value = databaseSecret;
+  $("modalSettings").classList.add("show");
+});
+$("btnOpenRules").addEventListener("click", () => {
+  $("modalRules").classList.add("show");
+});
+$("btnBannerFix").addEventListener("click", () => {
+  $("modalRules").classList.add("show");
+});
+$("btnCopyRules").addEventListener("click", () => {
+  copyToClipboard($("rulesCodeText").textContent, "Đã sao chép Rules vào bộ nhớ tạm!");
+});
+
+$("btnTestConn").addEventListener("click", async () => {
+  const btn = $("btnTestConn");
+  btn.disabled = true; btn.textContent = "Đang kiểm tra…";
+  const testUrl = $("cfgDatabaseUrl").value.trim().replace(/\/+$/, "");
+  const testSecret = $("cfgDatabaseSecret").value.trim();
+  let full = `${testUrl}/licensesV2.json`;
+  if (!testSecret) { showToast("Cần nhập token quản trị.", "error"); btn.disabled=false; btn.textContent="Kiểm Tra Kết Nối"; return; }
+  full += `?auth=${encodeURIComponent(testSecret)}`;
+
+  try {
+    const res = await fetch(full);
+    if (res.ok) {
+      showToast("Đã kiểm tra được quyền đọc danh sách key.", "success");
+    } else {
+      showToast(`Firebase trả về mã lỗi: HTTP ${res.status}`, "error");
+    }
+  } catch (err) {
+    showToast("Không kết nối được: " + err.message, "error");
+  } finally {
+    btn.disabled = false; btn.textContent = "Kiểm Tra Kết Nối";
+  }
+});
+
+$("btnSaveSettings").addEventListener("click", () => {
+  databaseURL = $("cfgDatabaseUrl").value.trim().replace(/\/+$/, "") || DEFAULT_DATABASE_URL;
+  databaseSecret = $("cfgDatabaseSecret").value.trim();
+  localStorage.setItem("license_db_url", databaseURL);
+  sessionStorage.setItem("license_db_secret", databaseSecret);
+  showToast("Đã lưu cấu hình Firebase!", "success");
+  $("modalSettings").classList.remove("show");
+  fetchLicenses();
+});
+
+// Close modals
+$$("[data-close]").forEach(el => {
+  el.addEventListener("click", () => {
+    $$(".modal-backdrop").forEach(m => m.classList.remove("show"));
+  });
+});
+$$(".modal-backdrop").forEach(backdrop => {
+  backdrop.addEventListener("click", e => {
+    if (e.target === backdrop) backdrop.classList.remove("show");
+  });
+});
+
+$("btnRefresh").addEventListener("click", () => {
+  fetchLicenses();
+  showToast("Đang làm mới danh sách…", "success");
+});
+
+$("licenseNamespace").addEventListener("change", async e => {
+  licenseNamespace=e.target.value;selectedHashes.clear();await fetchLicenses();
+});
+$("keysTableBody").addEventListener("click", async e => {
+  const copy=e.target.closest("[data-copy-key]");
+  if (copy) {
+    const item=allLicenses.find(x=>x.hash===copy.dataset.copyKey);
+    if (item) await copyToClipboard(item.key || item.hash,"Đã sao chép key!");return;
+  }
+  const reset=e.target.closest("[data-reset-device]");
+  const upgrade=e.target.closest("[data-upgrade-key]");
+  const action=reset || upgrade;if(!action)return;
+  const hash=reset ? reset.dataset.resetDevice : upgrade.dataset.upgradeKey;
+  const item=allLicenses.find(x=>x.hash===hash);if(!item)return;
+  if(!confirm(reset ? "Gỡ máy đã gắn? Đóng app đang dùng key trước; máy đăng nhập tiếp theo sẽ giữ key." : "Chuyển key sang bản mới? Bản cũ sẽ không dùng key này nữa."))return;
+  action.disabled=true;
+  try {
+    if(reset) {
+      const response=await fetch(getApiUrl(`licensesV2/${hash}/binding`),{method:"DELETE"});
+      if(!response.ok)throw new Error(`Gỡ máy thất bại: HTTP ${response.status}`);
+    } else {
+      const old=await fetch(getApiUrl(`licenses/${hash}`,"licenses"));
+      if(!old.ok)throw new Error(`Không đọc được key cũ: HTTP ${old.status}`);
+      const record=await old.json();if(!record)throw new Error("Key cũ không còn tồn tại.");
+      const response=await fetch(getApiUrl(`licensesV2/${hash}`),{method:"PUT",
+        headers:{"Content-Type":"application/json","if-match":"null_etag"},body:JSON.stringify({...record,protocol:2})});
+      if(!response.ok)throw new Error(response.status===412 ? "Key bản mới đã tồn tại; không ghi đè máy đã gắn." : `Chuyển key thất bại: HTTP ${response.status}`);
+      const disabled=await fetch(getApiUrl(`licenses/${hash}`,"licenses"),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:false})});
+      if(!disabled.ok)throw new Error("Đã tạo bản mới nhưng chưa khóa bản cũ. Hãy khóa key cũ trước khi cấp lại.");
+      licenseNamespace="licensesV2";$("licenseNamespace").value=licenseNamespace;
+    }
+    showToast(reset ? "Đã gỡ máy. Key vẫn dùng cho bản mới." : "Đã chuyển key và khóa bản cũ.");
+    await fetchLicenses();
+  } catch(error) {showToast(error.message,"error");} finally {action.disabled=false;}
+});
+$("btnApplyRules").addEventListener("click", async () => {
+  const button=$("btnApplyRules");
+  if(!databaseSecret) {showToast("Nhập token quản trị trong Cài đặt trước.","error");return;}
+  if(!confirm("Áp dụng Rules khóa một máy? Chỉ quản trị viên được tạo/sửa/gỡ máy; key cũ vẫn giữ nguyên dữ liệu."))return;
+  button.disabled=true;
+  try {
+    const url=getApiUrl(".settings/rules");
+    const current=await fetch(url);if(!current.ok)throw new Error("Token hiện tại không có quyền quản trị Rules.");
+    const backup=await current.text();
+    const blob=new Blob([backup],{type:"application/json"}),download=URL.createObjectURL(blob);
+    const link=document.createElement("a");link.href=download;link.download="firebase-rules-backup.json";link.click();URL.revokeObjectURL(download);
+    const rules=JSON.parse($("rulesCodeText").textContent);
+    // Preserve other database collections and their existing rules.
+    const merged=JSON.parse(backup);merged.rules={...merged.rules,...rules.rules};
+    const response=await fetch(url,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(merged)});
+    if(!response.ok)throw new Error(`Chưa áp dụng được Rules: HTTP ${response.status}`);
+    showToast("Đã áp dụng khóa 1 key / 1 máy và lưu bản sao Rules cũ.");await fetchLicenses();
+  } catch(error) {showToast(error.message,"error");} finally {button.disabled=false;}
+});
+
+// Khởi chạy khi load trang
+fetchLicenses();
 </script>
 </body>
 </html>

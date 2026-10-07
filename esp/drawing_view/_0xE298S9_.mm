@@ -96,7 +96,6 @@ static float      gESPMaxDistance   = 150.0f; // khoảng cách tối đa hiển
 static bool gESPPrefsLoadedOnce = false;
 static NSUInteger gRenderPrefsRevision = 0;
 static bool gBalancedRender = false;
-static bool gAimDiagnostics = false;
 static bool gNoReload = false;
 static bool gFastFire = false;
 
@@ -153,7 +152,6 @@ void ESPSyncFromPrefs(void) {
     silentMaxDistance = ESPPrefsFloat(@"SilentMaxDistance", 100);
     if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 100;
     silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
-    gAimDiagnostics = ESPPrefsBool(@"AimDiagnostics", NO);
     gNoReload = !gAutoFire && ESPPrefsBool(@"ShootNoReload", NO);
     // AimKill must use ordinary weapon timing even if manual fast fire is saved.
     gFastFire = !gAutoFire && ESPPrefsBool(@"FastFire", NO);
@@ -251,6 +249,7 @@ static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
     }
     if (isBox || isHeadRedDot) b.boxKnockPath = CGPathCreateMutable();
     if (isLine) {
+        b.snaplinePath = CGPathCreateMutable();
         b.axisZPath = CGPathCreateMutable();
         b.axisYPath = CGPathCreateMutable();
         b.axisXPath = CGPathCreateMutable();
@@ -355,12 +354,8 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 @property (nonatomic, strong) CAShapeLayer           *alertLayer;
 @property (nonatomic, strong) CAShapeLayer           *fovLayer;
 @property (nonatomic, strong) CAShapeLayer *ghostLayer;
-@property (nonatomic, strong) CATextLayer *ghostStatusLayer;
 @property (nonatomic, strong) NSMutableArray<CATextLayer *> *textLayerPool;
 @property (nonatomic, assign) NSUInteger              activeTextLayerCount;
-@property (nonatomic, strong) CATextLayer            *statusLayer;
-@property (nonatomic, strong) CATextLayer *aimDiagnosticLayer;
-@property (nonatomic, assign) CFTimeInterval nextAimDiagnosticUpdate;
 
 @property (nonatomic, strong) CAShapeLayer *boxBotLayer;
 @property (nonatomic, strong) CAShapeLayer *boxPlayerLayer;
@@ -373,7 +368,6 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 @property (nonatomic, assign) NSUInteger appliedRenderRevision;
 @property (nonatomic, assign) CGSize lastFovSize;
 @property (nonatomic, assign) float lastFovRadius;
-@property (nonatomic, assign) NSInteger lastEnemyCount;
 @end
 
 // ─────────────────────────────────────────────
@@ -412,7 +406,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.backgroundColor        = UIColor.clearColor;
     self.clipsToBounds = YES;
     self.textLayerPool          = [NSMutableArray array];
-    self.lastEnemyCount = -1;
 
     [self configureRenderingLayers];
 #ifdef MIZZE_INJECTED
@@ -497,18 +490,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.fovLayer        = [self makeShapeLayer:[UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f] fill:nil lineWidth:1.5f zPos:7];
     self.ghostLayer = [self makeShapeLayer:[UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.95]
         fill:nil lineWidth:1.8 zPos:7];
-    self.ghostStatusLayer = [CATextLayer layer];
-    self.ghostStatusLayer.fontSize = 13;
-    self.ghostStatusLayer.contentsScale = UIScreen.mainScreen.scale;
-    self.ghostStatusLayer.zPosition = 8;
-    self.ghostStatusLayer.foregroundColor = [UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:1].CGColor;
-    self.ghostStatusLayer.shadowColor = UIColor.blackColor.CGColor;
-    self.ghostStatusLayer.shadowOpacity = 0.8;
-    self.ghostStatusLayer.shadowRadius = 1;
-    self.ghostStatusLayer.shadowOffset = CGSizeMake(0, 1);
-    self.ghostStatusLayer.hidden = YES;
-    [self.layer addSublayer:self.ghostStatusLayer];
-
     self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.8f zPos:1];
     self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:1.0f zPos:2];
     self.boxLayer          = [self makeShapeLayer:white   fill:nil     lineWidth:0.5f zPos:3];
@@ -526,30 +507,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         [self.layer addSublayer:l];
     }
 
-    self.statusLayer = [CATextLayer layer];
-    self.statusLayer.foregroundColor = [UIColor colorWithRed:0.65 green:0.85 blue:0.77 alpha:0.85].CGColor;
-    self.statusLayer.alignmentMode   = kCAAlignmentCenter;
-    self.statusLayer.fontSize        = 15.0f;
-    self.statusLayer.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:15 weight:UIFontWeightBold];
-    self.statusLayer.backgroundColor = UIColor.clearColor.CGColor;
-    self.statusLayer.borderWidth = 0;
-    self.statusLayer.cornerRadius = 0;
-    self.statusLayer.shadowColor = UIColor.blackColor.CGColor;
-    self.statusLayer.shadowOffset = CGSizeMake(0, 1);
-    self.statusLayer.shadowOpacity = 0.9f;
-    self.statusLayer.shadowRadius = 0;
-    self.statusLayer.contentsScale   = UIScreen.mainScreen.scale;
-    self.statusLayer.zPosition       = 8;
-    self.statusLayer.actions = @{ @"string":NSNull.null, @"frame":NSNull.null, @"hidden":NSNull.null };
-    [self.layer addSublayer:self.statusLayer];
-    self.aimDiagnosticLayer = [CATextLayer layer];
-    self.aimDiagnosticLayer.foregroundColor = UIColor.whiteColor.CGColor;
-    self.aimDiagnosticLayer.fontSize = 11;
-    self.aimDiagnosticLayer.contentsScale = UIScreen.mainScreen.scale;
-    self.aimDiagnosticLayer.alignmentMode = kCAAlignmentCenter;
-    self.aimDiagnosticLayer.zPosition = 8;
-    self.aimDiagnosticLayer.hidden = YES;
-    [self.layer addSublayer:self.aimDiagnosticLayer];
 }
 
 - (void)resetTextLayers {
@@ -604,6 +561,8 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.axisXLayer.strokeColor = [UIColor colorWithRed:1 green:.36 blue:.4 alpha:1].CGColor;
     self.axisYLayer.strokeColor = [UIColor colorWithRed:.46 green:.86 blue:.73 alpha:1].CGColor;
     self.axisZLayer.strokeColor = [UIColor colorWithRed:.36 green:.65 blue:1 alpha:1].CGColor;
+    self.snaplineLayer.strokeColor = [UIColor colorWithWhite:1 alpha:.85].CGColor;
+    self.snaplineLayer.lineWidth = 1.1;
     self.fovLayer.strokeColor = ESPColor(@"FovColor", 0.46, 0.86, 0.73).CGColor;
     for (CAShapeLayer *layer in @[self.boxBotLayer, self.boxPlayerLayer, self.boxKnockLayer]) {
         layer.lineWidth = isCleanESP ? 1.35 : 1.5;
@@ -670,8 +629,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         if (!isVaildPtr(Moudule_Base)) {
             [self clearAllContent];
             [self updateFovCircle];
-            [self updateAimDiagnostic:(ESPFrameStats){} now:now];
-            [self updateGhostStatus];
             [CATransaction commit];
             return;
         }
@@ -708,23 +665,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         for (NSUInteger i = self.activeTextLayerCount; i < self.textLayerPool.count; ++i)
             self.textLayerPool[i].hidden = YES;
 
-        // Plain enemy count, with no icon or background.
-        if (stats.inMatch && ESPMatchReady() && (isCount || isLine || isBox)) {
-            int totalEnemies = stats.playerCount + stats.botCount;
-
-            if (self.lastEnemyCount != totalEnemies) {
-                self.statusLayer.string = [NSString stringWithFormat:@"ĐỊCH: %d", totalEnemies];
-                self.lastEnemyCount = totalEnemies;
-            }
-
-            CGFloat bannerWidth = 120.0f;
-            self.statusLayer.frame = CGRectMake(vw / 2.0f - (bannerWidth / 2.0f), 22.0f, bannerWidth, 22.0f);
-            self.statusLayer.alignmentMode = kCAAlignmentCenter;
-            self.statusLayer.hidden = NO;
-        } else {
-            self.statusLayer.hidden = YES;
-        }
-
         if (stats.inMatch) {
             // OK
         } else {
@@ -733,8 +673,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 
         // FOV is a screen-space setting and does not depend on successful game reads.
         [self updateFovCircle];
-        [self updateAimDiagnostic:stats now:now];
-        [self updateGhostStatus];
         [CATransaction commit];
         // CADisplayLink owns pacing. A second random timer used to skip valid
         // display ticks and leave ESP geometry behind the moving camera.
@@ -746,73 +684,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     }
 }
 
-- (void)updateAimDiagnostic:(ESPFrameStats)stats now:(CFTimeInterval)now {
-    if (!gAimDiagnostics || !stats.inMatch) {
-        self.aimDiagnosticLayer.hidden = YES;
-        return;
-    }
-    if (self.aimDiagnosticLayer.hidden || now >= self.nextAimDiagnosticUpdate) {
-        self.nextAimDiagnosticUpdate = now + 0.2;
-        self.aimDiagnosticLayer.string = isSilentAim ? [NSString stringWithFormat:
-            @"PRI21: %d · %@ · chuyển: %llu", stats.firingRaw,
-            AimStateDescription(stats.aimState), (unsigned long long)SilentAimRedirectCount()] :
-            [NSString stringWithFormat:@"Bắn: %d · PRI21: %d · Ngắm: %@ · %@", stats.firing,
-                stats.firingRaw, stats.scoping ? @"có" : @"không", AimStateDescription(stats.aimState)];
-    }
-    self.aimDiagnosticLayer.wrapped = YES;
-    self.aimDiagnosticLayer.frame = CGRectMake(8, 48, MAX(0, self.bounds.size.width - 16), 18);
-    self.aimDiagnosticLayer.hidden = NO;
-}
-
-- (void)updateGhostStatus {
-    if (!ESPMatchReady()) {
-        self.ghostStatusLayer.hidden = YES;
-        self.ghostStatusLayer.string = nil;
-        return;
-    }
-    NSMutableArray<NSString *> *lines = [NSMutableArray array];
-    NSString *status = @"chờ dữ liệu";
-    if (gGhostInstall == 9) status = @"bản game chưa hỗ trợ";
-    else if (gGhostInstall == 10) status = @"iOS từ chối cài";
-    else if (gGhostInstall == 11) status = @"chờ vào trận";
-    else if (gGhostInstall == 8) {
-        if (gGhostSnapshot.active) status = gGhostSnapshot.packets ? @"đang gửi vị trí gốc" : @"đã lưu vị trí";
-        else if (gGhostSnapshot.status == 7) status = @"tạm dừng";
-        else if (gGhostSnapshot.status == 8) status = @"chờ nhịp game";
-    }
-    if (gGhostMode) [lines addObject:[@"Ghost · " stringByAppendingString:status]];
-    NSMutableArray<NSString *> *modes = [NSMutableArray array];
-    if (ESPPrefsBool(@"AimLag", NO)) [modes addObject:@"Aimlag"];
-    if (ESPPrefsBool(@"FakeLag", NO)) [modes addObject:@"FakeLag"];
-    if (modes.count) {
-        const auto current = PlayerModesRead();
-        if (gPlayerModesInstall != 8) {
-            NSString *reason = gPlayerModesInstall == 9 ? @"bản game chưa hỗ trợ" :
-                (gPlayerModesInstall == 10 ? @"không cài được nhịp game" : @"chờ vào trận");
-            if (current.detail && current.detail[0]) reason = [NSString stringWithUTF8String:current.detail];
-            [lines addObject:[NSString stringWithFormat:@"%@ · %@", [modes componentsJoinedByString:@" / "], reason]];
-        } else {
-            const BOOL fakeLag = ESPPrefsBool(@"FakeLag", NO);
-            if (fakeLag || ESPPrefsBool(@"AimLag", NO)) {
-                NSString *name = fakeLag ? @"FakeLag" : @"Aimlag";
-                NSString *reason = !fakeLag && !current.scoped ? @"mở ngắm để giữ địch" :
-                    (current.heldEnemies ? [NSString stringWithFormat:@"giữ %u địch", current.heldEnemies] :
-                    (current.presenting ? @"chờ địch phù hợp" : @"chờ nhịp hiển thị"));
-                [lines addObject:[NSString stringWithFormat:@"%@ · %@", name, reason]];
-            }
-        }
-        if (gAimDiagnostics) [lines addObject:[NSString stringWithFormat:@"Nhịp %llu · hiển thị %llu · áp dụng %llu · bỏ qua %u",
-            (unsigned long long)current.ticks, (unsigned long long)current.postTicks,
-            (unsigned long long)current.applies, current.skipped]];
-        if (gAimDiagnostics && current.failedOffset) [lines addObject:[NSString stringWithFormat:@"Mã khác: 0x%llx",
-            (unsigned long long)current.failedOffset]];
-    }
-    self.ghostStatusLayer.hidden = lines.count == 0;
-    self.ghostStatusLayer.string = [lines componentsJoinedByString:@"\n"];
-    self.ghostStatusLayer.wrapped = YES;
-    self.ghostStatusLayer.frame = CGRectMake(10, gAimDiagnostics ? 90 : 50,
-        MAX(0, self.bounds.size.width - 20), MAX(22, lines.count * 22));
-}
 - (void)drawGhostAnchor:(Vector3)anchor matrix:(float *)matrix width:(CGFloat)vw height:(CGFloat)vh
                vpWidth:(CGFloat)vpW vpHeight:(CGFloat)vpH {
     // A small world-space cube marks the saved point, independently of ESP flags.
@@ -836,7 +707,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 - (void)clearAllContent {
     self.ghostLayer.path = nil;
-    self.ghostStatusLayer.hidden = YES;
     AutoFireClear();
     SilentAimSetEnabled(false);
     ResetWeaponFeatures();
@@ -844,8 +714,6 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     gAimLockTarget      = 0;
     gAimLockedHead      = {};
     gAimSmoothedValid   = false;
-    self.statusLayer.hidden = YES;
-    self.aimDiagnosticLayer.hidden = YES;
     self.boxKnockLayer.path = self.axisZLayer.path = self.fovLayer.path = nil;
     self.hpWarningLayer.path = self.hpCriticalLayer.path = self.hpHighlightLayer.path = nil;
     self.boxLayer.path = self.boneLayer.path = self.snaplineLayer.path = self.axisYLayer.path = self.axisXLayer.path = self.boxBotLayer.path = self.boxPlayerLayer.path = nil;
@@ -1016,7 +884,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         }
 
         if (isLine && distance <= gESPMaxDistance)
-            RenderXYZAxes(buffers, hip, matrix, vw, vh);
+            RenderXYZAxes(buffers, getPositionExt(getHead(pawn)), matrix, vw, vh);
         if ((visible || knocked) && distance <= gESPMaxDistance) {
             const bool bot = get_IsBot(pawn);
             if (bot) ++stats.botCount;

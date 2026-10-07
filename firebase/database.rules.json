@@ -5,8 +5,30 @@
     "licenses": {
       "$keyHash": {
         ".read": true,
-        ".write": "!data.exists() && newData.hasChildren(['enabled', 'expiresAt'])",
-        ".validate": "newData.hasChildren(['enabled', 'expiresAt']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber()"
+        ".write": false
+      }
+    },
+    "licensesV2": {
+      "$keyHash": {
+        ".read": "$keyHash.matches(/^[a-f0-9]{64}$/)",
+        ".write": false,
+        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 2",
+        "binding": {
+          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 2 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && newData.exists()",
+          ".validate": "newData.hasChildren(['deviceHash', 'version', 'claimedAt'])",
+          "deviceHash": {
+            ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{64}$/)"
+          },
+          "version": {
+            ".validate": "newData.isNumber() && newData.val() === 1"
+          },
+          "claimedAt": {
+            ".validate": "newData.isNumber() && newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
       }
     }
   }
