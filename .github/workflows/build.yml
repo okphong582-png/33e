@@ -56,6 +56,8 @@ jobs:
         run: |
           clang++ -std=c++17 -fobjc-arc -Itests/stubs -framework Foundation -framework CoreGraphics tests/injected_window_test.mm -o /tmp/injected-window-test
           /tmp/injected-window-test
+          clang++ -std=c++17 -fobjc-arc -Itests/stubs -framework Foundation -framework CoreGraphics tests/injected_overlay_attachment_test.mm -o /tmp/injected-overlay-attachment-test
+          /tmp/injected-overlay-attachment-test
           clang++ -std=c++17 -fobjc-arc -framework Foundation tests/os_version_test.mm sources/fix_version.mm -o /tmp/os-version-test
           /tmp/os-version-test
       - name: Two loaded dylib copies must share one overlay owner
@@ -104,6 +106,7 @@ jobs:
         run: |
           python3 tests/ipa_replacement_test.py
           python3 tests/ipa_injection_test.py
+          python3 tests/injected_dylib_contract_test.py
           g++ -std=c++17 -Wall -Wextra -Werror tests/license_session_policy_test.cpp -o /tmp/license-session-policy-test
           /tmp/license-session-policy-test
 

@@ -71,12 +71,12 @@ namespace {
     // dummy class/struct that is instantiated but never used
     struct JunkBlob {
         uint8_t         pad[64];
-        volatile uint32_t magic;
-        JunkBlob() : magic(0xDEADBEEF) {
+        uint32_t magic;
+        constexpr JunkBlob() : pad{}, magic(0xDEADBEEF) {
             for (int i = 0; i < 64; ++i) pad[i] = (uint8_t)(magic >> (i % 4));
         }
     };
-    static JunkBlob blob_instance;
+    static constexpr JunkBlob blob_instance{};
 
     // huge useless constexpr lookup table
     constexpr uint8_t junk_sbox[256] = {

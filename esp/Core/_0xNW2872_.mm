@@ -6,8 +6,20 @@
 #include <cerrno>
 #include <cstdlib>
 
-static NSString *const _0xFA = NSSENCRYPT("https://throbbing-shadow-3045.nguyenhoang1vnm.workers.dev"); // SỬA LINK Ở ĐÂY
-static NSString *const _0xFAA = NSSENCRYPT("akhe287Gsn288DMwi@");
+// Decode configuration only when the first offset request needs it, rather
+// than invoking Foundation while dyld is initializing an injected image.
+static NSString *OffsetEndpoint() {
+    static NSString *value;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ value = NSSENCRYPT("https://throbbing-shadow-3045.nguyenhoang1vnm.workers.dev"); });
+    return value;
+}
+static NSString *OffsetClientToken() {
+    static NSString *value;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ value = NSSENCRYPT("akhe287Gsn288DMwi@"); });
+    return value;
+}
 
 @implementation _0xFFFA282
 
@@ -47,7 +59,7 @@ static NSString *const _0xFAA = NSSENCRYPT("akhe287Gsn288DMwi@");
 }
 
 + (void)_0xFFFFFFFF:(NSString *)key _0xFAAAAAAAAA:(void(^)(uintptr_t, NSError *))completion {
-    NSURLComponents *components = [NSURLComponents componentsWithString:_0xFA];
+    NSURLComponents *components = [NSURLComponents componentsWithString:OffsetEndpoint()];
     components.path = @"/Andb38Kdj39ndjKdhaBf";
     components.queryItems = @[[NSURLQueryItem queryItemWithName:@"key" value:key]];
     NSURL *url = components.URL;
@@ -58,7 +70,7 @@ static NSString *const _0xFAA = NSSENCRYPT("akhe287Gsn288DMwi@");
     }
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
     [request setValue:@"iPhone" forHTTPHeaderField:@"User-Agent"];
-    [request setValue:_0xFAA forHTTPHeaderField:@"X-Client-Token"];
+    [request setValue:OffsetClientToken() forHTTPHeaderField:@"X-Client-Token"];
     [request setValue:[NSString stringWithFormat:@"%lld", (long long)(NSDate.date.timeIntervalSince1970 * 1000)]
         forHTTPHeaderField:@"X-Timestamp"];
     [[[self offsetSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {

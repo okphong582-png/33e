@@ -42,6 +42,7 @@ else
 # HUD application, private touch synthesizer (+load), or anti-debug threads.
 $(MIZZE_PRODUCT)_FILES := sources/StealthDylibInit.mm sources/InjectedProtection.mm sources/InjectedLicenseController.mm sources/LicenseSession.mm sources/_0xMO353DA.mm sources/_0xViSecureV28.m $(wildcard esp/drawing_view/*.mm esp/drawing_view/*.cpp esp/Core/*.mm esp/Core/*.cpp) esp/Core/AutoFireRemote.S esp/Core/GhostRemote.S esp/Core/PlayerModesRemote.S
 $(MIZZE_PRODUCT)_CFLAGS += -DMIZZE_INJECTED=1
+$(MIZZE_PRODUCT)_LDFLAGS += -Wl,-dead_strip_dylibs -Wl,-install_name,@rpath/libsubsystem.dylib
 endif
 
 sources/KIF/UITouch-KIFAdditions.m_CFLAGS := $(filter-out -mllvm -enable-fco,$(TESTTIPA_CFLAGS))
@@ -59,7 +60,10 @@ endif
 $(MIZZE_PRODUCT)_CFLAGS += -DOBFUSCATION_BUILD_SEED=0x$(MIZZE_BUILD_SEED)ULL
 $(MIZZE_PRODUCT)_CCFLAGS += -std=c++17
 
-$(MIZZE_PRODUCT)_FRAMEWORKS += CoreGraphics CoreServices QuartzCore IOKit UIKit CoreText Security CFNetwork SystemConfiguration ImageIO
+$(MIZZE_PRODUCT)_FRAMEWORKS += CoreGraphics QuartzCore UIKit Security
+ifeq ($(BUILD_KIND),tipa)
+$(MIZZE_PRODUCT)_FRAMEWORKS += CoreServices IOKit CoreText CFNetwork SystemConfiguration ImageIO
+endif
 
 ifeq ($(BUILD_KIND),tipa)
 $(MIZZE_PRODUCT)_PRIVATE_FRAMEWORKS += BackBoardServices GraphicsServices SpringBoardServices
@@ -91,6 +95,6 @@ stage::
 after-package::
 	@echo "[*] Packaging stealth dylib and deb..."
 	@mkdir -p packages
-	@cp .theos/obj/iOSViet.dylib packages/libsubsystem.dylib 2>/dev/null || cp .theos/obj/debug/iOSViet.dylib packages/libsubsystem.dylib 2>/dev/null || cp $(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries/iOSViet.dylib packages/libsubsystem.dylib 2>/dev/null || cp .theos/obj/iOSViet.dylib packages/iOSViet.dylib 2>/dev/null || true
+	@cp $(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries/iOSViet.dylib packages/libsubsystem.dylib
 	@echo "[*] Success: packages/libsubsystem.dylib"
 endif

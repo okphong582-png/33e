@@ -1,6 +1,7 @@
 #ifdef MIZZE_INJECTED
 #import "InjectedLicenseController.h"
 #import "LicenseSession.h"
+#import "InjectedProtection.h"
 #import "UIView+SecureView.h"
 #import "../esp/drawing_view/esp.h"
 #import "../esp/drawing_view/menu.h"
@@ -133,6 +134,7 @@
 }
 - (void)unlock {
     if (![LicenseSession shared].authorized) return;
+    MizzeStartOwnCodeProtection();
     [[LicenseSession shared] monitor];
     self.loginButton.hidden = YES;
     self.keyPanel.hidden=YES;self.keyField.text=@"";

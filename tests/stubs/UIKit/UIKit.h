@@ -15,7 +15,27 @@ typedef NS_ENUM(NSInteger, UISceneActivationState) {
 };
 
 @class UIWindow;
+typedef NS_OPTIONS(NSUInteger, UIViewAutoresizing) {
+    UIViewAutoresizingFlexibleWidth=1 << 1, UIViewAutoresizingFlexibleHeight=1 << 4
+};
+@interface UIView : NSObject
+@property(nonatomic) CGRect frame;
+@property(nonatomic) CGRect bounds;
+@property(nonatomic) UIViewAutoresizing autoresizingMask;
+@property(nonatomic, weak) UIView *superview;
+@property(nonatomic, weak) UIWindow *window;
+- (void)addSubview:(UIView *)view;
+- (void)removeFromSuperview;
+@end
 @interface UIViewController : NSObject
+@property(nonatomic, strong) UIView *view;
+@property(nonatomic, weak) UIViewController *parentViewController;
+- (void)addChildViewController:(UIViewController *)child;
+- (void)removeFromParentViewController;
+- (void)willMoveToParentViewController:(UIViewController *)parent;
+- (void)didMoveToParentViewController:(UIViewController *)parent;
+- (void)beginAppearanceTransition:(BOOL)appearing animated:(BOOL)animated;
+- (void)endAppearanceTransition;
 @end
 @interface UIScene : NSObject
 @property(nonatomic) UISceneActivationState activationState;
