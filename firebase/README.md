@@ -1,14 +1,19 @@
-# Key V2: mỗi key gắn một thiết bị
+# Key V3: giữ key hiện có, mỗi key gắn một thiết bị
 
-Web `license-key.html` tạo key tại `licensesV2/<SHA-256>`, với `protocol: 2`.
-Bản dylib/TIPA cũ chỉ đọc `licenses`, nên không sử dụng được key mới. Các bản
-sau cần tiếp tục dùng giao thức V2 để giữ tương thích.
+Web `license-key.html` tạo key tại `licensesV3/<SHA-256>`, với `protocol: 3`.
+Rules chặn truy cập công khai tới `licenses` và `licensesV2`, nên app cũ không
+dùng được các nhánh đó. Bản mới tiếp tục dùng cùng mã key sau khi chuyển dữ liệu.
 
 Mở **Cài đặt**, nhập token quản trị hiện có, sau đó **Rules → Áp dụng Rules**.
-Web tải bản sao Rules hiện tại trước khi cập nhật và giữ các nhánh dữ liệu khác.
-Token chỉ lưu trong phiên trình duyệt, không nằm trong HTML hoặc app/dylib.
-Nếu dùng Firebase CLI: `firebase deploy --only database --project appchatai-313e3`.
-Sửa file Rules trên máy không tự cập nhật Firebase đang chạy.
+Đóng app cũ trong lúc chuyển. Web tải bản sao dữ liệu key và Rules, chuyển key
+V1/V2 sang V3, rồi mới áp dụng Rules. Mã key, hash, hạn dùng, ghi chú và binding
+được giữ. Key bị khóa chuyển thành khóa vĩnh viễn; key hết hạn vẫn hết hạn.
+V2 được ưu tiên nếu trùng hash với V1. Dữ liệu gốc không bị xóa. Chạy lại không
+ghi đè key V3 đã có; dữ liệu nguồn lỗi sẽ dừng trước bước áp dụng Rules.
+Cập nhật đè app cùng bundle ID để giữ key đã lưu; bản mới vẫn cần xác thực online.
+Secret được lưu trong localStorage khi bấm Lưu, không nằm trong HTML/app/dylib;
+để trống rồi lưu để xóa. Sửa Rules trên máy không tự cập nhật Firebase đang chạy.
+Không deploy Rules bằng CLI hoặc dán thủ công trước khi chuyển key.
 
 Khi đăng nhập lần đầu, app gửi yêu cầu có điều kiện `if-match: null_etag` để tạo
 `binding`. Firebase chỉ nhận một máy thắng nếu có nhiều máy kích hoạt cùng lúc.
@@ -16,9 +21,15 @@ App đọc lại bản ghi và đối chiếu mã máy trước khi cấp phiên
 ghi đè, xóa khóa máy, tự tạo key, bật key hoặc gia hạn key.
 
 Web hiển thị **Đã gắn 1 máy** và mã máy rút gọn. **Gỡ máy** dành cho quản trị
-viên; đóng app cũ trước khi gỡ rồi đăng nhập trên máy mới. Phiên cũ kiểm tra lại
-mỗi 8 giây và không tự chiếm lại khóa đã gỡ. **Key bản cũ → Chuyển bản mới**
-giữ hạn dùng/ghi chú, tạo bản V2 rồi khóa bản cũ. Không ghi đè key V2 đã tồn tại.
+viên; đóng app cũ trước khi gỡ rồi đăng nhập trên máy mới. Phiên đang chạy kiểm
+tra lại mỗi 8 giây và không tự chiếm lại khóa đã gỡ.
+
+Khi khóa key, nhập lời nhắn và thời gian theo phút/giờ/ngày hoặc vĩnh viễn.
+Client giữ key và binding trong lúc khóa, ẩn menu và hiển thị lời nhắn. Hết thời
+gian khóa sẽ kiểm tra online lại; admin bấm mở sẽ xóa `lock` ngay, giữ nguyên
+hạn dùng và binding. Client theo dõi thay đổi qua SSE rồi đọc HTTPS lại trước khi
+khôi phục quyền; mất mạng không được coi là mở khóa. Có kiểm tra mỗi 8 giây làm
+dự phòng khi SSE ngắt. Xem [Firebase streaming](https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-streaming).
 
 Mã máy là SHA-256 của `identifierForVendor`, lưu thêm trong Keychain với
 `AfterFirstUnlockThisDeviceOnly`, không đồng bộ iCloud. Không dùng tên máy,
