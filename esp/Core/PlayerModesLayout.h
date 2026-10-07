@@ -41,6 +41,34 @@
 #define MODES_SPIN_ID 4864
 #define MODES_SPIN_REAL 4872
 #define MODES_SPIN_SHOWN 4888
+#define MODES_MODEL 4904
+#define MODES_LOCAL_POS 4912
+#define MODES_SET_LOCAL_POS 4920
+#define MODES_CHILD_COUNT 4928
+#define MODES_GET_CHILD 4936
+#define MODES_GET_SPEED 4944
+#define MODES_SET_SPEED 4952
+#define MODES_GET_ENABLED 4960
+#define MODES_SET_ENABLED 4968
+#define MODES_POSES 4976
+#define MODES_STATE_SIZE 0x94000
+#define POSE_CAPACITY 128
+#define POSE_SIZE 9264
+#define POSE_ROOT 0
+#define POSE_ANIMATOR 8
+#define POSE_COUNT 16
+#define POSE_ACTIVE 20
+#define POSE_ID 24
+#define POSE_EPOCH 28
+#define POSE_SPEED 32
+#define POSE_ENABLED 36
+#define POSE_BONES 48
+#define BONE_SIZE 72
+#define BONE_TRANSFORM 0
+#define BONE_ANCHOR_ROT 8
+#define BONE_ANCHOR_POS 24
+#define BONE_REAL_ROT 40
+#define BONE_REAL_POS 56
 #define MODES_CAPACITY 64
 #define MODES_ROW_SIZE 64
 #define ROW_PLAYER 0
@@ -55,7 +83,18 @@
 #include <cstddef>
 #include <cstdint>
 namespace PlayerModesRemote {
-constexpr uint64_t Magic = 0x504c4d4f44453039ULL;
+constexpr uint64_t Magic = 0x504c4d4f4445303aULL;
+struct BonePose {
+    uint64_t transform=0;
+    float anchorRotation[4]={},anchorPosition[3]={};uint32_t pad=0;
+    float realRotation[4]={},realPosition[3]={};uint32_t pad2=0;
+};
+struct Pose {
+    uint64_t root=0,animator=0;
+    uint32_t count=0,active=0,identity=0,epoch=0;
+    float speed=1;uint32_t enabled=1;uint64_t pad=0;
+    BonePose bones[POSE_CAPACITY];
+};
 struct Row {
     uint64_t player=0, match=0, local=0;
     uint32_t epoch=0, mode=0;
@@ -85,6 +124,8 @@ struct State {
     uint64_t spinPlayer=0,spinTransform=0;
     uint32_t spinID=0,spinPad=0;
     float spinReal[4]={},spinShown[4]={};
+    uint64_t model=0,localPos=0,setLocalPos=0,childCount=0,getChild=0;
+    uint64_t getSpeed=0,setSpeed=0,getEnabled=0,setEnabled=0;
 };
 static_assert(offsetof(State, input)==MODES_FLAGS);
 static_assert(offsetof(State, input)+offsetof(Input, players)==MODES_PLAYERS);
@@ -108,5 +149,9 @@ static_assert(sizeof(Row)==MODES_ROW_SIZE);
 static_assert(offsetof(Row, real)==ROW_REAL && offsetof(Row, shown)==ROW_SHOWN);
 static_assert(offsetof(Row, identity)==ROW_ID);
 static_assert(sizeof(State)<MODES_PAGE);
+static_assert(sizeof(State)==MODES_POSES && offsetof(State,model)==MODES_MODEL);
+static_assert(sizeof(Pose)==POSE_SIZE && offsetof(Pose,bones)==POSE_BONES);
+static_assert(sizeof(BonePose)==BONE_SIZE && offsetof(BonePose,realRotation)==BONE_REAL_ROT);
+static_assert(MODES_POSES+MODES_CAPACITY*sizeof(Pose)<MODES_STATE_SIZE);
 }
 #endif

@@ -30,7 +30,12 @@ constexpr Signature signatures[] = {
     {0x56268B4,0x24,0xE7908BBE},
     {0x8D6C788,0x60,0xAE8A72F8},{0x8D6C860,0x78,0xD1FEABDC},
     {0x8D6ECE0,0x64,0xDECACF20},{0x6B49C14,0xF0,0x990FC153},
-    {0x56182FC,0x154,0x8E831156},{0x6B4964C,0x8,0x80D43BE2}
+    {0x56182FC,0x154,0x8E831156},{0x6B4964C,0x8,0x80D43BE2},
+    {0x5639C90,0x154,0x3D4AF30F},
+    {0x8D6C38C,0x64,0xDB814CED},{0x8D6C454,0x74,0x61044F36},
+    {0x8D6E900,0x50,0x178B2DA7},{0x8D6EEB0,0x64,0x54800249},
+    {0x8D58C18,0x50,0x3655F88D},{0x8D58C68,0x64,0x43B62F71},
+    {0x8CDCAF4,0x50,0xD78D78BD},{0x8CDCB44,0x64,0x154D9667}
 };
 struct Session {
     uint64_t slot=0, allocation=0, original=0, originalPost=0;
@@ -135,7 +140,11 @@ bool Adopt(uint64_t slot,uint64_t address){
         state.setPos!=module+0x6B49E10||state.hp!=module+0x56AA7C8||state.vehicle!=module+0x561CA30||
         state.parachute!=module+0x561C7C8||state.waitSync!=module+0x5636F20||
         state.originalPost!=module+0x569C1E4||state.forcePos!=module+0x646B648||
-        state.getRot!=module+0x8D6C788||state.setRot!=module+0x8D6C860||state.isChild!=module+0x8D6ECE0)return false;
+        state.getRot!=module+0x8D6C788||state.setRot!=module+0x8D6C860||state.isChild!=module+0x8D6ECE0||
+        state.model!=module+0x5639C90||state.localPos!=module+0x8D6C38C||state.setLocalPos!=module+0x8D6C454||
+        state.childCount!=module+0x8D6E900||state.getChild!=module+0x8D6EEB0||
+        state.getSpeed!=module+0x8CDCAF4||state.setSpeed!=module+0x8CDCB44||
+        state.getEnabled!=module+0x8D58C18||state.setEnabled!=module+0x8D58C68)return false;
     sessions.push_back({slot,address,state.original,state.originalPost,state.sequence&~1u,true});
     epoch=state.input.epoch+1;
     PlayerModesRemote::Input off{};off.epoch=epoch;
@@ -158,7 +167,7 @@ int Install(uint64_t klass){
     if(!session){
         if(sessions.size()>=16)return 9;
         const uint64_t clock=Clock();if(!clock){snapshot.detail="không tìm được đồng hồ game";return 9;}
-        const auto mapping=SilentAimMapping::Map(task,PlayerModesRemoteStart,PlayerModesRemoteEnd);
+        const auto mapping=SilentAimMapping::Map(task,PlayerModesRemoteStart,PlayerModesRemoteEnd,MODES_STATE_SIZE);
         if(!mapping.address){snapshot.detail=mapping.operation;return 10;}
         PlayerModesRemote::State state{};
         state.original=current;state.clock=clock;state.currentMatch=module+0x591B898;
@@ -167,7 +176,11 @@ int Install(uint64_t klass){
         state.originalPost=post;
         state.forcePos=module+0x646B648;
         state.getRot=module+0x8D6C788;state.setRot=module+0x8D6C860;state.isChild=module+0x8D6ECE0;
-        if(!Write(mapping.address+MODES_PAGE,state)){snapshot.detail="không ghi được trạng thái";mach_vm_deallocate(task,mapping.address,2*MODES_PAGE);return 10;}
+        state.model=module+0x5639C90;state.localPos=module+0x8D6C38C;state.setLocalPos=module+0x8D6C454;
+        state.childCount=module+0x8D6E900;state.getChild=module+0x8D6EEB0;
+        state.getSpeed=module+0x8CDCAF4;state.setSpeed=module+0x8CDCB44;
+        state.getEnabled=module+0x8D58C18;state.setEnabled=module+0x8D58C68;
+        if(!Write(mapping.address+MODES_PAGE,state)){snapshot.detail="không ghi được trạng thái";mach_vm_deallocate(task,mapping.address,MODES_PAGE+MODES_STATE_SIZE);return 10;}
         sessions.push_back({slot,mapping.address,current,post,0,false});session=&sessions.back();
     }
     // All phases share restore/anchor rows; each entry calls its own original.

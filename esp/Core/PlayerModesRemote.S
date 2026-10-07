@@ -8,7 +8,7 @@
 .globl _PlayerModesRemoteStart
 .globl _PlayerModesRemoteEnd
 // Wrap virtual OnUpdate(self, dt, time, MethodInfo). Incoming interpolation,
-// health, weapon and animation logic still run; no outgoing packets are hooked.
+    // health and weapon logic still run; held skeletons only affect presentation.
 _PlayerModesRemoteStart:
     mov w16, #0
     b .Lentry
@@ -44,7 +44,7 @@ _PlayerModesRemoteStart:
     ldr w9, [x19, #MODES_SPIN_ID]
     cmp w8, w9
     b.ne .LspinRestored
-    ldr x8, [x20, #0x6c8] // Cached skeleton root TransformNode.
+    ldr x8, [x20, #0x6d0] // Player.get_BoneRootTransform: visual rig, not Root.
     cbz x8, .LspinRestored
     ldr x27, [x8, #0x10]
     ldr x9, [x19, #MODES_SPIN_TRANSFORM]
@@ -97,6 +97,7 @@ _PlayerModesRemoteStart:
     b .Loriginal
 .LfoundRow:
     mov x22, x8
+    bl .LposeBefore
     ldr w8, [x20, #0x60] // Entity.UniqueID distinguishes recycled instances.
     ldr w9, [x22, #ROW_ID]
     cmp w8, w9
@@ -433,6 +434,7 @@ _PlayerModesRemoteStart:
     str xzr, [x22, #ROW_PLAYER]
     str wzr, [x22, #ROW_MODE]
 .Lunlock:
+    bl .LposeAfter
     // Presentation only: apply after PostUpdate, to a child model transform.
     // Entity/physics root, camera, aim quaternions and packet fields are untouched.
     cbz w23, .LspinDone
@@ -468,9 +470,11 @@ _PlayerModesRemoteStart:
     blr x8
     cmp w0, #0
     b.le .LspinDone
-    ldr x8, [x20, #0x6c8]
-    cbz x8, .LspinDone
-    ldr x27, [x8, #0x10]
+    mov x0, x20
+    mov x1, #0
+    ldr x8, [x19, #MODES_MODEL]
+    blr x8 // Initialize the verified cached BoneRoot when needed.
+    mov x27, x0
     cbz x27, .LspinDone
     ldr x8, [x27, #0x10]
     cbz x8, .LspinDone
@@ -572,6 +576,7 @@ _PlayerModesRemoteStart:
     ldp x19, x20, [sp, #16]
     ldp x29, x30, [sp], #144
     ret
+#include "PlayerVisualPose.S.inc"
 .org MODES_PAGE, 0
 _PlayerModesRemoteEnd:
 .LmodesState:

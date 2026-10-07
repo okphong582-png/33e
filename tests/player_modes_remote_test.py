@@ -40,11 +40,12 @@ def read_code(path):
 CODE = read_code(sys.argv[1])
 HEADER = (pathlib.Path(__file__).parent.parent / 'esp/Core/PlayerModesLayout.h').read_text()
 OFF = {name: int(value, 0) for name, value in re.findall(r'^#define ((?:MODES|ROW)_\w+) (0x[\da-fA-F]+|\d+)$', HEADER, re.M)}
-BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x120000, 0x130000, 0x600000
+BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x1a0000, 0x1b0000, 0x600000
 LOCAL, ENEMY, OTHER, MATCH = 0x200000, 0x210000, 0x220000, 0x400000
-FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS', 'GET_ROT', 'SET_ROT', 'IS_CHILD']
+FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS', 'GET_ROT', 'SET_ROT', 'IS_CHILD', 'MODEL', 'LOCAL_POS', 'SET_LOCAL_POS', 'CHILD_COUNT', 'GET_CHILD', 'GET_SPEED', 'SET_SPEED', 'GET_ENABLED', 'SET_ENABLED']
 CCT,CCT_CLASS=0x430000,0x431000
 MODEL,NODE,ROOT=0x433000,0x434000,0x435000
+E_MODEL,E_ROOT,E_NODE,ANIMATOR,ANIM_SYSTEM=0x438000,0x439000,0x43a000,0x43b000,0x43c000
 
 
 def f32(value):
@@ -54,8 +55,8 @@ def f32(value):
 class Simulation:
     def __init__(self, flags=3, height=3.0, physical=True):
         self.uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
-        self.uc.mem_map(BASE, 0x40000)
-        self.uc.mem_map(LOCAL, 0x240000)
+        self.uc.mem_map(BASE, 0xc0000)
+        self.uc.mem_map(LOCAL, 0x280000)
         self.uc.mem_map(STACK, 0x10000)
         self.uc.mem_write(BASE, CODE)
         self.functions = {name: NATIVE+i*0x100 for i, name in enumerate(FUNCTIONS)}
@@ -80,15 +81,31 @@ class Simulation:
         self.q('FLY_CCT',CCT);self.q('FLY_CLASS',CCT_CLASS)
         self.w('FLY_KIND',1 if physical else 2)
         self.uc.mem_write(LOCAL+0x260,bytes([int(physical)]))
-        self.ptr(LOCAL+0x6c8,NODE);self.ptr(NODE+0x10,MODEL)
+        # Root can equal the physical entity, while BoneRoot is a separate child.
+        self.ptr(LOCAL+0x6c8,ROOT);self.ptr(LOCAL+0x6d0,NODE);self.ptr(NODE+0x10,MODEL)
         self.ptr(LOCAL+0x58,ROOT);self.ptr(MODEL+0x10,0x436000);self.ptr(ROOT+0x10,0x437000)
         self.rotation=(0.0,0.0,0.0,1.0);self.rotation_writes=[];self.native_rotations=[];self.child=True
+        self.pose_enabled=False;self.bone_child=True;self.children={};self.bone_rotations={};self.bone_positions={}
+        self.bone_writes=[];self.animator_speed=.75;self.animator_enabled=True;self.animator_writes=[];self.native_bones=[]
         self.uc.mem_write(STATE+OFF['MODES_SPIN_SIN'],struct.pack('<ff',math.sqrt(.5),math.sqrt(.5)))
         self.ptr(LOCAL+0x4d8,CCT);self.ptr(CCT+0x10,0x432000)
         self.uc.hook_add(UC_HOOK_CODE, self.hook)
 
     def ptr(self, address, value):
         self.uc.mem_write(address, struct.pack('<Q', value))
+
+    def enable_pose(self, count=8):
+        self.pose_enabled=True
+        self.ptr(ENEMY+0x6d0,E_NODE);self.ptr(E_NODE+0x10,E_MODEL)
+        self.ptr(ENEMY+0x58,E_ROOT);self.ptr(ENEMY+0x760,ANIM_SYSTEM);self.ptr(ANIM_SYSTEM+0x28,ANIMATOR)
+        for obj in [E_MODEL,E_ROOT,ANIMATOR]:self.ptr(obj+0x10,0x123000)
+        bones=[E_MODEL]+[0x440000+i*0x100 for i in range(count-1)]
+        for i,bone in enumerate(bones):
+            self.ptr(bone+0x10,0x123000)
+            self.children[bone]=bones[i+1:i+2]
+            self.bone_rotations[bone]=(0,0,0,1)
+            self.bone_positions[bone]=(0,f32(i*.1),0)
+        return bones
 
     def q(self, name, value=None):
         address = STATE+OFF['MODES_'+name]
@@ -112,6 +129,12 @@ class Simulation:
             assert uc.reg_read(UC_ARM64_REG_D0) == 0x3d800000 and uc.reg_read(UC_ARM64_REG_D1) == 0x41200000
             self.original_seen.append(self.positions[player])
             if player==LOCAL:self.native_rotations.append(self.rotation)
+            if player==ENEMY and self.pose_enabled:
+                self.native_bones.append((dict(self.bone_rotations),dict(self.bone_positions),self.animator_speed,self.animator_enabled))
+                for i,bone in enumerate(self.bone_rotations):
+                    angle=(len(self.native_bones)+i)*.07
+                    self.bone_rotations[bone]=(f32(math.sin(angle)),0,0,f32(math.cos(angle)))
+                    self.bone_positions[bone]=(f32(angle),f32(i*.1),0)
             # Local motion uses the normal transform. Remote interpolation uses
             # the continually advancing incoming state, independent of visuals.
             source = self.positions[player] if player == LOCAL else self.authoritative[player]
@@ -134,17 +157,49 @@ class Simulation:
             assert all(math.isfinite(v) for v in value)
             self.cct_position=value;self.force_writes.append(value)
         elif name == 'IS_CHILD':
-            assert player==MODEL and uc.reg_read(UC_ARM64_REG_X1)==ROOT
-            uc.reg_write(UC_ARM64_REG_X0,int(self.child))
+            parent=uc.reg_read(UC_ARM64_REG_X1)
+            assert (player==MODEL and parent==ROOT) or (player==E_MODEL and parent==E_ROOT) or (player in self.bone_rotations and parent==E_MODEL)
+            uc.reg_write(UC_ARM64_REG_X0,int(self.child if player==MODEL else self.bone_child))
+        elif name=='MODEL':
+            assert uc.reg_read(UC_ARM64_REG_X1)==0
+            node=struct.unpack('<Q',uc.mem_read(player+0x6d0,8))[0]
+            transform=struct.unpack('<Q',uc.mem_read(node+0x10,8))[0] if node else 0
+            uc.reg_write(UC_ARM64_REG_X0,transform)
+        elif name in ('GET_SPEED','SET_SPEED','GET_ENABLED','SET_ENABLED'):
+            assert player==ANIMATOR
+            if name=='GET_SPEED':uc.reg_write(UC_ARM64_REG_S0,struct.unpack('<I',struct.pack('<f',self.animator_speed))[0])
+            elif name=='GET_ENABLED':uc.reg_write(UC_ARM64_REG_X0,int(self.animator_enabled))
+            elif name=='SET_SPEED':
+                self.animator_speed=struct.unpack('<f',struct.pack('<I',uc.reg_read(UC_ARM64_REG_S0)))[0]
+                self.animator_writes.append(('speed',self.animator_speed))
+            else:
+                assert uc.reg_read(UC_ARM64_REG_X2)==0
+                self.animator_enabled=bool(uc.reg_read(UC_ARM64_REG_X1));self.animator_writes.append(('enabled',self.animator_enabled))
+        elif name in ('CHILD_COUNT','GET_CHILD'):
+            assert player in self.children
+            if name=='CHILD_COUNT':uc.reg_write(UC_ARM64_REG_X0,len(self.children[player]))
+            else:
+                assert uc.reg_read(UC_ARM64_REG_X2)==0
+                uc.reg_write(UC_ARM64_REG_X0,self.children[player][uc.reg_read(UC_ARM64_REG_X1)])
+        elif name in ('LOCAL_POS','SET_LOCAL_POS'):
+            assert player in self.bone_positions and uc.reg_read(UC_ARM64_REG_X1)==0
+            regs=(UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2)
+            if name=='LOCAL_POS':
+                for reg,value in zip(regs,self.bone_positions[player]):uc.reg_write(reg,struct.unpack('<I',struct.pack('<f',value))[0])
+            else:
+                self.bone_positions[player]=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(reg)))[0] for reg in regs)
+                self.bone_writes.append((player,'position'))
         elif name in ('GET_ROT','SET_ROT'):
-            assert player==MODEL and uc.reg_read(UC_ARM64_REG_X1)==0
+            assert (player==MODEL or player in self.bone_rotations) and uc.reg_read(UC_ARM64_REG_X1)==0
             if name=='GET_ROT':
-                for reg,value in zip((UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2,UC_ARM64_REG_S3),self.rotation):
+                rotation=self.rotation if player==MODEL else self.bone_rotations[player]
+                for reg,value in zip((UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2,UC_ARM64_REG_S3),rotation):
                     uc.reg_write(reg,struct.unpack('<I',struct.pack('<f',value))[0])
             else:
-                self.rotation=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(reg)))[0]
+                rotation=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(reg)))[0]
                     for reg in (UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2,UC_ARM64_REG_S3))
-                self.rotation_writes.append(self.rotation)
+                if player==MODEL:self.rotation=rotation;self.rotation_writes.append(rotation)
+                else:self.bone_rotations[player]=rotation;self.bone_writes.append((player,'rotation'))
         else:
             assert player == self.player and uc.reg_read(UC_ARM64_REG_X1) == 0, name
             if name == 'HP': uc.reg_write(UC_ARM64_REG_X0, self.health.get(player, 100) & 0xffffffff)
@@ -160,7 +215,7 @@ class Simulation:
                 self.writes.append((player, value))
                 self.positions[player] = value
                 if player==LOCAL and self.w('FLY_KIND')==2:self.cct_position=value
-        if name not in ('GET_POS', 'SET_POS', 'GET_ROT'):
+        if name not in ('GET_POS', 'SET_POS', 'GET_ROT','LOCAL_POS','GET_SPEED'):
             uc.reg_write(UC_ARM64_REG_D0, 0); uc.reg_write(UC_ARM64_REG_D1, 0)
         for reg in (UC_ARM64_REG_X8, UC_ARM64_REG_X9, UC_ARM64_REG_X10, UC_ARM64_REG_X11, UC_ARM64_REG_X12, UC_ARM64_REG_X13):
             uc.reg_write(reg, 0xdeadbeef)
@@ -491,3 +546,41 @@ for flags in [5,6,7]:
     assert s.rotation_writes
     if flags&1:s.run(ENEMY,post=True);assert s.writes
 print('Visual spin ARM64: child-only render phase, native restoration, independent modes and guards passed')
+
+# Complete held pose, not just the player position: head, arms, fingers and legs.
+s=Simulation(flags=1);bones=s.enable_pose();s.run(ENEMY,post=True)
+anchor_rot=dict(s.bone_rotations);anchor_pos=dict(s.bone_positions)
+assert s.animator_speed==0 and not s.animator_enabled
+for i in range(8):
+    s.run(ENEMY);s.run(ENEMY,post=True)
+    assert s.bone_rotations==anchor_rot and s.bone_positions==anchor_pos
+    assert s.animator_speed==0 and not s.animator_enabled
+assert all(speed==.75 and enabled for _,_,speed,enabled in s.native_bones)
+# Normal pose processing keeps progressing behind the visual freeze.
+assert s.native_bones[-1][0]!=s.native_bones[1][0]
+s.w('FLAGS',0);s.run(ENEMY)
+assert s.animator_speed==.75 and s.animator_enabled
+assert s.bone_rotations!=anchor_rot and s.bone_positions!=anchor_pos
+s=Simulation(flags=1);s.enable_pose();s.animator_speed=.25;s.animator_enabled=False
+s.run(ENEMY);s.w('FLAGS',0);s.run(ENEMY)
+assert s.animator_speed==.25 and not s.animator_enabled # Preserve native disabled state.
+s=Simulation(flags=1);s.enable_pose();s.run(ENEMY);anchor=dict(s.bone_rotations)
+s.w('EPOCH',2);s.run(ENEMY);assert s.bone_rotations!=anchor # New scope recaptures.
+for reason in ['cycle','overflow','missing','reparent','race','nan']:
+    s=Simulation(flags=1);bones=s.enable_pose(129 if reason=='overflow' else 8)
+    if reason=='cycle':s.children[bones[-1]]=[E_MODEL]
+    elif reason=='missing':s.ptr(bones[-1]+0x10,0)
+    elif reason=='reparent':s.bone_child=False
+    else:
+        def pose_failure(name,sim):
+            if name=='LOCAL_POS' and reason=='race':sim.w('SEQUENCE',4)
+            if name=='GET_ROT' and reason=='nan':sim.bone_rotations[bones[-1]]=(float('nan'),0,0,1)
+        s.action=pose_failure
+    s.run(ENEMY,post=True)
+    assert not s.animator_writes and not s.bone_writes,reason
+s=Simulation(flags=1);s.enable_pose(128);s.run(ENEMY,post=True)
+assert len(s.bone_writes)==256 and s.animator_speed==0 # Entire bounded hierarchy.
+s=Simulation(flags=1);s.enable_pose();s.run(ENEMY);before=len(s.animator_writes)
+s.uc.mem_write(ENEMY+0x60,struct.pack('<I',99));s.w('FLAGS',0);s.run(ENEMY)
+assert len(s.animator_writes)==before # No restore into a recycled entity.
+print('Frozen pose ARM64: all descendant positions/rotations, Animator pause/release, epochs and bounds passed')

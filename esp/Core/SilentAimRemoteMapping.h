@@ -41,10 +41,12 @@ inline kern_return_t Protection(vm_map_t task, mach_vm_address_t address,
 // Share the existing executable file-backed page, retaining its backing object.
 // Never write instructions into anonymous memory or request unsigned execution.
 // The following anonymous page is private RW state; ADR uses this exact offset.
-inline Result Map(vm_map_t target, const void *start, const void *end) {
+inline Result Map(vm_map_t target, const void *start, const void *end,
+                  mach_vm_size_t stateSize = SILENT_REMOTE_PAGE) {
     const auto source = reinterpret_cast<mach_vm_address_t>(start);
     const auto sourceEnd = reinterpret_cast<mach_vm_address_t>(end);
-    if (!source || source % SILENT_REMOTE_PAGE || sourceEnd < source ||
+    if (!stateSize || stateSize % SILENT_REMOTE_PAGE || stateSize > 1024 * 1024 ||
+        !source || source % SILENT_REMOTE_PAGE || sourceEnd < source ||
         sourceEnd - source != SILENT_REMOTE_PAGE)
         return {0, "trang mã sai kích thước/căn lề", KERN_INVALID_ARGUMENT};
     constexpr auto rx = VM_PROT_READ | VM_PROT_EXECUTE;
@@ -56,7 +58,7 @@ inline Result Map(vm_map_t target, const void *start, const void *end) {
         return {0, "trang mã nguồn không phải RX", KERN_PROTECTION_FAILURE};
 
     mach_vm_address_t region = 0;
-    constexpr mach_vm_size_t size = 2 * SILENT_REMOTE_PAGE;
+    const mach_vm_size_t size = SILENT_REMOTE_PAGE + stateSize;
     error = mach_vm_map(target, &region, size, SILENT_REMOTE_PAGE - 1,
         VM_FLAGS_ANYWHERE, MACH_PORT_NULL, 0, false, rw, rw, VM_INHERIT_NONE);
     if (error != KERN_SUCCESS) return {0, "cấp vùng trạng thái", error};
