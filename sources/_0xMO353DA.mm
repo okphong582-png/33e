@@ -97,7 +97,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     MizzePrepareMenuPrefs();
-    __weak typeof(self) weakSelf=self;
+    __weak _0xDEADBEEE *weakSelf=self;
     self.spinStatusTimer=[NSTimer scheduledTimerWithTimeInterval:.5 repeats:YES block:^(NSTimer *timer){
         _0xDEADBEEE *owner=weakSelf;
         if(owner.isViewLoaded&&owner.view.window&&!owner.view.hidden&&owner.spinStatusLabel)
