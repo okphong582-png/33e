@@ -20,8 +20,9 @@ def verify_package(path):
         subprocess.run(['dpkg-deb', '--extract', str(path), directory], check=True)
         root = Path(directory)
         for file in root.rglob('*'):
-            if file.is_file() and not file.relative_to(root).as_posix().startswith('var/jb/'):
-                raise ValueError(f'Unprefixed rootless payload: {file.relative_to(root)}')
+            relative = file.relative_to(root).as_posix()
+            if file.is_file() and (not relative.startswith('var/jb/') or relative.startswith('var/jb/var/jb/')):
+                raise ValueError(f'Incorrect rootless payload prefix: {relative}')
         tweak = root / 'var/jb/Library/MobileSubstrate/DynamicLibraries/iOSViet'
         verify(tweak.with_suffix('.dylib'))
         config = plistlib.loads(tweak.with_suffix('.plist').read_bytes())

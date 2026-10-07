@@ -90,8 +90,9 @@ else
 include $(THEOS_MAKE_PATH)/tweak.mk
 
 stage::
-	@mkdir -p "$(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/Application Support/iOSViet/"
-	@cp -r layout/Resources/* "$(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/Application Support/iOSViet/"
+# Theos prepends /var/jb to the entire payload during internal-package.
+	@mkdir -p "$(THEOS_STAGING_DIR)/Library/Application Support/iOSViet/"
+	@cp -r layout/Resources/* "$(THEOS_STAGING_DIR)/Library/Application Support/iOSViet/"
 
 after-package::
 	@echo "[*] Packaging stealth dylib and deb..."
