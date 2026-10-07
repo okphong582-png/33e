@@ -35,7 +35,8 @@ constexpr Signature signatures[] = {
     {0x8D6C38C,0x64,0xDB814CED},{0x8D6C454,0x74,0x61044F36},
     {0x8D6E900,0x50,0x178B2DA7},{0x8D6EEB0,0x64,0x54800249},
     {0x8D58C18,0x50,0x3655F88D},{0x8D58C68,0x64,0x43B62F71},
-    {0x8CDCAF4,0x50,0xD78D78BD},{0x8CDCB44,0x64,0x154D9667}
+    {0x8CDCAF4,0x50,0xD78D78BD},{0x8CDCB44,0x64,0x154D9667},
+    {0x8D6C5B4,0x60,0x6881CEE5},{0x8D6C68C,0x74,0x54F82A6C}
 };
 // Metadata: MatchGame.OnLateUpdate and its supplied game-mode overrides all
 // occupy BaseGame slot 18, ABI (self, MethodInfo), after the native late chain.
@@ -155,7 +156,8 @@ bool Adopt(uint64_t slot,uint64_t address){
         state.model!=module+0x5639C90||state.localPos!=module+0x8D6C38C||state.setLocalPos!=module+0x8D6C454||
         state.childCount!=module+0x8D6E900||state.getChild!=module+0x8D6EEB0||
         state.getSpeed!=module+0x8CDCAF4||state.setSpeed!=module+0x8CDCB44||
-        state.getEnabled!=module+0x8D58C18||state.setEnabled!=module+0x8D58C68)return false;
+        state.getEnabled!=module+0x8D58C18||state.setEnabled!=module+0x8D58C68||
+        state.worldRot!=module+0x8D6C5B4||state.setWorldRot!=module+0x8D6C68C)return false;
     sessions.push_back({slot,address,state.original,state.originalPost,state.sequence&~1u,true});
     epoch=state.input.epoch+1;
     PlayerModesRemote::Input off{};off.epoch=epoch;
@@ -191,6 +193,7 @@ int Install(uint64_t klass){
         state.childCount=module+0x8D6E900;state.getChild=module+0x8D6EEB0;
         state.getSpeed=module+0x8CDCAF4;state.setSpeed=module+0x8CDCB44;
         state.getEnabled=module+0x8D58C18;state.setEnabled=module+0x8D58C68;
+        state.worldRot=module+0x8D6C5B4;state.setWorldRot=module+0x8D6C68C;
         if(!Write(mapping.address+MODES_PAGE,state)){snapshot.detail="không ghi được trạng thái";mach_vm_deallocate(task,mapping.address,MODES_PAGE+MODES_STATE_SIZE);return 10;}
         sessions.push_back({slot,mapping.address,current,post,0,false});session=&sessions.back();
     }

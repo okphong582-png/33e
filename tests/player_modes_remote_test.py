@@ -42,7 +42,7 @@ HEADER = (pathlib.Path(__file__).parent.parent / 'esp/Core/PlayerModesLayout.h')
 OFF = {name: int(value, 0) for name, value in re.findall(r'^#define ((?:MODES|ROW)_\w+) (0x[\da-fA-F]+|\d+)$', HEADER, re.M)}
 BASE, STATE, NATIVE, RETURN, STACK = 0x100000, 0x104000, 0x1a0000, 0x1b0000, 0x600000
 LOCAL, ENEMY, OTHER, MATCH = 0x200000, 0x210000, 0x220000, 0x400000
-FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS', 'GET_ROT', 'SET_ROT', 'IS_CHILD', 'MODEL', 'LOCAL_POS', 'SET_LOCAL_POS', 'CHILD_COUNT', 'GET_CHILD', 'GET_SPEED', 'SET_SPEED', 'GET_ENABLED', 'SET_ENABLED', 'LATE_ORIGINAL']
+FUNCTIONS = ['ORIGINAL', 'POST_ORIGINAL', 'CLOCK', 'CURRENT_MATCH', 'GET_POS', 'SET_POS', 'HP', 'VEHICLE', 'PARACHUTE', 'WAIT_SYNC', 'FORCE_POS', 'GET_ROT', 'SET_ROT', 'IS_CHILD', 'MODEL', 'LOCAL_POS', 'SET_LOCAL_POS', 'CHILD_COUNT', 'GET_CHILD', 'GET_SPEED', 'SET_SPEED', 'GET_ENABLED', 'SET_ENABLED', 'LATE_ORIGINAL', 'WORLD_ROT', 'SET_WORLD_ROT']
 GAME=0x470000
 LATE_BASE=0x480000
 CCT,CCT_CLASS=0x430000,0x431000
@@ -52,6 +52,10 @@ E_MODEL,E_ROOT,E_NODE,ANIMATOR,ANIM_SYSTEM=0x438000,0x439000,0x43a000,0x43b000,0
 
 def f32(value):
     return struct.unpack('<f', struct.pack('<f', value))[0]
+
+def multiply(a,b):
+    x,y,z,w=a;X,Y,Z,W=b
+    return tuple(f32(v) for v in (w*X+x*W+y*Z-z*Y,w*Y-x*Z+y*W+z*X,w*Z+x*Y-y*X+z*W,w*W-x*X-y*Y-z*Z))
 
 
 class Simulation:
@@ -92,6 +96,7 @@ class Simulation:
         self.ptr(LOCAL+0x6c8,ROOT);self.ptr(LOCAL+0x6d0,NODE);self.ptr(NODE+0x10,MODEL)
         self.ptr(LOCAL+0x58,ROOT);self.ptr(MODEL+0x10,0x436000);self.ptr(ROOT+0x10,0x437000)
         self.rotation=(0.0,0.0,0.0,1.0);self.rotation_writes=[];self.native_rotations=[];self.child=True
+        self.parent_rotation=(0,0,0,1)
         self.pose_enabled=False;self.bone_child=True;self.children={};self.bone_rotations={};self.bone_positions={}
         self.bone_writes=[];self.animator_speed=.75;self.animator_enabled=True;self.animator_writes=[];self.native_bones=[]
         self.uc.mem_write(STATE+OFF['MODES_SPIN_SIN'],struct.pack('<ff',math.sqrt(.5),math.sqrt(.5)))
@@ -201,6 +206,16 @@ class Simulation:
             else:
                 self.bone_positions[player]=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(reg)))[0] for reg in regs)
                 self.bone_writes.append((player,'position'))
+        elif name in ('WORLD_ROT','SET_WORLD_ROT'):
+            assert player==MODEL and uc.reg_read(UC_ARM64_REG_X1)==0
+            regs=(UC_ARM64_REG_S0,UC_ARM64_REG_S1,UC_ARM64_REG_S2,UC_ARM64_REG_S3)
+            if name=='WORLD_ROT':
+                rotation=multiply(self.parent_rotation,self.rotation)
+                for reg,value in zip(regs,rotation):uc.reg_write(reg,struct.unpack('<I',struct.pack('<f',value))[0])
+            else:
+                world=tuple(struct.unpack('<f',struct.pack('<I',uc.reg_read(reg)))[0] for reg in regs)
+                inverse=tuple(-v for v in self.parent_rotation[:3])+(self.parent_rotation[3],)
+                self.rotation=multiply(inverse,world);self.rotation_writes.append(self.rotation)
         elif name in ('GET_ROT','SET_ROT'):
             assert (player==MODEL or player in self.bone_rotations) and uc.reg_read(UC_ARM64_REG_X1)==0
             if name=='GET_ROT':
@@ -227,7 +242,7 @@ class Simulation:
                 self.writes.append((player, value))
                 self.positions[player] = value
                 if player==LOCAL and self.w('FLY_KIND')==2:self.cct_position=value
-        if name not in ('GET_POS', 'SET_POS', 'GET_ROT','LOCAL_POS','GET_SPEED'):
+        if name not in ('GET_POS', 'SET_POS', 'GET_ROT','WORLD_ROT','LOCAL_POS','GET_SPEED'):
             uc.reg_write(UC_ARM64_REG_D0, 0); uc.reg_write(UC_ARM64_REG_D1, 0)
         for reg in (UC_ARM64_REG_X8, UC_ARM64_REG_X9, UC_ARM64_REG_X10, UC_ARM64_REG_X11, UC_ARM64_REG_X12, UC_ARM64_REG_X13):
             uc.reg_write(reg, 0xdeadbeef)
@@ -531,7 +546,7 @@ s.w('FLAGS',0);s.run(LOCAL)
 assert s.rotation==(0,0,0,1) and not s.q('SPIN_PLAYER')
 s=Simulation(flags=4);s.rotation=(math.sqrt(.5),0,0,math.sqrt(.5))
 s.run(LOCAL,late=True)
-assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(.5,.5,.5,.5)))
+assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(.5,.5,-.5,.5)))
 # Unity may normalize or negate the same quaternion representation.
 s.rotation=tuple(-v for v in s.rotation);s.w('FLAGS',0);s.run(LOCAL)
 assert all(abs(a-b)<1e-6 for a,b in zip(s.rotation,(math.sqrt(.5),0,0,math.sqrt(.5))))
@@ -568,6 +583,28 @@ for flags in [5,6,7]:
     assert s.rotation_writes
     if flags&1:s.run(ENEMY,post=True);assert s.writes
 print('Visual spin ARM64: child-only render phase, native restoration, independent modes and guards passed')
+
+# Imported skeletons have tilted local axes. World-up yaw must leave the standing
+# body's up vector unchanged, at every phase, regardless of parent orientation.
+for parent in [(math.sqrt(.5),0,0,math.sqrt(.5)),(0,0,math.sqrt(.5),math.sqrt(.5)),(.5,.5,.5,.5)]:
+    for angle in [0,math.pi/4,math.pi/2,math.pi,3*math.pi/2,2*math.pi]:
+        s=Simulation(flags=4);s.parent_rotation=parent
+        base=tuple(-v for v in parent[:3])+(parent[3],)
+        s.rotation=base
+        yaw=(0,math.sin(angle/2),0,math.cos(angle/2))
+        s.uc.mem_write(STATE+OFF['MODES_SPIN_SIN'],struct.pack('<ff',yaw[1],yaw[3]))
+        s.run(LOCAL,late=True)
+        shown=multiply(parent,s.rotation)
+        assert abs(sum(a*b for a,b in zip(shown,yaw)))>0.99999
+        # Rotation matrix's up column remains world-up: no pitch or roll.
+        x,y,z,w=shown
+        up=(2*(x*y-z*w),1-2*(x*x+z*z),2*(y*z+x*w))
+        assert all(abs(a-b)<1e-5 for a,b in zip(up,(0,1,0)))
+        # Changing parent yaw after the displayed pose cannot rewind that parent.
+        s.parent_rotation=multiply((0,.5,0,math.sqrt(.75)),parent)
+        s.w('FLAGS',0);s.run(LOCAL)
+        assert abs(sum(a*b for a,b in zip(s.rotation,base)))>0.99999
+print('Horizontal spin: world-up yaw, tilted import axes, full turns and local restoration passed')
 
 # Complete held pose, not just the player position: head, arms, fingers and legs.
 s=Simulation(flags=1);bones=s.enable_pose();s.run(ENEMY,post=True)

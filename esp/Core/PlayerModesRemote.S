@@ -541,6 +541,25 @@ _PlayerModesRemoteStart:
     fmov s5, #1.5
     fcmp s4, s5
     b.gt .LspinDone
+    add x16, x19, #1, lsl #12
+    add x16, x16, #(MODES_SPIN_REAL-4096)
+    stp s0, s1, [x16] // Restore local pose even if the parent moves next frame.
+    stp s2, s3, [x16, #8]
+    mov x0, x27
+    mov x1, #0
+    ldr x8, [x19, #MODES_WORLD_ROT]
+    blr x8
+    fmul s4, s0, s0
+    fmadd s4, s1, s1, s4
+    fmadd s4, s2, s2, s4
+    fmadd s4, s3, s3, s4
+    fmov s5, #0.5
+    fcmp s4, s5
+    b.lt .LspinDone
+    b.vs .LspinDone
+    fmov s5, #1.5
+    fcmp s4, s5
+    b.gt .LspinDone
     add x8, x19, #MODES_SEQUENCE
     ldar w9, [x8]
     cmp w9, w24
@@ -556,35 +575,39 @@ _PlayerModesRemoteStart:
     fmov s7, #1.5
     fcmp s6, s7
     b.gt .LspinDone
-    add x16, x19, #1, lsl #12
-    add x16, x16, #(MODES_SPIN_REAL-4096)
-    stp s0, s1, [x16]
-    stp s2, s3, [x16, #8]
-    // base * local-Y yaw, preserving the native tilt/animation.
+    // world-Y yaw * world base. Imported rigs can have a tilted local Y;
+    // spinning that local axis makes the body roll instead of turn horizontally.
+    str s1, [sp, #112]
     fmul s6, s0, s5
-    fmsub s7, s2, s4, s6
+    fmadd s7, s2, s4, s6
     fmul s6, s1, s5
     fmadd s1, s3, s4, s6
     fmul s6, s2, s5
-    fmadd s2, s0, s4, s6
+    fmsub s2, s0, s4, s6
     fmul s6, s3, s5
-    ldr s0, [x19, #(MODES_SPIN_REAL+4)]
+    ldr s0, [sp, #112]
     fmsub s3, s0, s4, s6
     fmov s0, s7
-    stp s0, s1, [x16, #16]
-    stp s2, s3, [x16, #24]
     add x8, x19, #MODES_SEQUENCE
     ldar w9, [x8]
     cmp w9, w24
     b.ne .LspinDone
+    mov x0, x27
+    mov x1, #0
+    ldr x8, [x19, #MODES_SET_WORLD_ROT]
+    blr x8
+    mov x0, x27
+    mov x1, #0
+    ldr x8, [x19, #MODES_GET_ROT]
+    blr x8
+    add x16, x19, #1, lsl #12
+    add x16, x16, #(MODES_SPIN_SHOWN-4096)
+    stp s0, s1, [x16]
+    stp s2, s3, [x16, #8]
     str x20, [x19, #MODES_SPIN_PLAYER]
     str x27, [x19, #MODES_SPIN_TRANSFORM]
     ldr w8, [x20, #0x60]
     str w8, [x19, #MODES_SPIN_ID]
-    mov x0, x27
-    mov x1, #0
-    ldr x8, [x19, #MODES_SET_ROT]
-    blr x8
     ldr x8, [x19, #MODES_SPIN_APPLIES]
     add x8, x8, #1
     str x8, [x19, #MODES_SPIN_APPLIES]

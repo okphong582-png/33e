@@ -66,3 +66,14 @@ The ARM64 regression now executes a separate late mapping and simulates a native
 late animation that resets the model rotation. It checks the final displayed
 rotation, native restoration, independent originals, guards and saved registers.
 This is emulator/static evidence; visibility on a physical iPhone remains unverified.
+
+## Horizontal turn
+
+The user demonstrated a vertical roll rather than a horizontal turn. Spin now
+reads the visual rig's world rotation and premultiplies it by world-up yaw.
+Unity Transform.get_rotation (0x8D6C5B4) and set_rotation (0x8D6C68C) are separately
+fingerprinted; their native icall names confirm world-space quaternion access.
+The original and displayed LOCAL quaternions are still retained for restoration,
+so movement of the parent between frames is preserved. No physical-root rotation
+is changed. Tests use three tilted imported parent orientations and six angles
+through a full turn, checking the displayed up vector and local restoration.
