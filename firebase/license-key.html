@@ -749,16 +749,21 @@
     .table-toolbar { gap:10px; }
     .search-box { flex:1 1 180px; min-width:0; }
     .search-box input { padding-left:38px; }
-    .table-responsive { border:1px solid #292929; border-radius:12px; }
+    .table-responsive { background:#101010; border:1px solid #292929; border-radius:12px; }
     table { min-width:640px; }
     thead { background:#181818; }
-    th { color:#aaa; font-size:10px; letter-spacing:.04em; }
+    th { background:#181818; color:#aaa; font-size:10px; letter-spacing:.04em; }
     td { font-size:12px; padding-top:17px; padding-bottom:17px; border-color:#282828; }
     tbody tr:hover { background:#1b1b1b; }
     .key-text,.key-box { color:#e5e5e5; }
     .key-box { background:#080808; border-color:#383838; }
     .modal { background:#141414; border-color:#383838; border-radius:20px; box-shadow:0 24px 80px #0009; }
     .modal-header,.modal-footer { border-color:#303030; }
+    .modal-backdrop { visibility:hidden; }
+    .modal-backdrop.show { visibility:visible; }
+    .toast { background:#202020; }
+    pre code { background:#090909; color:#c6e7d7; }
+    .bulk-bar { background:#18221c; border-color:#354f40; }
     .connection-badge { box-shadow:none; }
     button:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
     input[type=checkbox] { min-height:0; accent-color:var(--primary); }
