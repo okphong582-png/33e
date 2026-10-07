@@ -5,7 +5,7 @@ Settings tab. Speed is 0.1–3 revolutions/second, default 0.5. Phase uses elaps
 time, wraps at one turn and pauses through long/background timing gaps.
 
 Spin shares the existing PlayerModes callbacks for injected dylib, rootless
-Dopamine package and TIPA. The callback applies only after native PostUpdate,
+Dopamine package and TIPA. The callback applies after native MatchGame.OnLateUpdate,
 to the local player's BoneRoot TransformNode. The earlier Root (+0x6C8) can be
 the entity root and incorrectly reject a valid character; BoneRoot (+0x6D0) is
 resolved with the native getter so lazy caches are initialized. It requires a live
@@ -45,7 +45,8 @@ Changed identities, replaced avatars, reparented nodes, invalid native pointers,
 NaN pose values, cycles, oversized hierarchies and torn input prevent pose writes.
 Private RW pose storage is separately sized; the shared signed code stays RX.
 Physical-device animation ordering remains unverified.
-# Final-frame spin regression
+
+## Final-frame spin regression
 
 Spin no longer applies at Player.PostUpdate: the supplied game still has a
 separate native late chain. MatchGame.OnLateUpdate occupies virtual slot 18;

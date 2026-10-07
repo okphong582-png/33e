@@ -30,13 +30,13 @@ _PlayerModesRemoteStart:
     mov w23, w16 // Same state/anchor, distinct original for each frame phase.
     mov x20, x0
     mov x21, x1
-    str x20, [sp, #120]
+    str x20, [sp, #128] // #112..123 are Fly's temporary Vector3.
     cmp w23, #2
     b.ne .Llock
     // MatchGame.OnLateUpdate owns a separate signed mapping/original, but uses
     // the local Player session's pose state so OnUpdate can restore it first.
     ldr x8, [x19, #MODES_LATE_ORIGINAL]
-    str x8, [sp, #128]
+    str x8, [sp, #136]
     ldr x19, [x19, #MODES_LATE_SHARED]
     cbz x19, .LlateTail
 .Llock:
@@ -456,9 +456,9 @@ _PlayerModesRemoteStart:
     bl .LposeAfter
     b .LspinDone
 .LlateOriginal:
-    ldr x0, [sp, #120]
+    ldr x0, [sp, #128]
     mov x1, x21
-    ldr x8, [sp, #128]
+    ldr x8, [sp, #136]
     blr x8
     ldr x8, [x19, #MODES_LATE_TICKS]
     add x8, x8, #1
@@ -609,12 +609,12 @@ _PlayerModesRemoteStart:
     blr x8
     b .Lreturn
 .LlateTail:
-    ldr x0, [sp, #120]
+    ldr x0, [sp, #128]
     mov x1, x21
-    ldr x8, [sp, #128]
+    ldr x8, [sp, #136]
     blr x8
 .Lreturn:
-    ldr x0, [sp, #120]
+    ldr x0, [sp, #128]
     mov x1, x21
     ldp d0, d1, [sp, #96]
     ldp x27, x28, [sp, #80]
