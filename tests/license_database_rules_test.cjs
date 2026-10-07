@@ -7,8 +7,8 @@ assert(['localhost','127.0.0.1','[::1]'].includes(new URL(base).hostname),'Only 
 const hash='a'.repeat(64),deviceA='b'.repeat(64),deviceB='c'.repeat(64);
 async function request(path,method='GET',body,admin=false,conditional=false) {
   const url=new URL(path+'.json',base);url.searchParams.set('ns',namespace);
-  if(admin)url.searchParams.set('auth','owner');
   const headers={'Content-Type':'application/json'};
+  if(admin)headers.Authorization='Bearer owner'; // Emulator-only administrator.
   if(conditional)headers['if-match']='null_etag';
   return fetch(url,{method,headers,body:body===undefined ? undefined : JSON.stringify(body)});
 }
