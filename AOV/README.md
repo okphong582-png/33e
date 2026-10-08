@@ -1,11 +1,11 @@
 # AOV Menu
 
-Hai sản phẩm độc lập, chỉ có **ESP địch** và **ESP bùa xanh**:
+Hai sản phẩm độc lập, có **ESP địch** và **ESP quái** (toàn bộ quái sống trong danh sách MonsterActors):
 
 - `AOV-Menu.dylib`: menu trong game Liên Quân VN.
 - `AOV-Menu.tipa`: app riêng; mở app → Bật menu nổi → mở Liên Quân → bấm nút A → tự bật các ô ESP.
 
-Menu than đậm/mint, ô chọn X, nút A kéo được. Thanh máu đổi màu theo phần trăm. Không có log che màn hình chơi.
+Menu than đậm/mint, ô chọn X, nút A kéo được. ESP hiển thị chữ **Địch** / **Quái**, không ghi số phần trăm; thanh máu vẫn đổi màu theo lượng máu. Dây từ giữa phía trên màn hình tới địch/quái, kèm ba trục XYZ xoay theo camera giống bản FF. Dây đi cùng ô ESP tương ứng. Không có log che màn hình chơi.
 
 ## Build
 

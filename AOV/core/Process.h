@@ -15,6 +15,6 @@ class Process final: public Memory {
 public:
     ~Process() override { reset(); }
     bool copy(uint64_t address,void *out,size_t size) override;
-    Snapshot update(bool enemies,bool blue);
+    Snapshot update(bool enemies,bool showMonsters);
 };
 }

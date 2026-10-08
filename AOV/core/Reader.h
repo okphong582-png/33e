@@ -11,7 +11,7 @@ struct Point { float x=0,y=0; };
 struct Matrix { float m[16]{}; };
 struct Handle { uint32_t sequence=0, padding=0; uint64_t object=0; };
 static_assert(sizeof(Handle)==16);
-struct Actor { uint64_t address=0; uint32_t config=0; Vec3 position; int hp=0,maxHP=0; bool blue=false; };
+struct Actor { uint64_t address=0; uint32_t config=0; Vec3 position; int hp=0,maxHP=0; bool monster=false; };
 enum class State { disconnected, denied, unsupported, waiting, ready, changing };
 struct Snapshot { State state=State::waiting; Matrix view, projection; std::vector<Actor> actors; };
 class Memory {
@@ -48,15 +48,13 @@ inline bool project(Vec3 p,const Matrix &v,const Matrix &q,float width,float hei
 }
 class Reader {
     Memory &m;
-    bool actor(const Handle &h,int camp,bool blue,Actor &out) {
+    bool actor(const Handle &h,int camp,bool monster,Actor &out) {
         if(!h.object||!h.sequence)return false;
         uint32_t sequence=0; if(!m.read(h.object+actorSequence,sequence)||sequence!=h.sequence)return false;
-        int type=-1,side=0,sub=0; uint8_t soldier=0;
+        int type=-1,side=0;
         if(!m.read(h.object+actorType,type)||!m.read(h.object+actorCamp,side))return false;
-        if(blue){
+        if(monster){
             if(type!=1)return false;
-            if(!m.read(h.object+actorSubType,sub)||!m.read(h.object+soldierType,soldier))return false;
-            if(sub!=blueSubType&&soldier!=blueSoldierType&&soldier!=sharedBlueSoldierType)return false;
         } else if(type!=0||side<1||side>8||side==camp)return false;
         auto value=m.pointer(h.object+actorValues); if(!value)return false;
         if(!m.read(value+health,out.hp)||!m.read(value+maxHealth,out.maxHP)||out.hp<=0||out.maxHP<=0||out.hp>out.maxHP||out.maxHP>100000000)return false;
@@ -64,27 +62,27 @@ class Reader {
         if(!m.read(h.object+actorLocation,p)||std::abs(int64_t(p.x))>100000000||std::abs(int64_t(p.y))>100000000||std::abs(int64_t(p.z))>100000000)return false;
         if(!m.read(h.object+actorConfig,out.config))return false;
         uint32_t after=0; if(!m.read(h.object+actorSequence,after)||after!=sequence)return false;
-        out.address=h.object; out.position={p.x*0.001f,p.y*0.001f,p.z*0.001f}; out.blue=blue; return true;
+        out.address=h.object; out.position={p.x*0.001f,p.y*0.001f,p.z*0.001f}; out.monster=monster; return true;
     }
-    bool list(uint64_t p,int camp,bool blue,std::vector<Actor> &out) {
+    bool list(uint64_t p,int camp,bool monster,std::vector<Actor> &out) {
         if(!p)return false;
         int count=0,version=0;
-        if(!m.read(p+listSize,count)||count<0||count>(blue?256:64)||!m.read(p+listVersion,version))return false;
+        if(!m.read(p+listSize,count)||count<0||count>(monster?256:64)||!m.read(p+listVersion,version))return false;
         if(count==0)return true;
         auto array=m.pointer(p+listItems); uint64_t capacity=0;
         if(!array||!m.read(array+arrayLength,capacity)||capacity<uint64_t(count)||capacity>4096)return false;
         std::vector<Handle> handles(size_t(count),Handle{});
         if(!m.copy(array+arrayData,handles.data(),handles.size()*sizeof(Handle)))return false;
         size_t start=out.size();
-        for(const auto &h:handles){ Actor a; if(actor(h,camp,blue,a))out.push_back(a); }
+        for(const auto &h:handles){ Actor a; if(actor(h,camp,monster,a))out.push_back(a); }
         int after=0,afterCount=0;
         if(!m.read(p+listVersion,after)||after!=version||!m.read(p+listSize,afterCount)||afterCount!=count){ out.resize(start); return false; }
         return true;
     }
 public:
     explicit Reader(Memory &memory):m(memory){}
-    Snapshot sample(uint64_t base,bool enemies,bool blue) {
-        Snapshot out; if(!base||(!enemies&&!blue))return out;
+    Snapshot sample(uint64_t base,bool enemies,bool showMonsters) {
+        Snapshot out; if(!base||(!enemies&&!showMonsters))return out;
         auto framework=singleton(m,base+frameworkMethod),cameraSystem=singleton(m,base+cameraMethod);
         if(!framework||!cameraSystem)return out;
         auto manager=m.pointer(framework+actorManager),host=m.pointer(framework+hostLogic);
@@ -94,7 +92,7 @@ public:
         if(!native||!m.read(native+viewMatrix,out.view)||!m.read(native+projectionMatrix,out.projection)||!validMatrix(out.view)||!validMatrix(out.projection))return out;
         bool ok=true;
         if(enemies)ok=list(m.pointer(manager+heroes),camp,false,out.actors)&&ok;
-        if(blue)ok=list(m.pointer(manager+monsters),camp,true,out.actors)&&ok;
+        if(showMonsters)ok=list(m.pointer(manager+monsters),camp,true,out.actors)&&ok;
         if(!ok){out.actors.clear();out.state=State::changing;}else out.state=State::ready;
         return out;
     }

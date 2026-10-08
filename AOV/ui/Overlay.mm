@@ -4,6 +4,10 @@
 #include <memory>
 static UIColor *Mint(){return [UIColor colorWithRed:.35 green:.95 blue:.77 alpha:1];}
 static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontOfSize:size weight:weight];}
+static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,CGFloat width){
+    CGContextSetStrokeColorWithColor(c,color.CGColor);CGContextSetLineWidth(c,width);
+    CGContextMoveToPoint(c,start.x,start.y);CGContextAddLineToPoint(c,end.x,end.y);CGContextStrokePath(c);
+}
 @interface AOVDrawing : UIView { @public aov::Snapshot snapshot; }
 @end
 @implementation AOVDrawing
@@ -13,11 +17,26 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
     CGContextRef c=UIGraphicsGetCurrentContext();
     for(const auto &a:snapshot.actors){
         aov::Point p,t;
-        aov::Vec3 top=a.position;top.y+=a.blue?1.5f:2.1f;
+        aov::Vec3 top=a.position;top.y+=a.monster?1.5f:2.1f;
         if(!aov::project(a.position,snapshot.view,snapshot.projection,self.bounds.size.width,self.bounds.size.height,p)||!aov::project(top,snapshot.view,snapshot.projection,self.bounds.size.width,self.bounds.size.height,t))continue;
         CGFloat h=std::hypot(p.x-t.x,p.y-t.y);if(h<6||h>self.bounds.size.height*.8)continue;
         CGFloat w=MAX(20,h*.48),x=t.x-w*.5,y=MIN(t.y,p.y),bottom=MAX(t.y,p.y);
-        UIColor *color=a.blue?[UIColor colorWithRed:.35 green:.72 blue:1 alpha:1]:Mint();
+        UIColor *color=a.monster?[UIColor colorWithRed:.35 green:.72 blue:1 alpha:1]:Mint();
+        // Same top-center snapline and world X/Y/Z triad as the FF overlay.
+        CGPoint anchor=CGPointMake(self.bounds.size.width*.5,self.bounds.size.height*.08),target=CGPointMake(t.x,t.y);
+        CGContextSetLineCap(c,kCGLineCapRound);
+        StrokeLine(c,anchor,target,[UIColor colorWithWhite:0 alpha:.55],2.7);
+        StrokeLine(c,anchor,target,[color colorWithAlphaComponent:.8],1.3);
+        UIColor *axisColors[]={UIColor.systemRedColor,UIColor.systemGreenColor,UIColor.systemBlueColor};
+        for(int axis=0;axis<3;axis++){
+            aov::Vec3 end=top;if(axis==0)end.x+=.65f;else if(axis==1)end.y+=.65f;else end.z+=.65f;
+            aov::Point projected;
+            if(!aov::project(end,snapshot.view,snapshot.projection,self.bounds.size.width,self.bounds.size.height,projected))continue;
+            CGPoint endpoint=CGPointMake(projected.x,projected.y);
+            StrokeLine(c,target,endpoint,axisColors[axis],1.5);
+            CGFloat dx=endpoint.x-target.x,dy=endpoint.y-target.y,length=std::hypot(dx,dy);
+            if(length>8){CGFloat ux=dx/length,uy=dy/length;StrokeLine(c,endpoint,CGPointMake(endpoint.x-ux*4+uy*2,endpoint.y-uy*4-ux*2),axisColors[axis],1.5);StrokeLine(c,endpoint,CGPointMake(endpoint.x-ux*4-uy*2,endpoint.y-uy*4+ux*2),axisColors[axis],1.5);}
+        }
         CGContextSetStrokeColorWithColor(c,[UIColor colorWithWhite:0 alpha:.72].CGColor);CGContextSetLineWidth(c,3.3);
         CGFloat corner=MIN(14,w*.3);
         auto box=[&](){
@@ -34,7 +53,7 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
         CGContextSetFillColorWithColor(c,[UIColor colorWithWhite:0 alpha:.7].CGColor);CGContextFillRect(c,CGRectMake(x-1,bottom+6,w+2,5));
         UIColor *hp=ratio>.5?Mint():(ratio>.25?UIColor.systemYellowColor:UIColor.systemRedColor);
         CGContextSetFillColorWithColor(c,hp.CGColor);CGContextFillRect(c,CGRectMake(x,bottom+7,w*ratio,3));
-        NSString *name=a.blue?@"Bùa xanh":[NSString stringWithFormat:@"Địch · %d%%",int(ratio*100)];
+        NSString *name=a.monster?@"Quái":@"Địch";
         NSShadow *shadow=[NSShadow new];shadow.shadowColor=UIColor.blackColor;shadow.shadowOffset=CGSizeMake(0,1);shadow.shadowBlurRadius=2;
         NSDictionary *attrs=@{NSFontAttributeName:Font(12,UIFontWeightSemibold),NSForegroundColorAttributeName:color,NSShadowAttributeName:shadow};
         CGSize s=[name sizeWithAttributes:attrs];[name drawAtPoint:CGPointMake(t.x-s.width*.5,y-s.height-5) withAttributes:attrs];
@@ -44,12 +63,12 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
 @interface AOVOverlay () {
     AOVDrawing *_drawing;
     UIView *_panel;
-    UIButton *_dot,*_enemy,*_blue,*_close;
+    UIButton *_dot,*_enemy,*_monster,*_close;
     UILabel *_status;
     NSTimer *_timer;
     dispatch_queue_t _queue;
     std::shared_ptr<aov::Process> _reader;
-    BOOL _busy,_enemies,_buffs;
+    BOOL _busy,_enemies,_monsters;
     CGPoint _touchStart,_dotStart;
     NSInteger _touchIdentity;
     __weak UIView *_touchTarget;
@@ -67,7 +86,9 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
     if((self=[super initWithFrame:frame])){
         self.backgroundColor=UIColor.clearColor;self.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;_touchIdentity=-1;
         _reader=std::make_shared<aov::Process>();_queue=dispatch_queue_create("com.hoanghadev.aov.reader",DISPATCH_QUEUE_SERIAL);
-        NSUserDefaults *d=NSUserDefaults.standardUserDefaults;_enemies=[d boolForKey:@"AOV.Enemies"];_buffs=[d boolForKey:@"AOV.BlueBuff"];
+        NSUserDefaults *d=NSUserDefaults.standardUserDefaults;_enemies=[d boolForKey:@"AOV.Enemies"];
+        if(![d objectForKey:@"AOV.Monsters"])[d setBool:[d boolForKey:@"AOV.BlueBuff"] forKey:@"AOV.Monsters"];
+        _monsters=[d boolForKey:@"AOV.Monsters"];
         _drawing=[[AOVDrawing alloc] initWithFrame:self.bounds];_drawing.autoresizingMask=self.autoresizingMask;[self addSubview:_drawing];
         _dot=[self button:@"A" action:@selector(toggleMenu)];_dot.titleLabel.font=Font(20,UIFontWeightBold);_dot.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter;_dot.contentEdgeInsets=UIEdgeInsetsZero;
         _dot.frame=CGRectMake(22,80,48,48);_dot.layer.cornerRadius=24;[_dot setTitleColor:Mint() forState:UIControlStateNormal];_dot.layer.borderColor=Mint().CGColor;
@@ -77,7 +98,7 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
         UILabel *credit=[UILabel new];credit.text=@"HoangHaDev";credit.textColor=[UIColor colorWithWhite:.6 alpha:1];credit.font=Font(11,UIFontWeightMedium);credit.frame=CGRectMake(18,48,190,16);[_panel addSubview:credit];
         _close=[self button:@"×" action:@selector(toggleMenu)];_close.frame=CGRectMake(220,16,42,42);_close.titleLabel.font=Font(23,UIFontWeightMedium);[_panel addSubview:_close];
         _enemy=[self button:@"" action:@selector(toggleEnemy)];_enemy.frame=CGRectMake(16,80,248,52);[_panel addSubview:_enemy];
-        _blue=[self button:@"" action:@selector(toggleBlue)];_blue.frame=CGRectMake(16,142,248,52);[_panel addSubview:_blue];
+        _monster=[self button:@"" action:@selector(toggleMonsters)];_monster.frame=CGRectMake(16,142,248,52);[_panel addSubview:_monster];
         _status=[UILabel new];_status.font=Font(11,UIFontWeightMedium);_status.textColor=[UIColor colorWithWhite:.65 alpha:1];_status.numberOfLines=2;_status.frame=CGRectMake(18,206,246,32);[_panel addSubview:_status];
         [self updateButtons];
         __weak AOVOverlay *weak=self;
@@ -102,19 +123,19 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
 - (void)panDot:(UIPanGestureRecognizer *)g{CGPoint d=[g translationInView:self];_dot.center=CGPointMake(_dot.center.x+d.x,_dot.center.y+d.y);[g setTranslation:CGPointZero inView:self];[self setNeedsLayout];}
 - (void)updateButtons{
     [_enemy setTitle:_enemies?@"[ X ]   ESP địch":@"[   ]   ESP địch" forState:UIControlStateNormal];
-    [_blue setTitle:_buffs?@"[ X ]   ESP bùa xanh":@"[   ]   ESP bùa xanh" forState:UIControlStateNormal];
-    for(UIButton *b in @[_enemy,_blue]){BOOL on=b==_enemy?_enemies:_buffs;[b setTitleColor:on?Mint():UIColor.whiteColor forState:UIControlStateNormal];b.layer.borderColor=(on?Mint():[UIColor colorWithWhite:.25 alpha:1]).CGColor;}
+    [_monster setTitle:_monsters?@"[ X ]   ESP quái":@"[   ]   ESP quái" forState:UIControlStateNormal];
+    for(UIButton *b in @[_enemy,_monster]){BOOL on=b==_enemy?_enemies:_monsters;[b setTitleColor:on?Mint():UIColor.whiteColor forState:UIControlStateNormal];b.layer.borderColor=(on?Mint():[UIColor colorWithWhite:.25 alpha:1]).CGColor;}
 }
 - (void)toggleEnemy{_enemies=!_enemies;[NSUserDefaults.standardUserDefaults setBool:_enemies forKey:@"AOV.Enemies"];[self updateButtons];}
-- (void)toggleBlue{_buffs=!_buffs;[NSUserDefaults.standardUserDefaults setBool:_buffs forKey:@"AOV.BlueBuff"];[self updateButtons];}
+- (void)toggleMonsters{_monsters=!_monsters;[NSUserDefaults.standardUserDefaults setBool:_monsters forKey:@"AOV.Monsters"];[self updateButtons];}
 - (void)tick{
     if(!self.window||self.hidden||_busy)return;
-    if(!_enemies&&!_buffs){_drawing->snapshot={};[_drawing setNeedsDisplay];_status.text=@"Chọn ESP để bật";return;}
-    _busy=YES;BOOL enemy=_enemies,buff=_buffs;auto reader=_reader;__weak AOVOverlay *weak=self;
+    if(!_enemies&&!_monsters){_drawing->snapshot={};[_drawing setNeedsDisplay];_status.text=@"Chọn ESP để bật";return;}
+    _busy=YES;BOOL enemy=_enemies,monster=_monsters;auto reader=_reader;__weak AOVOverlay *weak=self;
     dispatch_async(_queue,^{
-        auto sample=reader->update(enemy,buff);
+        auto sample=reader->update(enemy,monster);
         dispatch_async(dispatch_get_main_queue(),^{AOVOverlay *s=weak;if(!s)return;s->_busy=NO;
-            if(enemy!=s->_enemies||buff!=s->_buffs)return;
+            if(enemy!=s->_enemies||monster!=s->_monsters)return;
             s->_drawing->snapshot=std::move(sample);[s->_drawing setNeedsDisplay];
             switch(s->_drawing->snapshot.state){
                 case aov::State::ready:s->_status.text=@"ESP đang hoạt động";break;

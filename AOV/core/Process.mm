@@ -55,9 +55,9 @@ bool Process::findImage(){
 #endif
     return false;
 }
-Snapshot Process::update(bool enemies,bool blue){
+Snapshot Process::update(bool enemies,bool showMonsters){
     Snapshot result;
-    if(!enemies&&!blue)return result;
+    if(!enemies&&!showMonsters)return result;
     if(task){uint32_t magic=0;if(image&&!read(image,magic))reset();}
     if(!image&&now()-lastConnect>1){
         lastConnect=now();reset();connection=State::disconnected;
@@ -74,6 +74,6 @@ Snapshot Process::update(bool enemies,bool blue){
         if(task)findImage();
     }
     if(!image){result.state=connection;return result;}
-    return Reader(*this).sample(image,enemies,blue);
+    return Reader(*this).sample(image,enemies,showMonsters);
 }
 }
