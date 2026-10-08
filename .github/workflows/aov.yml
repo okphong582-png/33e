@@ -1,0 +1,30 @@
+name: Build AOV dylib and TIPA
+on:
+  push:
+    branches: [main, master]
+    paths: ["AOV/**", ".github/workflows/aov.yml"]
+  workflow_dispatch:
+jobs:
+  build:
+    name: AOV ${{ matrix.kind }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [dylib, tipa]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test ESP reads and projection
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined AOV/tests/reader_test.cpp -o /tmp/aov-test
+          /tmp/aov-test
+      - name: Setup Theos
+        uses: Randomblock1/theos-action@v1
+      - name: Build
+        working-directory: AOV
+        run: make clean package BUILD_KIND=${{ matrix.kind }} FINALPACKAGE=1 FOR_RELEASE=1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOV-${{ matrix.kind }}
+          path: AOV/packages/*.${{ matrix.kind }}
+          if-no-files-found: error

@@ -1,0 +1,8 @@
+Package: com.hoanghadev.aov.menu
+Name: AOV Menu
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: AOV overlay with enemy and blue buff ESP
+Maintainer: HoangHaDev
+Author: HoangHaDev
+Section: Tweaks
