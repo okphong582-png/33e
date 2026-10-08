@@ -10,6 +10,12 @@
 <key>com.apple.QuartzCore.displayable-context</key><true/>
 <key>com.apple.accessibility.api</key><true/>
 <key>com.apple.accessibility.physicalinteraction.client</key><true/>
+<key>com.apple.springboard.accessibility-window-hosting</key><true/>
+<key>com.apple.springboard-ui.client</key><true/>
+<key>com.apple.security.exception.mach-lookup.global-name</key><array>
+<string>com.apple.accessibility.AXSpringBoardServer</string>
+<string>com.apple.accessibility.AXPineBoardServer</string>
+</array>
 <key>com.apple.private.hid.client.event-dispatch</key><true/>
 <key>com.apple.private.hid.client.event-monitor</key><true/>
 <key>com.apple.private.hid.manager.client</key><true/>

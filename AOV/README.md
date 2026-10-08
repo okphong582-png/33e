@@ -7,6 +7,16 @@ Hai sản phẩm độc lập, có **ESP địch** và **ESP quái** (toàn bộ
 
 Menu than đậm/mint, ô chọn X, nút A kéo được. ESP hiển thị chữ **Địch** / **Quái**, không ghi số phần trăm; thanh máu vẫn đổi màu theo lượng máu. Dây từ giữa phía trên màn hình tới địch/quái, kèm ba trục XYZ xoay theo camera giống bản FF. Dây đi cùng ô ESP tương ứng. Không có log che màn hình chơi.
 
+### Bản 1.2: cửa sổ TIPA và menu
+
+- Bổ sung quyền `com.apple.springboard.accessibility-window-hosting` và truy cập dịch vụ AXSpringBoardServer cho HUD.
+- Chờ tối đa 2 giây để UIKit cấp context cửa sổ, có bước tạo HUD dự phòng nếu plugin không gọi delegate khởi chạy.
+- App hiển thị tiến trình khởi chạy và báo nếu HUD thoát; mỗi phiên có mã riêng để không lấy nhầm thông báo từ lần bật cũ. “Đã đăng ký menu” chỉ xác nhận lời gọi đăng ký cửa sổ đã chạy, cần kiểm tra hiển thị trực tiếp trên máy.
+- Ô X thật, hàng cao 64 pt, nút A 52 pt, nền than/mint có chiều sâu và animation ngắn; tôn trọng Reduce Motion.
+- Nhấn, kéo và hủy chạm được xử lý riêng. TIPA dùng một đường kích hoạt nút để tránh nhấn hai lần; multi-touch hủy thao tác menu, không kích hoạt nhầm ô. Sau mất gói nhả tay, lần nhấn mới có thể khôi phục sau 3 giây.
+
+Trên thiết bị, kiểm tra: Bật menu nổi → thấy nút A → mở/đóng menu → kéo A → bật/tắt từng ô → xoay máy → tắt và bật lại HUD. Chưa có kết quả kiểm tra bản 1.2 trực tiếp trên iPhone.
+
 ## Build
 
 ```sh

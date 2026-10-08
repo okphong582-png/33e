@@ -1,5 +1,6 @@
 #import "Overlay.h"
 #include "../core/Process.h"
+#include "TouchState.h"
 #import <QuartzCore/QuartzCore.h>
 #include <memory>
 static UIColor *Mint(){return [UIColor colorWithRed:.35 green:.95 blue:.77 alpha:1];}
@@ -60,19 +61,56 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
     }
 }
 @end
+@interface AOVFeatureRow : UIControl
+@property(nonatomic,strong) UILabel *nameLabel;
+@property(nonatomic,strong) UILabel *detailLabel;
+@property(nonatomic,strong) UILabel *mark;
+@property(nonatomic,strong) UIView *checkbox;
+- (instancetype)initWithName:(NSString *)name detail:(NSString *)detail symbol:(NSString *)symbol;
+- (void)setOn:(BOOL)on animated:(BOOL)animated;
+@end
+@implementation AOVFeatureRow
+- (instancetype)initWithName:(NSString *)name detail:(NSString *)detail symbol:(NSString *)symbol {
+    if((self=[super initWithFrame:CGRectZero])){
+        self.layer.cornerRadius=14;self.layer.borderWidth=1;self.isAccessibilityElement=YES;self.accessibilityLabel=name;
+        UIImageView *icon=[[UIImageView alloc] initWithImage:[UIImage systemImageNamed:symbol]];
+        icon.tintColor=Mint();icon.contentMode=UIViewContentModeScaleAspectFit;icon.frame=CGRectMake(14,21,22,22);[self addSubview:icon];
+        _nameLabel=[UILabel new];_nameLabel.text=name;_nameLabel.font=Font(16,UIFontWeightSemibold);_nameLabel.textColor=UIColor.whiteColor;_nameLabel.frame=CGRectMake(48,12,176,22);[self addSubview:_nameLabel];
+        _detailLabel=[UILabel new];_detailLabel.text=detail;_detailLabel.font=Font(11,UIFontWeightMedium);_detailLabel.textColor=[UIColor colorWithWhite:.6 alpha:1];_detailLabel.frame=CGRectMake(48,36,176,16);[self addSubview:_detailLabel];
+        _checkbox=[UIView new];_checkbox.layer.cornerRadius=7;_checkbox.layer.borderWidth=1.2;_checkbox.frame=CGRectMake(230,20,24,24);[self addSubview:_checkbox];
+        _mark=[UILabel new];_mark.text=@"X";_mark.font=Font(14,UIFontWeightBold);_mark.textAlignment=NSTextAlignmentCenter;_mark.frame=_checkbox.bounds;[_checkbox addSubview:_mark];
+        for(UIView *child in self.subviews)child.userInteractionEnabled=NO;
+        [self setOn:NO animated:NO];
+    }return self;
+}
+- (void)setOn:(BOOL)on animated:(BOOL)animated {
+    self.selected=on;self.accessibilityValue=on?@"Bật":@"Tắt";
+    self.accessibilityTraits=UIAccessibilityTraitButton|(on?UIAccessibilityTraitSelected:0);
+    void (^changes)(void)=^{
+        self.backgroundColor=on?[Mint() colorWithAlphaComponent:.09]:[UIColor colorWithWhite:.12 alpha:1];
+        self.layer.borderColor=(on?[Mint() colorWithAlphaComponent:.6]:[UIColor colorWithWhite:.2 alpha:1]).CGColor;
+        self->_checkbox.backgroundColor=on?Mint():UIColor.clearColor;
+        self->_checkbox.layer.borderColor=(on?Mint():[UIColor colorWithWhite:.4 alpha:1]).CGColor;
+        self->_mark.textColor=[UIColor colorWithWhite:.06 alpha:1];self->_mark.alpha=on?1:0;
+    };
+    if(animated&&!UIAccessibilityIsReduceMotionEnabled())[UIView animateWithDuration:.16 animations:changes];else changes();
+}
+- (void)setHighlighted:(BOOL)highlighted {[super setHighlighted:highlighted];self.alpha=highlighted?.72:1;}
+@end
 @interface AOVOverlay () {
     AOVDrawing *_drawing;
     UIView *_panel;
-    UIButton *_dot,*_enemy,*_monster,*_close;
+    UIButton *_dot,*_close;
+    AOVFeatureRow *_enemy,*_monster;
+    CAGradientLayer *_panelGradient;
     UILabel *_status;
     NSTimer *_timer;
     dispatch_queue_t _queue;
     std::shared_ptr<aov::Process> _reader;
     BOOL _busy,_enemies,_monsters;
     CGPoint _touchStart,_dotStart;
-    NSInteger _touchIdentity;
-    __weak UIView *_touchTarget;
-    BOOL _moved;
+    aov::TouchState _touch;
+    __weak UIControl *_touchTarget;
 }
 @end
 @implementation AOVOverlay
@@ -84,22 +122,27 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
 }
 - (instancetype)initWithFrame:(CGRect)frame {
     if((self=[super initWithFrame:frame])){
-        self.backgroundColor=UIColor.clearColor;self.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;_touchIdentity=-1;
+        self.backgroundColor=UIColor.clearColor;self.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
         _reader=std::make_shared<aov::Process>();_queue=dispatch_queue_create("com.hoanghadev.aov.reader",DISPATCH_QUEUE_SERIAL);
         NSUserDefaults *d=NSUserDefaults.standardUserDefaults;_enemies=[d boolForKey:@"AOV.Enemies"];
         if(![d objectForKey:@"AOV.Monsters"])[d setBool:[d boolForKey:@"AOV.BlueBuff"] forKey:@"AOV.Monsters"];
         _monsters=[d boolForKey:@"AOV.Monsters"];
         _drawing=[[AOVDrawing alloc] initWithFrame:self.bounds];_drawing.autoresizingMask=self.autoresizingMask;[self addSubview:_drawing];
         _dot=[self button:@"A" action:@selector(toggleMenu)];_dot.titleLabel.font=Font(20,UIFontWeightBold);_dot.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter;_dot.contentEdgeInsets=UIEdgeInsetsZero;
-        _dot.frame=CGRectMake(22,80,48,48);_dot.layer.cornerRadius=24;[_dot setTitleColor:Mint() forState:UIControlStateNormal];_dot.layer.borderColor=Mint().CGColor;
+        _dot.frame=CGRectMake(22,80,52,52);_dot.layer.cornerRadius=26;[_dot setTitleColor:Mint() forState:UIControlStateNormal];_dot.layer.borderColor=Mint().CGColor;
+        _dot.accessibilityLabel=@"Mở menu AOV";_dot.layer.shadowColor=UIColor.blackColor.CGColor;_dot.layer.shadowOpacity=.35;_dot.layer.shadowRadius=8;_dot.layer.shadowOffset=CGSizeMake(0,3);
         [_dot addGestureRecognizer:[[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panDot:)]];[self addSubview:_dot];
-        _panel=[UIView new];_panel.backgroundColor=[UIColor colorWithWhite:.065 alpha:.97];_panel.layer.cornerRadius=20;_panel.layer.borderWidth=1;_panel.layer.borderColor=[UIColor colorWithWhite:.24 alpha:1].CGColor;_panel.hidden=YES;[self addSubview:_panel];
-        UILabel *title=[UILabel new];title.text=@"AOV";title.font=Font(23,UIFontWeightBold);title.textColor=Mint();title.frame=CGRectMake(18,16,180,30);[_panel addSubview:title];
-        UILabel *credit=[UILabel new];credit.text=@"HoangHaDev";credit.textColor=[UIColor colorWithWhite:.6 alpha:1];credit.font=Font(11,UIFontWeightMedium);credit.frame=CGRectMake(18,48,190,16);[_panel addSubview:credit];
-        _close=[self button:@"×" action:@selector(toggleMenu)];_close.frame=CGRectMake(220,16,42,42);_close.titleLabel.font=Font(23,UIFontWeightMedium);[_panel addSubview:_close];
-        _enemy=[self button:@"" action:@selector(toggleEnemy)];_enemy.frame=CGRectMake(16,80,248,52);[_panel addSubview:_enemy];
-        _monster=[self button:@"" action:@selector(toggleMonsters)];_monster.frame=CGRectMake(16,142,248,52);[_panel addSubview:_monster];
-        _status=[UILabel new];_status.font=Font(11,UIFontWeightMedium);_status.textColor=[UIColor colorWithWhite:.65 alpha:1];_status.numberOfLines=2;_status.frame=CGRectMake(18,206,246,32);[_panel addSubview:_status];
+        _panel=[UIView new];_panel.backgroundColor=[UIColor colorWithWhite:.07 alpha:1];_panel.layer.cornerRadius=22;_panel.layer.borderWidth=1;_panel.layer.borderColor=[UIColor colorWithWhite:.24 alpha:1].CGColor;_panel.hidden=YES;
+        _panel.layer.shadowColor=UIColor.blackColor.CGColor;_panel.layer.shadowOpacity=.4;_panel.layer.shadowRadius=18;_panel.layer.shadowOffset=CGSizeMake(0,6);[self addSubview:_panel];
+        _panelGradient=[CAGradientLayer layer];_panelGradient.colors=@[(id)[UIColor colorWithRed:.08 green:.15 blue:.14 alpha:1].CGColor,(id)[UIColor colorWithWhite:.07 alpha:1].CGColor];_panelGradient.cornerRadius=22;[_panel.layer insertSublayer:_panelGradient atIndex:0];
+        UILabel *title=[UILabel new];title.text=@"AOV Menu";title.font=Font(23,UIFontWeightBold);title.textColor=UIColor.whiteColor;title.frame=CGRectMake(20,14,190,30);[_panel addSubview:title];
+        UILabel *credit=[UILabel new];credit.text=@"HoangHaDev";credit.textColor=Mint();credit.font=Font(11,UIFontWeightMedium);credit.frame=CGRectMake(20,47,190,16);[_panel addSubview:credit];
+        _close=[self button:@"×" action:@selector(toggleMenu)];_close.frame=CGRectMake(244,12,44,44);_close.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter;_close.contentEdgeInsets=UIEdgeInsetsZero;_close.titleLabel.font=Font(25,UIFontWeightMedium);_close.accessibilityLabel=@"Đóng menu";[_panel addSubview:_close];
+        UILabel *section=[UILabel new];section.text=@"HIỂN THỊ";section.textColor=[UIColor colorWithWhite:.5 alpha:1];section.font=Font(10,UIFontWeightSemibold);section.frame=CGRectMake(20,73,240,14);[_panel addSubview:section];
+        _enemy=[[AOVFeatureRow alloc] initWithName:@"ESP địch" detail:@"Tướng · Dây · Thanh máu" symbol:@"person.crop.square"];_enemy.frame=CGRectMake(18,93,268,64);[_enemy addTarget:self action:@selector(toggleEnemy) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_enemy];
+        _monster=[[AOVFeatureRow alloc] initWithName:@"ESP quái" detail:@"Quái · Dây · Thanh máu" symbol:@"scope"];_monster.frame=CGRectMake(18,167,268,64);[_monster addTarget:self action:@selector(toggleMonsters) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_monster];
+        UIView *divider=[UIView new];divider.backgroundColor=[UIColor colorWithWhite:1 alpha:.08];divider.frame=CGRectMake(20,242,264,1);[_panel addSubview:divider];
+        _status=[UILabel new];_status.font=Font(11,UIFontWeightMedium);_status.textColor=[UIColor colorWithWhite:.65 alpha:1];_status.numberOfLines=1;_status.frame=CGRectMake(20,249,264,23);[_panel addSubview:_status];
         [self updateButtons];
         __weak AOVOverlay *weak=self;
         _timer=[NSTimer timerWithTimeInterval:1.0/30 repeats:YES block:^(NSTimer *t){[weak tick];}];[NSRunLoop.mainRunLoop addTimer:_timer forMode:NSRunLoopCommonModes];
@@ -110,21 +153,31 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
 - (void)layoutSubviews{
     [super layoutSubviews];_drawing.frame=self.bounds;
     UIEdgeInsets safe=self.safeAreaInsets;
-    CGFloat maxX=MAX(safe.left+24,self.bounds.size.width-safe.right-24),maxY=MAX(safe.top+24,self.bounds.size.height-safe.bottom-24);
-    _dot.center=CGPointMake(std::clamp(_dot.center.x,safe.left+24,maxX),std::clamp(_dot.center.y,safe.top+24,maxY));
-    _panel.frame=CGRectMake(std::clamp(_dot.frame.origin.x,safe.left+8,MAX(safe.left+8,self.bounds.size.width-safe.right-288)),std::clamp(_dot.frame.origin.y,safe.top+8,MAX(safe.top+8,self.bounds.size.height-safe.bottom-254)),280,246);
+    CGFloat maxX=MAX(safe.left+32,self.bounds.size.width-safe.right-32),maxY=MAX(safe.top+32,self.bounds.size.height-safe.bottom-32);
+    _dot.center=CGPointMake(std::clamp(_dot.center.x,safe.left+32,maxX),std::clamp(_dot.center.y,safe.top+32,maxY));
+    // Never assign a frame while a view has an animated transform.
+    _panel.bounds=CGRectMake(0,0,304,280);
+    CGFloat x=std::clamp(_dot.frame.origin.x,safe.left+8,MAX(safe.left+8,self.bounds.size.width-safe.right-312));
+    CGFloat y=std::clamp(_dot.frame.origin.y,safe.top+8,MAX(safe.top+8,self.bounds.size.height-safe.bottom-288));
+    _panel.center=CGPointMake(x+152,y+140);_panelGradient.frame=_panel.bounds;
+    _panel.layer.shadowPath=[UIBezierPath bezierPathWithRoundedRect:_panel.bounds cornerRadius:22].CGPath;
 }
 - (UIView *)hitTest:(CGPoint)p withEvent:(UIEvent *)e{
     if(!self.userInteractionEnabled||self.hidden||self.alpha<.01)return nil;
     if(!_panel.hidden&&CGRectContainsPoint(_panel.frame,p))return [_panel hitTest:[self convertPoint:p toView:_panel] withEvent:e];
-    if(CGRectContainsPoint(_dot.frame,p))return [_dot hitTest:[self convertPoint:p toView:_dot] withEvent:e];return nil;
+    if(!_dot.hidden&&CGRectContainsPoint(CGRectInset(_dot.frame,-6,-6),p))return _dot;return nil;
 }
-- (void)toggleMenu{_panel.hidden=!_panel.hidden;[self setNeedsLayout];if(!_panel.hidden){_panel.alpha=0;_panel.transform=CGAffineTransformMakeScale(.97,.97);[UIView animateWithDuration:.18 animations:^{self->_panel.alpha=1;self->_panel.transform=CGAffineTransformIdentity;}];}}
+- (void)toggleMenu{
+    BOOL show=_panel.hidden;[self cancelScreenTouch];[_panel.layer removeAllAnimations];_panel.transform=CGAffineTransformIdentity;_panel.alpha=1;
+    _panel.hidden=!show;_dot.hidden=show;[self setNeedsLayout];[self layoutIfNeeded];
+    if(show&&!UIAccessibilityIsReduceMotionEnabled()){
+        _panel.alpha=0;_panel.transform=CGAffineTransformMakeScale(.96,.96);
+        [UIView animateWithDuration:.2 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionAllowUserInteraction animations:^{self->_panel.alpha=1;self->_panel.transform=CGAffineTransformIdentity;} completion:nil];
+    }
+}
 - (void)panDot:(UIPanGestureRecognizer *)g{CGPoint d=[g translationInView:self];_dot.center=CGPointMake(_dot.center.x+d.x,_dot.center.y+d.y);[g setTranslation:CGPointZero inView:self];[self setNeedsLayout];}
 - (void)updateButtons{
-    [_enemy setTitle:_enemies?@"[ X ]   ESP địch":@"[   ]   ESP địch" forState:UIControlStateNormal];
-    [_monster setTitle:_monsters?@"[ X ]   ESP quái":@"[   ]   ESP quái" forState:UIControlStateNormal];
-    for(UIButton *b in @[_enemy,_monster]){BOOL on=b==_enemy?_enemies:_monsters;[b setTitleColor:on?Mint():UIColor.whiteColor forState:UIControlStateNormal];b.layer.borderColor=(on?Mint():[UIColor colorWithWhite:.25 alpha:1]).CGColor;}
+    [_enemy setOn:_enemies animated:YES];[_monster setOn:_monsters animated:YES];
 }
 - (void)toggleEnemy{_enemies=!_enemies;[NSUserDefaults.standardUserDefaults setBool:_enemies forKey:@"AOV.Enemies"];[self updateButtons];}
 - (void)toggleMonsters{_monsters=!_monsters;[NSUserDefaults.standardUserDefaults setBool:_monsters forKey:@"AOV.Monsters"];[self updateButtons];}
@@ -148,21 +201,32 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
     });
 }
 - (BOOL)handleScreenPoint:(CGPoint)point phase:(UITouchPhase)phase identity:(NSInteger)identity{
+    if(!self.window)return NO;
     CGPoint p=[self convertPoint:point fromCoordinateSpace:UIScreen.mainScreen.coordinateSpace];
     if(phase==UITouchPhaseBegan){
-        if(_touchIdentity!=-1)return NO;
         UIView *v=[self hitTest:p withEvent:nil];if(!v)return NO;
-        _touchTarget=v;_touchIdentity=identity;_touchStart=p;_dotStart=_dot.center;_moved=NO;return YES;
+        if(!_touch.begin(identity,p.x,p.y,CACurrentMediaTime()))return NO;
+        _touchTarget.highlighted=NO;
+        while(v&&v!=self&&![v isKindOfClass:UIControl.class])v=v.superview;
+        _touchTarget=[v isKindOfClass:UIControl.class]?(UIControl *)v:nil;
+        _touchTarget.highlighted=YES;_touchStart=p;_dotStart=_dot.center;return YES;
     }
-    if(identity!=_touchIdentity)return NO;
+    if(!_touch.owns(identity))return NO;
     if(phase==UITouchPhaseMoved){
-        CGFloat dx=p.x-_touchStart.x,dy=p.y-_touchStart.y;if(std::hypot(dx,dy)>7)_moved=YES;
-        if(_touchTarget==_dot&&_moved){_dot.center=CGPointMake(_dotStart.x+dx,_dotStart.y+dy);[self setNeedsLayout];}
+        _touch.move(identity,p.x,p.y,CACurrentMediaTime());
+        CGFloat dx=p.x-_touchStart.x,dy=p.y-_touchStart.y;
+        if(_touchTarget==_dot&&_touch.dragged()){_dot.center=CGPointMake(_dotStart.x+dx,_dotStart.y+dy);[self setNeedsLayout];[self layoutIfNeeded];}
+        else if(_touchTarget)_touchTarget.highlighted=CGRectContainsPoint(_touchTarget.bounds,[self convertPoint:p toView:_touchTarget]);
     }
     if(phase==UITouchPhaseEnded||phase==UITouchPhaseCancelled){
-        UIView *target=_touchTarget;
-        if(phase==UITouchPhaseEnded&&!_moved&&[target isKindOfClass:UIButton.class]&&CGRectContainsPoint(target.bounds,[self convertPoint:p toView:target]))[(UIButton *)target sendActionsForControlEvents:UIControlEventTouchUpInside];
-        _touchIdentity=-1;_touchTarget=nil;
+        UIControl *target=_touchTarget;
+        // Include travel in the lift packet when HID did not send a move.
+        _touch.move(identity,p.x,p.y,CACurrentMediaTime());
+        BOOL inside=target&&!target.hidden&&target.enabled&&CGRectContainsPoint(CGRectInset(target.bounds,-6,-6),[self convertPoint:p toView:target]);
+        BOOL activate=_touch.finish(identity,phase==UITouchPhaseCancelled,inside);
+        target.highlighted=NO;_touchTarget=nil;
+        if(activate)[target sendActionsForControlEvents:UIControlEventTouchUpInside];
     }return YES;
 }
+- (void)cancelScreenTouch{_touch.cancel();_touchTarget.highlighted=NO;_touchTarget=nil;}
 @end
