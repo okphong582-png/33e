@@ -1,8 +1,21 @@
 #include "../ui/TouchState.h"
+#include "../ui/FingerState.h"
 #include <cassert>
 #include <limits>
 #include <cstdio>
 int main() {
+    aov::FingerState fingers;
+    // Keep a joystick finger down while a different finger taps the menu.
+    assert(fingers.update(10,true,false)==aov::FingerPhase::began);
+    assert(fingers.update(10,true,false)==aov::FingerPhase::moved);
+    assert(fingers.update(20,true,false)==aov::FingerPhase::began);
+    assert(fingers.update(10,false,false)==aov::FingerPhase::ended);
+    assert(fingers.update(20,true,false)==aov::FingerPhase::moved);
+    assert(fingers.update(20,false,false)==aov::FingerPhase::ended);
+    assert(fingers.update(20,false,false)==aov::FingerPhase::none);
+    assert(fingers.update(20,true,false)==aov::FingerPhase::began);
+    assert(fingers.update(20,true,true)==aov::FingerPhase::cancelled);
+    assert(fingers.update(20,false,false)==aov::FingerPhase::none);
     aov::TouchState touch;
     // A stationary tap activates once, even if a duplicate lift follows.
     assert(touch.begin(1,40,100,0));
@@ -15,6 +28,12 @@ int main() {
     assert(!touch.finish(9,false,true));
     assert(touch.owns(8));
     assert(touch.finish(8,false,true));
+    // Interleaved joystick and menu HID packets must still activate once.
+    assert(touch.begin(20,40,100,1.1));
+    assert(!touch.move(10,200,200,1.11));
+    assert(!touch.finish(10,false,true));
+    assert(touch.move(20,41,100,1.12));
+    assert(touch.finish(20,false,true));
     // Dragging the A dot must never also open/close the menu.
     assert(touch.begin(2,40,100,2));
     assert(touch.move(2,70,120,2.1));

@@ -1,4 +1,5 @@
 #import "ui/Overlay.h"
+#include "ui/FingerState.h"
 #import <objc/message.h>
 #import <QuartzCore/QuartzCore.h>
 #import <notify.h>
@@ -20,7 +21,11 @@ static NSString *const StatusPath=@"/var/mobile/Library/Caches/com.hoanghadev.ao
 static const char *StopNotification="com.hoanghadev.aov.stop";
 static AOVOverlay *HUDOverlay;
 static NSString *HUDSession;
-static BOOL ManualTouchRouting;
+static BOOL RawTouchRouting;
+static CFArrayRef (*HIDChildren)(void *);
+static uint32_t (*HIDType)(void *);
+static CFIndex (*HIDInteger)(void *,uint32_t);
+static double (*HIDFloat)(void *,uint32_t);
 @interface UIWindow (AOVPrivate)
 - (instancetype)_initWithFrame:(CGRect)frame attached:(BOOL)attached;
 - (unsigned int)_contextId;
@@ -28,7 +33,6 @@ static BOOL ManualTouchRouting;
 @interface UIApplication (AOVPrivate)
 - (void)_accessibilityInit;
 - (void)__completeAndRunAsPlugin;
-- (void)_enqueueHIDEvent:(void *)event;
 @end
 @interface NSObject (AOVAccessibility)
 + (id)representationWithHIDEvent:(void *)event hidStreamIdentifier:(NSString *)identifier;
@@ -45,20 +49,6 @@ static BOOL ManualTouchRouting;
 - (void)setHandler:(void (^)(id))handler;
 - (void)invalidate;
 @end
-static BOOL InstallNativeEventLoop(UIApplication *app){
-    @try{
-        id dispatcher=[app valueForKey:@"eventDispatcher"];
-        Class fetcherClass=NSClassFromString(@"UIEventFetcher");
-        SEL install=NSSelectorFromString(@"_installEventRunLoopSources:");
-        if(!dispatcher||!fetcherClass||![dispatcher respondsToSelector:install])return NO;
-        ((void(*)(id,SEL,CFRunLoopRef))objc_msgSend)(dispatcher,install,CFRunLoopGetMain());
-        id fetcher=[fetcherClass new];[dispatcher setValue:fetcher forKey:@"eventFetcher"];
-        SEL sink=NSSelectorFromString(@"setEventFetcherSink:");
-        if([fetcher respondsToSelector:sink])((void(*)(id,SEL,id))objc_msgSend)(fetcher,sink,dispatcher);
-        else [fetcher setValue:dispatcher forKey:@"eventFetcherSink"];
-        [app setValue:fetcher forKey:@"eventFetcher"];return YES;
-    }@catch(NSException *exception){return NO;}
-}
 static void WriteStatus(NSString *s){
     [@{@"session":HUDSession?:@"",@"message":s,@"pid":@(getpid()),@"ready":@NO} writeToFile:StatusPath atomically:YES];
 }
@@ -67,13 +57,12 @@ static void WriteStatus(NSString *s){
 @implementation AOVHUDWindow
 + (BOOL)_isSystemWindow{return YES;}
 - (BOOL)_isWindowServerHostingManaged{return NO;}
-- (BOOL)_usesWindowServerHitTesting{return YES;}
-- (BOOL)_ignoresHitTest{return NO;}
+- (BOOL)_usesWindowServerHitTesting{return NO;}
+- (BOOL)_ignoresHitTest{return YES;}
 - (instancetype)initWithFrame:(CGRect)f{return [super _initWithFrame:f attached:YES];}
 - (UIView *)hitTest:(CGPoint)p withEvent:(UIEvent *)event{
-    UIView *hit=[HUDOverlay hitTest:[HUDOverlay convertPoint:p fromView:self] withEvent:event];
-    // Manual HID routing owns controls; don't also dispatch a UIKit button tap.
-    return ManualTouchRouting?(hit?HUDOverlay:nil):hit;
+    // Drawing never owns a foreground-game touch. Menu taps come from HID.
+    return nil;
 }
 @end
 @interface AOVHUDApplication : UIApplication
@@ -105,7 +94,7 @@ static void WriteStatus(NSString *s){
 - (void)startHUD{
     if(self.window)return;
     WriteStatus(@"Đang tạo cửa sổ nổi…");
-    self.window=[[AOVHUDWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];self.window.backgroundColor=UIColor.clearColor;self.window.windowLevel=10000010;
+    self.window=[[AOVHUDWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];self.window.backgroundColor=UIColor.clearColor;self.window.windowLevel=10000010;self.window.userInteractionEnabled=NO;
     UIViewController *root=[UIViewController new];root.view.backgroundColor=UIColor.clearColor;self.window.rootViewController=root;
     HUDOverlay=[[AOVOverlay alloc] initWithFrame:self.window.bounds];[root.view addSubview:HUDOverlay];self.window.hidden=NO;[self.window makeKeyAndVisible];
     UIInterfaceOrientation orientation=UIApplication.sharedApplication.statusBarOrientation;
@@ -154,18 +143,51 @@ static void WriteStatus(NSString *s){
     [@{@"session":HUDSession?:@"",@"message":@"Đã đăng ký menu — bấm nút A để mở",@"pid":@(getpid()),@"ready":@YES} writeToFile:StatusPath atomically:YES];
 }
 @end
+static void RouteDigitizer(void *event,unsigned int depth){
+    if(!event||depth>3)return;
+    CFArrayRef children=HIDChildren(event);
+    CFIndex count=children?CFArrayGetCount(children):0;
+    if(count){
+        for(CFIndex i=0;i<MIN(count,32);i++)RouteDigitizer((void *)CFArrayGetValueAtIndex(children,i),depth+1);
+        return;
+    }
+    constexpr uint32_t base=11u<<16;
+    if(HIDType(event)!=11||HIDInteger(event,base+4)!=2)return;
+    // IOHID digitizer fields match the KIF declarations in this repository.
+    uint64_t identity=static_cast<uint32_t>(HIDInteger(event,base+6));
+    uint64_t index=static_cast<uint32_t>(HIDInteger(event,base+5));
+    uint64_t finger=(identity<<32)|index;
+    uint32_t mask=static_cast<uint32_t>(HIDInteger(event,base+7));
+    static aov::FingerState fingers;
+    auto state=fingers.update(finger,HIDInteger(event,base+9)!=0,(mask&(1u<<7))!=0);
+    if(state==aov::FingerPhase::none)return;
+    UITouchPhase phase;
+    switch(state){
+        case aov::FingerPhase::began:phase=UITouchPhaseBegan;break;
+        case aov::FingerPhase::moved:phase=UITouchPhaseMoved;break;
+        case aov::FingerPhase::ended:phase=UITouchPhaseEnded;break;
+        default:phase=UITouchPhaseCancelled;break;
+    }
+    double x=HIDFloat(event,base),y=HIDFloat(event,base+1);
+    if(!std::isfinite(x)||!std::isfinite(y)){[HUDOverlay cancelScreenTouch];return;}
+    UIScreen *screen=UIScreen.mainScreen;
+    // Hardware positions are normalized in the physical portrait space.
+    CGRect fixed=screen.fixedCoordinateSpace.bounds;
+    CGPoint point=CGPointMake(fixed.origin.x+x*fixed.size.width,fixed.origin.y+y*fixed.size.height);
+    point=[screen.coordinateSpace convertPoint:point fromCoordinateSpace:screen.fixedCoordinateSpace];
+    [HUDOverlay handleScreenPoint:point phase:phase identity:static_cast<NSInteger>(finger)];
+}
 static void HIDCallback(void *target,void *ref,void *service,void *event){
     @autoreleasepool{
-        Class cls=NSClassFromString(@"AXEventRepresentation");
-        if(!ManualTouchRouting){
-            UIApplication *app=UIApplication.sharedApplication;
-            if([app respondsToSelector:@selector(_enqueueHIDEvent:)]){
-                CFRetain(event);dispatch_async(dispatch_get_main_queue(),^{[app _enqueueHIDEvent:event];CFRelease(event);});
-            }return;
+        if(RawTouchRouting){
+            CFRetain(event);
+            dispatch_async(dispatch_get_main_queue(),^{@autoreleasepool{RouteDigitizer(event,0);CFRelease(event);}});
+            return;
         }
+        Class cls=NSClassFromString(@"AXEventRepresentation");
         id rep=[cls representationWithHIDEvent:event hidStreamIdentifier:@"UIApplicationEvents"];
         NSArray *paths=[[rep handInfo] paths];
-        if(paths.count>1){dispatch_async(dispatch_get_main_queue(),^{[HUDOverlay cancelScreenTouch];});return;}
+        if(paths.count>1)return; // AX fallback has no per-path coordinates.
         id path=paths.firstObject;if(!path)return;
         UITouchPhase phase;
         if([rep isCancel])phase=UITouchPhaseCancelled;
@@ -272,8 +294,14 @@ static int RunHUD(){
     if(!gs||!bks||!init||!singleton||!callback||![UIWindow instancesRespondToSelector:@selector(_initWithFrame:attached:)]){WriteStatus(@"iOS không hỗ trợ khởi chạy HUD");return 2;}
     [UIScreen class];CFRunLoopGetCurrent();gs();bks();init();singleton(AOVHUDApplication.class);
     UIApplication *app=UIApplication.sharedApplication;static AOVHUDDelegate *delegate=[AOVHUDDelegate new];app.delegate=delegate;
-    Class representation=NSClassFromString(@"AXEventRepresentation");ManualTouchRouting=representation&&[representation respondsToSelector:@selector(representationWithHIDEvent:hidStreamIdentifier:)];
-    if(!ManualTouchRouting&&(![app respondsToSelector:@selector(_enqueueHIDEvent:)]||!InstallNativeEventLoop(app))){WriteStatus(@"iOS chưa hỗ trợ cảm ứng menu nổi");return 2;}
+    dlopen("/System/Library/Frameworks/IOKit.framework/IOKit",RTLD_LAZY|RTLD_GLOBAL);
+    HIDChildren=(CFArrayRef(*)(void *))dlsym(RTLD_DEFAULT,"IOHIDEventGetChildren");
+    HIDType=(uint32_t(*)(void *))dlsym(RTLD_DEFAULT,"IOHIDEventGetType");
+    HIDInteger=(CFIndex(*)(void *,uint32_t))dlsym(RTLD_DEFAULT,"IOHIDEventGetIntegerValue");
+    HIDFloat=(double(*)(void *,uint32_t))dlsym(RTLD_DEFAULT,"IOHIDEventGetFloatValue");
+    RawTouchRouting=HIDChildren&&HIDType&&HIDInteger&&HIDFloat;
+    Class representation=NSClassFromString(@"AXEventRepresentation");
+    if(!RawTouchRouting&&(!representation||![representation respondsToSelector:@selector(representationWithHIDEvent:hidStreamIdentifier:)])){WriteStatus(@"iOS chưa hỗ trợ cảm ứng menu nổi");return 2;}
     if([app respondsToSelector:@selector(_accessibilityInit)])[app _accessibilityInit];
     callback(HIDCallback);
     auto eventInit=(void(*)(Boolean))dlsym(RTLD_DEFAULT,"GSEventInitialize");auto mode=(void(*)(CFStringRef))dlsym(RTLD_DEFAULT,"GSEventPushRunLoopMode");if(eventInit)eventInit(false);if(mode)mode(kCFRunLoopDefaultMode);

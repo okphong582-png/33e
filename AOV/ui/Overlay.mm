@@ -162,17 +162,26 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
     _panel.center=CGPointMake(x+152,y+140);_panelGradient.frame=_panel.bounds;
     _panel.layer.shadowPath=[UIBezierPath bezierPathWithRoundedRect:_panel.bounds cornerRadius:22].CGPath;
 }
-- (UIView *)hitTest:(CGPoint)p withEvent:(UIEvent *)e{
+- (UIControl *)controlAtPoint:(CGPoint)p{
     if(!self.userInteractionEnabled||self.hidden||self.alpha<.01)return nil;
-    if(!_panel.hidden&&CGRectContainsPoint(_panel.frame,p))return [_panel hitTest:[self convertPoint:p toView:_panel] withEvent:e];
-    if(!_dot.hidden&&CGRectContainsPoint(CGRectInset(_dot.frame,-6,-6),p))return _dot;return nil;
+    if(!_panel.hidden){
+        for(UIControl *control in @[_close,_enemy,_monster]){
+            CGPoint local=[self convertPoint:p toView:control];
+            if(control.enabled&&!control.hidden&&CGRectContainsPoint(control.bounds,local))return control;
+        }
+    }
+    if(!_dot.hidden&&CGRectContainsPoint(_dot.frame,p))return _dot;
+    return nil;
 }
+- (BOOL)pointInside:(CGPoint)p withEvent:(UIEvent *)e{return [self controlAtPoint:p]!=nil;}
+- (UIView *)hitTest:(CGPoint)p withEvent:(UIEvent *)e{return [self controlAtPoint:p];}
 - (void)toggleMenu{
     BOOL show=_panel.hidden;[self cancelScreenTouch];[_panel.layer removeAllAnimations];_panel.transform=CGAffineTransformIdentity;_panel.alpha=1;
     _panel.hidden=!show;_dot.hidden=show;[self setNeedsLayout];[self layoutIfNeeded];
     if(show&&!UIAccessibilityIsReduceMotionEnabled()){
-        _panel.alpha=0;_panel.transform=CGAffineTransformMakeScale(.96,.96);
-        [UIView animateWithDuration:.2 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionAllowUserInteraction animations:^{self->_panel.alpha=1;self->_panel.transform=CGAffineTransformIdentity;} completion:nil];
+        // Fade without moving hit regions underneath an incoming touch.
+        _panel.alpha=0;
+        [UIView animateWithDuration:.15 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionAllowUserInteraction animations:^{self->_panel.alpha=1;} completion:nil];
     }
 }
 - (void)panDot:(UIPanGestureRecognizer *)g{CGPoint d=[g translationInView:self];_dot.center=CGPointMake(_dot.center.x+d.x,_dot.center.y+d.y);[g setTranslation:CGPointZero inView:self];[self setNeedsLayout];}
