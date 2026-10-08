@@ -53,4 +53,4 @@ make clean package GAME_VARIANT=max BUILD_KIND=dylib
 
 TIPA dùng bundle identifier HUD hiện có, cài MAX thay HUD TH, chưa hỗ trợ cài hai HUD song song. Dylib giữ install name `@rpath/libsubsystem.dylib` cho contract injector hiện có; tên artifact là `Mizze-MAX.dylib`.
 
-Máy Windows này thiếu make/iOS SDK/toolchain Theos link hoàn chỉnh. Chưa có artifact MAX đã link, chưa dispatch CI hay chạy thử trên thiết bị.
+Máy Windows này thiếu make/iOS SDK/toolchain Theos link hoàn chỉnh. Sau khi push commit `427f5a0`, [CI FF thường](https://github.com/okphong582-png/33e/actions/runs/37739762638) và [CI MAX](https://github.com/okphong582-png/33e/actions/runs/37739762660) đều thành công, đã có TIPA/dylib trong Artifacts. Chưa chạy thử trên thiết bị; xem [báo cáo kiểm tra](offset-profile-validation.md).

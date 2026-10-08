@@ -1,5 +1,16 @@
 # Kiểm tra profile offset
 
+## Kết quả build GitHub Actions
+
+Commit mã `427f5a05c94aefaaeaa9f0ebcd0b23d4dffdbc4b` đã push lên main ngày 08/10/2026:
+
+- [FF thường](https://github.com/okphong582-png/33e/actions/runs/37739762638): tất cả job thành công, có Mizze-tipa, Mizze-dylib, Mizze-aimlag và Mizze-Dopamine theo workflow TH hiện có. Các bước Python/Unicorn TH, license rules và test macOS cũng qua trên CI.
+- [FF MAX](https://github.com/okphong582-png/33e/actions/runs/37739762660): hai job tipa/dylib thành công; chỉ có Mizze-MAX-tipa và Mizze-MAX-dylib. Dylib đã qua kiểm tra ARM64, signature staged, dependencies tối thiểu, không +load và đủ protection sections.
+
+CI chứng minh compile/link/package và các test ghi ở workflow; không thay thế smoke test game trên thiết bị. MAX chưa chạy các test Unicorn với field fixture riêng của MAX. Các giới hạn Camera/Transform native vẫn giữ nguyên.
+
+## Kiểm tra cục bộ trước khi push
+
 Đối chiếu ngày 08/10/2026, sau khi nhận IPA MAX:
 
 - Dump TH/MAX: 87/87 danh tính hàm, 68/68 field ghép duy nhất. Scanner tạo lại headers giống snapshot.
@@ -13,4 +24,4 @@
 
 Chưa chạy Python/Unicorn: Python hệ thống và bundled lỗi startup `0xC00000FD`, kể cả --version. Không coi test mô phỏng đã qua. Test C++ không thay thế callback chạy thật.
 
-Chưa build/link iOS đầy đủ: thiếu make, WSL hoạt động, SDK và toolchain Theos link. Chưa có `.tipa`/`.dylib` MAX mới, chưa dispatch CI, chưa smoke test thiết bị. Native Unity camera/transform storage và hành vi runtime vẫn cần xác nhận; xem [giới hạn native evidence](ffmax-native-evidence.md).
+Máy Windows không build/link iOS cục bộ vì thiếu make, WSL hoạt động, SDK và toolchain Theos link. Sau khi push, GitHub Actions đã tạo artifact như ghi ở trên. Chưa smoke test thiết bị; native Unity camera/transform storage và hành vi runtime vẫn cần xác nhận, xem [giới hạn native evidence](ffmax-native-evidence.md).
