@@ -12,7 +12,7 @@ int main() {
     assert(state.headPercent == 75 && state.phase == 50);
     std::unordered_map<uint64_t, uint64_t> memory;
     const uint64_t local = 0x100000, manager = 0x200000, regular = 0x300000, combined = 0x400000;
-    memory[local + 0x740] = manager;
+    memory[local + MIZZE_PLAYER_740] = manager;
     memory[manager + 0x30] = local;
     memory[manager + 0x148] = 0;
     memory[manager + 0xA0] = regular;
@@ -41,6 +41,6 @@ int main() {
     memory[manager + 0x30] = local;
     memory.erase(manager + 0xA0);
     assert(weapon() == 0);
-    memory[local + 0x740] = 0;
+    memory[local + MIZZE_PLAYER_740] = 0;
     assert(weapon() == 0);
 }

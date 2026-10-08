@@ -1,3 +1,4 @@
+#include "GameProfileFields.h"
 #include "AutoFireRemoteLayout.h"
 #ifdef __APPLE__
 .section __TEXT,__autofire,regular,pure_instructions
@@ -115,7 +116,7 @@ _AutoFireRemoteStart:
     cmp x8, x25
     b.ne .LautoRelease
     add x8, x25, #0x1000
-    ldrb w8, [x8, #0x258]
+    ldrb w8, [x8, #(MIZZE_PLAYER_1258 - 0x1000)]
     cbnz w8, .LautoRelease
     ldr x24, [x19, #AUTO_DEADLINE]
     ldr x8, [x19, #AUTO_CLOCK]
@@ -158,7 +159,7 @@ _AutoFireRemoteStart:
     cmp x9, x10
     b.ne .LautoCheckFire
     cbz x9, .LautoCheckFire
-    ldr x8, [x25, #0x740]
+    ldr x8, [x25, #MIZZE_PLAYER_740]
     cbz x8, .LautoCheckFire
     ldr x9, [x8, #0x30]
     cmp x9, x25
@@ -457,7 +458,7 @@ _AutoFireRemoteStart:
     cmp w8, w23
     b.ne .LautoRayBlocked
     // An uninitialised/despawned target root can throw in the native getter.
-    ldr x8, [x0, #0x6C8]
+    ldr x8, [x0, #MIZZE_PLAYER_6C8]
     cbz x8, .LautoRayBlocked
     mov x1, #0
     ldr x8, [x19, #AUTO_ROOT_TRANSFORM]

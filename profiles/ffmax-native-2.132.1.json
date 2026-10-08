@@ -1,0 +1,3758 @@
+{
+  "schema": 1,
+  "variant": "max",
+  "version": "2.132.1",
+  "bundle": "com.dts.freefiremax",
+  "executable": "FreeFireMAX",
+  "build": "2019118522",
+  "nativeSha256": "4c8ed1c97a9f5f67da158647b99f2e68779a75011eb82a78827b4e2b98e69023",
+  "metadataSha256": "9b17e9c8a3266b6f06ac53957702ed98661ee6b8d1fbd78ec2baae1984243125",
+  "runtimeVerified": false,
+  "rvas": [
+    {
+      "th": 196373072,
+      "max": 199832600,
+      "label": "GameFacade TypeInfo"
+    },
+    {
+      "th": 196394696,
+      "max": 199854272,
+      "label": "Tracer TypeInfo"
+    },
+    {
+      "th": 168890908,
+      "max": 171457472,
+      "label": "Metadata initialization helper"
+    },
+    {
+      "th": 90817588,
+      "max": 91439812,
+      "label": "Player.PostUpdate instruction block"
+    },
+    {
+      "th": 96092244,
+      "max": 96726508,
+      "label": "Weapon firing instruction block"
+    },
+    {
+      "th": 96594192,
+      "max": 97135404,
+      "label": "Shot presentation instruction block"
+    },
+    {
+      "th": 105392800,
+      "max": 106053528,
+      "label": "GetSpeedByType instruction block"
+    }
+  ],
+  "fingerprints": [
+    {
+      "th": 96552340,
+      "length": 256,
+      "thHash": 1027973111,
+      "max": 97090440,
+      "maxHash": 2362368580
+    },
+    {
+      "th": 96752940,
+      "length": 256,
+      "thHash": 1105813009,
+      "max": 97297448,
+      "maxHash": 3235923494
+    },
+    {
+      "th": 95826856,
+      "length": 256,
+      "thHash": 705438372,
+      "max": 96363200,
+      "maxHash": 1273771227
+    },
+    {
+      "th": 95882468,
+      "length": 256,
+      "thHash": 1130755179,
+      "max": 96418836,
+      "maxHash": 684670409
+    },
+    {
+      "th": 95935744,
+      "length": 256,
+      "thHash": 4264962647,
+      "max": 96472420,
+      "maxHash": 738612656
+    },
+    {
+      "th": 95948876,
+      "length": 256,
+      "thHash": 2891867870,
+      "max": 96583140,
+      "maxHash": 381143036
+    },
+    {
+      "th": 96112212,
+      "length": 256,
+      "thHash": 2533218360,
+      "max": 96746476,
+      "maxHash": 6219290
+    },
+    {
+      "th": 96114256,
+      "length": 256,
+      "thHash": 923014208,
+      "max": 96748520,
+      "maxHash": 143733240
+    },
+    {
+      "th": 96146160,
+      "length": 256,
+      "thHash": 1788866624,
+      "max": 96780424,
+      "maxHash": 34678908
+    },
+    {
+      "th": 96314956,
+      "length": 256,
+      "thHash": 658086465,
+      "max": 96852496,
+      "maxHash": 591589944
+    },
+    {
+      "th": 96371768,
+      "length": 256,
+      "thHash": 1946232276,
+      "max": 96909348,
+      "maxHash": 3369983129
+    },
+    {
+      "th": 96944740,
+      "length": 256,
+      "thHash": 1500578524,
+      "max": 97489680,
+      "maxHash": 2729349435
+    },
+    {
+      "th": 90267928,
+      "length": 204,
+      "thHash": 3319796462,
+      "max": 90888956,
+      "maxHash": 2525875898
+    },
+    {
+      "th": 96565736,
+      "length": 1448,
+      "thHash": 2597849452,
+      "max": 97103836,
+      "maxHash": 1908141560
+    },
+    {
+      "th": 96609004,
+      "length": 484,
+      "thHash": 2733704609,
+      "max": 97150208,
+      "maxHash": 4242337909
+    },
+    {
+      "th": 90817588,
+      "length": 204,
+      "thHash": 2292497685,
+      "max": 91439812,
+      "maxHash": 1780657169
+    },
+    {
+      "th": 96418572,
+      "length": 528,
+      "thHash": 320737584,
+      "max": 96956452,
+      "maxHash": 3486628458
+    },
+    {
+      "th": 96092244,
+      "length": 80,
+      "thHash": 2707814986,
+      "max": 96726508,
+      "maxHash": 47602415
+    },
+    {
+      "th": 105397372,
+      "length": 16,
+      "thHash": 1462588420,
+      "max": 106058100,
+      "maxHash": 1462588420
+    },
+    {
+      "th": 90882984,
+      "length": 488,
+      "thHash": 518514327,
+      "max": 91504960,
+      "maxHash": 514143997
+    },
+    {
+      "th": 96954512,
+      "length": 9904,
+      "thHash": 1832126792,
+      "max": 97499452,
+      "maxHash": 475945112
+    },
+    {
+      "th": 168890908,
+      "length": 24,
+      "thHash": 801714938,
+      "max": 171457472,
+      "maxHash": 3988884282
+    },
+    {
+      "th": 96594192,
+      "length": 48,
+      "thHash": 3263560206,
+      "max": 97135404,
+      "maxHash": 3359285999
+    },
+    {
+      "th": 96612264,
+      "length": 780,
+      "thHash": 1981128333,
+      "max": 97153528,
+      "maxHash": 2041027028
+    },
+    {
+      "th": 96615252,
+      "length": 6920,
+      "thHash": 4038860953,
+      "max": 97156516,
+      "maxHash": 1696320469
+    },
+    {
+      "th": 148785412,
+      "length": 380,
+      "thHash": 2336083374,
+      "max": 149622160,
+      "maxHash": 3728523654
+    },
+    {
+      "th": 148785792,
+      "length": 496,
+      "thHash": 2304137227,
+      "max": 149622540,
+      "maxHash": 3150410112
+    },
+    {
+      "th": 148834096,
+      "length": 244,
+      "thHash": 4169441420,
+      "max": 149670980,
+      "maxHash": 177545079
+    },
+    {
+      "th": 148216876,
+      "length": 80,
+      "thHash": 3854029404,
+      "max": 149052776,
+      "maxHash": 2775562162
+    },
+    {
+      "th": 148303072,
+      "length": 100,
+      "thHash": 3737833248,
+      "max": 149139116,
+      "maxHash": 2944518938
+    },
+    {
+      "th": 90276604,
+      "length": 340,
+      "thHash": 2390954326,
+      "max": 90897624,
+      "maxHash": 3686936753
+    },
+    {
+      "th": 90402400,
+      "length": 192,
+      "thHash": 2353066127,
+      "max": 91023660,
+      "maxHash": 47232514
+    },
+    {
+      "th": 101966580,
+      "length": 756,
+      "thHash": 238047336,
+      "max": 101990344,
+      "maxHash": 3811749368
+    },
+    {
+      "th": 41329876,
+      "length": 236,
+      "thHash": 2111536276,
+      "max": 44896400,
+      "maxHash": 3949530756
+    },
+    {
+      "th": 41333708,
+      "length": 236,
+      "thHash": 1184284198,
+      "max": 44900232,
+      "maxHash": 1272554671
+    },
+    {
+      "th": 92015404,
+      "length": 560,
+      "thHash": 3153992305,
+      "max": 92640672,
+      "maxHash": 2651401386
+    },
+    {
+      "th": 112500240,
+      "length": 260,
+      "thHash": 2865665620,
+      "max": 113349176,
+      "maxHash": 3977974884
+    },
+    {
+      "th": 93436056,
+      "length": 456,
+      "thHash": 2465355403,
+      "max": 97834860,
+      "maxHash": 2158066796
+    },
+    {
+      "th": 90875848,
+      "length": 272,
+      "thHash": 1148765535,
+      "max": 91497832,
+      "maxHash": 3940393862
+    },
+    {
+      "th": 90402592,
+      "length": 96,
+      "thHash": 1850439166,
+      "max": 91023852,
+      "maxHash": 1527438471
+    },
+    {
+      "th": 90294832,
+      "length": 180,
+      "thHash": 2884835859,
+      "max": 90915808,
+      "maxHash": 1998252333
+    },
+    {
+      "th": 90327072,
+      "length": 256,
+      "thHash": 3392697336,
+      "max": 90948020,
+      "maxHash": 2424366833
+    },
+    {
+      "th": 90327328,
+      "length": 256,
+      "thHash": 3448242845,
+      "max": 90948276,
+      "maxHash": 659368029
+    },
+    {
+      "th": 90354644,
+      "length": 180,
+      "thHash": 421994049,
+      "max": 90975572,
+      "maxHash": 1415548509
+    },
+    {
+      "th": 90354824,
+      "length": 180,
+      "thHash": 1471204123,
+      "max": 90975752,
+      "maxHash": 3451053507
+    },
+    {
+      "th": 90294216,
+      "length": 108,
+      "thHash": 2035873484,
+      "max": 90915192,
+      "maxHash": 3351868831
+    },
+    {
+      "th": 90295012,
+      "length": 180,
+      "thHash": 3026831653,
+      "max": 90915988,
+      "maxHash": 1702146610
+    },
+    {
+      "th": 90327584,
+      "length": 284,
+      "thHash": 2736074740,
+      "max": 90948532,
+      "maxHash": 4271096996
+    },
+    {
+      "th": 90355004,
+      "length": 180,
+      "thHash": 1826602664,
+      "max": 90975932,
+      "maxHash": 1870140092
+    },
+    {
+      "th": 90326152,
+      "length": 180,
+      "thHash": 3124283848,
+      "max": 90947100,
+      "maxHash": 1211811895
+    },
+    {
+      "th": 101968384,
+      "length": 348,
+      "thHash": 547949231,
+      "max": 101992148,
+      "maxHash": 2765207113
+    },
+    {
+      "th": 101960580,
+      "length": 5384,
+      "thHash": 1725573275,
+      "max": 101984344,
+      "maxHash": 1967310099
+    },
+    {
+      "th": 39259864,
+      "length": 880,
+      "thHash": 3634120456,
+      "max": 42785712,
+      "maxHash": 1289127656
+    },
+    {
+      "th": 39265896,
+      "length": 592,
+      "thHash": 2198332774,
+      "max": 42791744,
+      "maxHash": 4181813775
+    },
+    {
+      "th": 39223484,
+      "length": 96,
+      "thHash": 160533781,
+      "max": 42749332,
+      "maxHash": 4237331834
+    },
+    {
+      "th": 90572544,
+      "length": 2116,
+      "thHash": 1283043156,
+      "max": 91194460,
+      "maxHash": 3035497461
+    },
+    {
+      "th": 94682816,
+      "length": 1620,
+      "thHash": 2085346153,
+      "max": 95341220,
+      "maxHash": 2447342102
+    },
+    {
+      "th": 94684816,
+      "length": 1052,
+      "thHash": 3852870292,
+      "max": 95343220,
+      "maxHash": 826299578
+    },
+    {
+      "th": 112499972,
+      "length": 268,
+      "thHash": 1550842924,
+      "max": 113348908,
+      "maxHash": 1339885534
+    },
+    {
+      "th": 112503076,
+      "length": 8,
+      "thHash": 1688629850,
+      "max": 113352012,
+      "maxHash": 1688629850
+    },
+    {
+      "th": 90816996,
+      "length": 11180,
+      "thHash": 1167013530,
+      "max": 91439220,
+      "maxHash": 2528779633
+    },
+    {
+      "th": 105297480,
+      "length": 176,
+      "thHash": 2086559551,
+      "max": 105958204,
+      "maxHash": 4189364567
+    },
+    {
+      "th": 90381608,
+      "length": 88,
+      "thHash": 3955853213,
+      "max": 91002876,
+      "maxHash": 2499508954
+    },
+    {
+      "th": 90335412,
+      "length": 36,
+      "thHash": 3885009854,
+      "max": 90956340,
+      "maxHash": 165751656
+    },
+    {
+      "th": 148293512,
+      "length": 96,
+      "thHash": 2928308984,
+      "max": 149129556,
+      "maxHash": 825008175
+    },
+    {
+      "th": 148293728,
+      "length": 120,
+      "thHash": 3523128284,
+      "max": 149129772,
+      "maxHash": 1029969986
+    },
+    {
+      "th": 112499732,
+      "length": 240,
+      "thHash": 2567946579,
+      "max": 113348668,
+      "maxHash": 1175629215
+    },
+    {
+      "th": 112498252,
+      "length": 8,
+      "thHash": 2161392610,
+      "max": 113347188,
+      "maxHash": 2161392610
+    },
+    {
+      "th": 90414224,
+      "length": 340,
+      "thHash": 1028322063,
+      "max": 91035452,
+      "maxHash": 2549380708
+    },
+    {
+      "th": 148292492,
+      "length": 100,
+      "thHash": 3682684141,
+      "max": 149128536,
+      "maxHash": 1799808403
+    },
+    {
+      "th": 148292692,
+      "length": 116,
+      "thHash": 1627672374,
+      "max": 149128736,
+      "maxHash": 3458807840
+    },
+    {
+      "th": 148302080,
+      "length": 80,
+      "thHash": 394997159,
+      "max": 149138124,
+      "maxHash": 2695813869
+    },
+    {
+      "th": 148303536,
+      "length": 100,
+      "thHash": 1417675337,
+      "max": 149139580,
+      "maxHash": 1157988919
+    },
+    {
+      "th": 148212760,
+      "length": 80,
+      "thHash": 911603853,
+      "max": 149048660,
+      "maxHash": 3069201975
+    },
+    {
+      "th": 148212840,
+      "length": 100,
+      "thHash": 1136013169,
+      "max": 149048740,
+      "maxHash": 3370264270
+    },
+    {
+      "th": 147704564,
+      "length": 80,
+      "thHash": 3616372925,
+      "max": 148539012,
+      "maxHash": 2664914390
+    },
+    {
+      "th": 147704644,
+      "length": 100,
+      "thHash": 357406311,
+      "max": 148539092,
+      "maxHash": 1060200634
+    },
+    {
+      "th": 148293044,
+      "length": 96,
+      "thHash": 1753337573,
+      "max": 149129088,
+      "maxHash": 2312566631
+    },
+    {
+      "th": 148293260,
+      "length": 116,
+      "thHash": 1425549932,
+      "max": 149129304,
+      "maxHash": 3644497186
+    },
+    {
+      "th": 95004244,
+      "length": 120,
+      "thHash": 32653720,
+      "max": 99039212,
+      "maxHash": 1707044159
+    },
+    {
+      "th": 104159564,
+      "length": 84,
+      "thHash": 4217270990,
+      "max": 104854592,
+      "maxHash": 337353310
+    },
+    {
+      "th": 104269516,
+      "length": 84,
+      "thHash": 806396690,
+      "max": 104965036,
+      "maxHash": 2262749932
+    },
+    {
+      "th": 104281068,
+      "length": 84,
+      "thHash": 788311630,
+      "max": 104976588,
+      "maxHash": 2582075361
+    },
+    {
+      "th": 104286488,
+      "length": 84,
+      "thHash": 1210611893,
+      "max": 104982008,
+      "maxHash": 3860727941
+    },
+    {
+      "th": 107874852,
+      "length": 84,
+      "thHash": 430695450,
+      "max": 108568016,
+      "maxHash": 1231103842
+    },
+    {
+      "th": 107938588,
+      "length": 84,
+      "thHash": 3450296428,
+      "max": 108631812,
+      "maxHash": 2188032056
+    },
+    {
+      "th": 96836500,
+      "length": 364,
+      "thHash": 3756587718,
+      "max": 97381432,
+      "maxHash": 3002395643
+    },
+    {
+      "th": 95196940,
+      "length": 160,
+      "thHash": 2482846084,
+      "max": 95730804,
+      "maxHash": 3263769139
+    },
+    {
+      "th": 90918580,
+      "length": 1528,
+      "thHash": 1083328791,
+      "max": 91540572,
+      "maxHash": 3498560985
+    },
+    {
+      "th": 94751188,
+      "length": 256,
+      "thHash": 1401707283,
+      "max": 95409600,
+      "maxHash": 2845942752
+    }
+  ],
+  "words": [
+    {
+      "th": 960909312,
+      "max": 960909312
+    },
+    {
+      "th": 3596551104,
+      "max": 3596551104
+    },
+    {
+      "th": 956715009,
+      "max": 956715009
+    },
+    {
+      "th": 3175336576,
+      "max": 3175336576
+    },
+    {
+      "th": 505421832,
+      "max": 505421832
+    },
+    {
+      "th": 1409287020,
+      "max": 1409287020
+    }
+  ],
+  "virtualMethods": [
+    {
+      "owner": "message.LDCJOLOBGGH",
+      "name": "Serialize",
+      "slot": 6,
+      "params": 1,
+      "flags": 198
+    },
+    {
+      "owner": "message.IFHJKHPIJPC",
+      "name": "Serialize",
+      "slot": 6,
+      "params": 1,
+      "flags": 198
+    },
+    {
+      "owner": "message.CJLFOJMIOEA",
+      "name": "Serialize",
+      "slot": 6,
+      "params": 1,
+      "flags": 198
+    },
+    {
+      "owner": "message.DCAOPGIKAFE",
+      "name": "Serialize",
+      "slot": 6,
+      "params": 1,
+      "flags": 198
+    },
+    {
+      "owner": "message.GKKODHEIJAL",
+      "name": "Serialize",
+      "slot": 6,
+      "params": 1,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IsInVehicle",
+      "slot": 101,
+      "params": 0,
+      "flags": 486
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IsOnStrop",
+      "slot": 105,
+      "params": 0,
+      "flags": 486
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IsInCatapult",
+      "slot": 107,
+      "params": 0,
+      "flags": 486
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "get_UsePhysicalCharacterController",
+      "slot": 79,
+      "params": 0,
+      "flags": 2534
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IsOnChair",
+      "slot": 106,
+      "params": 0,
+      "flags": 486
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "get_BoneRootTransform",
+      "slot": 142,
+      "params": 0,
+      "flags": 2534
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "OnUpdate",
+      "slot": 26,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "PostUpdate",
+      "slot": 174,
+      "params": 2,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "PlayFireEffect",
+      "slot": 182,
+      "params": 1,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "SwapWeapon",
+      "slot": 200,
+      "params": 3,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "SwapWeapon",
+      "slot": 201,
+      "params": 2,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.PlayerNetwork",
+      "name": "OnUpdate",
+      "slot": 26,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.PlayerNetwork",
+      "name": "SwapWeapon",
+      "slot": 200,
+      "params": 3,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.PlayerNetwork",
+      "name": "SwapWeapon",
+      "slot": 201,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.MatchGame",
+      "name": "OnLateUpdate",
+      "slot": 18,
+      "params": 0,
+      "flags": 196
+    },
+    {
+      "owner": "COW.GamePlay.EDKELKADDMB",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.GOHFDNFABPN",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.OKADKJALMHO",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.EBMCCBFMPID",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.AGBNEFBPNLL",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.KCGOPIPBJCA",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.ILMADHAGDOP",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.KLEPOIFFFGK",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.AEPPCENCDGH",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "name": "ALJMFCJMDCF",
+      "slot": 182,
+      "params": 0,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "name": "NFFJEBKJCAK",
+      "slot": 213,
+      "params": 0,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "name": "CIHHEOKFADJ",
+      "slot": 223,
+      "params": 3,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.HAMENLEEAAM",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.MDPBNKPCGNG",
+      "name": "IONEHPNFAJD",
+      "slot": 17,
+      "params": 0,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.MPBPLOLOIGN",
+      "name": "MAMFDNEJAPF",
+      "slot": 28,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.NGMILJIELKA",
+      "name": "JCCIMHDAPDB",
+      "slot": 5,
+      "params": 5,
+      "flags": 454
+    },
+    {
+      "owner": "COW.GamePlay.EPPMGCJDEDC",
+      "name": "EJCPAFDIOKB",
+      "slot": 6,
+      "params": 2,
+      "flags": 198
+    },
+    {
+      "owner": "COW.GamePlay.MNDPBJMLABJ",
+      "name": "OnLateUpdate",
+      "slot": 18,
+      "params": 0,
+      "flags": 196
+    },
+    {
+      "owner": "COW.GamePlay.PBKKDPJKIPB",
+      "name": "OnLateUpdate",
+      "slot": 18,
+      "params": 0,
+      "flags": 196
+    },
+    {
+      "owner": "COW.GamePlay.JJBBNOCIAGD",
+      "name": "OnLateUpdate",
+      "slot": 18,
+      "params": 0,
+      "flags": 196
+    },
+    {
+      "owner": "COW.GamePlay.JBGLPKNEIAF",
+      "name": "OnLateUpdate",
+      "slot": 18,
+      "params": 0,
+      "flags": 196
+    },
+    {
+      "owner": "COW.GamePlay.IJONELEIMJO",
+      "name": "OnLateUpdate",
+      "slot": 18,
+      "params": 0,
+      "flags": 196
+    },
+    {
+      "owner": "COW.GamePlay.EHAKFOKGKAA",
+      "name": "OnLateUpdate",
+      "slot": 18,
+      "params": 0,
+      "flags": 196
+    },
+    {
+      "owner": "GCommon.TransformNode",
+      "name": "get_transform",
+      "slot": 4,
+      "params": 0,
+      "flags": 2534
+    },
+    {
+      "owner": "GCommon.Entity",
+      "name": "get_CachedTransform",
+      "slot": 11,
+      "params": 0,
+      "flags": 2502
+    },
+    {
+      "owner": "GCommon.Entity",
+      "name": "get_Position",
+      "slot": 12,
+      "params": 0,
+      "flags": 2534
+    }
+  ],
+  "virtualTables": [
+    {
+      "owner": "COW.GamePlay.Player",
+      "slots": [
+        {
+          "slot": 5,
+          "name": "OnUpdate"
+        },
+        {
+          "slot": 26,
+          "name": "OnUpdate"
+        },
+        {
+          "slot": 174,
+          "name": "PostUpdate"
+        }
+      ]
+    },
+    {
+      "owner": "COW.GamePlay.PlayerNetwork",
+      "slots": [
+        {
+          "slot": 5,
+          "name": "OnUpdate"
+        },
+        {
+          "slot": 26,
+          "name": "OnUpdate"
+        },
+        {
+          "slot": 174,
+          "name": "PostUpdate"
+        }
+      ]
+    }
+  ],
+  "instructionChecks": [
+    {
+      "rva": 97834860,
+      "word": 2847821812,
+      "instruction": "stp x20, x19, [sp, #-0x20]!"
+    },
+    {
+      "rva": 97834864,
+      "word": 2835446781,
+      "instruction": "stp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 97834868,
+      "word": 2432713725,
+      "instruction": "add x29, sp, #0x10"
+    },
+    {
+      "rva": 97834872,
+      "word": 2416128915,
+      "instruction": "adrp x19, #0xc3bd000"
+    },
+    {
+      "rva": 97834876,
+      "word": 963794536,
+      "instruction": "ldrb w8, [x19, #0xc95]"
+    },
+    {
+      "rva": 97834880,
+      "word": 922747272,
+      "instruction": "tbnz w8, #0, #0x5d4d7b0"
+    },
+    {
+      "rva": 97834884,
+      "word": 3489860128,
+      "instruction": "adrp x0, #0xbe93000"
+    },
+    {
+      "rva": 97834888,
+      "word": 2433769472,
+      "instruction": "add x0, x0, #0x418"
+    },
+    {
+      "rva": 97834892,
+      "word": 2501433613,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 97834896,
+      "word": 3489860128,
+      "instruction": "adrp x0, #0xbe93000"
+    },
+    {
+      "rva": 97834900,
+      "word": 2433941504,
+      "instruction": "add x0, x0, #0x4c0"
+    },
+    {
+      "rva": 97834904,
+      "word": 2501433610,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 97834908,
+      "word": 3489860160,
+      "instruction": "adrp x0, #0xbe97000"
+    },
+    {
+      "rva": 97834912,
+      "word": 2436718592,
+      "instruction": "add x0, x0, #0xf58"
+    },
+    {
+      "rva": 97834916,
+      "word": 2501433607,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 97834920,
+      "word": 1384120360,
+      "instruction": "movz w8, #0x1"
+    },
+    {
+      "rva": 97834924,
+      "word": 959600232,
+      "instruction": "strb w8, [x19, #0xc95]"
+    },
+    {
+      "rva": 97834928,
+      "word": 1384130624,
+      "instruction": "movz w0, #0x142"
+    },
+    {
+      "rva": 97834932,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 97834936,
+      "word": 2488434940,
+      "instruction": "bl #0x71edba8"
+    },
+    {
+      "rva": 97834940,
+      "word": 872415520,
+      "instruction": "cbz w0, #0x5d4d7e0"
+    },
+    {
+      "rva": 97834944,
+      "word": 1384130624,
+      "instruction": "movz w0, #0x142"
+    },
+    {
+      "rva": 97834948,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 97834952,
+      "word": 2488434994,
+      "instruction": "bl #0x71edc90"
+    },
+    {
+      "rva": 97834956,
+      "word": 3019901728,
+      "instruction": "cbz x0, #0x5d4d930"
+    },
+    {
+      "rva": 97834960,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 97834964,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 97834968,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 97834972,
+      "word": 339955103,
+      "instruction": "b #0x6e20e58"
+    },
+    {
+      "rva": 97834976,
+      "word": 3489860148,
+      "instruction": "adrp x20, #0xbe93000"
+    },
+    {
+      "rva": 97834980,
+      "word": 2433942164,
+      "instruction": "add x20, x20, #0x4c0"
+    },
+    {
+      "rva": 97834984,
+      "word": 3489860147,
+      "instruction": "adrp x19, #0xbe93000"
+    },
+    {
+      "rva": 97834988,
+      "word": 2433770099,
+      "instruction": "add x19, x19, #0x418"
+    },
+    {
+      "rva": 97834992,
+      "word": 4181721728,
+      "instruction": "ldr x0, [x20]"
+    },
+    {
+      "rva": 97834996,
+      "word": 3108036616,
+      "instruction": "ldr w8, [x0, #0xe0]"
+    },
+    {
+      "rva": 97835000,
+      "word": 889192552,
+      "instruction": "cbnz w8, #0x5d4d804"
+    },
+    {
+      "rva": 97835004,
+      "word": 2501433690,
+      "instruction": "bl #0xa383d64"
+    },
+    {
+      "rva": 97835008,
+      "word": 4181721728,
+      "instruction": "ldr x0, [x20]"
+    },
+    {
+      "rva": 97835012,
+      "word": 4181744648,
+      "instruction": "ldr x8, [x0, #0xb8]"
+    },
+    {
+      "rva": 97835016,
+      "word": 1384664905,
+      "instruction": "movz w9, #0x427a"
+    },
+    {
+      "rva": 97835020,
+      "word": 946432265,
+      "instruction": "ldrb w9, [x8, x9]"
+    },
+    {
+      "rva": 97835024,
+      "word": 4181721696,
+      "instruction": "ldr x0, [x19]"
+    },
+    {
+      "rva": 97835028,
+      "word": 3108036616,
+      "instruction": "ldr w8, [x0, #0xe0]"
+    },
+    {
+      "rva": 97835032,
+      "word": 1895826751,
+      "instruction": "cmp w9, #1"
+    },
+    {
+      "rva": 97835036,
+      "word": 1409286337,
+      "instruction": "b.ne #0x5d4d834"
+    },
+    {
+      "rva": 97835040,
+      "word": 872415560,
+      "instruction": "cbz w8, #0x5d4d848"
+    },
+    {
+      "rva": 97835044,
+      "word": 4181744648,
+      "instruction": "ldr x8, [x0, #0xb8]"
+    },
+    {
+      "rva": 97835048,
+      "word": 4181722376,
+      "instruction": "ldr x8, [x8, #8]"
+    },
+    {
+      "rva": 97835052,
+      "word": 3036676488,
+      "instruction": "cbnz x8, #0x5d4d85c"
+    },
+    {
+      "rva": 97835056,
+      "word": 335544357,
+      "instruction": "b #0x5d4d8c4"
+    },
+    {
+      "rva": 97835060,
+      "word": 872415816,
+      "instruction": "cbz w8, #0x5d4d87c"
+    },
+    {
+      "rva": 97835064,
+      "word": 4181744648,
+      "instruction": "ldr x8, [x0, #0xb8]"
+    },
+    {
+      "rva": 97835068,
+      "word": 4181721352,
+      "instruction": "ldr x8, [x8]"
+    },
+    {
+      "rva": 97835072,
+      "word": 3036676744,
+      "instruction": "cbnz x8, #0x5d4d890"
+    },
+    {
+      "rva": 97835076,
+      "word": 335544352,
+      "instruction": "b #0x5d4d8c4"
+    },
+    {
+      "rva": 97835080,
+      "word": 2501433671,
+      "instruction": "bl #0xa383d64"
+    },
+    {
+      "rva": 97835084,
+      "word": 4181721696,
+      "instruction": "ldr x0, [x19]"
+    },
+    {
+      "rva": 97835088,
+      "word": 4181744648,
+      "instruction": "ldr x8, [x0, #0xb8]"
+    },
+    {
+      "rva": 97835092,
+      "word": 4181722376,
+      "instruction": "ldr x8, [x8, #8]"
+    },
+    {
+      "rva": 97835096,
+      "word": 3019899752,
+      "instruction": "cbz x8, #0x5d4d8c4"
+    },
+    {
+      "rva": 97835100,
+      "word": 3108036617,
+      "instruction": "ldr w9, [x0, #0xe0]"
+    },
+    {
+      "rva": 97835104,
+      "word": 889193961,
+      "instruction": "cbnz w9, #0x5d4d91c"
+    },
+    {
+      "rva": 97835108,
+      "word": 2501433664,
+      "instruction": "bl #0xa383d64"
+    },
+    {
+      "rva": 97835112,
+      "word": 4181721704,
+      "instruction": "ldr x8, [x19]"
+    },
+    {
+      "rva": 97835116,
+      "word": 4181744904,
+      "instruction": "ldr x8, [x8, #0xb8]"
+    },
+    {
+      "rva": 97835120,
+      "word": 4181722376,
+      "instruction": "ldr x8, [x8, #8]"
+    },
+    {
+      "rva": 97835124,
+      "word": 3036677448,
+      "instruction": "cbnz x8, #0x5d4d91c"
+    },
+    {
+      "rva": 97835128,
+      "word": 335544366,
+      "instruction": "b #0x5d4d930"
+    },
+    {
+      "rva": 97835132,
+      "word": 2501433658,
+      "instruction": "bl #0xa383d64"
+    },
+    {
+      "rva": 97835136,
+      "word": 4181721696,
+      "instruction": "ldr x0, [x19]"
+    },
+    {
+      "rva": 97835140,
+      "word": 4181744648,
+      "instruction": "ldr x8, [x0, #0xb8]"
+    },
+    {
+      "rva": 97835144,
+      "word": 4181721352,
+      "instruction": "ldr x8, [x8]"
+    },
+    {
+      "rva": 97835148,
+      "word": 3019899336,
+      "instruction": "cbz x8, #0x5d4d8c4"
+    },
+    {
+      "rva": 97835152,
+      "word": 3489860180,
+      "instruction": "adrp x20, #0xbe97000"
+    },
+    {
+      "rva": 97835156,
+      "word": 2436719252,
+      "instruction": "add x20, x20, #0xf58"
+    },
+    {
+      "rva": 97835160,
+      "word": 4181721737,
+      "instruction": "ldr x9, [x20]"
+    },
+    {
+      "rva": 97835164,
+      "word": 4181721354,
+      "instruction": "ldr x10, [x8]"
+    },
+    {
+      "rva": 97835168,
+      "word": 960807244,
+      "instruction": "ldrb w12, [x10, #0x130]"
+    },
+    {
+      "rva": 97835172,
+      "word": 960807211,
+      "instruction": "ldrb w11, [x9, #0x130]"
+    },
+    {
+      "rva": 97835176,
+      "word": 1795883423,
+      "instruction": "cmp w12, w11"
+    },
+    {
+      "rva": 97835180,
+      "word": 1409286339,
+      "instruction": "b.lo #0x5d4d8c4"
+    },
+    {
+      "rva": 97835184,
+      "word": 4181747018,
+      "instruction": "ldr x10, [x10, #0xc8]"
+    },
+    {
+      "rva": 97835188,
+      "word": 2332757322,
+      "instruction": "add x10, x10, x11, lsl #3"
+    },
+    {
+      "rva": 97835192,
+      "word": 4167008586,
+      "instruction": "ldur x10, [x10, #-8]"
+    },
+    {
+      "rva": 97835196,
+      "word": 3943235935,
+      "instruction": "cmp x10, x9"
+    },
+    {
+      "rva": 97835200,
+      "word": 1409286304,
+      "instruction": "b.eq #0x5d4d8d4"
+    },
+    {
+      "rva": 97835204,
+      "word": 3531603968,
+      "instruction": "movz x0, #0"
+    },
+    {
+      "rva": 97835208,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 97835212,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 97835216,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 97835220,
+      "word": 3108036618,
+      "instruction": "ldr w10, [x0, #0xe0]"
+    },
+    {
+      "rva": 97835224,
+      "word": 889192682,
+      "instruction": "cbnz w10, #0x5d4d8f4"
+    },
+    {
+      "rva": 97835228,
+      "word": 2501433634,
+      "instruction": "bl #0xa383d64"
+    },
+    {
+      "rva": 97835232,
+      "word": 4181721704,
+      "instruction": "ldr x8, [x19]"
+    },
+    {
+      "rva": 97835236,
+      "word": 4181744904,
+      "instruction": "ldr x8, [x8, #0xb8]"
+    },
+    {
+      "rva": 97835240,
+      "word": 4181721352,
+      "instruction": "ldr x8, [x8]"
+    },
+    {
+      "rva": 97835244,
+      "word": 3019899432,
+      "instruction": "cbz x8, #0x5d4d930"
+    },
+    {
+      "rva": 97835248,
+      "word": 4181721737,
+      "instruction": "ldr x9, [x20]"
+    },
+    {
+      "rva": 97835252,
+      "word": 4181721354,
+      "instruction": "ldr x10, [x8]"
+    },
+    {
+      "rva": 97835256,
+      "word": 960807244,
+      "instruction": "ldrb w12, [x10, #0x130]"
+    },
+    {
+      "rva": 97835260,
+      "word": 960807211,
+      "instruction": "ldrb w11, [x9, #0x130]"
+    },
+    {
+      "rva": 97835264,
+      "word": 1795883423,
+      "instruction": "cmp w12, w11"
+    },
+    {
+      "rva": 97835268,
+      "word": 1409286499,
+      "instruction": "b.lo #0x5d4d930"
+    },
+    {
+      "rva": 97835272,
+      "word": 4181747018,
+      "instruction": "ldr x10, [x10, #0xc8]"
+    },
+    {
+      "rva": 97835276,
+      "word": 2332757322,
+      "instruction": "add x10, x10, x11, lsl #3"
+    },
+    {
+      "rva": 97835280,
+      "word": 4167008586,
+      "instruction": "ldur x10, [x10, #-8]"
+    },
+    {
+      "rva": 97835284,
+      "word": 3943235935,
+      "instruction": "cmp x10, x9"
+    },
+    {
+      "rva": 97835288,
+      "word": 1409286337,
+      "instruction": "b.ne #0x5d4d930"
+    },
+    {
+      "rva": 97835292,
+      "word": 2852652000,
+      "instruction": "mov x0, x8"
+    },
+    {
+      "rva": 97835296,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 97835300,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 97835304,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 97835308,
+      "word": 335841600,
+      "instruction": "b #0x5e6fe2c"
+    },
+    {
+      "rva": 97835312,
+      "word": 2501433693,
+      "instruction": "bl #0xa383ea4"
+    },
+    {
+      "rva": 97522472,
+      "word": 2847758326,
+      "instruction": "stp x22, x21, [sp, #-0x30]!"
+    },
+    {
+      "rva": 97522476,
+      "word": 2835435508,
+      "instruction": "stp x20, x19, [sp, #0x10]"
+    },
+    {
+      "rva": 97522480,
+      "word": 2835512317,
+      "instruction": "stp x29, x30, [sp, #0x20]"
+    },
+    {
+      "rva": 97522484,
+      "word": 2432730109,
+      "instruction": "add x29, sp, #0x20"
+    },
+    {
+      "rva": 97522488,
+      "word": 2416129523,
+      "instruction": "adrp x19, #0xc3bd000"
+    },
+    {
+      "rva": 97522492,
+      "word": 963304040,
+      "instruction": "ldrb w8, [x19, #0xab6]"
+    },
+    {
+      "rva": 97522496,
+      "word": 3489860534,
+      "instruction": "adrp x22, #0xbe77000"
+    },
+    {
+      "rva": 97522500,
+      "word": 2435973846,
+      "instruction": "add x22, x22, #0xc80"
+    },
+    {
+      "rva": 97522504,
+      "word": 3489861269,
+      "instruction": "adrp x21, #0xbed3000"
+    },
+    {
+      "rva": 97522508,
+      "word": 2433155765,
+      "instruction": "add x21, x21, #0x1c0"
+    },
+    {
+      "rva": 97522512,
+      "word": 4026731700,
+      "instruction": "adrp x20, #0xbe98000"
+    },
+    {
+      "rva": 97522516,
+      "word": 2434990740,
+      "instruction": "add x20, x20, #0x8c0"
+    },
+    {
+      "rva": 97522520,
+      "word": 922747272,
+      "instruction": "tbnz w8, #0, #0x5d01388"
+    },
+    {
+      "rva": 97522524,
+      "word": 3489861248,
+      "instruction": "adrp x0, #0xbed3000"
+    },
+    {
+      "rva": 97522528,
+      "word": 2433155072,
+      "instruction": "add x0, x0, #0x1c0"
+    },
+    {
+      "rva": 97522532,
+      "word": 2501511703,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 97522536,
+      "word": 3489860512,
+      "instruction": "adrp x0, #0xbe77000"
+    },
+    {
+      "rva": 97522540,
+      "word": 2435973120,
+      "instruction": "add x0, x0, #0xc80"
+    },
+    {
+      "rva": 97522544,
+      "word": 2501511700,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 97522548,
+      "word": 4026731680,
+      "instruction": "adrp x0, #0xbe98000"
+    },
+    {
+      "rva": 97522552,
+      "word": 2434990080,
+      "instruction": "add x0, x0, #0x8c0"
+    },
+    {
+      "rva": 97522556,
+      "word": 2501511697,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 97522560,
+      "word": 1384120360,
+      "instruction": "movz w8, #0x1"
+    },
+    {
+      "rva": 97522564,
+      "word": 959109736,
+      "instruction": "strb w8, [x19, #0xab6]"
+    },
+    {
+      "rva": 97522568,
+      "word": 4181721792,
+      "instruction": "ldr x0, [x22]"
+    },
+    {
+      "rva": 97522572,
+      "word": 2501511873,
+      "instruction": "bl #0xa383e90"
+    },
+    {
+      "rva": 97522576,
+      "word": 2852127731,
+      "instruction": "mov x19, x0"
+    },
+    {
+      "rva": 97522580,
+      "word": 4181721762,
+      "instruction": "ldr x2, [x21]"
+    },
+    {
+      "rva": 97522584,
+      "word": 1384120449,
+      "instruction": "movz w1, #0x4"
+    },
+    {
+      "rva": 97522588,
+      "word": 2491514474,
+      "instruction": "bl #0x7d60d44"
+    },
+    {
+      "rva": 97522592,
+      "word": 4181721736,
+      "instruction": "ldr x8, [x20]"
+    },
+    {
+      "rva": 97522596,
+      "word": 4181744896,
+      "instruction": "ldr x0, [x8, #0xb8]"
+    },
+    {
+      "rva": 97522600,
+      "word": 4177526803,
+      "instruction": "str x19, [x0]"
+    },
+    {
+      "rva": 97522604,
+      "word": 2853372897,
+      "instruction": "mov x1, x19"
+    },
+    {
+      "rva": 91439812,
+      "word": 4181960288,
+      "instruction": "ldr x0, [x19, #0x748]"
+    },
+    {
+      "rva": 91439816,
+      "word": 3019902176,
+      "instruction": "cbz x0, #0x5734464"
+    },
+    {
+      "rva": 91439820,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 91439824,
+      "word": 2484100713,
+      "instruction": "bl #0x5b4bc74"
+    },
+    {
+      "rva": 91439828,
+      "word": 3019900384,
+      "instruction": "cbz x0, #0x5734390"
+    },
+    {
+      "rva": 91439832,
+      "word": 4181960288,
+      "instruction": "ldr x0, [x19, #0x748]"
+    },
+    {
+      "rva": 91439836,
+      "word": 3019982848,
+      "instruction": "cbz x0, #0x5736bdc"
+    },
+    {
+      "rva": 91439840,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 91439844,
+      "word": 2484100708,
+      "instruction": "bl #0x5b4bc74"
+    },
+    {
+      "rva": 91439848,
+      "word": 3019982752,
+      "instruction": "cbz x0, #0x5736bdc"
+    },
+    {
+      "rva": 91439852,
+      "word": 4181721096,
+      "instruction": "ldr x8, [x0]"
+    },
+    {
+      "rva": 91439856,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 91439860,
+      "word": 2852652000,
+      "instruction": "mov x0, x8"
+    },
+    {
+      "rva": 91439864,
+      "word": 2503086929,
+      "instruction": "bl #0xa3b903c"
+    },
+    {
+      "rva": 91439868,
+      "word": 4181721736,
+      "instruction": "ldr x8, [x20]"
+    },
+    {
+      "rva": 91439872,
+      "word": 2841085193,
+      "instruction": "ldp x9, x1, [x8, #0x178]"
+    },
+    {
+      "rva": 91439876,
+      "word": 2853438432,
+      "instruction": "mov x0, x20"
+    },
+    {
+      "rva": 91439880,
+      "word": 3594453280,
+      "instruction": "blr x9"
+    },
+    {
+      "rva": 91439884,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 91439888,
+      "word": 2496393196,
+      "instruction": "bl #0x8a302c0"
+    },
+    {
+      "rva": 91439892,
+      "word": 922747328,
+      "instruction": "tbnz w0, #0, #0x573434c"
+    },
+    {
+      "rva": 91439896,
+      "word": 4181960288,
+      "instruction": "ldr x0, [x19, #0x748]"
+    },
+    {
+      "rva": 91439900,
+      "word": 3019982336,
+      "instruction": "cbz x0, #0x5736bdc"
+    },
+    {
+      "rva": 91439904,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 91439908,
+      "word": 2484100692,
+      "instruction": "bl #0x5b4bc74"
+    },
+    {
+      "rva": 91439912,
+      "word": 3019982240,
+      "instruction": "cbz x0, #0x5736bdc"
+    },
+    {
+      "rva": 91439916,
+      "word": 4181721096,
+      "instruction": "ldr x8, [x0]"
+    },
+    {
+      "rva": 91439920,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 91439924,
+      "word": 2852652000,
+      "instruction": "mov x0, x8"
+    },
+    {
+      "rva": 91439928,
+      "word": 2503086913,
+      "instruction": "bl #0xa3b903c"
+    },
+    {
+      "rva": 91439932,
+      "word": 4181721736,
+      "instruction": "ldr x8, [x20]"
+    },
+    {
+      "rva": 91439936,
+      "word": 2841085193,
+      "instruction": "ldp x9, x1, [x8, #0x178]"
+    },
+    {
+      "rva": 91439940,
+      "word": 2853438432,
+      "instruction": "mov x0, x20"
+    },
+    {
+      "rva": 91439944,
+      "word": 3594453280,
+      "instruction": "blr x9"
+    },
+    {
+      "rva": 91439948,
+      "word": 4181960288,
+      "instruction": "ldr x0, [x19, #0x748]"
+    },
+    {
+      "rva": 91439952,
+      "word": 3019981920,
+      "instruction": "cbz x0, #0x5736bdc"
+    },
+    {
+      "rva": 91439956,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 91439960,
+      "word": 2484100679,
+      "instruction": "bl #0x5b4bc74"
+    },
+    {
+      "rva": 91439964,
+      "word": 3019981824,
+      "instruction": "cbz x0, #0x5736bdc"
+    },
+    {
+      "rva": 91439968,
+      "word": 3175103465,
+      "instruction": "ldr s9, [sp, #0x38]"
+    },
+    {
+      "rva": 91439972,
+      "word": 4181721096,
+      "instruction": "ldr x8, [x0]"
+    },
+    {
+      "rva": 91439976,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 91439980,
+      "word": 2852652000,
+      "instruction": "mov x0, x8"
+    },
+    {
+      "rva": 91439984,
+      "word": 2503086899,
+      "instruction": "bl #0xa3b903c"
+    },
+    {
+      "rva": 91439988,
+      "word": 4181721736,
+      "instruction": "ldr x8, [x20]"
+    },
+    {
+      "rva": 91439992,
+      "word": 4181818633,
+      "instruction": "ldr x9, [x8, #0x2f8]"
+    },
+    {
+      "rva": 91439996,
+      "word": 4181819649,
+      "instruction": "ldr x1, [x8, #0x300]"
+    },
+    {
+      "rva": 91440000,
+      "word": 2853438432,
+      "instruction": "mov x0, x20"
+    },
+    {
+      "rva": 91440004,
+      "word": 505430272,
+      "instruction": "fmov s0, s8"
+    },
+    {
+      "rva": 91440008,
+      "word": 505430305,
+      "instruction": "fmov s1, s9"
+    },
+    {
+      "rva": 91440012,
+      "word": 3594453280,
+      "instruction": "blr x9"
+    },
+    {
+      "rva": 96726508,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 96726512,
+      "word": 2483231196,
+      "instruction": "bl #0x5d05560"
+    },
+    {
+      "rva": 96726516,
+      "word": 3019901344,
+      "instruction": "cbz x0, #0x5c3ef28"
+    },
+    {
+      "rva": 96726520,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 96726524,
+      "word": 2483085450,
+      "instruction": "bl #0x5c77024"
+    },
+    {
+      "rva": 96726528,
+      "word": 505422080,
+      "instruction": "fcmp s8, s0"
+    },
+    {
+      "rva": 96726532,
+      "word": 1409288043,
+      "instruction": "b.lt #0x5c3eef0"
+    },
+    {
+      "rva": 96726536,
+      "word": 2853372896,
+      "instruction": "mov x0, x19"
+    },
+    {
+      "rva": 96726540,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 96726544,
+      "word": 2483231188,
+      "instruction": "bl #0x5d05560"
+    },
+    {
+      "rva": 96726548,
+      "word": 3019901088,
+      "instruction": "cbz x0, #0x5c3ef28"
+    },
+    {
+      "rva": 96726552,
+      "word": 4181721096,
+      "instruction": "ldr x8, [x0]"
+    },
+    {
+      "rva": 96726556,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 96726560,
+      "word": 2852652000,
+      "instruction": "mov x0, x8"
+    },
+    {
+      "rva": 96726564,
+      "word": 2501765254,
+      "instruction": "bl #0xa3b903c"
+    },
+    {
+      "rva": 96726568,
+      "word": 4181721736,
+      "instruction": "ldr x8, [x20]"
+    },
+    {
+      "rva": 96726572,
+      "word": 4182134025,
+      "instruction": "ldr x9, [x8, #0xc98]"
+    },
+    {
+      "rva": 96726576,
+      "word": 4182135041,
+      "instruction": "ldr x1, [x8, #0xca0]"
+    },
+    {
+      "rva": 96726580,
+      "word": 2853438432,
+      "instruction": "mov x0, x20"
+    },
+    {
+      "rva": 96726584,
+      "word": 3594453280,
+      "instruction": "blr x9"
+    },
+    {
+      "rva": 97135404,
+      "word": 2852127733,
+      "instruction": "mov x21, x0"
+    },
+    {
+      "rva": 97135408,
+      "word": 4181721792,
+      "instruction": "ldr x0, [x22]"
+    },
+    {
+      "rva": 97135412,
+      "word": 2501663042,
+      "instruction": "bl #0xa3b903c"
+    },
+    {
+      "rva": 97135416,
+      "word": 4181721800,
+      "instruction": "ldr x8, [x22]"
+    },
+    {
+      "rva": 97135420,
+      "word": 2841154825,
+      "instruction": "ldp x9, x5, [x8, #0x188]"
+    },
+    {
+      "rva": 97135424,
+      "word": 2853569504,
+      "instruction": "mov x0, x22"
+    },
+    {
+      "rva": 97135428,
+      "word": 2853438433,
+      "instruction": "mov x1, x20"
+    },
+    {
+      "rva": 97135432,
+      "word": 2853372898,
+      "instruction": "mov x2, x19"
+    },
+    {
+      "rva": 97135436,
+      "word": 505430272,
+      "instruction": "fmov s0, s8"
+    },
+    {
+      "rva": 97135440,
+      "word": 2853635043,
+      "instruction": "mov x3, x23"
+    },
+    {
+      "rva": 97135444,
+      "word": 2853503972,
+      "instruction": "mov x4, x21"
+    },
+    {
+      "rva": 97135448,
+      "word": 3594453280,
+      "instruction": "blr x9"
+    },
+    {
+      "rva": 106053528,
+      "word": 3175336576,
+      "instruction": "ldr s0, [x20, #0x3c8]"
+    },
+    {
+      "rva": 106053532,
+      "word": 505421832,
+      "instruction": "fcmp s0, #0.0"
+    },
+    {
+      "rva": 106053536,
+      "word": 1409287020,
+      "instruction": "b.gt #0x652400c"
+    },
+    {
+      "rva": 106058100,
+      "word": 960909312,
+      "instruction": "ldrb w0, [x0, #0x194]"
+    },
+    {
+      "rva": 106058104,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 106058108,
+      "word": 956715009,
+      "instruction": "strb w1, [x0, #0x194]"
+    },
+    {
+      "rva": 106058112,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 92546192,
+      "word": 2847758326,
+      "instruction": "stp x22, x21, [sp, #-0x30]!"
+    },
+    {
+      "rva": 92546196,
+      "word": 2835435508,
+      "instruction": "stp x20, x19, [sp, #0x10]"
+    },
+    {
+      "rva": 92546200,
+      "word": 2835512317,
+      "instruction": "stp x29, x30, [sp, #0x20]"
+    },
+    {
+      "rva": 92546204,
+      "word": 2432730109,
+      "instruction": "add x29, sp, #0x20"
+    },
+    {
+      "rva": 92546208,
+      "word": 2852127731,
+      "instruction": "mov x19, x0"
+    },
+    {
+      "rva": 92546212,
+      "word": 2953010132,
+      "instruction": "adrp x20, #0xc3bb000"
+    },
+    {
+      "rva": 92546216,
+      "word": 964466312,
+      "instruction": "ldrb w8, [x20, #0xf25]"
+    },
+    {
+      "rva": 92546220,
+      "word": 922747080,
+      "instruction": "tbnz w8, #0, #0x58424c4"
+    },
+    {
+      "rva": 92546224,
+      "word": 4026741376,
+      "instruction": "adrp x0, #0xbe95000"
+    },
+    {
+      "rva": 92546228,
+      "word": 2432925696,
+      "instruction": "add x0, x0, #0xe0"
+    },
+    {
+      "rva": 92546232,
+      "word": 2502755778,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 92546236,
+      "word": 1384120360,
+      "instruction": "movz w8, #0x1"
+    },
+    {
+      "rva": 92546240,
+      "word": 960272008,
+      "instruction": "strb w8, [x20, #0xf25]"
+    },
+    {
+      "rva": 92546244,
+      "word": 1384165120,
+      "instruction": "movz w0, #0x578"
+    },
+    {
+      "rva": 92546248,
+      "word": 1923088448,
+      "instruction": "movk w0, #0x2, lsl #16"
+    },
+    {
+      "rva": 92546252,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 92546256,
+      "word": 2489757110,
+      "instruction": "bl #0x71edba8"
+    },
+    {
+      "rva": 92546260,
+      "word": 872415616,
+      "instruction": "cbz w0, #0x5842504"
+    },
+    {
+      "rva": 92546264,
+      "word": 1384165120,
+      "instruction": "movz w0, #0x578"
+    },
+    {
+      "rva": 92546268,
+      "word": 1923088448,
+      "instruction": "movk w0, #0x2, lsl #16"
+    },
+    {
+      "rva": 92546272,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 92546276,
+      "word": 2489757163,
+      "instruction": "bl #0x71edc90"
+    },
+    {
+      "rva": 92546280,
+      "word": 3019900448,
+      "instruction": "cbz x0, #0x58425ac"
+    },
+    {
+      "rva": 92546284,
+      "word": 2853372897,
+      "instruction": "mov x1, x19"
+    },
+    {
+      "rva": 92546288,
+      "word": 3531603970,
+      "instruction": "movz x2, #0"
+    },
+    {
+      "rva": 92546292,
+      "word": 2839706621,
+      "instruction": "ldp x29, x30, [sp, #0x20]"
+    },
+    {
+      "rva": 92546296,
+      "word": 2839629812,
+      "instruction": "ldp x20, x19, [sp, #0x10]"
+    },
+    {
+      "rva": 92546300,
+      "word": 2831374326,
+      "instruction": "ldp x22, x21, [sp], #0x30"
+    },
+    {
+      "rva": 92546304,
+      "word": 341270278,
+      "instruction": "b #0x6e1a118"
+    },
+    {
+      "rva": 92546308,
+      "word": 4181736051,
+      "instruction": "ldr x19, [x19, #0x70]"
+    },
+    {
+      "rva": 92546312,
+      "word": 3019899603,
+      "instruction": "cbz x19, #0x5842560"
+    },
+    {
+      "rva": 92546316,
+      "word": 4026741384,
+      "instruction": "adrp x8, #0xbe95000"
+    },
+    {
+      "rva": 92546320,
+      "word": 2432925960,
+      "instruction": "add x8, x8, #0xe0"
+    },
+    {
+      "rva": 92546324,
+      "word": 4181721364,
+      "instruction": "ldr x20, [x8]"
+    },
+    {
+      "rva": 92546328,
+      "word": 4181721717,
+      "instruction": "ldr x21, [x19]"
+    },
+    {
+      "rva": 92546332,
+      "word": 2853503968,
+      "instruction": "mov x0, x21"
+    },
+    {
+      "rva": 92546336,
+      "word": 2502810311,
+      "instruction": "bl #0xa3b903c"
+    },
+    {
+      "rva": 92546340,
+      "word": 2034392744,
+      "instruction": "ldrh w8, [x21, #0x12e]"
+    },
+    {
+      "rva": 92546344,
+      "word": 3019899176,
+      "instruction": "cbz x8, #0x584254c"
+    },
+    {
+      "rva": 92546348,
+      "word": 4181744297,
+      "instruction": "ldr x9, [x21, #0xb0]"
+    },
+    {
+      "rva": 92546352,
+      "word": 2432704809,
+      "instruction": "add x9, x9, #8"
+    },
+    {
+      "rva": 92546356,
+      "word": 4167008554,
+      "instruction": "ldur x10, [x9, #-8]"
+    },
+    {
+      "rva": 92546360,
+      "word": 3943956831,
+      "instruction": "cmp x10, x20"
+    },
+    {
+      "rva": 92546364,
+      "word": 1409286592,
+      "instruction": "b.eq #0x5842574"
+    },
+    {
+      "rva": 92546368,
+      "word": 2432713001,
+      "instruction": "add x9, x9, #0x10"
+    },
+    {
+      "rva": 92546372,
+      "word": 4043310344,
+      "instruction": "subs x8, x8, #1"
+    },
+    {
+      "rva": 92546376,
+      "word": 1426063201,
+      "instruction": "b.ne #0x5842534"
+    },
+    {
+      "rva": 92546380,
+      "word": 2853372896,
+      "instruction": "mov x0, x19"
+    },
+    {
+      "rva": 92546384,
+      "word": 2853438433,
+      "instruction": "mov x1, x20"
+    },
+    {
+      "rva": 92546388,
+      "word": 1384120674,
+      "instruction": "movz w2, #0xb"
+    },
+    {
+      "rva": 92546392,
+      "word": 2502810479,
+      "instruction": "bl #0xa3b9314"
+    },
+    {
+      "rva": 92546396,
+      "word": 335544330,
+      "instruction": "b #0x5842584"
+    },
+    {
+      "rva": 92546400,
+      "word": 1384120320,
+      "instruction": "movz w0, #0"
+    },
+    {
+      "rva": 92546404,
+      "word": 2839706621,
+      "instruction": "ldp x29, x30, [sp, #0x20]"
+    },
+    {
+      "rva": 92546408,
+      "word": 2839629812,
+      "instruction": "ldp x20, x19, [sp, #0x10]"
+    },
+    {
+      "rva": 92546412,
+      "word": 2831374326,
+      "instruction": "ldp x22, x21, [sp], #0x30"
+    },
+    {
+      "rva": 92546416,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 92546420,
+      "word": 3107979560,
+      "instruction": "ldr w8, [x9]"
+    },
+    {
+      "rva": 92546424,
+      "word": 285224200,
+      "instruction": "add w8, w8, #0xb"
+    },
+    {
+      "rva": 92546428,
+      "word": 2334708392,
+      "instruction": "add x8, x21, w8, sxtw #4"
+    },
+    {
+      "rva": 92546432,
+      "word": 2433016064,
+      "instruction": "add x0, x8, #0x138"
+    },
+    {
+      "rva": 92546436,
+      "word": 2839545864,
+      "instruction": "ldp x8, x2, [x0]"
+    },
+    {
+      "rva": 92546440,
+      "word": 2853372896,
+      "instruction": "mov x0, x19"
+    },
+    {
+      "rva": 92546444,
+      "word": 1384120993,
+      "instruction": "movz w1, #0x15"
+    },
+    {
+      "rva": 92546448,
+      "word": 3594453248,
+      "instruction": "blr x8"
+    },
+    {
+      "rva": 92546452,
+      "word": 1895827487,
+      "instruction": "cmp w0, #2"
+    },
+    {
+      "rva": 92546456,
+      "word": 446633952,
+      "instruction": "cset w0, eq"
+    },
+    {
+      "rva": 92546460,
+      "word": 2839706621,
+      "instruction": "ldp x29, x30, [sp, #0x20]"
+    },
+    {
+      "rva": 92546464,
+      "word": 2839629812,
+      "instruction": "ldp x20, x19, [sp, #0x10]"
+    },
+    {
+      "rva": 92546468,
+      "word": 2831374326,
+      "instruction": "ldp x22, x21, [sp], #0x30"
+    },
+    {
+      "rva": 92546472,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 92546476,
+      "word": 2502755902,
+      "instruction": "bl #0xa383ea4"
+    },
+    {
+      "rva": 101992148,
+      "word": 2847631354,
+      "instruction": "stp x26, x25, [sp, #-0x50]!"
+    },
+    {
+      "rva": 101992152,
+      "word": 2835439608,
+      "instruction": "stp x24, x23, [sp, #0x10]"
+    },
+    {
+      "rva": 101992156,
+      "word": 2835503094,
+      "instruction": "stp x22, x21, [sp, #0x20]"
+    },
+    {
+      "rva": 101992160,
+      "word": 2835566580,
+      "instruction": "stp x20, x19, [sp, #0x30]"
+    },
+    {
+      "rva": 101992164,
+      "word": 2835643389,
+      "instruction": "stp x29, x30, [sp, #0x40]"
+    },
+    {
+      "rva": 101992168,
+      "word": 2432762877,
+      "instruction": "add x29, sp, #0x40"
+    },
+    {
+      "rva": 101992172,
+      "word": 2852127731,
+      "instruction": "mov x19, x0"
+    },
+    {
+      "rva": 101992176,
+      "word": 4026733529,
+      "instruction": "adrp x25, #0xc3bf000"
+    },
+    {
+      "rva": 101992180,
+      "word": 962273064,
+      "instruction": "ldrb w8, [x25, #0x6c7]"
+    },
+    {
+      "rva": 101992184,
+      "word": 2416110196,
+      "instruction": "adrp x20, #0xbe90000"
+    },
+    {
+      "rva": 101992188,
+      "word": 2433589908,
+      "instruction": "add x20, x20, #0x368"
+    },
+    {
+      "rva": 101992192,
+      "word": 4026722936,
+      "instruction": "adrp x24, #0xbe93000"
+    },
+    {
+      "rva": 101992196,
+      "word": 2432762648,
+      "instruction": "add x24, x24, #0x40"
+    },
+    {
+      "rva": 101992200,
+      "word": 2952980919,
+      "instruction": "adrp x23, #0xbe79000"
+    },
+    {
+      "rva": 101992204,
+      "word": 2435195639,
+      "instruction": "add x23, x23, #0x988"
+    },
+    {
+      "rva": 101992208,
+      "word": 2952981846,
+      "instruction": "adrp x22, #0xbeed000"
+    },
+    {
+      "rva": 101992212,
+      "word": 2434548438,
+      "instruction": "add x22, x22, #0x710"
+    },
+    {
+      "rva": 101992216,
+      "word": 2952981141,
+      "instruction": "adrp x21, #0xbe95000"
+    },
+    {
+      "rva": 101992220,
+      "word": 2436702901,
+      "instruction": "add x21, x21, #0xf48"
+    },
+    {
+      "rva": 101992224,
+      "word": 922747464,
+      "instruction": "tbnz w8, #0, #0x6144768"
+    },
+    {
+      "rva": 101992228,
+      "word": 2416110176,
+      "instruction": "adrp x0, #0xbe90000"
+    },
+    {
+      "rva": 101992232,
+      "word": 2433589248,
+      "instruction": "add x0, x0, #0x368"
+    },
+    {
+      "rva": 101992236,
+      "word": 2500394277,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 101992240,
+      "word": 4026722912,
+      "instruction": "adrp x0, #0xbe93000"
+    },
+    {
+      "rva": 101992244,
+      "word": 2432761856,
+      "instruction": "add x0, x0, #0x40"
+    },
+    {
+      "rva": 101992248,
+      "word": 2500394274,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 101992252,
+      "word": 2952981824,
+      "instruction": "adrp x0, #0xbeed000"
+    },
+    {
+      "rva": 101992256,
+      "word": 2434547712,
+      "instruction": "add x0, x0, #0x710"
+    },
+    {
+      "rva": 101992260,
+      "word": 2500394271,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 101992264,
+      "word": 2952980896,
+      "instruction": "adrp x0, #0xbe79000"
+    },
+    {
+      "rva": 101992268,
+      "word": 2435194880,
+      "instruction": "add x0, x0, #0x988"
+    },
+    {
+      "rva": 101992272,
+      "word": 2500394268,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 101992276,
+      "word": 2952981120,
+      "instruction": "adrp x0, #0xbe95000"
+    },
+    {
+      "rva": 101992280,
+      "word": 2436702208,
+      "instruction": "add x0, x0, #0xf48"
+    },
+    {
+      "rva": 101992284,
+      "word": 2500394265,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 101992288,
+      "word": 1384120360,
+      "instruction": "movz w8, #0x1"
+    },
+    {
+      "rva": 101992292,
+      "word": 958078760,
+      "instruction": "strb w8, [x25, #0x6c7]"
+    },
+    {
+      "rva": 101992296,
+      "word": 310378504,
+      "instruction": "movn w8, #0"
+    },
+    {
+      "rva": 101992300,
+      "word": 3104199272,
+      "instruction": "str w8, [x19, #0x650]"
+    },
+    {
+      "rva": 101992304,
+      "word": 4181721728,
+      "instruction": "ldr x0, [x20]"
+    },
+    {
+      "rva": 101992308,
+      "word": 2500394439,
+      "instruction": "bl #0xa383e90"
+    },
+    {
+      "rva": 101992312,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 101992316,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 101992320,
+      "word": 2535863014,
+      "instruction": "bl #0x2ad1318"
+    },
+    {
+      "rva": 101992324,
+      "word": 4177736308,
+      "instruction": "str x20, [x19, #0x660]"
+    },
+    {
+      "rva": 101992328,
+      "word": 2434368096,
+      "instruction": "add x0, x19, #0x660"
+    },
+    {
+      "rva": 101992332,
+      "word": 2853438433,
+      "instruction": "mov x1, x20"
+    },
+    {
+      "rva": 101992336,
+      "word": 2500394226,
+      "instruction": "bl #0xa383b58"
+    },
+    {
+      "rva": 101992340,
+      "word": 4181721856,
+      "instruction": "ldr x0, [x24]"
+    },
+    {
+      "rva": 101992344,
+      "word": 2500394430,
+      "instruction": "bl #0xa383e90"
+    },
+    {
+      "rva": 101992348,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 101992352,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 101992356,
+      "word": 2535863963,
+      "instruction": "bl #0x2ad2210"
+    },
+    {
+      "rva": 101992360,
+      "word": 4177737332,
+      "instruction": "str x20, [x19, #0x668]"
+    },
+    {
+      "rva": 101992364,
+      "word": 2434376288,
+      "instruction": "add x0, x19, #0x668"
+    },
+    {
+      "rva": 101992368,
+      "word": 2853438433,
+      "instruction": "mov x1, x20"
+    },
+    {
+      "rva": 101992372,
+      "word": 2500394217,
+      "instruction": "bl #0xa383b58"
+    },
+    {
+      "rva": 101992376,
+      "word": 4181721824,
+      "instruction": "ldr x0, [x23]"
+    },
+    {
+      "rva": 101992380,
+      "word": 2500394421,
+      "instruction": "bl #0xa383e90"
+    },
+    {
+      "rva": 101992384,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 101992388,
+      "word": 4181721793,
+      "instruction": "ldr x1, [x22]"
+    },
+    {
+      "rva": 101992392,
+      "word": 2491528765,
+      "instruction": "bl #0x81b20bc"
+    },
+    {
+      "rva": 101992396,
+      "word": 4177738356,
+      "instruction": "str x20, [x19, #0x670]"
+    },
+    {
+      "rva": 101992400,
+      "word": 2434384480,
+      "instruction": "add x0, x19, #0x670"
+    },
+    {
+      "rva": 101992404,
+      "word": 2853438433,
+      "instruction": "mov x1, x20"
+    },
+    {
+      "rva": 101992408,
+      "word": 2500394208,
+      "instruction": "bl #0xa383b58"
+    },
+    {
+      "rva": 101992412,
+      "word": 4181721824,
+      "instruction": "ldr x0, [x23]"
+    },
+    {
+      "rva": 101992416,
+      "word": 2500394412,
+      "instruction": "bl #0xa383e90"
+    },
+    {
+      "rva": 101992420,
+      "word": 2852127732,
+      "instruction": "mov x20, x0"
+    },
+    {
+      "rva": 101992424,
+      "word": 4181721793,
+      "instruction": "ldr x1, [x22]"
+    },
+    {
+      "rva": 101992428,
+      "word": 2491528756,
+      "instruction": "bl #0x81b20bc"
+    },
+    {
+      "rva": 101992432,
+      "word": 4177739380,
+      "instruction": "str x20, [x19, #0x678]"
+    },
+    {
+      "rva": 101992436,
+      "word": 2434392672,
+      "instruction": "add x0, x19, #0x678"
+    },
+    {
+      "rva": 101992440,
+      "word": 2853438433,
+      "instruction": "mov x1, x20"
+    },
+    {
+      "rva": 101992444,
+      "word": 2500394199,
+      "instruction": "bl #0xa383b58"
+    },
+    {
+      "rva": 101992448,
+      "word": 4181721760,
+      "instruction": "ldr x0, [x21]"
+    },
+    {
+      "rva": 101992452,
+      "word": 3108036616,
+      "instruction": "ldr w8, [x0, #0xe0]"
+    },
+    {
+      "rva": 101992456,
+      "word": 889192520,
+      "instruction": "cbnz w8, #0x6144810"
+    },
+    {
+      "rva": 101992460,
+      "word": 2500394326,
+      "instruction": "bl #0xa383d64"
+    },
+    {
+      "rva": 101992464,
+      "word": 2853372896,
+      "instruction": "mov x0, x19"
+    },
+    {
+      "rva": 101992468,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 101992472,
+      "word": 2839837693,
+      "instruction": "ldp x29, x30, [sp, #0x40]"
+    },
+    {
+      "rva": 101992476,
+      "word": 2839760884,
+      "instruction": "ldp x20, x19, [sp, #0x30]"
+    },
+    {
+      "rva": 101992480,
+      "word": 2839697398,
+      "instruction": "ldp x22, x21, [sp, #0x20]"
+    },
+    {
+      "rva": 101992484,
+      "word": 2839633912,
+      "instruction": "ldp x24, x23, [sp, #0x10]"
+    },
+    {
+      "rva": 101992488,
+      "word": 2831509498,
+      "instruction": "ldp x26, x25, [sp], #0x50"
+    },
+    {
+      "rva": 101992492,
+      "word": 400737783,
+      "instruction": "b #0x59f6008"
+    },
+    {
+      "rva": 90888956,
+      "word": 2847821812,
+      "instruction": "stp x20, x19, [sp, #-0x20]!"
+    },
+    {
+      "rva": 90888960,
+      "word": 2835446781,
+      "instruction": "stp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 90888964,
+      "word": 2432713725,
+      "instruction": "add x29, sp, #0x10"
+    },
+    {
+      "rva": 90888968,
+      "word": 2852127731,
+      "instruction": "mov x19, x0"
+    },
+    {
+      "rva": 90888972,
+      "word": 3489884276,
+      "instruction": "adrp x20, #0xc3bb000"
+    },
+    {
+      "rva": 90888976,
+      "word": 962756232,
+      "instruction": "ldrb w8, [x20, #0x89f]"
+    },
+    {
+      "rva": 90888980,
+      "word": 922747080,
+      "instruction": "tbnz w8, #0, #0x56adb2c"
+    },
+    {
+      "rva": 90888984,
+      "word": 3489873696,
+      "instruction": "adrp x0, #0xbe93000"
+    },
+    {
+      "rva": 90888988,
+      "word": 2435424256,
+      "instruction": "add x0, x0, #0xa68"
+    },
+    {
+      "rva": 90888992,
+      "word": 2503170088,
+      "instruction": "bl #0xa383bc0"
+    },
+    {
+      "rva": 90888996,
+      "word": 1384120360,
+      "instruction": "movz w8, #0x1"
+    },
+    {
+      "rva": 90889000,
+      "word": 958561928,
+      "instruction": "strb w8, [x20, #0x89f]"
+    },
+    {
+      "rva": 90889004,
+      "word": 1384147360,
+      "instruction": "movz w0, #0x34d"
+    },
+    {
+      "rva": 90889008,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 90889012,
+      "word": 2490171421,
+      "instruction": "bl #0x71edba8"
+    },
+    {
+      "rva": 90889016,
+      "word": 872415552,
+      "instruction": "cbz w0, #0x56adb60"
+    },
+    {
+      "rva": 90889020,
+      "word": 1384147360,
+      "instruction": "movz w0, #0x34d"
+    },
+    {
+      "rva": 90889024,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 90889028,
+      "word": 2490171475,
+      "instruction": "bl #0x71edc90"
+    },
+    {
+      "rva": 90889032,
+      "word": 3019899872,
+      "instruction": "cbz x0, #0x56adbc4"
+    },
+    {
+      "rva": 90889036,
+      "word": 2853372897,
+      "instruction": "mov x1, x19"
+    },
+    {
+      "rva": 90889040,
+      "word": 3531603970,
+      "instruction": "movz x2, #0"
+    },
+    {
+      "rva": 90889044,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 90889048,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 90889052,
+      "word": 341705461,
+      "instruction": "b #0x6e2e730"
+    },
+    {
+      "rva": 90889056,
+      "word": 4181960288,
+      "instruction": "ldr x0, [x19, #0x748]"
+    },
+    {
+      "rva": 90889060,
+      "word": 3019899296,
+      "instruction": "cbz x0, #0x56adb98"
+    },
+    {
+      "rva": 90889064,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 90889068,
+      "word": 2484238402,
+      "instruction": "bl #0x5b4bc74"
+    },
+    {
+      "rva": 90889072,
+      "word": 3019899200,
+      "instruction": "cbz x0, #0x56adb98"
+    },
+    {
+      "rva": 90889076,
+      "word": 3489873704,
+      "instruction": "adrp x8, #0xbe93000"
+    },
+    {
+      "rva": 90889080,
+      "word": 2435424520,
+      "instruction": "add x8, x8, #0xa68"
+    },
+    {
+      "rva": 90889084,
+      "word": 4181721352,
+      "instruction": "ldr x8, [x8]"
+    },
+    {
+      "rva": 90889088,
+      "word": 4181721097,
+      "instruction": "ldr x9, [x0]"
+    },
+    {
+      "rva": 90889092,
+      "word": 960807211,
+      "instruction": "ldrb w11, [x9, #0x130]"
+    },
+    {
+      "rva": 90889096,
+      "word": 960807178,
+      "instruction": "ldrb w10, [x8, #0x130]"
+    },
+    {
+      "rva": 90889100,
+      "word": 1795817855,
+      "instruction": "cmp w11, w10"
+    },
+    {
+      "rva": 90889104,
+      "word": 1409286306,
+      "instruction": "b.hs #0x56adba4"
+    },
+    {
+      "rva": 90889108,
+      "word": 3531603968,
+      "instruction": "movz x0, #0"
+    },
+    {
+      "rva": 90889112,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 90889116,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 90889120,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 90889124,
+      "word": 4181746985,
+      "instruction": "ldr x9, [x9, #0xc8]"
+    },
+    {
+      "rva": 90889128,
+      "word": 2332691753,
+      "instruction": "add x9, x9, x10, lsl #3"
+    },
+    {
+      "rva": 90889132,
+      "word": 4167008553,
+      "instruction": "ldur x9, [x9, #-8]"
+    },
+    {
+      "rva": 90889136,
+      "word": 3943170367,
+      "instruction": "cmp x9, x8"
+    },
+    {
+      "rva": 90889140,
+      "word": 2594111488,
+      "instruction": "csel x0, x0, xzr, eq"
+    },
+    {
+      "rva": 90889144,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 90889148,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 90889152,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 90889156,
+      "word": 2503170232,
+      "instruction": "bl #0xa383ea4"
+    },
+    {
+      "rva": 95730804,
+      "word": 2847821812,
+      "instruction": "stp x20, x19, [sp, #-0x20]!"
+    },
+    {
+      "rva": 95730808,
+      "word": 2835446781,
+      "instruction": "stp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 95730812,
+      "word": 2432713725,
+      "instruction": "add x29, sp, #0x10"
+    },
+    {
+      "rva": 95730816,
+      "word": 2852127731,
+      "instruction": "mov x19, x0"
+    },
+    {
+      "rva": 95730820,
+      "word": 1384141216,
+      "instruction": "movz w0, #0x28d"
+    },
+    {
+      "rva": 95730824,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 95730828,
+      "word": 2488960967,
+      "instruction": "bl #0x71edba8"
+    },
+    {
+      "rva": 95730832,
+      "word": 872415552,
+      "instruction": "cbz w0, #0x5b4bcb8"
+    },
+    {
+      "rva": 95730836,
+      "word": 1384141216,
+      "instruction": "movz w0, #0x28d"
+    },
+    {
+      "rva": 95730840,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 95730844,
+      "word": 2488961021,
+      "instruction": "bl #0x71edc90"
+    },
+    {
+      "rva": 95730848,
+      "word": 3019899776,
+      "instruction": "cbz x0, #0x5b4bd10"
+    },
+    {
+      "rva": 95730852,
+      "word": 2853372897,
+      "instruction": "mov x1, x19"
+    },
+    {
+      "rva": 95730856,
+      "word": 3531603970,
+      "instruction": "movz x2, #0"
+    },
+    {
+      "rva": 95730860,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 95730864,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 95730868,
+      "word": 340488332,
+      "instruction": "b #0x6e27ee4"
+    },
+    {
+      "rva": 95730872,
+      "word": 1384141184,
+      "instruction": "movz w0, #0x28c"
+    },
+    {
+      "rva": 95730876,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 95730880,
+      "word": 2488960954,
+      "instruction": "bl #0x71edba8"
+    },
+    {
+      "rva": 95730884,
+      "word": 872415648,
+      "instruction": "cbz w0, #0x5b4bcf8"
+    },
+    {
+      "rva": 95730888,
+      "word": 1384141184,
+      "instruction": "movz w0, #0x28c"
+    },
+    {
+      "rva": 95730892,
+      "word": 3531603969,
+      "instruction": "movz x1, #0"
+    },
+    {
+      "rva": 95730896,
+      "word": 2488961008,
+      "instruction": "bl #0x71edc90"
+    },
+    {
+      "rva": 95730900,
+      "word": 3019899360,
+      "instruction": "cbz x0, #0x5b4bd10"
+    },
+    {
+      "rva": 95730904,
+      "word": 2853372897,
+      "instruction": "mov x1, x19"
+    },
+    {
+      "rva": 95730908,
+      "word": 3531603970,
+      "instruction": "movz x2, #0"
+    },
+    {
+      "rva": 95730912,
+      "word": 2487957774,
+      "instruction": "bl #0x6e1a118"
+    },
+    {
+      "rva": 95730916,
+      "word": 889192672,
+      "instruction": "cbnz w0, #0x5b4bd00"
+    },
+    {
+      "rva": 95730920,
+      "word": 4181742176,
+      "instruction": "ldr x0, [x19, #0xa0]"
+    },
+    {
+      "rva": 95730924,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 95730928,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 95730932,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 95730936,
+      "word": 960832104,
+      "instruction": "ldrb w8, [x19, #0x148]"
+    },
+    {
+      "rva": 95730940,
+      "word": 906493800,
+      "instruction": "tbz w8, #0, #0x5b4bce8"
+    },
+    {
+      "rva": 95730944,
+      "word": 4181743200,
+      "instruction": "ldr x0, [x19, #0xa8]"
+    },
+    {
+      "rva": 95730948,
+      "word": 2839641085,
+      "instruction": "ldp x29, x30, [sp, #0x10]"
+    },
+    {
+      "rva": 95730952,
+      "word": 2831306740,
+      "instruction": "ldp x20, x19, [sp], #0x20"
+    },
+    {
+      "rva": 95730956,
+      "word": 3596551104,
+      "instruction": "ret "
+    },
+    {
+      "rva": 95730960,
+      "word": 2501959781,
+      "instruction": "bl #0xa383ea4"
+    },
+    {
+      "rva": 97381748,
+      "word": 1833186285,
+      "instruction": "ldp d13, d12, [sp, #0x40]"
+    },
+    {
+      "rva": 97381752,
+      "word": 1833122799,
+      "instruction": "ldp d15, d14, [sp, #0x30]"
+    },
+    {
+      "rva": 97381756,
+      "word": 2432910335,
+      "instruction": "add sp, sp, #0xd0"
+    },
+    {
+      "rva": 97381760,
+      "word": 340061803,
+      "instruction": "b #0x6e1a72c"
+    },
+    {
+      "rva": 97381764,
+      "word": 2853372916,
+      "instruction": "mov x20, x19"
+    },
+    {
+      "rva": 97381768,
+      "word": 4165111432,
+      "instruction": "ldr x8, [x20, #0x28]!"
+    },
+    {
+      "rva": 97381772,
+      "word": 3019916552,
+      "instruction": "cbz x8, #0x5cdf62c"
+    },
+    {
+      "rva": 97381776,
+      "word": 4181723765,
+      "instruction": "ldr x21, [x19, #0x10]"
+    },
+    {
+      "rva": 97381780,
+      "word": 3019916501,
+      "instruction": "cbz x21, #0x5cdf62c"
+    },
+    {
+      "rva": 97381784,
+      "word": 759703817,
+      "instruction": "ldp s9, s10, [x8, #0x40]"
+    },
+    {
+      "rva": 97381788,
+      "word": 3175106827,
+      "instruction": "ldr s11, [x8, #0x48]"
+    },
+    {
+      "rva": 97381792,
+      "word": 4181721760,
+      "instruction": "ldr x0, [x21]"
+    },
+    {
+      "rva": 32408964,
+      "word": 2847758326,
+      "instruction": "stp x22, x21, [sp, #-0x30]!"
+    },
+    {
+      "rva": 32408968,
+      "word": 2835435508,
+      "instruction": "stp x20, x19, [sp, #0x10]"
+    },
+    {
+      "rva": 32408972,
+      "word": 2835512317,
+      "instruction": "stp x29, x30, [sp, #0x20]"
+    },
+    {
+      "rva": 32408976,
+      "word": 2432730109,
+      "instruction": "add x29, sp, #0x20"
+    },
+    {
+      "rva": 32408980,
+      "word": 2852193268,
+      "instruction": "mov x20, x1"
+    },
+    {
+      "rva": 32408984,
+      "word": 2852127731,
+      "instruction": "mov x19, x0"
+    },
+    {
+      "rva": 32408988,
+      "word": 2953127413,
+      "instruction": "adrp x21, #0xc3a5000"
+    },
+    {
+      "rva": 32408992,
+      "word": 963350184,
+      "instruction": "ldrb w8, [x21, #0xae3]"
+    },
+    {
+      "rva": 32408996,
+      "word": 922747080,
+      "instruction": "tbnz w8, #0, #0x1ee85bc"
+    },
+    {
+      "rva": 32409000,
+      "word": 3489988096,
+      "instruction": "adrp x0, #0xbeaa000"
+    },
+    {
+      "rva": 32409004,
+      "word": 2435399680,
+      "instruction": "add x0, x0, #0xa50"
+    },
+    {
+      "rva": 32409008,
+      "word": 2507441087,
+      "instruction": "bl #0x7c094ac"
+    },
+    {
+      "rva": 32409012,
+      "word": 1384120360,
+      "instruction": "movz w8, #0x1"
+    },
+    {
+      "rva": 32409016,
+      "word": 959155880,
+      "instruction": "strb w8, [x21, #0xae3]"
+    },
+    {
+      "rva": 32409020,
+      "word": 960759400,
+      "instruction": "ldrb w8, [x19, #0x101]"
+    },
+    {
+      "rva": 32409024,
+      "word": 1796473119,
+      "instruction": "cmp w8, w20"
+    },
+    {
+      "rva": 32409028,
+      "word": 1409288224,
+      "instruction": "b.eq #0x1ee86c8"
+    },
+    {
+      "rva": 32409032,
+      "word": 3489988117,
+      "instruction": "adrp x21, #0xbeaa000"
+    },
+    {
+      "rva": 32409036,
+      "word": 2435400373,
+      "instruction": "add x21, x21, #0xa50"
+    },
+    {
+      "rva": 32409040,
+      "word": 956565108,
+      "instruction": "strb w20, [x19, #0x101]"
+    },
+    {
+      "rva": 32409044,
+      "word": 4181721760,
+      "instruction": "ldr x0, [x21]"
+    },
+    {
+      "rva": 32409048,
+      "word": 3108036616,
+      "instruction": "ldr w8, [x0, #0xe0]"
+    },
+    {
+      "rva": 32409052,
+      "word": 872415432,
+      "instruction": "cbz w8, #0x1ee85f4"
+    },
+    {
+      "rva": 32409056,
+      "word": 4181744648,
+      "instruction": "ldr x8, [x0, #0xb8]"
+    }
+  ],
+  "globalReferences": [
+    {
+      "adrp": 97834884,
+      "add": 97834888,
+      "target": 199832600
+    },
+    {
+      "adrp": 97522512,
+      "add": 97522516,
+      "target": 199854272
+    }
+  ],
+  "fieldAudit": [
+    {
+      "baselineOwner": "COW.GamePlay.JMAGGLCNGIG",
+      "offsets": [
+        1632,
+        1640
+      ],
+      "actualOwner": "COW.GamePlay.EPPMGCJDEDC",
+      "status": "verified-dump-and-native",
+      "evidence": "Constructor 0x61446D4 stores pooled packets at +0x660/+0x668; send path 0x6142858 reads both."
+    },
+    {
+      "baselineOwner": "COW.GamePlay.HBIBDMMOOOK",
+      "offset": 96,
+      "actualOwner": "COW.GamePlay.CDMMCIIFHGM",
+      "status": "verified-inherited-dump",
+      "evidence": "Inherited Player backing reference; same in TH/MAX."
+    },
+    {
+      "baselineOwner": "COW.GamePlay.HBIBDMMOOOK",
+      "offset": 600,
+      "status": "not-an-active-weapon-access",
+      "evidence": "kFastFireOff is used only on PlayerAttributes.FireIntervalScale, verified separately."
+    },
+    {
+      "baselineOwner": "COW.GamePlay.HBIBDMMOOOK",
+      "offset": 1977,
+      "status": "unused-legacy-alias",
+      "evidence": "kWeaponCostAmmo has no active consumers; not verified as ammo."
+    },
+    {
+      "baselineOwner": "COW.GamePlay.MDPBNKPCGNG",
+      "offset": 16,
+      "actualOwner": "COW.GamePlay.DGHJEPHMGPO",
+      "status": "verified-inherited-dump-and-native",
+      "evidence": "Handler 0x5CDEC38 reads inherited reference at +0x10; aiming info at +0x28 and direction +0x40."
+    },
+    {
+      "baselineOwner": "Player visibility alias",
+      "offset": 2640,
+      "status": "rejected",
+      "evidence": "LevelSwingSpider reference is not a visibility flag object. Both variants now use class-checked UmaAvatarSimple +0x101."
+    },
+    {
+      "baselineOwner": "message.LDCJOLOBGGH",
+      "offset": 16,
+      "actualOwner": "GCommon.UDPClientMessageBase",
+      "status": "verified-inherited-dump",
+      "evidence": "Inherited m_GetFromPool bool at +0x10, not a vector coordinate. LDCJOLOBGGH coordinates are int fields +0x14/+0x18/+0x1C in both dumps."
+    }
+  ]
+}

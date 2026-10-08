@@ -1,3 +1,4 @@
+#include "GameOffsets.h"
 #include "SilentAim.h"
 #if !defined(MIZZE_INJECTED) && (defined(__aarch64__) || defined(__arm64__))
 #include "SilentAimRemoteLayout.h"
@@ -15,7 +16,7 @@
 extern "C" const unsigned char SilentAimRemoteStart[], SilentAimRemoteEnd[];
 
 namespace {
-constexpr uint64_t WeaponGetter = 0x5616118, HandlerMethod = 0x5C59B94;
+constexpr uint64_t WeaponGetter = GameOffsets::Rva(0x5616118), HandlerMethod = GameOffsets::Rva(0x5C59B94);
 constexpr uint64_t HandlerSlot = 0x138 + 17 * 16;
 std::recursive_mutex controllerMutex;
 bool enabled = false;
@@ -129,7 +130,7 @@ template <size_t N> bool Fingerprint(uint64_t address, uint32_t expected) {
     if (!Read(address, bytes)) return false;
     uint32_t hash = 0x811C9DC5;
     for (uint8_t byte : bytes) hash = (hash ^ byte) * 0x01000193u;
-    return hash == expected;
+    return hash == GameOffsets::ExpectedHash(expected);
 }
 bool ClassName(uint64_t object, const char *expected) {
     uint64_t klass = 0, name = 0;

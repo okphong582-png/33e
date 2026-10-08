@@ -95,6 +95,21 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Verify FF and MAX dump profile consistency
+        run: |
+          node tests/game_profile_test.cjs
+          node tests/offset_scanner_cli_test.cjs
+          g++ -std=c++17 -Wall -Wextra -Werror tests/game_profile_fields_test.cpp -o /tmp/game-profile-th
+          /tmp/game-profile-th
+          g++ -std=c++17 -Wall -Wextra -Werror -DMIZZE_GAME_MAX=1 tests/game_profile_fields_test.cpp -o /tmp/game-profile-max
+          /tmp/game-profile-max
+          g++ -std=c++17 -Wall -Wextra -Werror -DMIZZE_GAME_MAX=1 tests/max_native_profile_test.cpp -o /tmp/max-native-profile
+          /tmp/max-native-profile
+          g++ -std=c++17 -Wall -Wextra -Werror tests/avatar_visibility_test.cpp -o /tmp/avatar-visibility-th
+          /tmp/avatar-visibility-th
+          g++ -std=c++17 -Wall -Wextra -Werror -DMIZZE_GAME_MAX=1 tests/avatar_visibility_test.cpp -o /tmp/avatar-visibility-max
+          /tmp/avatar-visibility-max
+
       - name: Bounded VM, corruption checks and concurrent protection initialization
         run: |
           for seed in 1 0x4D495A5A4533; do

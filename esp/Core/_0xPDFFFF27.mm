@@ -94,6 +94,12 @@ pid_t GetGameProcesspid(char *GameProcessName) {
 
 uintptr_t GetGameModule_Base(char *GameProcessName) {
 #ifdef MIZZE_INJECTED
+    // Each injected artifact must attach only to the game its profile targets.
+#ifdef MIZZE_GAME_MAX
+    if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.dts.freefiremax"]) return 0;
+#else
+    if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.dts.freefireth"]) return 0;
+#endif
     // In-process builds must not depend on privileged process enumeration or
     // task_for_pid. Own a send-right reference just like the external cache.
     if (get_task == MACH_PORT_NULL) {

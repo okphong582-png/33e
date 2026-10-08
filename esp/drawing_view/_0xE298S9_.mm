@@ -452,7 +452,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 - (void)setupModuleBase {
     // Lookup returns zero on failure. Retry while waiting for the game and after
     // a restart; never terminate the floating menu because the game is absent.
-    Moudule_Base = (uint64_t)GetGameModule_Base((char *)KH_STR("FreeFire"));
+    Moudule_Base = (uint64_t)GetGameModule_Base((char *)KH_STR(MIZZE_GAME_PROCESS_NAME));
 }
 
 // ─── Layer Factory ────────────────────────────

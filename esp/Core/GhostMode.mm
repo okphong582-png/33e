@@ -1,3 +1,4 @@
+#include "GameOffsets.h"
 #include "GhostMode.h"
 #if defined(__aarch64__) || defined(__arm64__)
 #include "GhostRemoteLayout.h"
@@ -12,21 +13,21 @@
 #include <mutex>
 extern "C" const unsigned char GhostRemoteStart[], GhostRemoteEnd[];
 namespace {
-constexpr uint64_t Tick=0x613E2F4, Position=0x276A4D4, Axis=0x276B3CC, Slot=0x198;
+constexpr uint64_t Tick=GameOffsets::Rva(0x613E2F4), Position=GameOffsets::Rva(0x276A4D4), Axis=GameOffsets::Rva(0x276B3CC), Slot=0x198;
 struct Signature { uint64_t offset; size_t size; uint32_t hash; };
 constexpr Signature signatures[] = {
     {Tick,0x2F4,0x0E305068},{Position,0xEC,0x7DDB7C94},{Axis,0xEC,0x4696BE26},
-    {0x57C0B2C,0x230,0xBBFE1A71},{0x6B49E10,0x104,0xAACE9654},
-    {0x591B898,0x1C8,0x92F2568B},{0x56AA7C8,0x110,0x4478C55F},
-    {0x5636F20,0x60,0x6E4B75FE},{0x561CA30,0xB4,0xABF31A13},
-    {0x5624820,0x100,0xCA3873F8},{0x5624920,0x100,0xCD88029D},
-    {0x562B3D4,0xB4,0x19271E41},{0x562B488,0xB4,0x57B0CB1B},
-    {0x561C7C8,0x6C,0x7958F6CC},{0x561CAE4,0xB4,0xB469C925},
-    {0x5624A20,0x11C,0xA3152FF4},{0x562B53C,0xB4,0x6CDFBEA8},
-    {0x5624488,0xB4,0xBA38C9C8},
-    {0x613EA00,0x15C,0x20A90AAF},{0x613CB84,0x1508,0x66DA289B},
-    {0x2570ED8,0x370,0xD89C4708},{0x2572668,0x250,0x8307E566},
-    {0x25680BC,0x60,0x09918D15}
+    {GameOffsets::Rva(0x57C0B2C),0x230,0xBBFE1A71},{GameOffsets::Rva(0x6B49E10),0x104,0xAACE9654},
+    {GameOffsets::Rva(0x591B898),0x1C8,0x92F2568B},{GameOffsets::Rva(0x56AA7C8),0x110,0x4478C55F},
+    {GameOffsets::Rva(0x5636F20),0x60,0x6E4B75FE},{GameOffsets::Rva(0x561CA30),0xB4,0xABF31A13},
+    {GameOffsets::Rva(0x5624820),0x100,0xCA3873F8},{GameOffsets::Rva(0x5624920),0x100,0xCD88029D},
+    {GameOffsets::Rva(0x562B3D4),0xB4,0x19271E41},{GameOffsets::Rva(0x562B488),0xB4,0x57B0CB1B},
+    {GameOffsets::Rva(0x561C7C8),0x6C,0x7958F6CC},{GameOffsets::Rva(0x561CAE4),0xB4,0xB469C925},
+    {GameOffsets::Rva(0x5624A20),0x11C,0xA3152FF4},{GameOffsets::Rva(0x562B53C),0xB4,0x6CDFBEA8},
+    {GameOffsets::Rva(0x5624488),0xB4,0xBA38C9C8},
+    {GameOffsets::Rva(0x613EA00),0x15C,0x20A90AAF},{GameOffsets::Rva(0x613CB84),0x1508,0x66DA289B},
+    {GameOffsets::Rva(0x2570ED8),0x370,0xD89C4708},{GameOffsets::Rva(0x2572668),0x250,0x8307E566},
+    {GameOffsets::Rva(0x25680BC),0x60,0x09918D15}
 };
 std::recursive_mutex mutex;
 mach_port_t task=MACH_PORT_NULL;
@@ -98,7 +99,7 @@ bool Verify() {
         if(!ReadBytes(module+s.offset,bytes.data(),s.size))return false;
         uint32_t h=0x811C9DC5;
         for(size_t i=0;i<s.size;++i)h=(h^bytes[i])*0x01000193u;
-        if(h!=s.hash)return false;
+        if(h!=GameOffsets::ExpectedHash(s.hash))return false;
     }
     verified=true;return true;
 }
@@ -124,13 +125,13 @@ bool Adopt(uint64_t a) {
     if(!Read(a,code)||std::memcmp(code.data(),GhostRemoteStart,code.size())||
         !Read(a+GHOST_PAGE,state)||state.magic!=GhostRemote::Magic||
         state.tick!=module+Tick||state.position!=module+Position||state.axis!=module+Axis||
-        state.clock!=Clock()||state.currentMatch!=module+0x591B898||
-        state.getPos!=module+0x57C0B2C||state.setPos!=module+0x6B49E10||
-        state.hp!=module+0x56AA7C8||state.waitSync!=module+0x5636F20||
-        state.vehicle!=module+0x561CA30||state.catapult!=module+0x5624820||
-        state.cannon!=module+0x5624920||state.chair!=module+0x562B3D4||state.chairAlt!=module+0x562B488||
-        state.parachute!=module+0x561C7C8||state.strop!=module+0x561CAE4||state.rail!=module+0x5624A20||
-        state.seesaw!=module+0x562B53C||state.platform!=module+0x5624488)return false;
+        state.clock!=Clock()||state.currentMatch!=module+GameOffsets::Rva(0x591B898)||
+        state.getPos!=module+GameOffsets::Rva(0x57C0B2C)||state.setPos!=module+GameOffsets::Rva(0x6B49E10)||
+        state.hp!=module+GameOffsets::Rva(0x56AA7C8)||state.waitSync!=module+GameOffsets::Rva(0x5636F20)||
+        state.vehicle!=module+GameOffsets::Rva(0x561CA30)||state.catapult!=module+GameOffsets::Rva(0x5624820)||
+        state.cannon!=module+GameOffsets::Rva(0x5624920)||state.chair!=module+GameOffsets::Rva(0x562B3D4)||state.chairAlt!=module+GameOffsets::Rva(0x562B488)||
+        state.parachute!=module+GameOffsets::Rva(0x561C7C8)||state.strop!=module+GameOffsets::Rva(0x561CAE4)||state.rail!=module+GameOffsets::Rva(0x5624A20)||
+        state.seesaw!=module+GameOffsets::Rva(0x562B53C)||state.platform!=module+GameOffsets::Rva(0x5624488))return false;
     allocation=a;sequence=state.sequence&~1u;epoch=state.epoch+1;
     input.epoch=epoch;published=true;Cancel();return true;
 }
@@ -148,12 +149,12 @@ int Install(uint64_t matchClass,uint64_t packetClass,uint64_t axisClass) {
         if(!mapping.address)return 10;
         GhostRemote::State initial{};
         initial.tick=original[0];initial.position=original[1];initial.axis=original[2];initial.clock=clock;
-        initial.currentMatch=module+0x591B898;initial.getPos=module+0x57C0B2C;
-        initial.setPos=module+0x6B49E10;initial.hp=module+0x56AA7C8;initial.waitSync=module+0x5636F20;
-        initial.vehicle=module+0x561CA30;initial.catapult=module+0x5624820;
-        initial.cannon=module+0x5624920;initial.chair=module+0x562B3D4;initial.chairAlt=module+0x562B488;
-        initial.parachute=module+0x561C7C8;initial.strop=module+0x561CAE4;initial.rail=module+0x5624A20;
-        initial.seesaw=module+0x562B53C;initial.platform=module+0x5624488;
+        initial.currentMatch=module+GameOffsets::Rva(0x591B898);initial.getPos=module+GameOffsets::Rva(0x57C0B2C);
+        initial.setPos=module+GameOffsets::Rva(0x6B49E10);initial.hp=module+GameOffsets::Rva(0x56AA7C8);initial.waitSync=module+GameOffsets::Rva(0x5636F20);
+        initial.vehicle=module+GameOffsets::Rva(0x561CA30);initial.catapult=module+GameOffsets::Rva(0x5624820);
+        initial.cannon=module+GameOffsets::Rva(0x5624920);initial.chair=module+GameOffsets::Rva(0x562B3D4);initial.chairAlt=module+GameOffsets::Rva(0x562B488);
+        initial.parachute=module+GameOffsets::Rva(0x561C7C8);initial.strop=module+GameOffsets::Rva(0x561CAE4);initial.rail=module+GameOffsets::Rva(0x5624A20);
+        initial.seesaw=module+GameOffsets::Rva(0x562B53C);initial.platform=module+GameOffsets::Rva(0x5624488);
         if(!Write(mapping.address+GHOST_PAGE,initial)){mach_vm_deallocate(task,mapping.address,2*GHOST_PAGE);return 10;}
         allocation=mapping.address;
     }

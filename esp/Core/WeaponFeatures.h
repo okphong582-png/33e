@@ -1,4 +1,5 @@
 #pragma once
+#include "GameOffsets.h"
 
 #include <algorithm>
 #include <cmath>
@@ -9,7 +10,7 @@
 
 namespace WeaponFeatures {
 // Free Fire 1.132.1: verified Player/PlayerAttributes fields and ARM64 getters.
-constexpr uint64_t PlayerAttributesOffset = 0x768;
+constexpr uint64_t PlayerAttributesOffset = MIZZE_PLAYER_768;
 constexpr uint64_t AttributesPlayerOffset = 0x20;
 constexpr uint64_t ShootNoReloadOffset = 0x111;
 constexpr uint64_t IsAmmoFreeOffset = 0x194;

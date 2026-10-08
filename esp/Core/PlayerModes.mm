@@ -1,3 +1,4 @@
+#include "GameOffsets.h"
 #include "PlayerModes.h"
 #if defined(__aarch64__) || defined(__arm64__)
 #include "PlayerModesLayout.h"
@@ -20,31 +21,31 @@ namespace {
 constexpr uint64_t Slot=PlayerModesInstall::Slots[0];
 struct Signature { uint64_t offset; size_t size; uint32_t hash; };
 constexpr Signature signatures[] = {
-    {0x5660700,0x844,0x4C79AF54},{0x5A4BEC0,0x654,0x7C4BDB69},
-    {0x5A4C690,0x41C,0xE5A62294},{0x6B49D04,0x10C,0x5C6FFC2C},
-    {0x6B49E10,0x104,0xAACE9654},{0x591B898,0x1C8,0x92F2568B},
-    {0x56AA7C8,0x110,0x4478C55F},{0x561CA30,0xB4,0xABF31A13},
-    {0x561C7C8,0x6C,0x7958F6CC},{0x5636F20,0x60,0x6E4B75FE},
-    {0x6B4A924,0x8,0x64A6725A},{0x569C1E4,0x2BAC,0x458F369A},
-    {0x646B648,0xB0,0x7C5E5F3F},{0x5631D28,0x58,0xEBC9879D},
-    {0x56268B4,0x24,0xE7908BBE},
-    {0x8D6C788,0x60,0xAE8A72F8},{0x8D6C860,0x78,0xD1FEABDC},
-    {0x8D6ECE0,0x64,0xDECACF20},{0x6B49C14,0xF0,0x990FC153},
-    {0x56182FC,0x154,0x8E831156},{0x6B4964C,0x8,0x80D43BE2},
-    {0x5639C90,0x154,0x3D4AF30F},
-    {0x8D6C38C,0x64,0xDB814CED},{0x8D6C454,0x74,0x61044F36},
-    {0x8D6E900,0x50,0x178B2DA7},{0x8D6EEB0,0x64,0x54800249},
-    {0x8D58C18,0x50,0x3655F88D},{0x8D58C68,0x64,0x43B62F71},
-    {0x8CDCAF4,0x50,0xD78D78BD},{0x8CDCB44,0x64,0x154D9667},
-    {0x8D6C5B4,0x60,0x6881CEE5},{0x8D6C68C,0x74,0x54F82A6C}
+    {GameOffsets::Rva(0x5660700),0x844,0x4C79AF54},{GameOffsets::Rva(0x5A4BEC0),0x654,0x7C4BDB69},
+    {GameOffsets::Rva(0x5A4C690),0x41C,0xE5A62294},{GameOffsets::Rva(0x6B49D04),0x10C,0x5C6FFC2C},
+    {GameOffsets::Rva(0x6B49E10),0x104,0xAACE9654},{GameOffsets::Rva(0x591B898),0x1C8,0x92F2568B},
+    {GameOffsets::Rva(0x56AA7C8),0x110,0x4478C55F},{GameOffsets::Rva(0x561CA30),0xB4,0xABF31A13},
+    {GameOffsets::Rva(0x561C7C8),0x6C,0x7958F6CC},{GameOffsets::Rva(0x5636F20),0x60,0x6E4B75FE},
+    {GameOffsets::Rva(0x6B4A924),0x8,0x64A6725A},{GameOffsets::Rva(0x569C1E4),0x2BAC,0x458F369A},
+    {GameOffsets::Rva(0x646B648),0xB0,0x7C5E5F3F},{GameOffsets::Rva(0x5631D28),0x58,0xEBC9879D},
+    {GameOffsets::Rva(0x56268B4),0x24,0xE7908BBE},
+    {GameOffsets::Rva(0x8D6C788),0x60,0xAE8A72F8},{GameOffsets::Rva(0x8D6C860),0x78,0xD1FEABDC},
+    {GameOffsets::Rva(0x8D6ECE0),0x64,0xDECACF20},{GameOffsets::Rva(0x6B49C14),0xF0,0x990FC153},
+    {GameOffsets::Rva(0x56182FC),0x154,0x8E831156},{GameOffsets::Rva(0x6B4964C),0x8,0x80D43BE2},
+    {GameOffsets::Rva(0x5639C90),0x154,0x3D4AF30F},
+    {GameOffsets::Rva(0x8D6C38C),0x64,0xDB814CED},{GameOffsets::Rva(0x8D6C454),0x74,0x61044F36},
+    {GameOffsets::Rva(0x8D6E900),0x50,0x178B2DA7},{GameOffsets::Rva(0x8D6EEB0),0x64,0x54800249},
+    {GameOffsets::Rva(0x8D58C18),0x50,0x3655F88D},{GameOffsets::Rva(0x8D58C68),0x64,0x43B62F71},
+    {GameOffsets::Rva(0x8CDCAF4),0x50,0xD78D78BD},{GameOffsets::Rva(0x8CDCB44),0x64,0x154D9667},
+    {GameOffsets::Rva(0x8D6C5B4),0x60,0x6881CEE5},{GameOffsets::Rva(0x8D6C68C),0x74,0x54F82A6C}
 };
 // Metadata: MatchGame.OnLateUpdate and its supplied game-mode overrides all
 // occupy BaseGame slot 18, ABI (self, MethodInfo), after the native late chain.
 constexpr Signature lateSignatures[] = {
-    {0x5A9A654,0x78,0x01F24198},{0x635594C,0x54,0xFB5E72CE},
-    {0x63706CC,0x54,0x3010A312},{0x63733EC,0x54,0x2EFCAE4E},
-    {0x6374918,0x54,0x482878B5},{0x66E0A24,0x54,0x19ABE41A},
-    {0x66F031C,0x54,0xCDA7586C}
+    {GameOffsets::Rva(0x5A9A654),0x78,0x01F24198},{GameOffsets::Rva(0x635594C),0x54,0xFB5E72CE},
+    {GameOffsets::Rva(0x63706CC),0x54,0x3010A312},{GameOffsets::Rva(0x63733EC),0x54,0x2EFCAE4E},
+    {GameOffsets::Rva(0x6374918),0x54,0x482878B5},{GameOffsets::Rva(0x66E0A24),0x54,0x19ABE41A},
+    {GameOffsets::Rva(0x66F031C),0x54,0xCDA7586C}
 };
 constexpr uint64_t LateSlot=0x138+18*16;
 struct LateSession { uint64_t slot=0,allocation=0,original=0,shared=0; };
@@ -122,7 +123,7 @@ bool Verify(){
         }
         uint32_t hash=0x811C9DC5;
         for(size_t i=0;i<signature.size;++i)hash=(hash^bytes[i])*0x01000193u;
-        if(hash!=signature.hash){snapshot.detail="mã game khác bản đã kiểm tra";snapshot.failedOffset=signature.offset;return false;}
+        if(hash!=GameOffsets::ExpectedHash(signature.hash)){snapshot.detail="mã game khác bản đã kiểm tra";snapshot.failedOffset=signature.offset;return false;}
     }
     return verified=true;
 }
@@ -135,7 +136,7 @@ uint64_t Clock(){
     const uint64_t address=base+((uintptr_t)clock-(uintptr_t)info.dli_fbase);
     return base&&Read(address,bytes)&&!std::memcmp(bytes.data(),clock,bytes.size())?address:0;
 }
-bool Supported(uint64_t original){return original==module+0x5660700||original==module+0x5A4BEC0;}
+bool Supported(uint64_t original){return original==module+GameOffsets::Rva(0x5660700)||original==module+GameOffsets::Rva(0x5A4BEC0);}
 bool Writable(uint64_t address){
     mach_vm_address_t region=address;mach_vm_size_t size=0;natural_t height=0;
     vm_region_submap_info_data_64_t info{};mach_msg_type_number_t count=VM_REGION_SUBMAP_INFO_COUNT_64;
@@ -148,16 +149,16 @@ bool Adopt(uint64_t slot,uint64_t address){
     std::array<uint8_t,MODES_PAGE> code{};PlayerModesRemote::State state{};
     if(!Read(address,code)||std::memcmp(code.data(),PlayerModesRemoteStart,code.size())||
         !Read(address+MODES_PAGE,state)||state.magic!=PlayerModesRemote::Magic||!Supported(state.original)||
-        state.clock!=Clock()||state.currentMatch!=module+0x591B898||state.getPos!=module+0x6B49D04||
-        state.setPos!=module+0x6B49E10||state.hp!=module+0x56AA7C8||state.vehicle!=module+0x561CA30||
-        state.parachute!=module+0x561C7C8||state.waitSync!=module+0x5636F20||
-        state.originalPost!=module+0x569C1E4||state.forcePos!=module+0x646B648||
-        state.getRot!=module+0x8D6C788||state.setRot!=module+0x8D6C860||state.isChild!=module+0x8D6ECE0||
-        state.model!=module+0x5639C90||state.localPos!=module+0x8D6C38C||state.setLocalPos!=module+0x8D6C454||
-        state.childCount!=module+0x8D6E900||state.getChild!=module+0x8D6EEB0||
-        state.getSpeed!=module+0x8CDCAF4||state.setSpeed!=module+0x8CDCB44||
-        state.getEnabled!=module+0x8D58C18||state.setEnabled!=module+0x8D58C68||
-        state.worldRot!=module+0x8D6C5B4||state.setWorldRot!=module+0x8D6C68C)return false;
+        state.clock!=Clock()||state.currentMatch!=module+GameOffsets::Rva(0x591B898)||state.getPos!=module+GameOffsets::Rva(0x6B49D04)||
+        state.setPos!=module+GameOffsets::Rva(0x6B49E10)||state.hp!=module+GameOffsets::Rva(0x56AA7C8)||state.vehicle!=module+GameOffsets::Rva(0x561CA30)||
+        state.parachute!=module+GameOffsets::Rva(0x561C7C8)||state.waitSync!=module+GameOffsets::Rva(0x5636F20)||
+        state.originalPost!=module+GameOffsets::Rva(0x569C1E4)||state.forcePos!=module+GameOffsets::Rva(0x646B648)||
+        state.getRot!=module+GameOffsets::Rva(0x8D6C788)||state.setRot!=module+GameOffsets::Rva(0x8D6C860)||state.isChild!=module+GameOffsets::Rva(0x8D6ECE0)||
+        state.model!=module+GameOffsets::Rva(0x5639C90)||state.localPos!=module+GameOffsets::Rva(0x8D6C38C)||state.setLocalPos!=module+GameOffsets::Rva(0x8D6C454)||
+        state.childCount!=module+GameOffsets::Rva(0x8D6E900)||state.getChild!=module+GameOffsets::Rva(0x8D6EEB0)||
+        state.getSpeed!=module+GameOffsets::Rva(0x8CDCAF4)||state.setSpeed!=module+GameOffsets::Rva(0x8CDCB44)||
+        state.getEnabled!=module+GameOffsets::Rva(0x8D58C18)||state.setEnabled!=module+GameOffsets::Rva(0x8D58C68)||
+        state.worldRot!=module+GameOffsets::Rva(0x8D6C5B4)||state.setWorldRot!=module+GameOffsets::Rva(0x8D6C68C))return false;
     sessions.push_back({slot,address,state.original,state.originalPost,state.sequence&~1u,true});
     epoch=state.input.epoch+1;
     PlayerModesRemote::Input off{};off.epoch=epoch;
@@ -174,7 +175,7 @@ int Install(uint64_t klass){
     if(session&&current!=session->original&&current!=session->allocation){snapshot.detail="nhịp nhân vật đã bị thay đổi";return 9;}
     uint64_t post=0;
     if(!Read(klass+PlayerModesInstall::Slots[2],post)||
-        (post!=module+0x569C1E4&&(!session||post!=session->allocation+MODES_POST_ENTRY))){
+        (post!=module+GameOffsets::Rva(0x569C1E4)&&(!session||post!=session->allocation+MODES_POST_ENTRY))){
         snapshot.detail="nhịp hiển thị chưa hỗ trợ";return 9;
     }
     if(!session){
@@ -183,17 +184,17 @@ int Install(uint64_t klass){
         const auto mapping=SilentAimMapping::Map(task,PlayerModesRemoteStart,PlayerModesRemoteEnd,MODES_STATE_SIZE);
         if(!mapping.address){snapshot.detail=mapping.operation;return 10;}
         PlayerModesRemote::State state{};
-        state.original=current;state.clock=clock;state.currentMatch=module+0x591B898;
-        state.getPos=module+0x6B49D04;state.setPos=module+0x6B49E10;state.hp=module+0x56AA7C8;
-        state.vehicle=module+0x561CA30;state.parachute=module+0x561C7C8;state.waitSync=module+0x5636F20;
+        state.original=current;state.clock=clock;state.currentMatch=module+GameOffsets::Rva(0x591B898);
+        state.getPos=module+GameOffsets::Rva(0x6B49D04);state.setPos=module+GameOffsets::Rva(0x6B49E10);state.hp=module+GameOffsets::Rva(0x56AA7C8);
+        state.vehicle=module+GameOffsets::Rva(0x561CA30);state.parachute=module+GameOffsets::Rva(0x561C7C8);state.waitSync=module+GameOffsets::Rva(0x5636F20);
         state.originalPost=post;
-        state.forcePos=module+0x646B648;
-        state.getRot=module+0x8D6C788;state.setRot=module+0x8D6C860;state.isChild=module+0x8D6ECE0;
-        state.model=module+0x5639C90;state.localPos=module+0x8D6C38C;state.setLocalPos=module+0x8D6C454;
-        state.childCount=module+0x8D6E900;state.getChild=module+0x8D6EEB0;
-        state.getSpeed=module+0x8CDCAF4;state.setSpeed=module+0x8CDCB44;
-        state.getEnabled=module+0x8D58C18;state.setEnabled=module+0x8D58C68;
-        state.worldRot=module+0x8D6C5B4;state.setWorldRot=module+0x8D6C68C;
+        state.forcePos=module+GameOffsets::Rva(0x646B648);
+        state.getRot=module+GameOffsets::Rva(0x8D6C788);state.setRot=module+GameOffsets::Rva(0x8D6C860);state.isChild=module+GameOffsets::Rva(0x8D6ECE0);
+        state.model=module+GameOffsets::Rva(0x5639C90);state.localPos=module+GameOffsets::Rva(0x8D6C38C);state.setLocalPos=module+GameOffsets::Rva(0x8D6C454);
+        state.childCount=module+GameOffsets::Rva(0x8D6E900);state.getChild=module+GameOffsets::Rva(0x8D6EEB0);
+        state.getSpeed=module+GameOffsets::Rva(0x8CDCAF4);state.setSpeed=module+GameOffsets::Rva(0x8CDCB44);
+        state.getEnabled=module+GameOffsets::Rva(0x8D58C18);state.setEnabled=module+GameOffsets::Rva(0x8D58C68);
+        state.worldRot=module+GameOffsets::Rva(0x8D6C5B4);state.setWorldRot=module+GameOffsets::Rva(0x8D6C68C);
         if(!Write(mapping.address+MODES_PAGE,state)){snapshot.detail="không ghi được trạng thái";mach_vm_deallocate(task,mapping.address,MODES_PAGE+MODES_STATE_SIZE);return 10;}
         sessions.push_back({slot,mapping.address,current,post,0,false});session=&sessions.back();
     }
@@ -250,7 +251,7 @@ int InstallLate(uint64_t game,uint64_t shared){
     }
     uint32_t hash=0x811C9DC5;
     for(size_t i=0;i<signature->size;++i)hash=(hash^bytes[i])*0x01000193u;
-    if(hash!=signature->hash){snapshot.detail="Spin: nhịp cuối khác bản đã kiểm tra";snapshot.failedOffset=signature->offset;return 9;}
+    if(hash!=GameOffsets::ExpectedHash(signature->hash)){snapshot.detail="Spin: nhịp cuối khác bản đã kiểm tra";snapshot.failedOffset=signature->offset;return 9;}
     if(!Writable(slot)||lateSessions.size()>=64){snapshot.detail="Spin: không cài được nhịp cuối";return 10;}
     const auto mapping=SilentAimMapping::Map(task,PlayerModesRemoteStart,PlayerModesRemoteEnd);
     if(!mapping.address){snapshot.detail=mapping.operation;return 10;}

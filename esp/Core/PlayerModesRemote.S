@@ -1,3 +1,4 @@
+#include "GameProfileFields.h"
 #include "PlayerModesLayout.h"
 #ifdef __APPLE__
 .section __TEXT,__playermodes,regular,pure_instructions
@@ -61,7 +62,7 @@ _PlayerModesRemoteStart:
     ldr w9, [x19, #MODES_SPIN_ID]
     cmp w8, w9
     b.ne .LspinRestored
-    ldr x8, [x20, #0x6d0] // Player.get_BoneRootTransform: visual rig, not Root.
+    ldr x8, [x20, #MIZZE_PLAYER_6D0] // Player.get_BoneRootTransform: visual rig, not Root.
     cbz x8, .LspinRestored
     ldr x27, [x8, #0x10]
     ldr x9, [x19, #MODES_SPIN_TRANSFORM]
@@ -228,7 +229,7 @@ _PlayerModesRemoteStart:
     cmp x8, x28
     b.ne .Ldrop
     add x8, x28, #0x1000
-    ldrb w8, [x8, #0x258]
+    ldrb w8, [x8, #(MIZZE_PLAYER_1258 - 0x1000)]
     cbnz w8, .Ldrop
     cmp x20, x28
     b.ne .Lenemy
@@ -253,7 +254,7 @@ _PlayerModesRemoteStart:
     mov w25, #1
 .Lhealth:
     add x8, x20, #0x1000
-    ldrb w8, [x8, #0x258]
+    ldrb w8, [x8, #(MIZZE_PLAYER_1258 - 0x1000)]
     cbnz w8, .Ldrop
     mov x0, x20
     mov x1, #0
@@ -281,18 +282,18 @@ _PlayerModesRemoteStart:
     blr x8
     cbnz w0, .Ldrop
     ldr w10, [x19, #MODES_FLY_KIND]
-    ldrb w8, [x20, #0x260]
+    ldrb w8, [x20, #MIZZE_PLAYER_260]
     cmp w10, #1
     b.ne .LunityController
     cmp w8, #1
     b.ne .Ldrop
-    ldr x8, [x20, #0x268]
+    ldr x8, [x20, #MIZZE_PLAYER_268]
     b .LcontrollerIdentity
 .LunityController:
     cmp w10, #2
     b.ne .Ldrop
     cbnz w8, .Ldrop
-    ldr x8, [x20, #0x4d8]
+    ldr x8, [x20, #MIZZE_PLAYER_4D8]
 .LcontrollerIdentity:
     cbz x8, .Ldrop
     ldr x9, [x19, #MODES_FLY_CCT]
@@ -429,7 +430,7 @@ _PlayerModesRemoteStart:
     b.ne .LsetVisual
     stp s0, s1, [sp, #112]
     str s2, [sp, #120]
-    ldr x0, [x20, #0x268]
+    ldr x0, [x20, #MIZZE_PLAYER_268]
     mov x1, #0
     ldr x8, [x19, #MODES_FORCE_POS]
     blr x8
@@ -493,7 +494,7 @@ _PlayerModesRemoteStart:
     cmp x8, x20
     b.ne .LspinDone
     add x8, x20, #0x1000
-    ldrb w8, [x8, #0x258]
+    ldrb w8, [x8, #(MIZZE_PLAYER_1258 - 0x1000)]
     cbnz w8, .LspinDone
     mov x0, x20
     mov x1, #0

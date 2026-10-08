@@ -12,17 +12,17 @@ int main() {
         auto valid=[&](uint64_t a){return a>=0x1000&&a<mem.size();};
         auto read=[&](uint64_t a,void *p,size_t n){if(!valid(a)||a+n>mem.size())return false;std::memcpy(p,mem.data()+a,n);return true;};
         auto ptr=[&](uint64_t a,uint64_t v){std::memcpy(mem.data()+a,&v,8);};
-        ptr(0x1000+0x4d8,0x2000);ptr(0x2000,0x3000);ptr(0x2000+0x10,0x6000);
+        ptr(0x1000+MIZZE_PLAYER_4D8,0x2000);ptr(0x2000,0x3000);ptr(0x2000+0x10,0x6000);
         ptr(0x3000+0x10,0x4000);ptr(0x3000+0x18,0x4100);
         std::memcpy(mem.data()+0x4000,"CharacterController",20);std::memcpy(mem.data()+0x4100,"UnityEngine",12);
         PlayerModesController::Identity id;
         assert(PlayerModesController::Resolve(0x1000,id,read,valid)&&id.kind==2&&id.object==0x2000);
         ptr(0x2000+0x10,0);assert(!PlayerModesController::Resolve(0x1000,id,read,valid)&&!id.object);
-        mem[0x1260]=1;ptr(0x1268,0x2000);ptr(0x2000+0x1c8,0x6000);
+        mem[0x1000+MIZZE_PLAYER_260]=1;ptr(0x1000+MIZZE_PLAYER_268,0x2000);ptr(0x2000+0x1c8,0x6000);
         std::memcpy(mem.data()+0x4000,"PhysicalCCT",12);std::memcpy(mem.data()+0x4100,"COW.GamePlay",13);
         assert(PlayerModesController::Resolve(0x1000,id,read,valid)&&id.kind==1);
         mem[0x4100]='X';assert(!PlayerModesController::Resolve(0x1000,id,read,valid));
-        mem[0x1260]=2;assert(!PlayerModesController::Resolve(0x1000,id,read,valid));
+        mem[0x1000+MIZZE_PLAYER_260]=2;assert(!PlayerModesController::Resolve(0x1000,id,read,valid));
     }
     using namespace PlayerModesControl;
     State state;

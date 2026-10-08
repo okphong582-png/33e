@@ -1,3 +1,4 @@
+#include "GameProfileFields.h"
 #include "GhostRemoteLayout.h"
 #ifdef __APPLE__
 .section __TEXT,__ghost,regular,pure_instructions
@@ -98,7 +99,7 @@ _GhostRemoteStart:
     cmp w0, #0
     b.le .LtickDiscard
     add x8, x23, #0x1000
-    ldrb w8, [x8, #0x258]
+    ldrb w8, [x8, #(MIZZE_PLAYER_1258 - 0x1000)]
     cbnz w8, .LtickDiscard
     ldr x8, [x19, #GHOST_CLOCK]
     blr x8
@@ -288,7 +289,7 @@ _GhostRemoteStart:
     b.ne .LguardFail
     cbz x9, .LguardFail
     add x9, x9, #0x1000
-    ldrb w9, [x9, #0x258]
+    ldrb w9, [x9, #(MIZZE_PLAYER_1258 - 0x1000)]
     cbnz w9, .LguardFail
     add x9, x19, #GHOST_SEQUENCE
     ldar w9, [x9]

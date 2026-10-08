@@ -1,0 +1,2023 @@
+{
+  "schema": 1,
+  "baseline": {
+    "sourceRevision": "683b338",
+    "variant": "th",
+    "version": "1.132.1",
+    "dump": "FF-dumper-th_1.132.1"
+  },
+  "target": {
+    "variant": "max",
+    "version": "2.132.1",
+    "dump": "FF-dumper-max_2.132.1"
+  },
+  "methods": [
+    {
+      "baseline": 39223484,
+      "name": "message.LDCJOLOBGGH$$Serialize",
+      "signature": "void message_LDCJOLOBGGH__Serialize (struct GCommon_FastBinaryWriter_o* PFKCIJENDFN, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 29
+        }
+      ]
+    },
+    {
+      "baseline": 39259864,
+      "name": "message.IFHJKHPIJPC$$Serialize",
+      "signature": "void message_IFHJKHPIJPC__Serialize (struct GCommon_FastBinaryWriter_o* PFKCIJENDFN, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "baseline": 39265896,
+      "name": "message.CJLFOJMIOEA$$Serialize",
+      "signature": "void message_CJLFOJMIOEA__Serialize (struct GCommon_FastBinaryWriter_o* PFKCIJENDFN, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "baseline": 41329876,
+      "name": "message.DCAOPGIKAFE$$Serialize",
+      "signature": "void message_DCAOPGIKAFE__Serialize (struct GCommon_FastBinaryWriter_o* PFKCIJENDFN, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "baseline": 41333708,
+      "name": "message.GKKODHEIJAL$$Serialize",
+      "signature": "void message_GKKODHEIJAL__Serialize (struct GCommon_FastBinaryWriter_o* PFKCIJENDFN, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "baseline": 90267928,
+      "name": "COW.GamePlay.Player$$GetWeaponOnHand",
+      "signature": "struct COW_GamePlay_HBIBDMMOOOK_o* COW_GamePlay_Player__GetWeaponOnHand (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 20
+        },
+        {
+          "file": "esp/Core/SilentAim.mm",
+          "line": 16
+        },
+        {
+          "file": "esp/Core/SilentAimExternal.mm",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "baseline": 90276604,
+      "name": "COW.GamePlay.Player$$get_RootTransform",
+      "signature": "struct UnityEngine_Transform_o* COW_GamePlay_Player__get_RootTransform (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 27
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 33
+        }
+      ]
+    },
+    {
+      "baseline": 90294216,
+      "name": "COW.GamePlay.Player$$get_IsParachuting",
+      "signature": "bool COW_GamePlay_Player__get_IsParachuting (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 24
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 132
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 155
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 27
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 153
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 188
+        }
+      ]
+    },
+    {
+      "baseline": 90294832,
+      "name": "COW.GamePlay.Player$$IsInVehicle",
+      "signature": "bool COW_GamePlay_Player__IsInVehicle (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 21
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 130
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 153
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 26
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 152
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 188
+        }
+      ]
+    },
+    {
+      "baseline": 90295012,
+      "name": "COW.GamePlay.Player$$IsOnStrop",
+      "signature": "bool COW_GamePlay_Player__IsOnStrop (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 24
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 132
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 155
+        }
+      ]
+    },
+    {
+      "baseline": 90326152,
+      "name": "COW.GamePlay.Player$$IsInMovePlatform",
+      "signature": "bool COW_GamePlay_Player__IsInMovePlatform (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 26
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 133
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 156
+        }
+      ]
+    },
+    {
+      "baseline": 90327072,
+      "name": "COW.GamePlay.Player$$IsInCatapult",
+      "signature": "bool COW_GamePlay_Player__IsInCatapult (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 22
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 130
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 153
+        }
+      ]
+    },
+    {
+      "baseline": 90327328,
+      "name": "COW.GamePlay.Player$$IsInCannon",
+      "signature": "bool COW_GamePlay_Player__IsInCannon (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 22
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 131
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "baseline": 90327584,
+      "name": "COW.GamePlay.Player$$IsOnRailStrop",
+      "signature": "bool COW_GamePlay_Player__IsOnRailStrop (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 25
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 132
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 155
+        }
+      ]
+    },
+    {
+      "baseline": 90335412,
+      "name": "COW.GamePlay.Player$$get_UsePhysicalCharacterController",
+      "signature": "bool COW_GamePlay_Player__get_UsePhysicalCharacterController (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 30
+        }
+      ]
+    },
+    {
+      "baseline": 90354644,
+      "name": "COW.GamePlay.Player$$IsOnChair",
+      "signature": "bool COW_GamePlay_Player__IsOnChair (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 23
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 131
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "baseline": 90354824,
+      "name": "COW.GamePlay.Player$$IsOnLevelSwing",
+      "signature": "bool COW_GamePlay_Player__IsOnLevelSwing (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 23
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 131
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "baseline": 90355004,
+      "name": "COW.GamePlay.Player$$IsOnSeesaw",
+      "signature": "bool COW_GamePlay_Player__IsOnSeesaw (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 25
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 133
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 156
+        }
+      ]
+    },
+    {
+      "baseline": 90381608,
+      "name": "COW.GamePlay.Player$$get_CharacterController",
+      "signature": "struct UnityEngine_CharacterController_o* COW_GamePlay_Player__get_CharacterController (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 29
+        }
+      ]
+    },
+    {
+      "baseline": 90402400,
+      "name": "COW.GamePlay.Player$$get_InSwapWeaponCD",
+      "signature": "bool COW_GamePlay_Player__get_InSwapWeaponCD (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 141
+        },
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 172
+        },
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 282
+        }
+      ]
+    },
+    {
+      "baseline": 90402592,
+      "name": "COW.GamePlay.Player$$get_WaitForForceSync",
+      "signature": "bool COW_GamePlay_Player__get_WaitForForceSync (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 21
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 129
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 152
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 27
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 153
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 188
+        }
+      ]
+    },
+    {
+      "baseline": 90414224,
+      "name": "COW.GamePlay.Player$$get_BoneRootTransform",
+      "signature": "struct UnityEngine_Transform_o* COW_GamePlay_Player__get_BoneRootTransform (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 34
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 156
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 192
+        }
+      ]
+    },
+    {
+      "baseline": 90572544,
+      "name": "COW.GamePlay.Player$$OnUpdate",
+      "signature": "void COW_GamePlay_Player__OnUpdate (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 23
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "baseline": 90816996,
+      "name": "COW.GamePlay.Player$$PostUpdate",
+      "signature": "void COW_GamePlay_Player__PostUpdate (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 28
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 154
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 177
+        }
+      ]
+    },
+    {
+      "baseline": 90875848,
+      "name": "COW.GamePlay.Player$$get_CurHP",
+      "signature": "int32_t COW_GamePlay_Player__get_CurHP (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 20
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 129
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 152
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 26
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 152
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 187
+        }
+      ]
+    },
+    {
+      "baseline": 90882984,
+      "name": "COW.GamePlay.Player$$PlayFireEffect",
+      "signature": "void COW_GamePlay_Player__PlayFireEffect (struct COW_GamePlay_HBIBDMMOOOK_o* CCKJDJEMBPM, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "baseline": 90918580,
+      "name": "COW.GamePlay.Player$$SwapWeapon",
+      "signature": "void COW_GamePlay_Player__SwapWeapon (struct COW_GamePlay_KAOANCLHAEL_o EHJFFFIABGC, bool CHJJBNFHCIL, const MethodInfo* method);",
+      "typeSignature": "viii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 283
+        }
+      ]
+    },
+    {
+      "baseline": 92015404,
+      "name": "COW.GamePlay.Player$$GetSyncStatePos",
+      "signature": "struct UnityEngine_Vector3_o COW_GamePlay_Player__GetSyncStatePos (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 19
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 128
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 151
+        }
+      ]
+    },
+    {
+      "baseline": 93436056,
+      "name": "COW.GameFacade$$CurrentMatch",
+      "signature": "struct COW_GamePlay_JMAGGLCNGIG_o* COW_GameFacade__CurrentMatch (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 20
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 127
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 151
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 25
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 151
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 186
+        }
+      ]
+    },
+    {
+      "baseline": 94682816,
+      "name": "COW.GamePlay.PlayerNetwork$$OnUpdate",
+      "signature": "void COW_GamePlay_PlayerNetwork__OnUpdate (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 23
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "baseline": 94684816,
+      "name": "COW.GamePlay.PlayerNetwork$$ComputePosition",
+      "signature": "void COW_GamePlay_PlayerNetwork__ComputePosition (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 24
+        }
+      ]
+    },
+    {
+      "baseline": 94751188,
+      "name": "COW.GamePlay.PlayerNetwork$$SwapWeapon",
+      "signature": "void COW_GamePlay_PlayerNetwork__SwapWeapon (struct COW_GamePlay_KAOANCLHAEL_o DICADNFLLBM, bool CHJJBNFHCIL, const MethodInfo* method);",
+      "typeSignature": "viii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 284
+        }
+      ]
+    },
+    {
+      "baseline": 95004244,
+      "name": "COW.MatchGame$$OnLateUpdate",
+      "signature": "void COW_MatchGame__OnLateUpdate (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 44
+        }
+      ]
+    },
+    {
+      "baseline": 95196940,
+      "name": "COW.GamePlay.GMOCOOEIFMK$$PDAGHPAOBLP",
+      "signature": "struct COW_GamePlay_CDMMCIIFHGM_o* COW_GamePlay_GMOCOOEIFMK__PDAGHPAOBLP (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/SilentAimWeapon.h",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "baseline": 95826856,
+      "name": "COW.GamePlay.EDKELKADDMB$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_EDKELKADDMB__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "baseline": 95882468,
+      "name": "COW.GamePlay.GOHFDNFABPN$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_GOHFDNFABPN__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 41
+        }
+      ]
+    },
+    {
+      "baseline": 95935744,
+      "name": "COW.GamePlay.OKADKJALMHO$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_OKADKJALMHO__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 41
+        }
+      ]
+    },
+    {
+      "baseline": 95948876,
+      "name": "COW.GamePlay.EBMCCBFMPID$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_EBMCCBFMPID__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 41
+        }
+      ]
+    },
+    {
+      "baseline": 96112212,
+      "name": "COW.GamePlay.AGBNEFBPNLL$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_AGBNEFBPNLL__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "baseline": 96114256,
+      "name": "COW.GamePlay.KCGOPIPBJCA$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_KCGOPIPBJCA__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "baseline": 96146160,
+      "name": "COW.GamePlay.ILMADHAGDOP$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_ILMADHAGDOP__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "baseline": 96314956,
+      "name": "COW.GamePlay.KLEPOIFFFGK$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_KLEPOIFFFGK__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "baseline": 96371768,
+      "name": "COW.GamePlay.AEPPCENCDGH$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_AEPPCENCDGH__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "baseline": 96418572,
+      "name": "COW.GamePlay.HBIBDMMOOOK$$LDKCJEMDAMC",
+      "signature": "float COW_GamePlay_HBIBDMMOOOK__LDKCJEMDAMC (const MethodInfo* method);",
+      "typeSignature": "fi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 24
+        }
+      ]
+    },
+    {
+      "baseline": 96552340,
+      "name": "COW.GamePlay.HBIBDMMOOOK$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_HBIBDMMOOOK__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "baseline": 96565736,
+      "name": "COW.GamePlay.HBIBDMMOOOK$$ALJMFCJMDCF",
+      "signature": "void COW_GamePlay_HBIBDMMOOOK__ALJMFCJMDCF (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 20
+        }
+      ]
+    },
+    {
+      "baseline": 96609004,
+      "name": "COW.GamePlay.HBIBDMMOOOK$$NFFJEBKJCAK",
+      "signature": "void COW_GamePlay_HBIBDMMOOOK__NFFJEBKJCAK (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 20
+        }
+      ]
+    },
+    {
+      "baseline": 96612264,
+      "name": "COW.GamePlay.HBIBDMMOOOK$$CIHHEOKFADJ",
+      "signature": "int32_t COW_GamePlay_HBIBDMMOOOK__CIHHEOKFADJ (struct COW_GamePlay_CGKJLKPMGDJ_o* JLBCCIDGINC, struct UnityEngine_MonoBehaviour_o* NPAOJCLNIEK, float JCJBCDELLLK, const MethodInfo* method);",
+      "typeSignature": "iiifi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 31
+        }
+      ]
+    },
+    {
+      "baseline": 96615252,
+      "name": "COW.GamePlay.HBIBDMMOOOK$$LHNJLFOINDO",
+      "signature": "int32_t COW_GamePlay_HBIBDMMOOOK__LHNJLFOINDO (struct COW_GamePlay_CGKJLKPMGDJ_o* JLBCCIDGINC, const MethodInfo* method);",
+      "typeSignature": "iii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 31
+        }
+      ]
+    },
+    {
+      "baseline": 96752940,
+      "name": "COW.GamePlay.HAMENLEEAAM$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_HAMENLEEAAM__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "baseline": 96836500,
+      "name": "COW.GamePlay.MDPBNKPCGNG$$IONEHPNFAJD",
+      "signature": "void COW_GamePlay_MDPBNKPCGNG__IONEHPNFAJD (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/SilentAim.mm",
+          "line": 17
+        },
+        {
+          "file": "esp/Core/SilentAimExternal.mm",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "baseline": 96944740,
+      "name": "COW.GamePlay.MPBPLOLOIGN$$MAMFDNEJAPF",
+      "signature": "void COW_GamePlay_MPBPLOLOIGN__MAMFDNEJAPF (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "baseline": 96954512,
+      "name": "COW.GamePlay.NGMILJIELKA$$JCCIMHDAPDB",
+      "signature": "void COW_GamePlay_NGMILJIELKA__JCCIMHDAPDB (struct COW_GamePlay_CGKJLKPMGDJ_o* JLBCCIDGINC, struct UnityEngine_MonoBehaviour_o* NPAOJCLNIEK, float JCJBCDELLLK, bool LBGAHLGOKMO, struct System_String_o* JOJCLDOIGBE, const MethodInfo* method);",
+      "typeSignature": "viifiii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 29
+        }
+      ]
+    },
+    {
+      "baseline": 101960580,
+      "name": "COW.GamePlay.EPPMGCJDEDC$$AGDFODEDCCP",
+      "signature": "void COW_GamePlay_EPPMGCJDEDC__AGDFODEDCCP (struct COW_GamePlay_Player_o* PEKLPBDMGAL, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 27
+        }
+      ]
+    },
+    {
+      "baseline": 101966580,
+      "name": "COW.GamePlay.EPPMGCJDEDC$$EJCPAFDIOKB",
+      "signature": "void COW_GamePlay_EPPMGCJDEDC__EJCPAFDIOKB (float KGPEEBFGDDP, float NDDGOGCHGEK, const MethodInfo* method);",
+      "typeSignature": "vffi",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "baseline": 101968384,
+      "name": "COW.GamePlay.EPPMGCJDEDC$$.ctor",
+      "signature": "void COW_GamePlay_EPPMGCJDEDC__.ctor (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 27
+        }
+      ]
+    },
+    {
+      "baseline": 104159564,
+      "name": "COW.GamePlay.MNDPBJMLABJ$$OnLateUpdate",
+      "signature": "void COW_GamePlay_MNDPBJMLABJ__OnLateUpdate (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 44
+        }
+      ]
+    },
+    {
+      "baseline": 104269516,
+      "name": "COW.GamePlay.PBKKDPJKIPB$$OnLateUpdate",
+      "signature": "void COW_GamePlay_PBKKDPJKIPB__OnLateUpdate (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "baseline": 104281068,
+      "name": "COW.GamePlay.JJBBNOCIAGD$$OnLateUpdate",
+      "signature": "void COW_GamePlay_JJBBNOCIAGD__OnLateUpdate (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "baseline": 104286488,
+      "name": "COW.GamePlay.JBGLPKNEIAF$$OnLateUpdate",
+      "signature": "void COW_GamePlay_JBGLPKNEIAF__OnLateUpdate (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 46
+        }
+      ]
+    },
+    {
+      "baseline": 105297480,
+      "name": "COW.GamePlay.PhysicalCCT$$ForceSetPosition",
+      "signature": "void COW_GamePlay_PhysicalCCT__ForceSetPosition (struct UnityEngine_Vector3_o AJKKPNODAFJ, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 29
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 154
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 190
+        }
+      ]
+    },
+    {
+      "baseline": 105397372,
+      "name": "COW.GamePlay.PlayerAttributes$$get_IsAmmoFree",
+      "signature": "bool COW_GamePlay_PlayerAttributes__get_IsAmmoFree (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 259
+        },
+        {
+          "file": "esp/Core/_0xGL2972_.mm",
+          "line": 33
+        }
+      ]
+    },
+    {
+      "baseline": 105397380,
+      "name": "COW.GamePlay.PlayerAttributes$$set_IsAmmoFree",
+      "signature": "void COW_GamePlay_PlayerAttributes__set_IsAmmoFree (bool BOKHFCBMCAB, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/_0xGL2972_.mm",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "baseline": 107874852,
+      "name": "COW.GamePlay.IJONELEIMJO$$OnLateUpdate",
+      "signature": "void COW_GamePlay_IJONELEIMJO__OnLateUpdate (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 46
+        }
+      ]
+    },
+    {
+      "baseline": 107938588,
+      "name": "COW.GamePlay.EHAKFOKGKAA$$OnLateUpdate",
+      "signature": "void COW_GamePlay_EHAKFOKGKAA__OnLateUpdate (const MethodInfo* method);",
+      "typeSignature": "vi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 47
+        }
+      ]
+    },
+    {
+      "baseline": 112498252,
+      "name": "GCommon.TransformNode$$get_transform",
+      "signature": "struct UnityEngine_Transform_o* GCommon_TransformNode__get_transform (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 33
+        }
+      ]
+    },
+    {
+      "baseline": 112499732,
+      "name": "GCommon.Entity$$get_CachedTransform",
+      "signature": "struct UnityEngine_Transform_o* GCommon_Entity__get_CachedTransform (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "baseline": 112499972,
+      "name": "GCommon.Entity$$get_Position",
+      "signature": "struct UnityEngine_Vector3_o GCommon_Entity__get_Position (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 24
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 151
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 187
+        }
+      ]
+    },
+    {
+      "baseline": 112500240,
+      "name": "GCommon.Entity$$set_Position",
+      "signature": "void GCommon_Entity__set_Position (struct UnityEngine_Vector3_o value, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 19
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 128
+        },
+        {
+          "file": "esp/Core/GhostMode.mm",
+          "line": 152
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 25
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 152
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 187
+        }
+      ]
+    },
+    {
+      "baseline": 112503076,
+      "name": "GCommon.Entity$$get_UniqueID",
+      "signature": "uint32_t GCommon_Entity__get_UniqueID (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "baseline": 147704564,
+      "name": "UnityEngine.Animator$$get_speed",
+      "signature": "float UnityEngine_Animator__get_speed (const MethodInfo* method);",
+      "typeSignature": "fi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 38
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 158
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 194
+        }
+      ]
+    },
+    {
+      "baseline": 147704644,
+      "name": "UnityEngine.Animator$$set_speed",
+      "signature": "void UnityEngine_Animator__set_speed (float value, const MethodInfo* method);",
+      "typeSignature": "vfi",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 38
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 158
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 194
+        }
+      ]
+    },
+    {
+      "baseline": 148212760,
+      "name": "UnityEngine.Behaviour$$get_enabled",
+      "signature": "bool UnityEngine_Behaviour__get_enabled (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 37
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 159
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 195
+        }
+      ]
+    },
+    {
+      "baseline": 148212840,
+      "name": "UnityEngine.Behaviour$$set_enabled",
+      "signature": "void UnityEngine_Behaviour__set_enabled (bool value, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 37
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 159
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 195
+        }
+      ]
+    },
+    {
+      "baseline": 148216876,
+      "name": "UnityEngine.Component$$get_transform",
+      "signature": "struct UnityEngine_Transform_o* UnityEngine_Component__get_transform (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 27
+        }
+      ]
+    },
+    {
+      "baseline": 148292492,
+      "name": "UnityEngine.Transform$$get_localPosition",
+      "signature": "struct UnityEngine_Vector3_o UnityEngine_Transform__get_localPosition (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 35
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 156
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 192
+        }
+      ]
+    },
+    {
+      "baseline": 148292692,
+      "name": "UnityEngine.Transform$$set_localPosition",
+      "signature": "void UnityEngine_Transform__set_localPosition (struct UnityEngine_Vector3_o value, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 35
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 156
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 192
+        }
+      ]
+    },
+    {
+      "baseline": 148293044,
+      "name": "UnityEngine.Transform$$get_rotation",
+      "signature": "struct UnityEngine_Quaternion_o UnityEngine_Transform__get_rotation (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 39
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 160
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 196
+        }
+      ]
+    },
+    {
+      "baseline": 148293260,
+      "name": "UnityEngine.Transform$$set_rotation",
+      "signature": "void UnityEngine_Transform__set_rotation (struct UnityEngine_Quaternion_o value, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 39
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 160
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 196
+        }
+      ]
+    },
+    {
+      "baseline": 148293512,
+      "name": "UnityEngine.Transform$$get_localRotation",
+      "signature": "struct UnityEngine_Quaternion_o UnityEngine_Transform__get_localRotation (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 31
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 155
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 191
+        }
+      ]
+    },
+    {
+      "baseline": 148293728,
+      "name": "UnityEngine.Transform$$set_localRotation",
+      "signature": "void UnityEngine_Transform__set_localRotation (struct UnityEngine_Quaternion_o value, const MethodInfo* method);",
+      "typeSignature": "vii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 31
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 155
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 191
+        }
+      ]
+    },
+    {
+      "baseline": 148302080,
+      "name": "UnityEngine.Transform$$get_childCount",
+      "signature": "int32_t UnityEngine_Transform__get_childCount (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 36
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 157
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 193
+        }
+      ]
+    },
+    {
+      "baseline": 148303072,
+      "name": "UnityEngine.Transform$$IsChildOf",
+      "signature": "bool UnityEngine_Transform__IsChildOf (struct UnityEngine_Transform_o* parent, const MethodInfo* method);",
+      "typeSignature": "iii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 27
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 32
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 155
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 191
+        }
+      ]
+    },
+    {
+      "baseline": 148303536,
+      "name": "UnityEngine.Transform$$GetChild",
+      "signature": "struct UnityEngine_Transform_o* UnityEngine_Transform__GetChild (int32_t index, const MethodInfo* method);",
+      "typeSignature": "iii",
+      "uses": [
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 36
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 157
+        },
+        {
+          "file": "esp/Core/PlayerModes.mm",
+          "line": 193
+        }
+      ]
+    },
+    {
+      "baseline": 148785412,
+      "name": "UnityEngine.Physics$$Raycast",
+      "signature": "bool UnityEngine_Physics__Raycast (struct UnityEngine_Vector3_o origin, struct UnityEngine_Vector3_o direction, struct UnityEngine_RaycastHit_o hitInfo, float maxDistance, int32_t layerMask, struct UnityEngine_QueryTriggerInteraction_o queryTriggerInteraction, const MethodInfo* method);",
+      "typeSignature": "iiiifiii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 26
+        }
+      ]
+    },
+    {
+      "baseline": 148785792,
+      "name": "UnityEngine.PhysicsScene$$Raycast",
+      "signature": "bool UnityEngine_PhysicsScene__Raycast (struct UnityEngine_Vector3_o origin, struct UnityEngine_Vector3_o direction, struct UnityEngine_RaycastHit_o hitInfo, float maxDistance, int32_t layerMask, struct UnityEngine_QueryTriggerInteraction_o queryTriggerInteraction, const MethodInfo* method);",
+      "typeSignature": "iiiifiii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 263
+        }
+      ]
+    },
+    {
+      "baseline": 148834096,
+      "name": "UnityEngine.RaycastHit$$get_collider",
+      "signature": "struct UnityEngine_Collider_o* UnityEngine_RaycastHit__get_collider (const MethodInfo* method);",
+      "typeSignature": "ii",
+      "uses": [
+        {
+          "file": "esp/Core/AutoFire.mm",
+          "line": 26
+        }
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "<KGLPFNLHOKP>k__BackingField",
+      "declaration": "private bool",
+      "baseline": 608,
+      "baselineLine": 1172603,
+      "macro": "MIZZE_PLAYER_260"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "<CKBBPOHMPGK>k__BackingField",
+      "declaration": "private PhysicalCCT",
+      "baseline": 616,
+      "baselineLine": 1172604,
+      "macro": "MIZZE_PLAYER_268"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "CCFBBFMPJNP",
+      "declaration": "private Dictionary<int, uint>",
+      "baseline": 720,
+      "baselineLine": 1172650,
+      "macro": "MIZZE_PLAYER_2D0"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "MainCameraTransform",
+      "declaration": "public Transform",
+      "baseline": 1000,
+      "baselineLine": 1172705,
+      "macro": "MIZZE_PLAYER_3E8"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "MHGFKKALMDK",
+      "declaration": "protected BEADLMGGGGL",
+      "baseline": 1032,
+      "baselineLine": 1172710,
+      "macro": "MIZZE_PLAYER_408"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "BDHGDLFDHAL",
+      "declaration": "protected string",
+      "baseline": 1168,
+      "baselineLine": 1172726,
+      "macro": "MIZZE_PLAYER_490"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IsClientBot",
+      "declaration": "public bool",
+      "baseline": 1184,
+      "baselineLine": 1172728,
+      "macro": "MIZZE_PLAYER_4A0"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "DFLDHLFENGD",
+      "declaration": "protected CharacterController",
+      "baseline": 1240,
+      "baselineLine": 1172738,
+      "macro": "MIZZE_PLAYER_4D8"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "<AKKPEKIHGAH>k__BackingField",
+      "declaration": "private Quaternion",
+      "baseline": 1556,
+      "baselineLine": 1172811,
+      "macro": "MIZZE_PLAYER_614"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "<GKOPDDOCJMC>k__BackingField",
+      "declaration": "private Quaternion",
+      "baseline": 1576,
+      "baselineLine": 1172813,
+      "macro": "MIZZE_PLAYER_628"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "AHNCPOJPPCL",
+      "declaration": "protected FollowCamera",
+      "baseline": 1680,
+      "baselineLine": 1172828,
+      "macro": "MIZZE_PLAYER_690"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "GBKFHDFCPMD",
+      "declaration": "protected ITransformNode",
+      "baseline": 1696,
+      "baselineLine": 1172830,
+      "macro": "MIZZE_PLAYER_6A0"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "COBFGNOIPMF",
+      "declaration": "protected ITransformNode",
+      "baseline": 1704,
+      "baselineLine": 1172831,
+      "macro": "MIZZE_PLAYER_6A8"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "CFMDINAGALM",
+      "declaration": "protected ITransformNode",
+      "baseline": 1728,
+      "baselineLine": 1172834,
+      "macro": "MIZZE_PLAYER_6C0"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IIPBIDIBJDK",
+      "declaration": "protected ITransformNode",
+      "baseline": 1736,
+      "baselineLine": 1172835,
+      "macro": "MIZZE_PLAYER_6C8"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "EJJBPONNECG",
+      "declaration": "protected ITransformNode",
+      "baseline": 1744,
+      "baselineLine": 1172836,
+      "macro": "MIZZE_PLAYER_6D0"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "GPIBDOCMHBE",
+      "declaration": "protected ITransformNode",
+      "baseline": 1752,
+      "baselineLine": 1172837,
+      "macro": "MIZZE_PLAYER_6D8"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "EMNIJJCEKDD",
+      "declaration": "protected ITransformNode",
+      "baseline": 1760,
+      "baselineLine": 1172838,
+      "macro": "MIZZE_PLAYER_6E0"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "JMHBBGIKBNO",
+      "declaration": "protected ITransformNode",
+      "baseline": 1776,
+      "baselineLine": 1172840,
+      "macro": "MIZZE_PLAYER_6F0"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "ONEIIEEJLOC",
+      "declaration": "protected ITransformNode",
+      "baseline": 1784,
+      "baselineLine": 1172841,
+      "macro": "MIZZE_PLAYER_6F8"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "JLAECGNPCHC",
+      "declaration": "protected ITransformNode",
+      "baseline": 1816,
+      "baselineLine": 1172845,
+      "macro": "MIZZE_PLAYER_718"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "CLCEEJMGBGE",
+      "declaration": "protected ITransformNode",
+      "baseline": 1824,
+      "baselineLine": 1172846,
+      "macro": "MIZZE_PLAYER_720"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "DJAOGHBOBOJ",
+      "declaration": "protected ITransformNode",
+      "baseline": 1832,
+      "baselineLine": 1172847,
+      "macro": "MIZZE_PLAYER_728"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IMLDFGHNLBP",
+      "declaration": "protected ITransformNode",
+      "baseline": 1840,
+      "baselineLine": 1172848,
+      "macro": "MIZZE_PLAYER_730"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "BKEPAKCAGNJ",
+      "declaration": "protected GMOCOOEIFMK",
+      "baseline": 1856,
+      "baselineLine": 1172850,
+      "macro": "MIZZE_PLAYER_740"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "NLENBNNCDMC",
+      "declaration": "protected NewPlayerAnimationSystemComponent",
+      "baseline": 1888,
+      "baselineLine": 1172854,
+      "macro": "MIZZE_PLAYER_760"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IODLOCEJIOK",
+      "declaration": "protected PlayerAttributes",
+      "baseline": 1896,
+      "baselineLine": 1172855,
+      "macro": "MIZZE_PLAYER_768"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "GGJOLDEEIEN",
+      "declaration": "protected AvatarManager",
+      "baseline": 1904,
+      "baselineLine": 1172856,
+      "macro": "MIZZE_PLAYER_770"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "DDLJOPFINGE",
+      "declaration": "protected LevelSwingSpider",
+      "baseline": 2640,
+      "baselineLine": 1172958,
+      "macro": "MIZZE_PLAYER_A50"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "IsKnockedDownBleed",
+      "declaration": "public bool",
+      "baseline": 4696,
+      "baselineLine": 1173404,
+      "macro": "MIZZE_PLAYER_1258"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "name": "GBJCJJNPPEC",
+      "declaration": "protected GFLBFKKDAMK",
+      "baseline": 7496,
+      "baselineLine": 1173868,
+      "macro": "MIZZE_PLAYER_1D48"
+    },
+    {
+      "owner": "COW.GamePlay.PlayerAttributes",
+      "name": "BDOEGBMMEOK",
+      "declaration": "private Player",
+      "baseline": 32,
+      "baselineLine": 1323833
+    },
+    {
+      "owner": "COW.GamePlay.PlayerAttributes",
+      "name": "ShootNoReload",
+      "declaration": "public bool",
+      "baseline": 273,
+      "baselineLine": 1323881
+    },
+    {
+      "owner": "COW.GamePlay.PlayerAttributes",
+      "name": "<MFAFICJMAHI>k__BackingField",
+      "declaration": "private bool",
+      "baseline": 404,
+      "baselineLine": 1323902
+    },
+    {
+      "owner": "COW.GamePlay.PlayerAttributes",
+      "name": "CILIDJHLLJA",
+      "declaration": "private float",
+      "baseline": 600,
+      "baselineLine": 1323943
+    },
+    {
+      "owner": "COW.GamePlay.PlayerAttributes",
+      "name": "ForceSetRunAndDashSpeed",
+      "declaration": "public float",
+      "baseline": 968,
+      "baselineLine": 1324007
+    },
+    {
+      "owner": "COW.GameFacade",
+      "name": "CurrentGame",
+      "declaration": "public static BaseGame",
+      "baseline": 0,
+      "baselineLine": 305814
+    },
+    {
+      "owner": "COW.GameFacade",
+      "name": "CurrentMatchGame",
+      "declaration": "public static MatchGame",
+      "baseline": 8,
+      "baselineLine": 305815
+    },
+    {
+      "owner": "COW.MatchGame",
+      "name": "m_Match",
+      "declaration": "protected JMAGGLCNGIG",
+      "baseline": 144,
+      "baselineLine": 308106
+    },
+    {
+      "owner": "COW.MatchGame",
+      "name": "m_CameraControllerManager",
+      "declaration": "protected CameraControllerManager",
+      "baseline": 216,
+      "baselineLine": 308115
+    },
+    {
+      "owner": "COW.GamePlay.JMAGGLCNGIG",
+      "name": "MHJCLOPOBAA",
+      "declaration": "protected Player",
+      "baseline": 216,
+      "baselineLine": 1200830
+    },
+    {
+      "owner": "COW.GamePlay.JMAGGLCNGIG",
+      "name": "DKCLHINMMFO",
+      "declaration": "protected Dictionary<byte, Player>",
+      "baseline": 328,
+      "baselineLine": 1200842
+    },
+    {
+      "owner": "COW.GamePlay.CameraControllerManager",
+      "name": "EKIPKGNKILM",
+      "declaration": "private Camera",
+      "baseline": 32,
+      "baselineLine": 1195133
+    },
+    {
+      "owner": "COW.GamePlay.AvatarManager",
+      "name": "LHEDBMJJOLM",
+      "declaration": "internal IUmaAvatar",
+      "baseline": 312,
+      "baselineLine": 1191283
+    },
+    {
+      "owner": "UMA.Simple.UmaAvatarSimple",
+      "name": "IsVisible",
+      "declaration": "private bool",
+      "baseline": 257,
+      "baselineLine": 36025
+    },
+    {
+      "owner": "GCommon.ReplicationEntity",
+      "name": "m_PRIDataPool",
+      "declaration": "protected IPRIDataPool",
+      "baseline": 112,
+      "baselineLine": 1410411
+    },
+    {
+      "owner": "GCommon.Entity",
+      "name": "m_UniqueID",
+      "declaration": "private uint",
+      "baseline": 96,
+      "baselineLine": 1410088
+    },
+    {
+      "owner": "GCommon.TransformNode",
+      "name": "<transform>k__BackingField",
+      "declaration": "private Transform",
+      "baseline": 16,
+      "baselineLine": 1410003
+    },
+    {
+      "owner": "COW.GamePlay.PhysicalCCT",
+      "name": "OCODGKDOKPF",
+      "declaration": "private Transform",
+      "baseline": 456,
+      "baselineLine": 1322247
+    },
+    {
+      "owner": "COW.GamePlay.GMOCOOEIFMK",
+      "name": "<NPMJLIMGKPA>k__BackingField",
+      "declaration": "private Player",
+      "baseline": 48,
+      "baselineLine": 1215206
+    },
+    {
+      "owner": "COW.GamePlay.GMOCOOEIFMK",
+      "name": "IBOOGFMCICN",
+      "declaration": "private CDMMCIIFHGM[]",
+      "baseline": 136,
+      "baselineLine": 1215218
+    },
+    {
+      "owner": "COW.GamePlay.GMOCOOEIFMK",
+      "name": "LMFNCLKHIIO",
+      "declaration": "private CDMMCIIFHGM",
+      "baseline": 160,
+      "baselineLine": 1215221
+    },
+    {
+      "owner": "COW.GamePlay.GMOCOOEIFMK",
+      "name": "PDIMNGEMALB",
+      "declaration": "private GEJIJAMODGH",
+      "baseline": 168,
+      "baselineLine": 1215222
+    },
+    {
+      "owner": "COW.GamePlay.GMOCOOEIFMK",
+      "name": "OMHEPNBNEKL",
+      "declaration": "private bool",
+      "baseline": 328,
+      "baselineLine": 1215254
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "name": "<BDKDBILOMDE>k__BackingField",
+      "declaration": "private DGHJEPHMGPO",
+      "baseline": 128,
+      "baselineLine": 1232477
+    },
+    {
+      "owner": "COW.GamePlay.MDPBNKPCGNG",
+      "name": "JLBCCIDGINC",
+      "declaration": "protected CGKJLKPMGDJ",
+      "baseline": 40,
+      "baselineLine": 1236556
+    },
+    {
+      "owner": "COW.GamePlay.CGKJLKPMGDJ",
+      "name": "HLDECMJFKJK",
+      "declaration": "public Vector3",
+      "baseline": 64,
+      "baselineLine": 1313632
+    },
+    {
+      "owner": "COW.GamePlay.CGKJLKPMGDJ",
+      "name": "EKPLMDDKOGB",
+      "declaration": "public Vector3",
+      "baseline": 76,
+      "baselineLine": 1313633
+    },
+    {
+      "owner": "message.DCAOPGIKAFE",
+      "name": "PEOEKJPBBPC",
+      "declaration": "public IFHJKHPIJPC",
+      "baseline": 24,
+      "baselineLine": 91386
+    },
+    {
+      "owner": "message.GKKODHEIJAL",
+      "name": "JDLCKJMFPGP",
+      "declaration": "public CJLFOJMIOEA",
+      "baseline": 24,
+      "baselineLine": 91465
+    },
+    {
+      "owner": "message.IFHJKHPIJPC",
+      "name": "CHBDLAKCLKD",
+      "declaration": "public LDCJOLOBGGH",
+      "baseline": 24,
+      "baselineLine": 87044
+    },
+    {
+      "owner": "message.IFHJKHPIJPC",
+      "name": "IEEIGMJLPEL",
+      "declaration": "public BJFGLKKKOAN",
+      "baseline": 48,
+      "baselineLine": 87047
+    },
+    {
+      "owner": "message.CJLFOJMIOEA",
+      "name": "AEFEHLJONKE",
+      "declaration": "public LDCJOLOBGGH",
+      "baseline": 24,
+      "baselineLine": 87141
+    },
+    {
+      "owner": "message.CJLFOJMIOEA",
+      "name": "NMLIGADAAHJ",
+      "declaration": "public LDCJOLOBGGH",
+      "baseline": 32,
+      "baselineLine": 87142
+    },
+    {
+      "owner": "message.CJLFOJMIOEA",
+      "name": "AJNDDAKFFDM",
+      "declaration": "public LDCJOLOBGGH",
+      "baseline": 40,
+      "baselineLine": 87143
+    },
+    {
+      "owner": "message.CJLFOJMIOEA",
+      "name": "NHEBDLANOAB",
+      "declaration": "public LDCJOLOBGGH",
+      "baseline": 48,
+      "baselineLine": 87144
+    },
+    {
+      "owner": "message.LDCJOLOBGGH",
+      "name": "ALNGACCIEFF",
+      "declaration": "public int",
+      "baseline": 20,
+      "baselineLine": 86292
+    },
+    {
+      "owner": "message.LDCJOLOBGGH",
+      "name": "CHHBFMKPGDC",
+      "declaration": "public int",
+      "baseline": 24,
+      "baselineLine": 86293
+    }
+  ],
+  "nativeOnly": [
+    {
+      "label": "GameFacade TypeInfo",
+      "baseline": 196373072,
+      "reason": "ScriptMetadata is empty in both supplied dumps; recover and verify the global pointer in the native binary."
+    },
+    {
+      "label": "Tracer TypeInfo",
+      "baseline": 196394696,
+      "reason": "Recover the exact native global pointer; do not relocate it by a method delta."
+    },
+    {
+      "label": "Metadata initialization helper",
+      "baseline": 168890908,
+      "reason": "Native helper is absent from ScriptMethod."
+    },
+    {
+      "label": "Player.PostUpdate instruction block",
+      "baseline": 90817588,
+      "reason": "This is an interior instruction block; method identity does not preserve the block offset."
+    },
+    {
+      "label": "Weapon firing instruction block",
+      "baseline": 96092244,
+      "reason": "This is an interior instruction block; verify branches and call targets."
+    },
+    {
+      "label": "Shot presentation instruction block",
+      "baseline": 96594192,
+      "reason": "Interior block; verify instruction boundaries and semantics."
+    },
+    {
+      "label": "GetSpeedByType instruction block",
+      "baseline": 105392800,
+      "reason": "Interior block used by an opcode guard; verify separately."
+    },
+    {
+      "label": "Hook fingerprints, vtable slots, IL2CPP class layout",
+      "baseline": null,
+      "reason": "TH full-byte FNV hashes change with branch relocations and Player fields. Need decrypted ARM64 native binary for MAX."
+    },
+    {
+      "label": "Unity native Camera / Transform / PRI storage / PlayerID",
+      "baseline": null,
+      "reason": "Managed dump does not verify all native layout, PRI index meanings or memory chains."
+    }
+  ],
+  "warnings": [
+    "kWeaponOnHand=0x690 names FollowCamera in this dump; runtime weapon lookup uses Player weapon manager +0x740 instead.",
+    "kPlayerIDStruct=0x2D0 names a Dictionary<int,uint>; runtime team lookup uses kPlayerID=0x408 (BEADLMGGGGL).",
+    "kVisibleObj=0xA50 names LevelSwingSpider, not a verified visibility object. Avatar fallback uses AvatarManager +0x770 -> +0x138 -> IsVisible +0x101.",
+    "kKnocked=0x1258 names IsKnockedDownBleed. PRI firing index 21/value 2 require native-semantic confirmation per OB.",
+    "Bone field names are obfuscated. Exact dump field matching verifies storage position, not that a bone is anatomically head/hip/hand.",
+    "New OB may rename obfuscated fields/methods. The tool reports unresolved identities and never guesses a shared address delta.",
+    "The supplied ScriptMetadataMethod.Address numbers are outside safe integer range; they must not be used as TypeInfo RVAs."
+  ],
+  "unresolvedFieldIdentities": [
+    {
+      "owner": "COW.GamePlay.JMAGGLCNGIG",
+      "offset": 1632
+    },
+    {
+      "owner": "COW.GamePlay.JMAGGLCNGIG",
+      "offset": 1640
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "offset": 96
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "offset": 600
+    },
+    {
+      "owner": "COW.GamePlay.HBIBDMMOOOK",
+      "offset": 1977
+    },
+    {
+      "owner": "COW.GamePlay.MDPBNKPCGNG",
+      "offset": 16
+    },
+    {
+      "owner": "message.LDCJOLOBGGH",
+      "offset": 16
+    }
+  ]
+}

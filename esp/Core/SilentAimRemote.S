@@ -1,3 +1,4 @@
+#include "GameProfileFields.h"
 #include "SilentAimRemoteLayout.h"
 // A relocatable ARM64 handler: all calls come from the remote state page.
 // Only this page is copied; none of the TIPA's function pointers enter the game.
@@ -60,7 +61,7 @@ _SilentAimRemoteStart:
     cmp x8, x20
     b.ne .Lnative
     add x8, x24, #0x1000
-    ldrb w8, [x8, #0x258]      // local knock
+    ldrb w8, [x8, #(MIZZE_PLAYER_1258 - 0x1000)]      // local knock
     cbnz w8, .Lnative
     // Native shot events may run without the manual trigger's PRI21. Only
     // a scoped AutoFire call for this exact local weapon can bypass that gate.

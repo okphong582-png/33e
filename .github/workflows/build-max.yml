@@ -1,0 +1,55 @@
+name: Build Free Fire MAX TIPA and Dylib
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  max:
+    name: FF MAX ${{ matrix.kind }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [tipa, dylib]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check MAX native verification before compiling
+        run: |
+          node tests/game_profile_test.cjs
+          node tests/offset_scanner_cli_test.cjs
+          clang++ -std=c++17 -DMIZZE_GAME_MAX=1 tests/game_profile_fields_test.cpp -o /tmp/max-fields
+          /tmp/max-fields
+          clang++ -std=c++17 -DMIZZE_GAME_MAX=1 tests/max_native_profile_test.cpp -o /tmp/max-native
+          /tmp/max-native
+          clang++ -std=c++17 -DMIZZE_GAME_MAX=1 tests/avatar_visibility_test.cpp -o /tmp/max-visibility
+          /tmp/max-visibility
+          clang++ -std=c++17 -DMIZZE_GAME_MAX=1 tests/player_modes_control_test.cpp -o /tmp/max-controller
+          /tmp/max-controller
+          clang++ -std=c++17 -DMIZZE_GAME_MAX=1 tests/silent_aim_external_test.cpp -o /tmp/max-weapon
+          /tmp/max-weapon
+      - name: Setup Theos and iOS toolchain
+        uses: Randomblock1/theos-action@v1
+      - name: Build selected MAX artifact
+        run: make clean package GAME_VARIANT=max BUILD_KIND=${{ matrix.kind }} FINALPACKAGE=1 FOR_RELEASE=1
+      - name: Verify injected dylib contract
+        if: matrix.kind == 'dylib'
+        run: python3 tools/verify_injected_dylib.py packages/max/Mizze-MAX.dylib
+      - name: Upload MAX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-MAX-${{ matrix.kind }}
+          path: |
+            packages/max/*.tipa
+            packages/max/*.dylib
+          if-no-files-found: error

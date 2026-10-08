@@ -1,3 +1,4 @@
+#include "GameOffsets.h"
 #include "AutoFire.h"
 #include "SilentAim.h"
 #if defined(__aarch64__) || defined(__arm64__)
@@ -17,18 +18,18 @@
 #include <vector>
 extern "C" const unsigned char AutoFireRemoteStart[], AutoFireRemoteEnd[];
 namespace {
-constexpr uint64_t Getter=0x5616118, Start=0x5C179E8, Stop=0x5C222EC;
+constexpr uint64_t Getter=GameOffsets::Rva(0x5616118), Start=GameOffsets::Rva(0x5C179E8), Stop=GameOffsets::Rva(0x5C222EC);
 // Weapon.LDKCJEMDAMC() returns the current fire interval, including attributes
 // and weapon type. POFKDNELDJL.IPFONNHEKFA compares accumulated dt against it
 // before each virtual-182 shot (0x5BA4054..0x5BA40A4).
-constexpr uint64_t Interval=0x5BF3B0C;
+constexpr uint64_t Interval=GameOffsets::Rva(0x5BF3B0C);
 // Unity's standard Raycast overload, not the game's ExtraMask extension.
-constexpr uint64_t Raycast=0x8DE4904, HitCollider=0x8DF0730;
-constexpr uint64_t ComponentTransform=0x8D59C2C, IsChild=0x8D6ECE0, RootTransform=0x56182FC;
-constexpr uint64_t FireEffect=0x56AC3A8, EffectSlot=0x138+182*16;
-constexpr uint64_t Tracer=0x5C76890, TracerSlot=0x138+5*16;
-constexpr uint64_t MetadataInit=0xA11121C, TracerTypeInfo=0xBB4BEC8;
-constexpr uint64_t ShotPresentation=0x5C22FA8, ShotHit=0x5C23B54;
+constexpr uint64_t Raycast=GameOffsets::Rva(0x8DE4904), HitCollider=GameOffsets::Rva(0x8DF0730);
+constexpr uint64_t ComponentTransform=GameOffsets::Rva(0x8D59C2C), IsChild=GameOffsets::Rva(0x8D6ECE0), RootTransform=GameOffsets::Rva(0x56182FC);
+constexpr uint64_t FireEffect=GameOffsets::Rva(0x56AC3A8), EffectSlot=0x138+182*16;
+constexpr uint64_t Tracer=GameOffsets::Rva(0x5C76890), TracerSlot=0x138+5*16;
+constexpr uint64_t MetadataInit=GameOffsets::Rva(0xA11121C), TracerTypeInfo=GameOffsets::Rva(0xBB4BEC8);
+constexpr uint64_t ShotPresentation=GameOffsets::Rva(0x5C22FA8), ShotHit=GameOffsets::Rva(0x5C23B54);
 // Player.PostUpdate calls the current weapon's MAMFDNEJAPF(float,float)
 // through virtual slot 28 at 0x569C4E8. Player.OnUpdate is also called
 // directly, so replacing its virtual slot can install a callback with no ticks.
@@ -37,10 +38,10 @@ struct UpdateFingerprint { uint64_t offset; uint32_t hash; };
 // Slot-28 implementations whose start/stop slots use the verified methods
 // in the supplied 1.132.1 IPA. Each has the same two-float ABI.
 constexpr UpdateFingerprint weaponUpdates[] = {
-    {0x5C14594,0x3D459FF7}, {0x5C4552C,0x41E95E11}, {0x5B633A8,0x2A0C22A4},
-    {0x5B70CE4,0x4365F46B}, {0x5B7DD00,0xFE362A57}, {0x5B8104C,0xAC5E66DE},
-    {0x5BA8E54,0x96FDD838}, {0x5BA9650,0x37041440}, {0x5BB12F0,0x6A9FF040},
-    {0x5BDA64C,0x27399A41}, {0x5BE8438,0x740125D4}, {0x5C74264,0x597102DC}
+    {GameOffsets::Rva(0x5C14594),0x3D459FF7}, {GameOffsets::Rva(0x5C4552C),0x41E95E11}, {GameOffsets::Rva(0x5B633A8),0x2A0C22A4},
+    {GameOffsets::Rva(0x5B70CE4),0x4365F46B}, {GameOffsets::Rva(0x5B7DD00),0xFE362A57}, {GameOffsets::Rva(0x5B8104C),0xAC5E66DE},
+    {GameOffsets::Rva(0x5BA8E54),0x96FDD838}, {GameOffsets::Rva(0x5BA9650),0x37041440}, {GameOffsets::Rva(0x5BB12F0),0x6A9FF040},
+    {GameOffsets::Rva(0x5BDA64C),0x27399A41}, {GameOffsets::Rva(0x5BE8438),0x740125D4}, {GameOffsets::Rva(0x5C74264),0x597102DC}
 };
 struct Session {
     uint64_t slot=0, allocation=0, original=0;
@@ -87,7 +88,7 @@ void Clear() {
 template<size_t N> bool Fingerprint(uint64_t a,uint32_t expected) {
     std::array<uint8_t,N> bytes{}; if(!Read(a,bytes))return false;
     uint32_t h=0x811C9DC5;for(uint8_t b:bytes)h=(h^b)*0x01000193u;
-    return h==expected;
+    return h==GameOffsets::ExpectedHash(expected);
 }
 bool SupportedUpdate(uint64_t original) {
     for (const auto &f : weaponUpdates)
@@ -138,7 +139,7 @@ bool Adopt(uint64_t slot,uint64_t a) {
         state.interval!=module+Interval||state.clock!=Clock()||state.effectOriginal!=module+FireEffect||
         state.tracerOriginal!=module+Tracer||state.metadataInit!=module+MetadataInit||
         state.tracerTypeInfo!=module+TracerTypeInfo||state.shotOriginal!=module+ShotPresentation||
-        state.shotHit!=module+ShotHit||state.swapCooldown!=module+0x5636E60||
+        state.shotHit!=module+ShotHit||state.swapCooldown!=module+GameOffsets::Rva(0x5636E60)||
         state.raycast!=module+Raycast||state.hitCollider!=module+HitCollider||
         state.componentTransform!=module+ComponentTransform||state.isChild!=module+IsChild||
         state.rootTransform!=module+RootTransform)return false;
@@ -169,7 +170,7 @@ int Install(uint64_t slot,Session *&session) {
         state.tracerTypeInfo=module+TracerTypeInfo;
         state.shotOriginal=module+ShotPresentation;
         state.shotHit=module+ShotHit;
-        state.swapCooldown=module+0x5636E60;
+        state.swapCooldown=module+GameOffsets::Rva(0x5636E60);
         state.raycast=module+Raycast;state.hitCollider=module+HitCollider;
         state.componentTransform=module+ComponentTransform;
         state.isChild=module+IsChild;state.rootTransform=module+RootTransform;
@@ -254,13 +255,13 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,
     if(!weapon||!Read(weapon,weaponClass)||!isVaildPtr(weaponClass)||
         !Read(weaponClass+StartSlot,start)||start!=base+Start||!Read(weaponClass+StopSlot,stop)||stop!=base+Stop||
         (!codeVerified && (!Fingerprint<0xCC>(base+Getter,0xC5E012EE)||!Fingerprint<0x5A8>(base+Start,0x9AD8096C)||
-        !Fingerprint<0x1E4>(base+Stop,0xA2F105A1)||!Fingerprint<0xCC>(base+0x569C434,0x88A4BD15)||
-        !Fingerprint<0x210>(base+Interval,0x131E1130)||!Fingerprint<0x50>(base+0x5BA4054,0xA165FA4A)||
-        !Fingerprint<0x10>(base+0x6483C7C,0x572D5404)||!Fingerprint<0x1E8>(base+FireEffect,0x1EE7E697)||
+        !Fingerprint<0x1E4>(base+Stop,0xA2F105A1)||!Fingerprint<0xCC>(base+GameOffsets::Rva(0x569C434),0x88A4BD15)||
+        !Fingerprint<0x210>(base+Interval,0x131E1130)||!Fingerprint<0x50>(base+GameOffsets::Rva(0x5BA4054),0xA165FA4A)||
+        !Fingerprint<0x10>(base+GameOffsets::Rva(0x6483C7C),0x572D5404)||!Fingerprint<0x1E8>(base+FireEffect,0x1EE7E697)||
         !Fingerprint<0x26B0>(base+Tracer,0x6D340948)||!Fingerprint<0x18>(base+MetadataInit,0x2FC932FA)||
-        !Fingerprint<0x30>(base+0x5C1E910,0xC285FA0E)||!Fingerprint<0x30C>(base+ShotPresentation,0x76159E8D)||
+        !Fingerprint<0x30>(base+GameOffsets::Rva(0x5C1E910),0xC285FA0E)||!Fingerprint<0x30C>(base+ShotPresentation,0x76159E8D)||
         !Fingerprint<0x1B08>(base+ShotHit,0xF0BC2099)||
-        !Fingerprint<0x17C>(base+Raycast,0x8B3DCDAE)||!Fingerprint<0x1F0>(base+0x8DE4A80,0x8956580B)||
+        !Fingerprint<0x17C>(base+Raycast,0x8B3DCDAE)||!Fingerprint<0x1F0>(base+GameOffsets::Rva(0x8DE4A80),0x8956580B)||
         !Fingerprint<0xF4>(base+HitCollider,0xF884A08C)||!Fingerprint<0x50>(base+ComponentTransform,0xE5B7D25C)||
         !Fingerprint<0x64>(base+IsChild,0xDECACF20)||!Fingerprint<0x154>(base+RootTransform,0x8E831156)))){
         Clear();retryAt=now+1;retryState=9;return 9;
@@ -279,9 +280,9 @@ int AutoFireUpdate(uint64_t base,uint64_t match,uint64_t local,uint64_t target,
     if(!Write(session->state()+AUTO_SILENT_GATE,silentGate)){Clear();return 10;}
     uint64_t swapFunction=0,swapWeapon=0,localClass=0,manager=0;
     uint32_t swapSlot=0;
-    if(swap&&Fingerprint<0xC0>(base+0x5636E60,0x8C40F08F)&&Read(local,localClass)&&Read(localClass+0xDC8,swapFunction)&&
-        ((swapFunction==base+0x56B4EB4&&Fingerprint<0x5F8>(swapFunction,0x40924917))||
-         (swapFunction==base+0x5A5C9D4&&Fingerprint<0x100>(swapFunction,0x538C5B13)))&&Read(local+0x740,manager)) {
+    if(swap&&Fingerprint<0xC0>(base+GameOffsets::Rva(0x5636E60),0x8C40F08F)&&Read(local,localClass)&&Read(localClass+0xDC8,swapFunction)&&
+        ((swapFunction==base+GameOffsets::Rva(0x56B4EB4)&&Fingerprint<0x5F8>(swapFunction,0x40924917))||
+         (swapFunction==base+GameOffsets::Rva(0x5A5C9D4)&&Fingerprint<0x100>(swapFunction,0x538C5B13)))&&Read(local + MIZZE_PLAYER_740,manager)) {
         const auto next=AutoSwap::Next(manager,local,weapon,base+Start,
             [](uint64_t a,auto &v){return Read(a,v);},[](uint64_t a){return isVaildPtr(a);});
         swapWeapon=next.weapon;swapSlot=next.slot;

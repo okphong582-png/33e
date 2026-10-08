@@ -1,7 +1,9 @@
+#include "GameOffsets.h"
 #import "GameLogic.h"
 #include "AimSelection.h"
 #include "GamePRI.h"
 #include "WeaponFeatures.h"
+#include "AvatarVisibility.h"
 #include "RunSpeed.h"
 #import "../drawing_view/offset.h"
 #import <Foundation/Foundation.h>
@@ -30,9 +32,9 @@ static void RunWeaponFeatureUpdate(uint64_t moduleBase, bool noReload, bool fast
     if(ammoFree) {
         // Match both single-byte accessors before activating this new field.
         uint32_t getter[2]={},setter[2]={};
-        ammoFree=isVaildPtr(moduleBase)&&_read((long)(moduleBase+0x6483C7C),getter,sizeof(getter))&&
-            _read((long)(moduleBase+0x6483C84),setter,sizeof(setter))&&
-            getter[0]==0x39465000&&getter[1]==0xD65F03C0&&setter[0]==0x39065001&&setter[1]==0xD65F03C0;
+        ammoFree=isVaildPtr(moduleBase)&&_read((long)(moduleBase+GameOffsets::Rva(0x6483C7C)),getter,sizeof(getter))&&
+            _read((long)(moduleBase+GameOffsets::Rva(0x6483C84)),setter,sizeof(setter))&&
+            getter[0]==GameOffsets::ExpectedWord(0x39465000)&&getter[1]==GameOffsets::ExpectedWord(0xD65F03C0)&&setter[0]==GameOffsets::ExpectedWord(0x39065001)&&setter[1]==GameOffsets::ExpectedWord(0xD65F03C0);
     }
     gWeaponFeatures.Update(CurrentWeaponContext(), noReload, fastFire,
         [](uint64_t address, void *buffer, size_t length) {
@@ -69,8 +71,8 @@ void UpdateRunSpeed(uint64_t moduleBase,bool enabled,float metersPerSecond) {
         uint32_t words[3]={};
         // GetSpeedByType: positive ForceRunAndDashSpeedValue at +0x3c8
         // overrides ordinary run/dash, without changing other movement modes.
-        if(!read(moduleBase+0x6482AA0,words,sizeof(words))||words[0]!=0xBD43CA80||
-            words[1]!=0x1E202008||words[2]!=0x5400036C)return;
+        if(!read(moduleBase+GameOffsets::Rva(0x6482AA0),words,sizeof(words))||words[0]!=GameOffsets::ExpectedWord(0xBD43CA80)||
+            words[1]!=GameOffsets::ExpectedWord(0x1E202008)||words[2]!=GameOffsets::ExpectedWord(0x5400036C))return;
     }
     gRunSpeed.Update(CurrentWeaponContext(),enabled,metersPerSecond,read,
         [](uint64_t a,const void *p,size_t n){return _write((long)a,p,(int)n);},valid,
@@ -197,7 +199,7 @@ uint64_t getHip(uint64_t player) {
 }
 
 uint64_t getRoot(uint64_t player) {
-    uint64_t BodyPart = ReadAddr<uint64_t>(player + OFF64(0x6C8));//protected ITransformNode MPJBGDJJJMJ; // 0x668
+    uint64_t BodyPart = ReadAddr<uint64_t>(player + OFF64(MIZZE_PLAYER_6C8));//protected ITransformNode MPJBGDJJJMJ; // 0x668
 
 
     return getTransNode(BodyPart);
@@ -272,17 +274,14 @@ uint64_t getRightHand(uint64_t player) {
 
 bool getIsVisible(uint64_t playerPawn) {
     if (!isVaildPtr(playerPawn)) return false;
-    const uint64_t visibleObject = ReadAddr<uint64_t>(playerPawn + kVisibleObj);
-    if (isVaildPtr(visibleObject)) {
-        uint32_t flags = 0;
-        if (_read((long)(visibleObject + kVisibleObjFlags), &flags, sizeof(flags)))
-            return (flags & kISVisibleCamera) != 0;
-    }
-    // Compatibility fallback for builds with the avatar visibility layout.
-    const uint64_t avatarManager = ReadAddr<uint64_t>(playerPawn + _0x27276BC);
-    if (!isVaildPtr(avatarManager)) return false;
-    const uint64_t avatar = ReadAddr<uint64_t>(avatarManager + _0x28726BD);
-    return isVaildPtr(avatar) && ReadAddr<uint8_t>(avatar + _0x2872DCF) == 1;
+    // Player +0xA50 (TH) / +0xA58 (MAX) is LevelSwingSpider, not visibility.
+    // UmaAvatarSimple.SetVisible reads/writes +0x101 in both native images.
+    // This is avatar presentation visibility, not a physics line-of-sight test.
+    const auto read = [](uint64_t address, void *value, size_t size) {
+        return _read((long)address, value, size);
+    };
+    const auto valid = [](uint64_t address) { return isVaildPtr(address); };
+    return AvatarVisibility::IsVisible(playerPawn,read,valid);
 }
 
 bool getAimVisibility(uint64_t playerPawn) {

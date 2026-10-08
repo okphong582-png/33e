@@ -1,3 +1,4 @@
+#include "GameProfileFields.h"
 // Shared state, one pose per position row. No anonymous instructions or packets.
 .macro poseSave
     stp x29, x30, [sp, #-112]!
@@ -30,7 +31,7 @@
     ldr w9, [x21, #POSE_ID]
     cmp w8, w9
     b.ne .LposeBeforeForget
-    ldr x8, [x20, #0x6d0]
+    ldr x8, [x20, #MIZZE_PLAYER_6D0]
     cbz x8, .LposeBeforeForget
     ldr x26, [x8, #0x10]
     ldr x9, [x21, #POSE_ROOT]
@@ -39,7 +40,7 @@
     cbz x26, .LposeBeforeForget
     ldr x8, [x26, #0x10]
     cbz x8, .LposeBeforeForget
-    ldr x8, [x20, #0x760]
+    ldr x8, [x20, #MIZZE_PLAYER_760]
     cbz x8, .LposeBeforeForget
     ldr x27, [x8, #0x28]
     ldr x9, [x21, #POSE_ANIMATOR]
@@ -149,7 +150,7 @@
     ldr x8, [x19, #MODES_IS_CHILD]
     blr x8
     cbz w0, .LposeAbort
-    ldr x8, [x20, #0x760]
+    ldr x8, [x20, #MIZZE_PLAYER_760]
     cbz x8, .LposeAbort
     ldr x27, [x8, #0x28]
     cbz x27, .LposeAbort
