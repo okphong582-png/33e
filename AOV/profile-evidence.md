@@ -20,4 +20,6 @@ Nguồn tại máy: `AOV/com.garena.game.kgvn_1.64.1.7_und3fined.ipa`, `AOV/dump
 | View matrix | native `0xaabe50c` cập nhật và trả camera native+0x80 |
 | Projection matrix | native `0xaabbb88` cập nhật và trả camera native+0xc0 |
 
-Game methods chính nằm trong `Project_d.dll`; Unity methods trong `UnityEngine.CoreModule.dll`. Dump RVA 0x7D… của Android không được chuyển trực tiếp sang iOS. Các enum/layout không có getter độc lập còn cần xác nhận bằng thử nghiệm trên thiết bị; test giả lập xác nhận bộ lọc và biên đọc, không xác nhận dữ liệu game đang chạy.
+Đối chiếu thêm `Il2CppMetadataRegistration`: field-offset count tại `0xc98aae0` = 34451, bảng pointer `0xcf47270`. Field-offset records của KyriosFramework (type2161), VHostLogic (2150), ActorManager (2607), ActorLinker (2598), ValueLinkerComponent (2625), CameraSystem (465), PooledClassObjectBase (33659) khớp các field đọc ở trên. Offset struct trong bảng này bao gồm header boxed 8 byte; ActorStaticData.TheMonsterOnlyInfo = 0x168 boxed → 0x160 unboxed.
+
+Game methods chính nằm trong `Project_d.dll`; Unity methods trong `UnityEngine.CoreModule.dll`. Dump RVA 0x7D… của Android không được chuyển trực tiếp sang iOS. Test giả lập xác nhận bộ lọc và biên đọc; dữ liệu game đang chạy và HUD cần thử nghiệm trên thiết bị.

@@ -22,10 +22,13 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
         CGFloat corner=MIN(14,w*.3);
         auto box=[&](){
             CGContextBeginPath(c);
-            for(int side=0;side<2;side++)for(int end=0;end<2;end++){
-                CGFloat bx=side?x+w:x,by=end?bottom:y;
-                CGContextMoveToPoint(c,bx+(side?-corner:corner),by);CGContextAddLineToPoint(c,bx,by);CGContextAddLineToPoint(c,bx,by+(end?-corner:corner));
-            }CGContextStrokePath(c);
+            for(int side=0;side<2;side++){
+                for(int end=0;end<2;end++){
+                    CGFloat bx=side?x+w:x,by=end?bottom:y;
+                    CGContextMoveToPoint(c,bx+(side?-corner:corner),by);CGContextAddLineToPoint(c,bx,by);CGContextAddLineToPoint(c,bx,by+(end?-corner:corner));
+                }
+            }
+            CGContextStrokePath(c);
         };box();CGContextSetStrokeColorWithColor(c,color.CGColor);CGContextSetLineWidth(c,1.7);box();
         CGFloat ratio=std::clamp(float(a.hp)/a.maxHP,0.f,1.f);
         CGContextSetFillColorWithColor(c,[UIColor colorWithWhite:0 alpha:.7].CGColor);CGContextFillRect(c,CGRectMake(x-1,bottom+6,w+2,5));

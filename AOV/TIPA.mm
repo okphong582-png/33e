@@ -77,7 +77,7 @@ static void WriteStatus(NSString *s){[s writeToFile:StatusPath atomically:YES en
     self.orientationObserver=observer?[observer new]:nil;
     if([self.orientationObserver respondsToSelector:@selector(setHandler:)]){
         __weak AOVHUDDelegate *weak=self;
-        [self.orientationObserver setHandler:^(id update){if([update respondsToSelector:@selector(orientation)]){NSInteger orientation=[update orientation];dispatch_async(dispatch_get_main_queue(),^{[weak rotate:(UIInterfaceOrientation)orientation];});}}];
+        [self.orientationObserver setHandler:^(id update){if([update respondsToSelector:@selector(orientation)]){NSInteger orientation=((NSInteger(*)(id,SEL))objc_msgSend)(update,@selector(orientation));dispatch_async(dispatch_get_main_queue(),^{[weak rotate:(UIInterfaceOrientation)orientation];});}}];
     }
     __weak AOVHUDDelegate *weak=self;
     int token;notify_register_dispatch("SBSpringBoardDidLaunchNotification",&token,dispatch_get_main_queue(),^(int t){[weak hostWindow];});
@@ -101,7 +101,11 @@ static void WriteStatus(NSString *s){[s writeToFile:StatusPath atomically:YES en
     if(!context){WriteStatus(@"Không tạo được cửa sổ nổi");_exit(2);}
     NSMethodSignature *signature=[self.hosting methodSignatureForSelector:selector];
     if(!signature||signature.numberOfArguments!=4){WriteStatus(@"Cửa sổ nổi chưa tương thích");_exit(2);}
-    NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];call.target=self.hosting;call.selector=selector;[call setArgument:&context atIndex:2];[call setArgument:&level atIndex:3];[call invoke];WriteStatus(@"Menu đã bật — mở Liên Quân");
+    const char *levelType=[signature getArgumentTypeAtIndex:3];
+    if(strcmp(levelType,"d")&&strcmp(levelType,"f")){WriteStatus(@"Cửa sổ nổi chưa tương thích");_exit(2);}
+    NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];call.target=self.hosting;call.selector=selector;[call setArgument:&context atIndex:2];
+    if(!strcmp(levelType,"f")){float floatLevel=level;[call setArgument:&floatLevel atIndex:3];}else [call setArgument:&level atIndex:3];
+    [call invoke];WriteStatus(@"Menu đã bật — mở Liên Quân");
 }
 @end
 static void HIDCallback(void *target,void *ref,void *service,void *event){
@@ -112,7 +116,7 @@ static void HIDCallback(void *target,void *ref,void *service,void *event){
         id path=[[[rep handInfo] paths] firstObject];if(!path)return;
         UITouchPhase phase;
         if([rep isTouchDown])phase=UITouchPhaseBegan;else if([rep isMove])phase=UITouchPhaseMoved;else if([rep isCancel])phase=UITouchPhaseCancelled;else if([rep isLift]||[rep isInRange]||[rep isInRangeLift])phase=UITouchPhaseEnded;else return;
-        CGPoint location=[rep location];NSInteger identity=[path pathIdentity];
+        CGPoint location=((CGPoint(*)(id,SEL))objc_msgSend)(rep,@selector(location));NSInteger identity=[path pathIdentity];
         dispatch_async(dispatch_get_main_queue(),^{[HUDOverlay handleScreenPoint:location phase:phase identity:identity];});
     }
 }

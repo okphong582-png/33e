@@ -19,11 +19,11 @@ GitHub Actions **Build AOV dylib and TIPA** xuất hai artifact `AOV-dylib` và 
 
 ## Phạm vi tương thích
 
-Profile hiện tại dành cho IPA **com.garena.game.kgvn 1.64.1.7**, UnityFramework ARM64 UUID `E73CE98D-A67A-3FD6-AD83-A16D13984811`. Dữ liệu dump Android giúp nhận diện tên/kiểu, địa chỉ đọc được đối chiếu riêng trên binary iOS. Bản khác UUID sẽ dừng đọc và báo trong menu, cần cập nhật profile.
+Profile hiện tại dành cho IPA **com.garena.game.kgvn 1.64.1.7** trong thư mục đầu vào (CFBundleShortVersionString thực tế **1.64.11768577**), UnityFramework ARM64 UUID `E73CE98D-A67A-3FD6-AD83-A16D13984811`. Dữ liệu dump Android giúp nhận diện tên/kiểu, địa chỉ đọc được đối chiếu riêng trên binary iOS. Bản khác UUID sẽ dừng đọc và báo trong menu, cần cập nhật profile.
 
 TIPA cần môi trường cấp quyền task port và cửa sổ HUD (TrollStore/jailbreak thích hợp). Cài được app không đồng nghĩa iOS đã cấp quyền đọc game; nếu thiếu quyền, menu báo rõ. ESP chỉ hiển thị dữ liệu còn có trong bộ nhớ client; không thể tạo vị trí khi server không gửi dữ liệu. Chưa xác nhận trực tiếp trên thiết bị AOV.
 
-Bộ đọc chỉ dùng `mach_vm_read_overwrite`, không ghi bộ nhớ hoặc gọi hàm game. Danh sách được giới hạn 64 tướng/256 quái, kiểm tra sequence của pool handle và version của list. Đọc trên hàng đợi riêng tối đa 30 Hz; không quét bộ nhớ toàn game mỗi khung hình.
+Bộ đọc chỉ dùng `vm_read_overwrite` với địa chỉ ARM64 64-bit, không ghi bộ nhớ hoặc gọi hàm game. Danh sách được giới hạn 64 tướng/256 quái, kiểm tra sequence của pool handle và version của list. Đọc trên hàng đợi riêng tối đa 30 Hz; không quét bộ nhớ toàn game mỗi khung hình.
 
 ## Dữ liệu đối chiếu
 

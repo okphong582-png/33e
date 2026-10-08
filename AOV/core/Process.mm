@@ -2,7 +2,6 @@
 #include <mach-o/dyld.h>
 #include <mach-o/dyld_images.h>
 #include <mach-o/loader.h>
-#include <mach/mach_vm.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -12,8 +11,9 @@ static double now(){timeval t{};gettimeofday(&t,nullptr);return t.tv_sec+t.tv_us
 void Process::reset(){if(owned&&task)mach_port_deallocate(mach_task_self(),task); task=0;owned=false;image=0;pid=0;}
 bool Process::copy(uint64_t address,void *out,size_t size){
     if(!task||!address||size==0||size>65536||address>0x00007fffffffffffULL-size)return false;
-    mach_vm_size_t got=0;
-    return mach_vm_read_overwrite(task,address,size,reinterpret_cast<mach_vm_address_t>(out),&got)==KERN_SUCCESS&&got==size;
+    static_assert(sizeof(vm_address_t)==8,"AOV supports ARM64 address spaces");
+    vm_size_t got=0;
+    return vm_read_overwrite(task,static_cast<vm_address_t>(address),size,reinterpret_cast<vm_address_t>(out),&got)==KERN_SUCCESS&&got==size;
 }
 bool Process::accepts(uint64_t header){
     mach_header_64 h{};if(!read(header,h)||h.magic!=MH_MAGIC_64||h.cputype!=CPU_TYPE_ARM64||h.ncmds>512||h.sizeofcmds>65536)return false;
