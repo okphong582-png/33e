@@ -30,7 +30,7 @@
         // Decoding happens only when a locked key is shown, never in +load/constructor.
         NSData *data=[[NSData alloc] initWithBase64EncodedString:MizzeLicenseLockImage options:0];
         self.art=[[UIImageView alloc] initWithImage:[UIImage imageWithData:data]];
-        self.art.contentMode=UIViewContentModeScaleAspectFill;self.art.clipsToBounds=YES;
+        self.art.contentMode=UIViewContentModeScaleAspectFit;self.art.clipsToBounds=YES;
         [self.card addSubview:self.art];
         // Cover the sample's baked text so the administrator's message replaces it.
         self.content=[UIView new];self.content.backgroundColor=[UIColor colorWithWhite:.065 alpha:1];
