@@ -17,5 +17,7 @@ inline constexpr uint64_t actorConfig = 0x218, actorType = 0x228, actorCamp = 0x
 inline constexpr uint64_t actorSubType = 0x488, soldierType = 0x408; // TheStaticData.MonsterOnlyInfo.SoldierType
 inline constexpr uint64_t health = 0x40, maxHealth = 0x44;
 inline constexpr uint64_t mainCamera = 0x108, nativeCamera = 0x8, viewMatrix = 0x80, projectionMatrix = 0xc0;
+inline constexpr uint64_t mobaCamera = 0x18, cameraZoomAmount = 0x90, cameraAdditionZoom = 0x94;
+inline constexpr uint64_t cameraDirty = 0xdc, cameraStarted = 0xe4;
 inline constexpr int blueSubType = 14, blueSoldierType = 10, sharedBlueSoldierType = 50;
 }

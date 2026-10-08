@@ -13,11 +13,13 @@ struct Handle { uint32_t sequence=0, padding=0; uint64_t object=0; };
 static_assert(sizeof(Handle)==16);
 struct Actor { uint64_t address=0; uint32_t config=0; Vec3 position; int hp=0,maxHP=0; bool monster=false; };
 enum class State { disconnected, denied, unsupported, waiting, ready, changing };
-struct Snapshot { State state=State::waiting; Matrix view, projection; std::vector<Actor> actors; };
+enum class ZoomState { off, waiting, active, denied };
+struct Snapshot { State state=State::waiting; ZoomState zoom=ZoomState::off; Matrix view, projection; std::vector<Actor> actors; };
 class Memory {
 public:
     virtual ~Memory()=default;
     virtual bool copy(uint64_t address, void *out, size_t size)=0;
+    virtual bool store(uint64_t address,const void *value,size_t size) { (void)address;(void)value;(void)size;return false; }
     template<class T> bool read(uint64_t p,T &v) {
         v={}; return p>=0x10000 && p<=0x00007fffffffffffULL-sizeof(T) && copy(p,&v,sizeof(T));
     }

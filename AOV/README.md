@@ -7,6 +7,15 @@ Hai sản phẩm độc lập, có **ESP địch** và **ESP quái** (toàn bộ
 
 Menu than đậm/mint, ô chọn X, nút A kéo được. ESP hiển thị chữ **Địch** / **Quái**, không ghi số phần trăm; thanh máu vẫn đổi màu theo lượng máu. Dây từ giữa phía trên màn hình tới địch/quái, kèm ba trục XYZ xoay theo camera giống bản FF. Dây đi cùng ô ESP tương ứng. Không có log che màn hình chơi.
 
+### Bản 1.4: Cam xa và nút A TIPA
+
+- **Cam xa** có thanh kéo **1.0×–4.0×**, bước 0.1; **Gốc** trả về 1.0×. Lưu mức chọn cho lần mở sau. Camera có thể bật riêng khi cả hai ESP đang tắt.
+- Đối chiếu native iOS trước khi dùng `CameraSystem.MobaCamera` và `Moba_Camera._additionZoomAmount`. Tính khoảng cách từ zoom gốc, không nhân chồng mức đã áp dụng. Đánh dấu `changeInCamera` để game cập nhật transform theo góc camera hiện tại.
+- Camera chỉ ghi hai field heap đã đối chiếu; không sửa mã máy, FOV, fog hoặc dữ liệu actor. Không có camera hợp lệ thì chờ; thiếu quyền ghi thì báo trong menu. Không tự tạo dữ liệu ngoài vùng client nhận được.
+- Khi bấm Gốc hoặc tắt HUD từ app, trả lại phần zoom bổ sung trước khi thoát. Nếu game tự đổi giá trị, giữ giá trị mới làm gốc; không khôi phục vào object camera của cảnh trước. Đóng cưỡng bức tiến trình không bảo đảm khôi phục; có thể cần mở lại HUD/bấm Gốc hoặc vào trận mới.
+- TIPA tách thành cửa sổ ESP toàn màn hình xuyên chạm và cửa sổ nút/menu có kích thước đúng vùng điều khiển. Ưu tiên UIKit `UIEventFetcher` cho nút và slider; dùng HID khi API UIKit này không có. Cửa sổ menu không phủ toàn màn hình chơi.
+- Layout gọn theo chiều cao màn hình; mở menu chỉ đổi độ mờ, vùng bấm đứng yên. Chưa xác nhận trực tiếp trên iPhone: cần thử A → menu → ô ESP → Cam xa → Gốc → Tắt menu.
+
 ### Bản 1.3: cảm ứng game và menu
 
 - Cửa sổ TIPA luôn xuyên cảm ứng (`_ignoresHitTest=YES`, `_usesWindowServerHitTesting=NO`, `userInteractionEnabled=NO`). ESP không giữ chạm của game; menu nhận chạm qua callback HID riêng.
@@ -22,7 +31,7 @@ Menu than đậm/mint, ô chọn X, nút A kéo được. ESP hiển thị chữ
 - Ô X thật, hàng cao 64 pt, nút A 52 pt, nền than/mint có chiều sâu và animation ngắn; tôn trọng Reduce Motion.
 - Nhấn, kéo và hủy chạm được xử lý riêng. TIPA dùng một đường kích hoạt nút để tránh nhấn hai lần. Sau mất gói nhả tay, lần nhấn mới có thể khôi phục sau 3 giây.
 
-Trên thiết bị, kiểm tra: Bật menu nổi → thấy nút A → mở/đóng menu → kéo A → bật/tắt từng ô → giữ joystick và bấm menu → xoay máy → tắt và bật lại HUD. Chưa có kết quả kiểm tra bản 1.3 trực tiếp trên iPhone.
+Trên thiết bị, kiểm tra: Bật menu nổi → thấy nút A → mở/đóng menu → kéo A → bật/tắt từng ô → giữ joystick và bấm menu → xoay máy → tắt và bật lại HUD. Chưa có kết quả kiểm tra trực tiếp trên iPhone.
 
 ## Build
 
@@ -40,7 +49,7 @@ Profile hiện tại dành cho IPA **com.garena.game.kgvn 1.64.1.7** trong thư 
 
 TIPA cần môi trường cấp quyền task port và cửa sổ HUD (TrollStore/jailbreak thích hợp). Cài được app không đồng nghĩa iOS đã cấp quyền đọc game; nếu thiếu quyền, menu báo rõ. ESP chỉ hiển thị dữ liệu còn có trong bộ nhớ client; không thể tạo vị trí khi server không gửi dữ liệu. Chưa xác nhận trực tiếp trên thiết bị AOV.
 
-Bộ đọc chỉ dùng `vm_read_overwrite` với địa chỉ ARM64 64-bit, không ghi bộ nhớ hoặc gọi hàm game. Danh sách được giới hạn 64 tướng/256 quái, kiểm tra sequence của pool handle và version của list. Đọc trên hàng đợi riêng tối đa 30 Hz; không quét bộ nhớ toàn game mỗi khung hình.
+Bộ đọc ESP dùng `vm_read_overwrite` với địa chỉ ARM64 64-bit. Danh sách được giới hạn 64 tướng/256 quái, kiểm tra sequence của pool handle và version của list. Cam xa dùng `vm_write` cho hai field camera và kiểm tra lại singleton/native pointer trước khi ghi. Xử lý trên hàng đợi riêng tối đa 30 Hz; không quét bộ nhớ toàn game mỗi khung hình.
 
 ## Dữ liệu đối chiếu
 

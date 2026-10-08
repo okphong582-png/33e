@@ -1,5 +1,6 @@
 #pragma once
 #include "Reader.h"
+#include "CameraZoom.h"
 #include <mach/mach.h>
 namespace aov {
 class Process final: public Memory {
@@ -9,12 +10,15 @@ class Process final: public Memory {
     uint64_t image=0;
     double lastConnect=-10;
     State connection=State::disconnected;
+    CameraZoom camera;
     bool findImage();
     bool accepts(uint64_t header);
     void reset();
 public:
-    ~Process() override { reset(); }
+    ~Process() override { restoreCamera();reset(); }
     bool copy(uint64_t address,void *out,size_t size) override;
-    Snapshot update(bool enemies,bool showMonsters);
+    bool store(uint64_t address,const void *value,size_t size) override;
+    Snapshot update(bool enemies,bool showMonsters,float zoom=1.f);
+    void restoreCamera();
 };
 }

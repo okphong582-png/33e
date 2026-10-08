@@ -22,6 +22,7 @@ static const char *StopNotification="com.hoanghadev.aov.stop";
 static AOVOverlay *HUDOverlay;
 static NSString *HUDSession;
 static BOOL RawTouchRouting;
+static BOOL NativeTouchRouting;
 static CFArrayRef (*HIDChildren)(void *);
 static uint32_t (*HIDType)(void *);
 static CFIndex (*HIDInteger)(void *,uint32_t);
@@ -49,12 +50,32 @@ static double (*HIDFloat)(void *,uint32_t);
 - (void)setHandler:(void (^)(id))handler;
 - (void)invalidate;
 @end
+static BOOL InstallNativeEventLoop(UIApplication *app){
+    @try{
+        id dispatcher=[app valueForKey:@"eventDispatcher"];
+        Class fetcherClass=NSClassFromString(@"UIEventFetcher");
+        SEL install=NSSelectorFromString(@"_installEventRunLoopSources:");
+        if(!dispatcher||!fetcherClass||![dispatcher respondsToSelector:install])return NO;
+        ((void(*)(id,SEL,CFRunLoopRef))objc_msgSend)(dispatcher,install,CFRunLoopGetMain());
+        id fetcher=[fetcherClass new];[dispatcher setValue:fetcher forKey:@"eventFetcher"];
+        SEL sink=NSSelectorFromString(@"setEventFetcherSink:");
+        if([fetcher respondsToSelector:sink])((void(*)(id,SEL,id))objc_msgSend)(fetcher,sink,dispatcher);
+        else [fetcher setValue:dispatcher forKey:@"eventFetcherSink"];
+        [app setValue:fetcher forKey:@"eventFetcher"];return YES;
+    }@catch(NSException *exception){return NO;}
+}
 static void WriteStatus(NSString *s){
     [@{@"session":HUDSession?:@"",@"message":s,@"pid":@(getpid()),@"ready":@NO} writeToFile:StatusPath atomically:YES];
 }
-@interface AOVHUDWindow : UIWindow
+@interface AOVExternalOverlay : AOVOverlay
+@property(nonatomic,weak) UIWindow *canvasWindow;
 @end
-@implementation AOVHUDWindow
+@implementation AOVExternalOverlay
+- (UIEdgeInsets)safeAreaInsets{return self.canvasWindow.safeAreaInsets;}
+@end
+@interface AOVDrawingWindow : UIWindow
+@end
+@implementation AOVDrawingWindow
 + (BOOL)_isSystemWindow{return YES;}
 - (BOOL)_isWindowServerHostingManaged{return NO;}
 - (BOOL)_usesWindowServerHitTesting{return NO;}
@@ -65,12 +86,26 @@ static void WriteStatus(NSString *s){
     return nil;
 }
 @end
+@interface AOVMenuWindow : AOVDrawingWindow
+@end
+@implementation AOVMenuWindow
+- (BOOL)_usesWindowServerHitTesting{return YES;}
+- (BOOL)_ignoresHitTest{return NO;}
+- (UIView *)hitTest:(CGPoint)p withEvent:(UIEvent *)event{
+    UIView *control=[HUDOverlay hitTest:[HUDOverlay convertPoint:p fromView:self] withEvent:event];
+    // Native UIKit dispatch or one manual HID path, never both.
+    return NativeTouchRouting?control:(control?self.rootViewController.view:nil);
+}
+@end
 @interface AOVHUDApplication : UIApplication
 @end
 @implementation AOVHUDApplication
 - (instancetype)init {
     if((self=[super init])){
-        void (^stop)(int)=^(int value){WriteStatus(@"Đã tắt menu");_exit(0);};
+        void (^stop)(int)=^(int value){
+            if(HUDOverlay)[HUDOverlay stopWithCompletion:^{WriteStatus(@"Đã tắt menu");_exit(0);}];
+            else {WriteStatus(@"Đã tắt menu");_exit(0);}
+        };
         int token;notify_register_dispatch(StopNotification,&token,dispatch_get_main_queue(),stop);
         NSString *sessionStop=[@"com.hoanghadev.aov.stop." stringByAppendingString:HUDSession?:@""];
         notify_register_dispatch(sessionStop.UTF8String,&token,dispatch_get_main_queue(),stop);
@@ -79,13 +114,16 @@ static void WriteStatus(NSString *s){
 @end
 @interface AOVHUDDelegate : NSObject <UIApplicationDelegate>
 @property(nonatomic,strong) UIWindow *window;
+@property(nonatomic,strong) UIWindow *menuWindow;
 @property(nonatomic,strong) id hosting;
+@property(nonatomic,strong) id menuHosting;
 @property(nonatomic,strong) id orientationObserver;
 @property(nonatomic,assign) unsigned int hostingAttempts;
 @property(nonatomic,assign) UIInterfaceOrientation currentOrientation;
 - (void)startHUD;
 - (void)hostWindow;
 - (void)rotate:(UIInterfaceOrientation)orientation;
+- (void)layoutMenuWindow;
 @end
 @implementation AOVHUDDelegate
 - (BOOL)application:(UIApplication *)app didFinishLaunchingWithOptions:(NSDictionary *)opts{
@@ -94,9 +132,15 @@ static void WriteStatus(NSString *s){
 - (void)startHUD{
     if(self.window)return;
     WriteStatus(@"Đang tạo cửa sổ nổi…");
-    self.window=[[AOVHUDWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];self.window.backgroundColor=UIColor.clearColor;self.window.windowLevel=10000010;self.window.userInteractionEnabled=NO;
+    self.window=[[AOVDrawingWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];self.window.backgroundColor=UIColor.clearColor;self.window.windowLevel=10000010;self.window.userInteractionEnabled=NO;
     UIViewController *root=[UIViewController new];root.view.backgroundColor=UIColor.clearColor;self.window.rootViewController=root;
-    HUDOverlay=[[AOVOverlay alloc] initWithFrame:self.window.bounds];[root.view addSubview:HUDOverlay];self.window.hidden=NO;[self.window makeKeyAndVisible];
+    AOVExternalOverlay *external=[[AOVExternalOverlay alloc] initWithFrame:self.window.bounds];external.canvasWindow=self.window;HUDOverlay=external;
+    UIView *drawing=[HUDOverlay drawingView];[drawing removeFromSuperview];[root.view addSubview:drawing];
+    self.menuWindow=[[AOVMenuWindow alloc] initWithFrame:CGRectMake(0,0,52,52)];self.menuWindow.backgroundColor=UIColor.clearColor;self.menuWindow.windowLevel=10000011;self.menuWindow.clipsToBounds=YES;
+    UIViewController *menuRoot=[UIViewController new];menuRoot.view.backgroundColor=UIColor.clearColor;menuRoot.view.clipsToBounds=YES;self.menuWindow.rootViewController=menuRoot;
+    HUDOverlay.autoresizingMask=UIViewAutoresizingNone;[menuRoot.view addSubview:HUDOverlay];
+    __weak AOVHUDDelegate *geometryOwner=self;HUDOverlay.geometryChanged=^{[geometryOwner layoutMenuWindow];};
+    self.window.hidden=NO;self.menuWindow.hidden=NO;[self.menuWindow makeKeyAndVisible];
     UIInterfaceOrientation orientation=UIApplication.sharedApplication.statusBarOrientation;
     [self rotate:orientation==UIInterfaceOrientationUnknown?UIInterfaceOrientationPortrait:orientation];
     [self.window layoutIfNeeded];[HUDOverlay layoutIfNeeded];
@@ -121,15 +165,27 @@ static void WriteStatus(NSString *s){
     CGFloat angle=o==UIInterfaceOrientationLandscapeLeft?-M_PI_2:o==UIInterfaceOrientationLandscapeRight?M_PI_2:o==UIInterfaceOrientationPortraitUpsideDown?M_PI:0;
     [HUDOverlay cancelScreenTouch];
     self.window.transform=CGAffineTransformMakeRotation(angle);self.window.rootViewController.view.frame=self.window.bounds;HUDOverlay.frame=self.window.bounds;[HUDOverlay setNeedsLayout];[HUDOverlay layoutIfNeeded];
+    [HUDOverlay drawingView].frame=self.window.bounds;[self layoutMenuWindow];
+}
+- (void)layoutMenuWindow{
+    if(!self.menuWindow||!HUDOverlay)return;
+    CGRect rect=[HUDOverlay interactiveFrame];
+    CGPoint center=[self.window convertPoint:CGPointMake(CGRectGetMidX(rect),CGRectGetMidY(rect)) toCoordinateSpace:UIScreen.mainScreen.coordinateSpace];
+    CGAffineTransform transform=self.window.transform;
+    CGRect overlayFrame=CGRectMake(-rect.origin.x,-rect.origin.y,self.window.bounds.size.width,self.window.bounds.size.height);
+    if(CGSizeEqualToSize(self.menuWindow.bounds.size,rect.size)&&CGPointEqualToPoint(self.menuWindow.center,center)&&CGAffineTransformEqualToTransform(self.menuWindow.transform,transform)&&CGRectEqualToRect(HUDOverlay.frame,overlayFrame))return;
+    self.menuWindow.transform=CGAffineTransformIdentity;self.menuWindow.bounds=CGRectMake(0,0,rect.size.width,rect.size.height);self.menuWindow.center=center;self.menuWindow.transform=transform;
+    self.menuWindow.rootViewController.view.frame=self.menuWindow.bounds;HUDOverlay.frame=overlayFrame;
 }
 - (void)hostWindow{
-    self.window.hidden=NO;[self.window makeKeyAndVisible];[self.window layoutIfNeeded];
+    self.window.hidden=NO;self.menuWindow.hidden=NO;[self.menuWindow makeKeyAndVisible];[self.window layoutIfNeeded];[self.menuWindow layoutIfNeeded];
     Class host=NSClassFromString(@"SBSAccessibilityWindowHostingController");if(!self.hosting)self.hosting=host?[host new]:nil;
     SEL selector=NSSelectorFromString(@"registerWindowWithContextID:atLevel:");
     if(![self.hosting respondsToSelector:selector]){WriteStatus(@"iOS không hỗ trợ cửa sổ nổi");_exit(2);}
     unsigned int context=[self.window _contextId];double level=self.window.windowLevel;
+    unsigned int menuContext=[self.menuWindow _contextId];
     if(!context){[self.window layoutIfNeeded];context=[self.window _contextId];}
-    if(!context){
+    if(!context||!menuContext){
         if(++self.hostingAttempts<20){dispatch_after(dispatch_time(DISPATCH_TIME_NOW,100*NSEC_PER_MSEC),dispatch_get_main_queue(),^{[self hostWindow];});return;}
         WriteStatus(@"iOS chưa cấp cửa sổ nổi — kiểm tra quyền TrollStore");_exit(2);
     }
@@ -139,20 +195,25 @@ static void WriteStatus(NSString *s){
     if(strcmp(levelType,"d")&&strcmp(levelType,"f")){WriteStatus(@"Cửa sổ nổi chưa tương thích");_exit(2);}
     NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];call.target=self.hosting;call.selector=selector;[call setArgument:&context atIndex:2];
     if(!strcmp(levelType,"f")){float floatLevel=level;[call setArgument:&floatLevel atIndex:3];}else [call setArgument:&level atIndex:3];
+    [call invoke];
+    if(!self.menuHosting)self.menuHosting=[host new];
+    context=menuContext;level=self.menuWindow.windowLevel;call.target=self.menuHosting;[call setArgument:&context atIndex:2];
+    if(!strcmp(levelType,"f")){float floatLevel=level;[call setArgument:&floatLevel atIndex:3];}else [call setArgument:&level atIndex:3];
     [call invoke];[HUDOverlay setNeedsLayout];[HUDOverlay layoutIfNeeded];[CATransaction flush];
     [@{@"session":HUDSession?:@"",@"message":@"Đã đăng ký menu — bấm nút A để mở",@"pid":@(getpid()),@"ready":@YES} writeToFile:StatusPath atomically:YES];
 }
 @end
-static void RouteDigitizer(void *event,unsigned int depth){
-    if(!event||depth>3)return;
+static BOOL RouteDigitizer(void *event,unsigned int depth,const CGPoint *singlePoint){
+    if(!event||depth>3)return NO;
     CFArrayRef children=HIDChildren(event);
     CFIndex count=children?CFArrayGetCount(children):0;
     if(count){
-        for(CFIndex i=0;i<MIN(count,32);i++)RouteDigitizer((void *)CFArrayGetValueAtIndex(children,i),depth+1);
-        return;
+        BOOL routed=NO;
+        for(CFIndex i=0;i<MIN(count,32);i++)routed=RouteDigitizer((void *)CFArrayGetValueAtIndex(children,i),depth+1,singlePoint)||routed;
+        return routed;
     }
     constexpr uint32_t base=11u<<16;
-    if(HIDType(event)!=11||HIDInteger(event,base+4)!=2)return;
+    if(HIDType(event)!=11||HIDInteger(event,base+4)!=2)return NO;
     // IOHID digitizer fields match the KIF declarations in this repository.
     uint64_t identity=static_cast<uint32_t>(HIDInteger(event,base+6));
     uint64_t index=static_cast<uint32_t>(HIDInteger(event,base+5));
@@ -160,7 +221,7 @@ static void RouteDigitizer(void *event,unsigned int depth){
     uint32_t mask=static_cast<uint32_t>(HIDInteger(event,base+7));
     static aov::FingerState fingers;
     auto state=fingers.update(finger,HIDInteger(event,base+9)!=0,(mask&(1u<<7))!=0);
-    if(state==aov::FingerPhase::none)return;
+    if(state==aov::FingerPhase::none)return YES;
     UITouchPhase phase;
     switch(state){
         case aov::FingerPhase::began:phase=UITouchPhaseBegan;break;
@@ -169,19 +230,31 @@ static void RouteDigitizer(void *event,unsigned int depth){
         default:phase=UITouchPhaseCancelled;break;
     }
     double x=HIDFloat(event,base),y=HIDFloat(event,base+1);
-    if(!std::isfinite(x)||!std::isfinite(y)){[HUDOverlay cancelScreenTouch];return;}
+    if(!std::isfinite(x)||!std::isfinite(y)){[HUDOverlay cancelScreenTouch];return YES;}
     UIScreen *screen=UIScreen.mainScreen;
     // Hardware positions are normalized in the physical portrait space.
     CGRect fixed=screen.fixedCoordinateSpace.bounds;
     CGPoint point=CGPointMake(fixed.origin.x+x*fixed.size.width,fixed.origin.y+y*fixed.size.height);
     point=[screen.coordinateSpace convertPoint:point fromCoordinateSpace:screen.fixedCoordinateSpace];
+    // AX provides UIKit screen coordinates on systems that rotate HID input.
+    // Keep raw per-finger phases, but use AX's point for a single-finger packet.
+    if(singlePoint)point=*singlePoint;
     [HUDOverlay handleScreenPoint:point phase:phase identity:static_cast<NSInteger>(finger)];
+    return YES;
 }
 static void HIDCallback(void *target,void *ref,void *service,void *event){
     @autoreleasepool{
+        if(NativeTouchRouting)return;
         if(RawTouchRouting){
             CFRetain(event);
-            dispatch_async(dispatch_get_main_queue(),^{@autoreleasepool{RouteDigitizer(event,0);CFRelease(event);}});
+            dispatch_async(dispatch_get_main_queue(),^{@autoreleasepool{
+                Class cls=NSClassFromString(@"AXEventRepresentation");id rep=nil;
+                if([cls respondsToSelector:@selector(representationWithHIDEvent:hidStreamIdentifier:)])rep=[cls representationWithHIDEvent:event hidStreamIdentifier:@"UIApplicationEvents"];
+                NSArray *paths=[[rep handInfo] paths];CGPoint point=CGPointZero;
+                BOOL single=paths.count==1&&[rep respondsToSelector:@selector(location)];
+                if(single){point=((CGPoint(*)(id,SEL))objc_msgSend)(rep,@selector(location));single=std::isfinite(point.x)&&std::isfinite(point.y);}
+                RouteDigitizer(event,0,single?&point:nullptr);CFRelease(event);
+            }});
             return;
         }
         Class cls=NSClassFromString(@"AXEventRepresentation");
@@ -294,6 +367,7 @@ static int RunHUD(){
     if(!gs||!bks||!init||!singleton||!callback||![UIWindow instancesRespondToSelector:@selector(_initWithFrame:attached:)]){WriteStatus(@"iOS không hỗ trợ khởi chạy HUD");return 2;}
     [UIScreen class];CFRunLoopGetCurrent();gs();bks();init();singleton(AOVHUDApplication.class);
     UIApplication *app=UIApplication.sharedApplication;static AOVHUDDelegate *delegate=[AOVHUDDelegate new];app.delegate=delegate;
+    NativeTouchRouting=InstallNativeEventLoop(app);
     dlopen("/System/Library/Frameworks/IOKit.framework/IOKit",RTLD_LAZY|RTLD_GLOBAL);
     HIDChildren=(CFArrayRef(*)(void *))dlsym(RTLD_DEFAULT,"IOHIDEventGetChildren");
     HIDType=(uint32_t(*)(void *))dlsym(RTLD_DEFAULT,"IOHIDEventGetType");
@@ -301,9 +375,9 @@ static int RunHUD(){
     HIDFloat=(double(*)(void *,uint32_t))dlsym(RTLD_DEFAULT,"IOHIDEventGetFloatValue");
     RawTouchRouting=HIDChildren&&HIDType&&HIDInteger&&HIDFloat;
     Class representation=NSClassFromString(@"AXEventRepresentation");
-    if(!RawTouchRouting&&(!representation||![representation respondsToSelector:@selector(representationWithHIDEvent:hidStreamIdentifier:)])){WriteStatus(@"iOS chưa hỗ trợ cảm ứng menu nổi");return 2;}
+    if(!NativeTouchRouting&&!RawTouchRouting&&(!representation||![representation respondsToSelector:@selector(representationWithHIDEvent:hidStreamIdentifier:)])){WriteStatus(@"iOS chưa hỗ trợ cảm ứng menu nổi");return 2;}
     if([app respondsToSelector:@selector(_accessibilityInit)])[app _accessibilityInit];
-    callback(HIDCallback);
+    if(!NativeTouchRouting)callback(HIDCallback);
     auto eventInit=(void(*)(Boolean))dlsym(RTLD_DEFAULT,"GSEventInitialize");auto mode=(void(*)(CFStringRef))dlsym(RTLD_DEFAULT,"GSEventPushRunLoopMode");if(eventInit)eventInit(false);if(mode)mode(kCFRunLoopDefaultMode);
     if(![app respondsToSelector:@selector(__completeAndRunAsPlugin)]){WriteStatus(@"UIKit chưa hỗ trợ HUD");return 2;}
     dispatch_async(dispatch_get_main_queue(),^{[delegate startHUD];});

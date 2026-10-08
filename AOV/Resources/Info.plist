@@ -5,8 +5,8 @@
 <key>CFBundleName</key><string>AOVMenu</string>
 <key>CFBundleExecutable</key><string>AOVMenu</string>
 <key>CFBundleIdentifier</key><string>com.hoanghadev.aov.menu</string>
-<key>CFBundleVersion</key><string>4</string>
-<key>CFBundleShortVersionString</key><string>1.3</string>
+<key>CFBundleVersion</key><string>5</string>
+<key>CFBundleShortVersionString</key><string>1.4</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>MinimumOSVersion</key><string>13.0</string>
 <key>LSRequiresIPhoneOS</key><true/>

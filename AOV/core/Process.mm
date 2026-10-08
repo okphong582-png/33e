@@ -8,13 +8,18 @@
 #include <string>
 namespace aov {
 static double now(){timeval t{};gettimeofday(&t,nullptr);return t.tv_sec+t.tv_usec*1e-6;}
-void Process::reset(){if(owned&&task)mach_port_deallocate(mach_task_self(),task); task=0;owned=false;image=0;pid=0;}
+void Process::reset(){camera.forget();if(owned&&task)mach_port_deallocate(mach_task_self(),task); task=0;owned=false;image=0;pid=0;}
 bool Process::copy(uint64_t address,void *out,size_t size){
     if(!task||!address||size==0||size>65536||address>0x00007fffffffffffULL-size)return false;
     static_assert(sizeof(vm_address_t)==8,"AOV supports ARM64 address spaces");
     vm_size_t got=0;
     return vm_read_overwrite(task,static_cast<vm_address_t>(address),size,reinterpret_cast<vm_address_t>(out),&got)==KERN_SUCCESS&&got==size;
 }
+bool Process::store(uint64_t address,const void *value,size_t size){
+    if(!task||!value||address<0x10000||size==0||size>16||address>0x00007fffffffffffULL-size)return false;
+    return vm_write(task,static_cast<vm_address_t>(address),reinterpret_cast<vm_offset_t>(value),static_cast<mach_msg_type_number_t>(size))==KERN_SUCCESS;
+}
+void Process::restoreCamera(){if(image&&camera.applied())camera.update(*this,image,1.f);}
 bool Process::accepts(uint64_t header){
     mach_header_64 h{};if(!read(header,h)||h.magic!=MH_MAGIC_64||h.cputype!=CPU_TYPE_ARM64||h.ncmds>512||h.sizeofcmds>65536)return false;
     std::vector<uint8_t> commands(h.sizeofcmds);if(!copy(header+sizeof(h),commands.data(),commands.size()))return false;
@@ -55,9 +60,10 @@ bool Process::findImage(){
 #endif
     return false;
 }
-Snapshot Process::update(bool enemies,bool showMonsters){
+Snapshot Process::update(bool enemies,bool showMonsters,float zoom){
     Snapshot result;
-    if(!enemies&&!showMonsters)return result;
+    zoom=zoomMultiplier(zoom);
+    if(!enemies&&!showMonsters&&zoom==1.f&&!camera.applied())return result;
     if(task){uint32_t magic=0;if(image&&!read(image,magic))reset();}
     if(!image&&now()-lastConnect>1){
         lastConnect=now();reset();connection=State::disconnected;
@@ -73,7 +79,9 @@ Snapshot Process::update(bool enemies,bool showMonsters){
 #endif
         if(task)findImage();
     }
-    if(!image){result.state=connection;return result;}
-    return Reader(*this).sample(image,enemies,showMonsters);
+    if(!image){result.state=connection;result.zoom=zoom>1.f?ZoomState::waiting:ZoomState::off;return result;}
+    auto zoomState=camera.update(*this,image,zoom);
+    if(enemies||showMonsters)result=Reader(*this).sample(image,enemies,showMonsters);
+    result.zoom=zoomState;return result;
 }
 }

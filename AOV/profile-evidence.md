@@ -19,7 +19,12 @@ Nguồn tại máy: `AOV/com.garena.game.kgvn_1.64.1.7_und3fined.ipa`, `AOV/dump
 | Unity camera native pointer | native icall worldToCameraMatrix `0xa4478f8`, projectionMatrix `0xa447970` đều đọc managed camera+8 |
 | View matrix | native `0xaabe50c` cập nhật và trả camera native+0x80 |
 | Projection matrix | native `0xaabbb88` cập nhật và trả camera native+0xc0 |
+| Moba camera | CameraSystem field registration: MobaCamera+0x18; `UpdateCameraState 0x540da00` đọc +0x18 và gọi `set_currentZoomRate 0x550e4f0` |
+| Zoom gốc/bổ sung | Moba_Camera field registration: `_currentZoomAmount`+0x90, `_additionZoomAmount`+0x94, `changeInCamera`+0xdc, HasStarted+0xe4. `set_additionZoomAmount 0x550e3f8` ghi float+0x94 và byte1+0xdc |
+| Khoảng cách thực | `GetCameraOffsetLocalPosition 0x5511558`: đọc +0x90 và +0x94, cộng hai số rồi nhân vector hướng và rates+0x98/+0x9c. `CalculateCameraUpdates 0x5510b40` yêu cầu dirty+0xdc, cập nhật camera transform rồi xóa dirty tại `0x5510ecc` |
 
 Đối chiếu thêm `Il2CppMetadataRegistration`: field-offset count tại `0xc98aae0` = 34451, bảng pointer `0xcf47270`. Field-offset records của KyriosFramework (type2161), VHostLogic (2150), ActorManager (2607), ActorLinker (2598), ValueLinkerComponent (2625), CameraSystem (465), PooledClassObjectBase (33659) khớp các field đọc ở trên. Offset struct trong bảng này bao gồm header boxed 8 byte; ActorStaticData.TheMonsterOnlyInfo = 0x168 boxed → 0x160 unboxed.
 
 Game methods chính nằm trong `Project_d.dll`; Unity methods trong `UnityEngine.CoreModule.dll`. Dump RVA 0x7D… của Android không được chuyển trực tiếp sang iOS. Test giả lập xác nhận bộ lọc và biên đọc; dữ liệu game đang chạy và HUD cần thử nghiệm trên thiết bị.
+
+Cam xa dùng công thức `addition = (currentZoomAmount + originalAddition) * multiplier - currentZoomAmount`. Mức 1.0× trả lại originalAddition, không chỉnh giới hạn zoom gốc trong settings. Trước khi ghi kiểm tra HasStarted, float hữu hạn, dirty hợp lệ, singleton và native camera pointer; phiên/cảnh thay đổi sẽ bỏ địa chỉ cũ. Kiểm tra fake memory bao phủ mức 1–4×, không nhân chồng, khôi phục, thay đổi từ game, quyền ghi và rollback khi không ghi được dirty flag.

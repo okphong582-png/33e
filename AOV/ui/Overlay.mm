@@ -1,6 +1,7 @@
 #import "Overlay.h"
 #include "../core/Process.h"
 #include "TouchState.h"
+#include "../core/CameraZoom.h"
 #import <QuartzCore/QuartzCore.h>
 #include <memory>
 static UIColor *Mint(){return [UIColor colorWithRed:.35 green:.95 blue:.77 alpha:1];}
@@ -96,24 +97,37 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
     if(animated&&!UIAccessibilityIsReduceMotionEnabled())[UIView animateWithDuration:.16 animations:changes];else changes();
 }
 - (void)setHighlighted:(BOOL)highlighted {[super setHighlighted:highlighted];self.alpha=highlighted?.72:1;}
+- (void)layoutSubviews {
+    [super layoutSubviews];CGFloat mid=CGRectGetMidY(self.bounds);
+    for(UIView *v in self.subviews)if([v isKindOfClass:UIImageView.class])v.center=CGPointMake(25,mid);
+    _nameLabel.frame=CGRectMake(48,mid-20,176,22);_detailLabel.frame=CGRectMake(48,mid+4,176,16);
+    _checkbox.center=CGPointMake(242,mid);
+}
 @end
 @interface AOVOverlay () {
     AOVDrawing *_drawing;
     UIView *_panel;
     UIButton *_dot,*_close;
     AOVFeatureRow *_enemy,*_monster;
+    UISlider *_cameraSlider;
+    UIButton *_cameraReset;
+    UILabel *_cameraTitle,*_cameraValue;
+    UIView *_divider;
     CAGradientLayer *_panelGradient;
     UILabel *_status;
     NSTimer *_timer;
     dispatch_queue_t _queue;
     std::shared_ptr<aov::Process> _reader;
     BOOL _busy,_enemies,_monsters;
+    float _zoom;
     CGPoint _touchStart,_dotStart;
     aov::TouchState _touch;
     __weak UIControl *_touchTarget;
 }
 @end
 @implementation AOVOverlay
+- (UIView *)drawingView{return _drawing;}
+- (CGRect)interactiveFrame{return _panel.hidden?_dot.frame:_panel.frame;}
 - (UIButton *)button:(NSString *)title action:(SEL)action {
     UIButton *b=[UIButton buttonWithType:UIButtonTypeCustom];[b setTitle:title forState:UIControlStateNormal];b.titleLabel.font=Font(16,UIFontWeightSemibold);
     b.contentHorizontalAlignment=UIControlContentHorizontalAlignmentLeft;b.contentEdgeInsets=UIEdgeInsetsMake(0,14,0,14);
@@ -127,6 +141,7 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
         NSUserDefaults *d=NSUserDefaults.standardUserDefaults;_enemies=[d boolForKey:@"AOV.Enemies"];
         if(![d objectForKey:@"AOV.Monsters"])[d setBool:[d boolForKey:@"AOV.BlueBuff"] forKey:@"AOV.Monsters"];
         _monsters=[d boolForKey:@"AOV.Monsters"];
+        _zoom=aov::zoomMultiplier([d objectForKey:@"AOV.CameraZoom"]?[d floatForKey:@"AOV.CameraZoom"]:1.f);
         _drawing=[[AOVDrawing alloc] initWithFrame:self.bounds];_drawing.autoresizingMask=self.autoresizingMask;[self addSubview:_drawing];
         _dot=[self button:@"A" action:@selector(toggleMenu)];_dot.titleLabel.font=Font(20,UIFontWeightBold);_dot.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter;_dot.contentEdgeInsets=UIEdgeInsetsZero;
         _dot.frame=CGRectMake(22,80,52,52);_dot.layer.cornerRadius=26;[_dot setTitleColor:Mint() forState:UIControlStateNormal];_dot.layer.borderColor=Mint().CGColor;
@@ -141,14 +156,23 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
         UILabel *section=[UILabel new];section.text=@"HIỂN THỊ";section.textColor=[UIColor colorWithWhite:.5 alpha:1];section.font=Font(10,UIFontWeightSemibold);section.frame=CGRectMake(20,73,240,14);[_panel addSubview:section];
         _enemy=[[AOVFeatureRow alloc] initWithName:@"ESP địch" detail:@"Tướng · Dây · Thanh máu" symbol:@"person.crop.square"];_enemy.frame=CGRectMake(18,93,268,64);[_enemy addTarget:self action:@selector(toggleEnemy) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_enemy];
         _monster=[[AOVFeatureRow alloc] initWithName:@"ESP quái" detail:@"Quái · Dây · Thanh máu" symbol:@"scope"];_monster.frame=CGRectMake(18,167,268,64);[_monster addTarget:self action:@selector(toggleMonsters) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_monster];
-        UIView *divider=[UIView new];divider.backgroundColor=[UIColor colorWithWhite:1 alpha:.08];divider.frame=CGRectMake(20,242,264,1);[_panel addSubview:divider];
+        _cameraTitle=[UILabel new];_cameraTitle.text=@"Cam xa";_cameraTitle.font=Font(14,UIFontWeightSemibold);_cameraTitle.textColor=UIColor.whiteColor;[_panel addSubview:_cameraTitle];
+        _cameraValue=[UILabel new];_cameraValue.textColor=Mint();_cameraValue.font=Font(12,UIFontWeightSemibold);_cameraValue.textAlignment=NSTextAlignmentRight;[_panel addSubview:_cameraValue];
+        _cameraSlider=[UISlider new];_cameraSlider.minimumValue=1;_cameraSlider.maximumValue=4;_cameraSlider.value=_zoom;_cameraSlider.minimumTrackTintColor=Mint();_cameraSlider.maximumTrackTintColor=[UIColor colorWithWhite:.23 alpha:1];_cameraSlider.thumbTintColor=Mint();_cameraSlider.accessibilityLabel=@"Khoảng cách camera";
+        [_cameraSlider addTarget:self action:@selector(cameraChanged:) forControlEvents:UIControlEventValueChanged];[_panel addSubview:_cameraSlider];
+        _cameraReset=[self button:@"Gốc" action:@selector(resetCamera)];_cameraReset.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter;_cameraReset.contentEdgeInsets=UIEdgeInsetsZero;_cameraReset.titleLabel.font=Font(12,UIFontWeightSemibold);_cameraReset.accessibilityLabel=@"Khôi phục camera gốc";[_panel addSubview:_cameraReset];
+        _divider=[UIView new];_divider.backgroundColor=[UIColor colorWithWhite:1 alpha:.08];[_panel addSubview:_divider];
         _status=[UILabel new];_status.font=Font(11,UIFontWeightMedium);_status.textColor=[UIColor colorWithWhite:.65 alpha:1];_status.numberOfLines=1;_status.frame=CGRectMake(20,249,264,23);[_panel addSubview:_status];
         [self updateButtons];
         __weak AOVOverlay *weak=self;
         _timer=[NSTimer timerWithTimeInterval:1.0/30 repeats:YES block:^(NSTimer *t){[weak tick];}];[NSRunLoop.mainRunLoop addTimer:_timer forMode:NSRunLoopCommonModes];
     }return self;
 }
-- (void)stop{[_timer invalidate];_timer=nil;}
+- (void)stop{[self stopWithCompletion:nil];}
+- (void)stopWithCompletion:(void (^)(void))completion{
+    [_timer invalidate];_timer=nil;[self cancelScreenTouch];auto reader=_reader;
+    dispatch_async(_queue,^{reader->restoreCamera();if(completion)dispatch_async(dispatch_get_main_queue(),completion);});
+}
 - (void)dealloc{[_timer invalidate];}
 - (void)layoutSubviews{
     [super layoutSubviews];_drawing.frame=self.bounds;
@@ -156,16 +180,25 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
     CGFloat maxX=MAX(safe.left+32,self.bounds.size.width-safe.right-32),maxY=MAX(safe.top+32,self.bounds.size.height-safe.bottom-32);
     _dot.center=CGPointMake(std::clamp(_dot.center.x,safe.left+32,maxX),std::clamp(_dot.center.y,safe.top+32,maxY));
     // Never assign a frame while a view has an animated transform.
-    _panel.bounds=CGRectMake(0,0,304,280);
+    CGFloat available=self.bounds.size.height-safe.top-safe.bottom-16;
+    BOOL compact=available<330;CGFloat panelHeight=compact?304:330;
+    _panel.bounds=CGRectMake(0,0,304,panelHeight);
     CGFloat x=std::clamp(_dot.frame.origin.x,safe.left+8,MAX(safe.left+8,self.bounds.size.width-safe.right-312));
-    CGFloat y=std::clamp(_dot.frame.origin.y,safe.top+8,MAX(safe.top+8,self.bounds.size.height-safe.bottom-288));
-    _panel.center=CGPointMake(x+152,y+140);_panelGradient.frame=_panel.bounds;
+    CGFloat y=std::clamp(_dot.frame.origin.y,safe.top+8,MAX(safe.top+8,self.bounds.size.height-safe.bottom-panelHeight-8));
+    _panel.center=CGPointMake(x+152,y+panelHeight*.5);_panelGradient.frame=_panel.bounds;
+    CGFloat rowHeight=compact?48:56;
+    _enemy.frame=CGRectMake(18,93,268,rowHeight);_monster.frame=CGRectMake(18,101+rowHeight,268,rowHeight);
+    CGFloat cameraY=109+2*rowHeight;
+    _cameraTitle.frame=CGRectMake(20,cameraY,100,22);_cameraValue.frame=CGRectMake(123,cameraY,80,22);
+    _cameraReset.frame=CGRectMake(224,cameraY-2,60,28);_cameraSlider.frame=CGRectMake(20,cameraY+22,264,38);
+    _divider.frame=CGRectMake(20,panelHeight-31,264,1);_status.frame=CGRectMake(20,panelHeight-26,264,22);
     _panel.layer.shadowPath=[UIBezierPath bezierPathWithRoundedRect:_panel.bounds cornerRadius:22].CGPath;
+    if(self.geometryChanged)self.geometryChanged();
 }
 - (UIControl *)controlAtPoint:(CGPoint)p{
     if(!self.userInteractionEnabled||self.hidden||self.alpha<.01)return nil;
     if(!_panel.hidden){
-        for(UIControl *control in @[_close,_enemy,_monster]){
+        for(UIControl *control in @[_close,_enemy,_monster,_cameraSlider,_cameraReset]){
             CGPoint local=[self convertPoint:p toView:control];
             if(control.enabled&&!control.hidden&&CGRectContainsPoint(control.bounds,local))return control;
         }
@@ -187,17 +220,34 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
 - (void)panDot:(UIPanGestureRecognizer *)g{CGPoint d=[g translationInView:self];_dot.center=CGPointMake(_dot.center.x+d.x,_dot.center.y+d.y);[g setTranslation:CGPointZero inView:self];[self setNeedsLayout];}
 - (void)updateButtons{
     [_enemy setOn:_enemies animated:YES];[_monster setOn:_monsters animated:YES];
+    _cameraValue.text=[NSString stringWithFormat:@"%.1f×",_zoom];
 }
 - (void)toggleEnemy{_enemies=!_enemies;[NSUserDefaults.standardUserDefaults setBool:_enemies forKey:@"AOV.Enemies"];[self updateButtons];}
 - (void)toggleMonsters{_monsters=!_monsters;[NSUserDefaults.standardUserDefaults setBool:_monsters forKey:@"AOV.Monsters"];[self updateButtons];}
+- (void)cameraChanged:(UISlider *)slider{
+    _zoom=aov::zoomMultiplier(slider.value);[NSUserDefaults.standardUserDefaults setFloat:_zoom forKey:@"AOV.CameraZoom"];[self updateButtons];
+}
+- (void)resetCamera{_zoom=1;_cameraSlider.value=1;[self cameraChanged:_cameraSlider];}
+- (void)activateControl:(UIControl *)control{
+    // External HUD input calls our actions directly instead of UIKit tracking.
+    if(control==_dot||control==_close)[self toggleMenu];
+    else if(control==_enemy)[self toggleEnemy];
+    else if(control==_monster)[self toggleMonsters];
+    else if(control==_cameraReset)[self resetCamera];
+}
+- (void)moveCameraSlider:(CGPoint)p{
+    CGPoint local=[self convertPoint:p toView:_cameraSlider];
+    CGRect track=[_cameraSlider trackRectForBounds:_cameraSlider.bounds];
+    CGFloat fraction=std::clamp((local.x-CGRectGetMinX(track))/MAX(1,track.size.width),CGFloat(0),CGFloat(1));
+    _cameraSlider.value=aov::zoomMultiplier(1+3*fraction);[self cameraChanged:_cameraSlider];
+}
 - (void)tick{
     if(!self.window||self.hidden||_busy)return;
-    if(!_enemies&&!_monsters){_drawing->snapshot={};[_drawing setNeedsDisplay];_status.text=@"Chọn ESP để bật";return;}
-    _busy=YES;BOOL enemy=_enemies,monster=_monsters;auto reader=_reader;__weak AOVOverlay *weak=self;
+    _busy=YES;BOOL enemy=_enemies,monster=_monsters;float zoom=_zoom;auto reader=_reader;__weak AOVOverlay *weak=self;
     dispatch_async(_queue,^{
-        auto sample=reader->update(enemy,monster);
+        auto sample=reader->update(enemy,monster,zoom);
         dispatch_async(dispatch_get_main_queue(),^{AOVOverlay *s=weak;if(!s)return;s->_busy=NO;
-            if(enemy!=s->_enemies||monster!=s->_monsters)return;
+            if(enemy!=s->_enemies||monster!=s->_monsters||zoom!=s->_zoom)return;
             s->_drawing->snapshot=std::move(sample);[s->_drawing setNeedsDisplay];
             switch(s->_drawing->snapshot.state){
                 case aov::State::ready:s->_status.text=@"ESP đang hoạt động";break;
@@ -206,6 +256,10 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
                 case aov::State::disconnected:s->_status.text=@"Mở Liên Quân VN";break;
                 default:s->_status.text=@"Chờ dữ liệu trận đấu";break;
             }
+            if(!enemy&&!monster&&zoom==1)s->_status.text=@"Chọn chức năng để bật";
+            if(s->_drawing->snapshot.zoom==aov::ZoomState::active)s->_status.text=@"Cam xa đang áp dụng";
+            else if(s->_drawing->snapshot.zoom==aov::ZoomState::denied)s->_status.text=@"iOS không cấp quyền chỉnh camera";
+            else if(zoom>1&&s->_drawing->snapshot.state==aov::State::waiting)s->_status.text=@"Cam xa · Chờ camera trận đấu";
         });
     });
 }
@@ -218,13 +272,15 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
         _touchTarget.highlighted=NO;
         while(v&&v!=self&&![v isKindOfClass:UIControl.class])v=v.superview;
         _touchTarget=[v isKindOfClass:UIControl.class]?(UIControl *)v:nil;
-        _touchTarget.highlighted=YES;_touchStart=p;_dotStart=_dot.center;return YES;
+        _touchTarget.highlighted=YES;_touchStart=p;_dotStart=_dot.center;
+        if(_touchTarget==_cameraSlider)[self moveCameraSlider:p];return YES;
     }
     if(!_touch.owns(identity))return NO;
     if(phase==UITouchPhaseMoved){
         _touch.move(identity,p.x,p.y,CACurrentMediaTime());
         CGFloat dx=p.x-_touchStart.x,dy=p.y-_touchStart.y;
-        if(_touchTarget==_dot&&_touch.dragged()){_dot.center=CGPointMake(_dotStart.x+dx,_dotStart.y+dy);[self setNeedsLayout];[self layoutIfNeeded];}
+        if(_touchTarget==_cameraSlider)[self moveCameraSlider:p];
+        else if(_touchTarget==_dot&&_touch.dragged()){_dot.center=CGPointMake(_dotStart.x+dx,_dotStart.y+dy);[self setNeedsLayout];[self layoutIfNeeded];}
         else if(_touchTarget)_touchTarget.highlighted=CGRectContainsPoint(_touchTarget.bounds,[self convertPoint:p toView:_touchTarget]);
     }
     if(phase==UITouchPhaseEnded||phase==UITouchPhaseCancelled){
@@ -234,7 +290,7 @@ static void StrokeLine(CGContextRef c,CGPoint start,CGPoint end,UIColor *color,C
         BOOL inside=target&&!target.hidden&&target.enabled&&CGRectContainsPoint(CGRectInset(target.bounds,-6,-6),[self convertPoint:p toView:target]);
         BOOL activate=_touch.finish(identity,phase==UITouchPhaseCancelled,inside);
         target.highlighted=NO;_touchTarget=nil;
-        if(activate)[target sendActionsForControlEvents:UIControlEventTouchUpInside];
+        if(activate)[self activateControl:target];
     }return YES;
 }
 - (void)cancelScreenTouch{_touch.cancel();_touchTarget.highlighted=NO;_touchTarget=nil;}

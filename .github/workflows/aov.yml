@@ -22,6 +22,10 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined AOV/tests/touch_test.cpp -o /tmp/aov-touch-test
           /tmp/aov-touch-test
+      - name: Test camera zoom bounds, restore, stale objects and write failures
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined AOV/tests/camera_test.cpp -o /tmp/aov-camera-test
+          /tmp/aov-camera-test
       - name: Setup Theos
         uses: Randomblock1/theos-action@v1
       - name: Build
