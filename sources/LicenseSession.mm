@@ -144,7 +144,7 @@ NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification = @"Licen
 
 - (NSURL *)databaseURLForHash:(NSString *)licenseHash {
     NSString *base = [self.config[@"DatabaseURL"] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"/"]];
-    return [NSURL URLWithString:[NSString stringWithFormat:@"%@/licensesV3/%@.json", base, licenseHash]];
+    return [NSURL URLWithString:[NSString stringWithFormat:@"%@/licensesV4/%@.json", base, licenseHash]];
 }
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest *))completionHandler {
@@ -169,7 +169,7 @@ NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification = @"Licen
 }
 
 - (void)revokeWithMessage:(NSString *)message reason:(NSString *)reason {
-    BOOL notify = self.hadAuthorizedSession||(self.locked&&![self.lastMessage isEqualToString:message]);
+    BOOL notify = self.hadAuthorizedSession||([reason isEqualToString:@"locked"]&&(!self.locked||![self.lastMessage isEqualToString:message]));
     self.hadAuthorizedSession = NO;
     self.validUntilUptime = 0;
     self.expiresAt = 0;
@@ -225,7 +225,7 @@ NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification = @"Licen
             [NSUserDefaults.standardUserDefaults synchronize];
         }
         self.validUntilUptime = deadline;
-        [NSUserDefaults.standardUserDefaults setInteger:3 forKey:@"LicenseSavedProtocolVersion"];
+        [NSUserDefaults.standardUserDefaults setInteger:4 forKey:@"LicenseSavedProtocolVersion"];
         self.expiresAt = expiry;
         self.hadAuthorizedSession = YES;
         self.lastMessage = message;
@@ -235,8 +235,7 @@ NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification = @"Licen
     } else if (transient && (self.authorized||self.locked)) {
         // Keep only the time granted by the last successful server response.
         // Retries and failed requests must never extend this deadline.
-        self.lastMessage = message;
-        self.lastReason = reason;
+        if(!self.locked){self.lastMessage = message;self.lastReason = reason;}
     } else {
         if([reason isEqualToString:@"locked"]){
             [NSUserDefaults.standardUserDefaults setObject:licenseHash forKey:@"LicenseHash"];
@@ -320,10 +319,10 @@ NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification = @"Licen
                     std::isfinite([expiryValue doubleValue]);
                 if (object == NSNull.null) {
                     BOOL awaitingMigration=[[NSUserDefaults.standardUserDefaults stringForKey:@"LicenseHash"] isEqualToString:licenseHash]&&
-                        [NSUserDefaults.standardUserDefaults integerForKey:@"LicenseSavedProtocolVersion"]<3;
+                        [NSUserDefaults.standardUserDefaults integerForKey:@"LicenseSavedProtocolVersion"]<4;
                     message=awaitingMigration ? @"Key cũ đang chờ chuyển sang bản mới. Admin cần bấm Áp dụng Rules trên web key." : @"Key không tồn tại hoặc đã bị xóa.";
                     reason=awaitingMigration ? @"migration_pending" : @"missing";
-                } else if (!record || !enabledIsBoolean || !expiryIsNumber || ![record[@"protocol"] isEqual:@3]) {
+                } else if (!record || !enabledIsBoolean || !expiryIsNumber || ![record[@"protocol"] isEqual:@4]) {
                     message = @"Dữ liệu key không hợp lệ. Liên hệ người cấp key."; reason = @"invalid_record";
                 } else if (![enabled boolValue]) {
                     message = @"Key đã bị khóa."; reason = @"disabled";
@@ -370,7 +369,7 @@ NSNotificationName const LicenseSessionDidBecomeAuthorizedNotification = @"Licen
                             if(!wellFormed){deadline=0;needsBinding=NO;message=@"Dữ liệu khóa key không hợp lệ.";reason=@"invalid_record";}
                             else if([until doubleValue]==0||[until doubleValue]/1000.0>lockServerNow){
                                 deadline=0;reason=@"locked";needsBinding=NO;
-                                message=[notice length]?notice:@"Key đang bị khóa. Liên hệ admin.";
+                                message=[notice length]?notice:@"Tài khoản đã bị khóa.";
                                 if([until doubleValue]>0){
                                     NSDateFormatter *display=[NSDateFormatter new];display.dateFormat=@"HH:mm dd/MM/yyyy";
                                     message=[message stringByAppendingFormat:@"\nTự mở: %@",[display stringFromDate:[NSDate dateWithTimeIntervalSince1970:[until doubleValue]/1000.0]]];

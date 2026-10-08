@@ -11,12 +11,16 @@
       ".write": false
     },
     "licensesV3": {
+      ".read": false,
+      ".write": false
+    },
+    "licensesV4": {
       "$keyHash": {
         ".read": "$keyHash.matches(/^[a-f0-9]{64}$/)",
         ".write": false,
-        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 3",
+        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 4",
         "binding": {
-          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 3 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && (!data.parent().child('lock').exists() || (data.parent().child('lock').child('until').isNumber() && data.parent().child('lock').child('until').val() > 0 && data.parent().child('lock').child('until').val() <= now)) && newData.exists()",
+          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 4 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && (!data.parent().child('lock').exists() || (data.parent().child('lock').child('until').isNumber() && data.parent().child('lock').child('until').val() > 0 && data.parent().child('lock').child('until').val() <= now)) && newData.exists()",
           ".validate": "newData.hasChildren(['deviceHash', 'version', 'claimedAt'])",
           "deviceHash": {
             ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{64}$/)"

@@ -1,6 +1,7 @@
 #import "HomeViewController.h"
 #import "HUDHelper.h"
 #import "LicenseSession.h"
+#import "LicenseLockView.h"
 #import "../esp/drawing_view/ESPStyle.h"
 #import "MizzeTheme.h"
 
@@ -220,6 +221,7 @@
     return YES;
 }
 - (void)updateControls {
+    if(![LicenseSession shared].locked)MizzeRemoveLicenseLock(self.view);
     self.keyField.hidden = self.fieldLabel.hidden = self.submit.hidden = self.loggedIn;
     self.start.hidden = self.logoutButton.hidden = !self.loggedIn;
     self.start.enabled = !self.starting;
@@ -331,6 +333,7 @@
     });
 }
 - (void)logout {
+    MizzeRemoveLicenseLock(self.view);
     self.restoringKey = NO;
     ++self.requestGeneration; self.starting = NO; self.hadRunningHUD = NO;
     StopHUD(); [[LicenseSession shared] logout];
@@ -341,6 +344,8 @@
     if([notification.userInfo[@"reason"] isEqualToString:@"locked"]){
         ++self.requestGeneration;self.starting=NO;self.restoringKey=NO;self.loggedIn=NO;
         self.status.text=notification.userInfo[@"message"];
+        [self.view endEditing:YES];
+        MizzeShowLicenseLock(self.view,self.status.text);
         self.submit.enabled=self.keyField.enabled=YES;[self updateControls];return;
     }
     // A parent app can be suspended long enough for its short local lease to
@@ -363,6 +368,7 @@
 }
 - (void)licenseRestored:(NSNotification *)notification {
     if(![LicenseSession shared].authorized)return;
+    MizzeRemoveLicenseLock(self.view);
     self.loggedIn=YES;self.restoringKey=NO;self.status.text=@"Admin đã mở khóa key.";
     [self updateControls];[self showLicenseExpiry];
 }

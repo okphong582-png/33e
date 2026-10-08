@@ -1,6 +1,7 @@
 #ifdef MIZZE_INJECTED
 #import "InjectedLicenseController.h"
 #import "LicenseSession.h"
+#import "LicenseLockView.h"
 #import "InjectedProtection.h"
 #import "UIView+SecureView.h"
 #import "../esp/drawing_view/esp.h"
@@ -105,6 +106,8 @@
     }
     self.keyStatus.text=self.message;self.keyPanel.hidden=NO;
     [self.view setNeedsLayout];
+    if([LicenseSession shared].locked)MizzeShowLicenseLock(self.view,[LicenseSession shared].lastMessage);
+    else MizzeRemoveLicenseLock(self.view);
 }
 - (BOOL)textFieldShouldBeginEditing:(UITextField *)field {
     [self.view.window makeKeyWindow];return YES;
@@ -136,6 +139,7 @@
 }
 - (void)unlock {
     if (![LicenseSession shared].authorized) return;
+    MizzeRemoveLicenseLock(self.view);
     MizzeStartOwnCodeProtection();
     [[LicenseSession shared] monitor];
     self.loginButton.hidden = YES;

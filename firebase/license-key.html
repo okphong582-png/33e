@@ -784,7 +784,15 @@
       .table-toolbar>.filter-tabs .filter-tab { flex:1; }
     }
     @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
-  </style>
+
+/* The same illustration and editable message used by the V4 clients. */
+.lock-preview{position:relative;border:1px solid #633892;border-radius:12px;overflow:hidden;background:#111;margin:16px 0;min-height:170px}
+.lock-preview img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lock-preview-content{position:relative;margin-left:38%;padding:20px;background:#111;min-height:170px}
+.lock-preview-title{color:#fff;font-size:13px;font-weight:700;border-bottom:2px solid #ffc429;padding-bottom:8px;width:max-content;max-width:100%}
+.lock-preview-message{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#fff;max-height:120px;overflow:auto;margin-top:12px}
+@media(max-width:500px){.lock-preview-content{margin-left:28%;padding:14px}}
+</style>
 </head>
 <body>
 
@@ -985,7 +993,7 @@
       <!-- Toolbar: Search & Filter -->
       <div class="table-toolbar">
         <select id="licenseNamespace" aria-label="Phiên bản key" style="max-width:170px">
-          <option value="licensesV3">Key V3 · hiện tại</option><option value="licensesV2">Key V2 · đã chặn</option><option value="licenses">Key V1 · đã chặn</option>
+          <option value="licensesV4">Key V4 · hiện tại</option><option value="licensesV3">Key V3 · đã chặn</option><option value="licensesV2">Key V2 · đã chặn</option><option value="licenses">Key V1 · đã chặn</option>
         </select>
         <div class="search-box">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -1074,7 +1082,7 @@
       <button class="modal-close" data-close>&times;</button>
     </div>
     <div class="modal-body">
-      <p>Bấm Áp dụng Rules để sao lưu và chuyển toàn bộ key sang V3, giữ nguyên hạn dùng, ghi chú và máy đã gắn. Sau đó app cũ bị chặn; bản mới dùng lại key đang lưu.</p>
+      <p>Bấm Áp dụng Rules để sao lưu và chuyển toàn bộ key sang V4, giữ nguyên hạn dùng, ghi chú và máy đã gắn. Sau đó app cũ bị chặn; bản mới dùng lại key đang lưu.</p>
       <ol style="margin-left: 20px; margin-top: 8px; margin-bottom: 12px; line-height: 1.6">
         <li>Lưu token quản trị trong Cài đặt.</li>
         <li>Đóng app cũ, chuyển key xong rồi cập nhật đè bản app mới để giữ key đã lưu.</li>
@@ -1093,12 +1101,16 @@
       ".write": false
     },
     "licensesV3": {
+      ".read": false,
+      ".write": false
+    },
+    "licensesV4": {
       "$keyHash": {
         ".read": "$keyHash.matches(/^[a-f0-9]{64}$/)",
         ".write": false,
-        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 3",
+        ".validate": "newData.hasChildren(['enabled', 'expiresAt', 'protocol']) && newData.child('enabled').isBoolean() && newData.child('expiresAt').isNumber() && newData.child('protocol').val() === 4",
         "binding": {
-          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 3 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && (!data.parent().child('lock').exists() || (data.parent().child('lock').child('until').isNumber() && data.parent().child('lock').child('until').val() > 0 && data.parent().child('lock').child('until').val() <= now)) && newData.exists()",
+          ".write": "$keyHash.matches(/^[a-f0-9]{64}$/) && !data.exists() && data.parent().exists() && data.parent().child('protocol').val() === 4 && data.parent().child('enabled').val() === true && data.parent().child('expiresAt').val() > now && (!data.parent().child('lock').exists() || (data.parent().child('lock').child('until').isNumber() && data.parent().child('lock').child('until').val() > 0 && data.parent().child('lock').child('until').val() <= now)) && newData.exists()",
           ".validate": "newData.hasChildren(['deviceHash', 'version', 'claimedAt'])",
           "deviceHash": {
             ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{64}$/)"
@@ -1143,9 +1155,10 @@
   <div class="modal-header"><div class="modal-title">Khóa key</div><button class="modal-close" data-close>&times;</button></div>
   <div class="modal-body">
     <p>Key: <strong id="lockKeyName" class="mono"></strong></p>
-    <div class="form-group"><label for="lockMessage">Lời nhắn hiển thị trong app</label><textarea id="lockMessage" maxlength="500" rows="3"></textarea></div>
+    <div class="form-group"><label for="lockMessage">Nội dung thông báo khóa</label><textarea id="lockMessage" maxlength="500" rows="3"></textarea></div>
     <div class="form-group"><label for="lockDuration">Thời gian khóa</label><input id="lockDuration" type="number" min="0.01" step="any" value="1"><select id="lockUnit"><option value="minutes">Phút</option><option value="hours" selected>Giờ</option><option value="days">Ngày</option><option value="permanent">Đến khi admin mở</option></select></div>
-    <div class="input-hint">Hết thời gian sẽ tự mở. Admin có thể mở ngay, giữ nguyên key và máy đã gắn.</div>
+    <div class="lock-preview" aria-label="Xem trước thông báo khóa"><img src="assets/license-lock.jpg" alt=""><div class="lock-preview-content"><div class="lock-preview-title">THÔNG TIN · MIZZE</div><div class="lock-preview-message" id="lockMessagePreview"></div></div></div>
+    <div class="input-hint">App V4 hiện ảnh này và lắc nhẹ một lần. Hết thời gian sẽ tự mở. Admin có thể mở ngay, giữ nguyên key và máy đã gắn.</div>
   </div><div class="modal-footer"><button class="btn btn-secondary" data-close>Hủy</button><button id="btnConfirmLock" class="btn btn-danger">Khóa key</button></div>
 </div></div>
 <!-- Modal: Gia Hạn Key -->
@@ -1236,7 +1249,7 @@ let databaseURL = storedSetting(localStorage,"license_db_url") || DEFAULT_DATABA
 let databaseSecret = storedSetting(localStorage,"license_db_secret") || storedSetting(sessionStorage,"license_db_secret");
 if (databaseSecret) saveSetting(localStorage,"license_db_secret",databaseSecret);
 saveSetting(sessionStorage,"license_db_secret",databaseSecret);
-let licenseNamespace = "licensesV3";
+let licenseNamespace = "licensesV4";
 
 // State
 let allLicenses = []; // mảng chứa các record key
@@ -1259,7 +1272,7 @@ async function digest(text) {
   const bytes = new TextEncoder().encode(text);
   return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
 }
-function randomKey(prefix = "HH3-") {
+function randomKey(prefix = "HH4-") {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   return prefix + hex(bytes).toUpperCase();
@@ -1273,13 +1286,13 @@ function readLocalCache() {
 function getLocalCache() {
   const result={};
   for(const record of Object.values(readLocalCache())) {
-    const namespace=record.namespace || (record.protocol===3 ? "licensesV3" : record.protocol===2 ? "licensesV2" : "licenses");
+    const namespace=record.namespace || (record.protocol===4 ? "licensesV4" : record.protocol===3 ? "licensesV3" : record.protocol===2 ? "licensesV2" : "licenses");
     if(namespace===licenseNamespace && record.hash)result[record.hash]=record;
   }
   return result;
 }
 function saveToLocalCache(hash, record) {
-  const cache=readLocalCache(),namespace=record.protocol===3 ? "licensesV3" : licenseNamespace;
+  const cache=readLocalCache(),namespace=record.namespace || (record.protocol===4 ? "licensesV4" : record.protocol===3 ? "licensesV3" : record.protocol===2 ? "licensesV2" : licenseNamespace);
   const key=namespace+":"+hash;
   cache[key]={...(cache[key] || {}),...record,hash,namespace};
   localStorage.setItem(CACHE_KEY,JSON.stringify(cache));
@@ -1341,18 +1354,18 @@ function getApiUrl(path, namespace = licenseNamespace) {
 }
 
 async function assertNewKey(hash) {
-  for (const namespace of ["licenses", "licensesV2"]) {
+  for (const namespace of ["licenses", "licensesV2", "licensesV3"]) {
     const response=await fetch(getApiUrl(`${namespace}/${hash}`,namespace));
     if(!response.ok)throw new Error(`Không kiểm tra được key cũ: HTTP ${response.status}`);
     if(await response.json())throw new Error("Key đã có ở bản cũ. Bấm Áp dụng Rules để giữ và chuyển key này sang bản mới.");
   }
 }
 
-// Validate every source before writing anything. A retry only creates missing V3
+// Validate every source before writing anything. A retry only creates missing V4
 // records; it never overwrites an existing device binding or changes old records.
 async function prepareKeyMigration() {
   const roots={};
-  for(const namespace of ["licenses","licensesV2","licensesV3"]){
+  for(const namespace of ["licenses","licensesV2","licensesV3","licensesV4"]){
     const response=await fetch(getApiUrl(namespace,namespace));
     if(!response.ok)throw new Error(`Không đọc được ${namespace}: HTTP ${response.status}`);
     const root=await response.json();
@@ -1360,8 +1373,8 @@ async function prepareKeyMigration() {
     roots[namespace]=root||{};
   }
   const records=new Map(),cache=readLocalCache();
-  // V2 is the newer authoritative record when the same key exists in V1 and V2.
-  for(const namespace of ["licenses","licensesV2"]){
+  // Newer namespaces take precedence; preserve V3 locks and device bindings.
+  for(const namespace of ["licenses","licensesV2","licensesV3"]){
     for(const [hash,record] of Object.entries(roots[namespace])){
       if(!/^[a-f0-9]{64}$/.test(hash)||!record||typeof record!=="object"||Array.isArray(record)||
         typeof record.expiresAt!=="number"||!Number.isFinite(record.expiresAt)||record.expiresAt<=0||
@@ -1374,13 +1387,13 @@ async function prepareKeyMigration() {
         typeof record.lock.message!=="string"||record.lock.message.length>500))
         throw new Error(`Trạng thái khóa của key ${hash.slice(0,12)} không hợp lệ; chưa đổi Rules.`);
       const cached=cache[namespace+":"+hash]||cache[hash]||{};
-      const migrated={...record,protocol:3,enabled:true};
+      const migrated={...record,protocol:4,enabled:true};
       if(record.key===undefined&&cached.key)migrated.key=cached.key;
       if(record.note===undefined&&cached.note)migrated.note=cached.note;
       if(record.enabled===false)migrated.lock={until:0,message:record.lock?.message||"Key đang bị quản trị viên khóa."};
       const previous=records.get(hash);
-      if(previous?.binding&&!migrated.binding)migrated.binding=previous.binding;
-      if(previous?.binding&&migrated.binding&&previous.binding.deviceHash!==migrated.binding.deviceHash)
+      if(namespace!=="licensesV3"&&previous?.binding&&!migrated.binding)migrated.binding=previous.binding;
+      if(namespace!=="licensesV3"&&previous?.binding&&migrated.binding&&previous.binding.deviceHash!==migrated.binding.deviceHash)
         throw new Error(`Key ${hash.slice(0,12)} gắn hai máy khác nhau; chưa đổi Rules.`);
       records.set(hash,migrated);
     }
@@ -1390,7 +1403,7 @@ async function prepareKeyMigration() {
 async function migrateKeys(plan) {
   let copied=0,existing=0;
   for(const [hash,record] of plan.records){
-    const response=await fetch(getApiUrl(`licensesV3/${hash}`),{method:"PUT",
+    const response=await fetch(getApiUrl(`licensesV4/${hash}`),{method:"PUT",
       headers:{"Content-Type":"application/json","if-match":"null_etag"},body:JSON.stringify(record)});
     if(response.status===412){existing++;continue;}
     if(!response.ok)throw new Error(`Chuyển key thất bại: HTTP ${response.status}. Key cũ còn nguyên; có thể chạy lại.`);
@@ -1620,7 +1633,7 @@ function renderTable() {
               <input type="checkbox" ${isKeyLocked(item,now) ? '' : 'checked'} onchange="toggleKeyStatus('${item.hash}', this.checked)">
               <span class="slider"></span>
             </label>
-            ${licenseNamespace === 'licensesV3' && item.binding ? '<button class="btn btn-secondary btn-sm" data-reset-device="'+item.hash+'">Gỡ máy</button>' : ''}
+            ${licenseNamespace === 'licensesV4' && item.binding ? '<button class="btn btn-secondary btn-sm" data-reset-device="'+item.hash+'">Gỡ máy</button>' : ''}
             <!-- Nút Gia hạn -->
             <button class="btn btn-secondary btn-sm" onclick="openExtendModal('${item.hash}')" title="Gia hạn thời gian sử dụng">
               +Hạn
@@ -1758,14 +1771,14 @@ $("btnSubmitGenerate").addEventListener("click", async () => {
       const hash = await digest(key);
       const payload = {
         enabled: true,
-          protocol: 3,
+          protocol: 4,
         expiresAt,
         createdAt,
         key,
         note
       };
 
-      const url = getApiUrl(`licensesV3/${hash}`);
+      const url = getApiUrl(`licensesV4/${hash}`);
       await assertNewKey(hash);
       const res = await fetch(url, {
         method: "PUT",
@@ -1800,14 +1813,14 @@ $("btnSubmitGenerate").addEventListener("click", async () => {
         const itemNote = note ? `${note} (#${i})` : `Bulk #${i}`;
         const payload = {
           enabled: true,
-          protocol: 3,
+          protocol: 4,
           expiresAt,
           createdAt: createdAt + i,
           key,
           note: itemNote
         };
 
-        const url = getApiUrl(`licensesV3/${hash}`);
+        const url = getApiUrl(`licensesV4/${hash}`);
         await assertNewKey(hash);
         const res = await fetch(url, {
           method: "PUT",
@@ -1826,7 +1839,7 @@ $("btnSubmitGenerate").addEventListener("click", async () => {
       showToast(`Đã tạo ${count} key thành công!`, "success");
     }
 
-    licenseNamespace="licensesV3";$("licenseNamespace").value=licenseNamespace;
+    licenseNamespace="licensesV4";$("licenseNamespace").value=licenseNamespace;
     await fetchLicenses();
   } catch (err) {
     showToast(err.message || "Lỗi khi tạo key", "error");
@@ -1859,10 +1872,15 @@ let currentLockTarget=null;
 function openLockModal(hash) {
   currentLockTarget=allLicenses.find(x=>x.hash===hash);if(!currentLockTarget)return;
   $("lockKeyName").textContent=currentLockTarget.key || hash.slice(0,16);
-  $("lockMessage").value=currentLockTarget.lock?.message || "Key đang bị khóa. Liên hệ admin.";
+  $("lockMessage").value=currentLockTarget.lock?.message || "Tài khoản đã bị khóa.";
   $("lockDuration").value="1";$("lockUnit").value="hours";
+  updateLockPreview();
   $("modalLock").classList.add("show");renderTable();
 }
+function updateLockPreview() {
+  $("lockMessagePreview").textContent=$("lockMessage").value.trim() || "Tài khoản đã bị khóa.";
+}
+$("lockMessage").addEventListener("input",updateLockPreview);
 function lockUntil(value,unit,now=Date.now()) {
   if(unit==="permanent")return 0;
   const factor={minutes:60000,hours:3600000,days:86400000}[unit];
@@ -1874,7 +1892,7 @@ $("btnConfirmLock").addEventListener("click",async()=>{
   if(!currentLockTarget)return;
   const button=$("btnConfirmLock");button.disabled=true;
   try {
-    const lock={message:$("lockMessage").value.trim(),until:lockUntil($("lockDuration").value,$("lockUnit").value)};
+    const lock={message:$("lockMessage").value.trim() || "Tài khoản đã bị khóa.",until:lockUntil($("lockDuration").value,$("lockUnit").value)};
     if(lock.message.length>500)throw Error("Lời nhắn tối đa 500 ký tự.");
     const res=await fetch(getApiUrl(`licenses/${currentLockTarget.hash}`),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:true,lock})});
     if(!res.ok)throw Error(`HTTP ${res.status}`);
@@ -2186,7 +2204,7 @@ $("btnTestConn").addEventListener("click", async () => {
   btn.disabled = true; btn.textContent = "Đang kiểm tra…";
   const testUrl = $("cfgDatabaseUrl").value.trim().replace(/\/+$/, "");
   const testSecret = $("cfgDatabaseSecret").value.trim();
-  let full = `${testUrl}/licensesV3.json`;
+  let full = `${testUrl}/licensesV4.json`;
   if (!testSecret) { showToast("Cần nhập token quản trị.", "error"); btn.disabled=false; btn.textContent="Kiểm Tra Kết Nối"; return; }
   full += `?auth=${encodeURIComponent(testSecret)}`;
 
@@ -2249,7 +2267,7 @@ $("keysTableBody").addEventListener("click", async e => {
   if(!confirm("Gỡ máy đã gắn? Đóng app đang dùng key trước; máy đăng nhập tiếp theo sẽ giữ key."))return;
   action.disabled=true;
   try {
-    const response=await fetch(getApiUrl(`licensesV3/${hash}/binding`),{method:"DELETE"});
+    const response=await fetch(getApiUrl(`licensesV4/${hash}/binding`),{method:"DELETE"});
     if(!response.ok)throw new Error(`Gỡ máy thất bại: HTTP ${response.status}`);
     showToast("Đã gỡ máy. Key vẫn dùng cho bản mới.");
     await fetchLicenses();
@@ -2258,7 +2276,7 @@ $("keysTableBody").addEventListener("click", async e => {
 $("btnApplyRules").addEventListener("click", async () => {
   const button=$("btnApplyRules");
   if(!databaseSecret) {showToast("Nhập token quản trị trong Cài đặt trước.","error");return;}
-  if(!confirm("Chuyển sang V3? Giữ nguyên key, hạn dùng và máy đã gắn; sao lưu dữ liệu trước khi chuyển. Sau đó app cũ bị chặn. Đóng app cũ trong lúc chuyển."))return;
+  if(!confirm("Chuyển sang V4? Giữ nguyên key, hạn dùng và máy đã gắn; sao lưu dữ liệu trước khi chuyển. Sau đó app cũ bị chặn. Đóng app cũ trong lúc chuyển."))return;
   button.disabled=true;
   try {
     const url=getApiUrl(".settings/rules");
@@ -2274,8 +2292,8 @@ $("btnApplyRules").addEventListener("click", async () => {
     const merged=JSON.parse(backup);merged.rules={...merged.rules,...rules.rules};
     const response=await fetch(url,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(merged)});
     if(!response.ok)throw new Error(`Chưa áp dụng được Rules: HTTP ${response.status}`);
-    licenseNamespace="licensesV3";$("licenseNamespace").value=licenseNamespace;
-    showToast(`Đã giữ ${migration.copied} key cũ, ${migration.existing} key V3 có sẵn. Rules đã chặn app cũ.`);await fetchLicenses();
+    licenseNamespace="licensesV4";$("licenseNamespace").value=licenseNamespace;
+    showToast(`Đã giữ ${migration.copied} key cũ, ${migration.existing} key V4 có sẵn. Rules đã chặn app cũ.`);await fetchLicenses();
   } catch(error) {showToast(error.message,"error");} finally {button.disabled=false;button.textContent="Áp dụng Rules";}
 });
 

@@ -18,7 +18,7 @@ static BOOL streamEventsEnabled;
 + (BOOL)canInitWithRequest:(NSURLRequest *)request { return [request.URL.host isEqualToString:@"license.test"]; }
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request { return request; }
 - (void)startLoading {
-    assert([self.request.URL.path hasPrefix:@"/licensesV3/"]);
+    assert([self.request.URL.path hasPrefix:@"/licensesV4/"]);
     if([[self.request valueForHTTPHeaderField:@"Accept"] isEqualToString:@"text/event-stream"]){
         streamProtocol=self;
         NSHTTPURLResponse *response=[[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"text/event-stream"}];
@@ -54,7 +54,7 @@ static BOOL streamEventsEnabled;
     }
     NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:status HTTPVersion:@"HTTP/1.1" headerFields:@{}];
     [self.client URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-    NSMutableDictionary *license=[@{@"enabled":@YES,@"protocol":mode==7 ? @2 : @3,
+    NSMutableDictionary *license=[@{@"enabled":@YES,@"protocol":mode==7 ? @3 : @4,
         @"expiresAt":@((NSDate.date.timeIntervalSince1970 + (mode == 3 ? -60 : 3600)) * 1000)} mutableCopy];
     if (serverBinding) license[@"binding"]=serverBinding;
     if(serverLock)license[@"lock"]=serverLock;
@@ -142,9 +142,18 @@ int main() {
         const double ready=NSProcessInfo.processInfo.systemUptime+1;
         while(!streamProtocol&&NSProcessInfo.processInfo.systemUptime<ready)[NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
         const NSUInteger beforeLock=claims;
+        __block NSUInteger lockedNotices=0;
+        id lockObserver=[NSNotificationCenter.defaultCenter addObserverForName:LicenseSessionDidBecomeUnauthorizedNotification object:first queue:nil usingBlock:^(NSNotification *note){if([note.userInfo[@"reason"] isEqual:@"locked"])++lockedNotices;}];
         serverLock=@{@"until":@0,@"message":@"Admin: kiểm tra lại tài khoản."};
         Event(@"event: patch\ndata: {\"path\":\"/lock\"}\n\n");WaitState(first,YES,NO);
         assert(first.hasSavedKey&&[first.lastMessage containsString:@"kiểm tra"]);
+        assert(lockedNotices==1);
+        Verify(first,NO,NO);assert(lockedNotices==1);
+        NSString *lockedMessage=first.lastMessage;mode=2;Verify(first,NO,NO);
+        assert(first.locked&&[first.lastMessage isEqual:lockedMessage]);
+        mode=0;Verify(first,NO,NO);assert(lockedNotices==1);
+        serverLock=@{@"until":@0,@"message":@"Admin: thông báo mới."};
+        Verify(first,NO,NO);assert(lockedNotices==2&&[first.lastMessage containsString:@"thông báo mới"]);
         __block NSUInteger restored=0;
         id observer=[NSNotificationCenter.defaultCenter addObserverForName:LicenseSessionDidBecomeAuthorizedNotification object:first queue:nil usingBlock:^(NSNotification *){++restored;}];
         serverLock=nil;Event(@"event: patch\ndata: {\"path\":\"/lock\",\"data\":null}\n\n");WaitState(first,NO,YES);
@@ -155,7 +164,12 @@ int main() {
         Verify(first,NO,NO);assert(first.locked&&first.hasSavedKey);
         WaitState(first,NO,YES);assert(restored==2&&claims==beforeLock);
         serverLock=@{@"until":@(-1),@"message":@"invalid"};Verify(first,NO,NO);assert(!first.hasSavedKey);
-        [NSNotificationCenter.defaultCenter removeObserver:observer];[first logout];
+        [NSNotificationCenter.defaultCenter removeObserver:observer];[NSNotificationCenter.defaultCenter removeObserver:lockObserver];[first logout];
+        serverLock=@{@"until":@0,@"message":@"Khóa trước đăng nhập"};
+        __block NSUInteger firstLoginNotices=0;
+        id firstLock=[NSNotificationCenter.defaultCenter addObserverForName:LicenseSessionDidBecomeUnauthorizedNotification object:first queue:nil usingBlock:^(NSNotification *note){if([note.userInfo[@"reason"] isEqual:@"locked"])++firstLoginNotices;}];
+        Verify(first,YES,NO);assert(first.locked&&first.hasSavedKey&&firstLoginNotices==1);
+        [NSNotificationCenter.defaultCenter removeObserver:firstLock];[first logout];
         // Upgrading before the admin migration must not erase the cached V2 key.
         NSString *oldHash=[@"f" stringByPaddingToLength:64 withString:@"f" startingAtIndex:0];
         [NSUserDefaults.standardUserDefaults setObject:oldHash forKey:@"LicenseHash"];
@@ -163,6 +177,6 @@ int main() {
         assert([first.lastMessage containsString:@"chờ chuyển"]);
         mode=0;serverLock=nil;serverBinding=nil;Verify(first,NO,YES);
         assert(first.hasSavedKey&&claims==beforeLock+1);[first logout];
-        puts("License V3: first claim, device binding, protocol isolation, locks, live unlock, messages, expiry and offline guards passed.");
+        puts("License V4: first claim, device binding, protocol isolation, locks, live unlock, messages, expiry and offline guards passed.");
     }
 }

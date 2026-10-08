@@ -29,6 +29,7 @@ jobs:
       - name: Test actual Firebase rules with concurrent device claims
         run: |
           node tests/license_web_test.cjs
+          node tests/license_lock_asset_test.cjs
           npm install --global firebase-tools@15.32.1
           firebase emulators:exec --project demo-mizze-device --config firebase/firebase.json --only database "node tests/license_database_rules_test.cjs"
   network-responsiveness:

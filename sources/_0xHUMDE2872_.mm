@@ -16,6 +16,7 @@
 #import "../esp/Core/pid.h"
 #import "HUDHelper.h"
 #import "LicenseSession.h"
+#import "LicenseLockView.h"
 #import "UIView+SecureView.h"
 
 // FBSOrientationObserver
@@ -104,6 +105,12 @@ BOOL HUDFloatButtonHandleTouch(CGPoint screenPoint, UITouchPhase phase, NSIntege
 }
 
 - (BOOL)handleTouchAtScreenPoint:(CGPoint)screenPoint phase:(UITouchPhase)phase pointerId:(NSInteger)pointerId {
+    MizzeLicenseLockView *lock=MizzeFindLicenseLock(self.window.rootViewController.view);
+    if(lock && !lock.hidden) {
+        CGPoint point=[self.window convertPoint:screenPoint fromCoordinateSpace:UIScreen.mainScreen.coordinateSpace];
+        return [lock handleTouchAtWindowPoint:point phase:phase pointerId:pointerId];
+    }
+    if(![LicenseSession shared].authorized)return NO;
     if (!_menuView || !self.window) return NO;
     CGPoint inWindow = [self.window convertPoint:screenPoint fromCoordinateSpace:[UIScreen mainScreen].coordinateSpace];
     BOOL consumed = [_menuView handleTouchAtWindowPoint:inWindow phase:phase pointerId:pointerId];
@@ -254,7 +261,7 @@ self.window.bounds = targetFrame;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(licenseBecameInvalid:) name:LicenseSessionDidBecomeUnauthorizedNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(licenseRestored:) name:LicenseSessionDidBecomeAuthorizedNotification object:nil];
     [[LicenseSession shared] refresh:^(BOOL ok, NSString *message) {
-        if (!ok) { if([LicenseSession shared].locked)return;RequestExitHUDWithMessage(message); return; }
+        if (!ok) { if([LicenseSession shared].locked){[self showLockedKey:message];return;}RequestExitHUDWithMessage(message); return; }
         [self buildHUDWindow];
         [[LicenseSession shared] monitor];
     }];
@@ -348,16 +355,21 @@ self.window.bounds = targetFrame;
     
     espView.frame = containerView.bounds;
     menuView.frame = containerView.bounds;
+    if([LicenseSession shared].locked) {
+        espView.hidden=YES;menuView.hidden=YES;
+        MizzeShowLicenseLock(containerView,[LicenseSession shared].lastMessage);
+    }
     
     [self restoreWindowHosting];
 }
 
 - (void)restoreWindowHosting {
-    if (!self.window || ![LicenseSession shared].authorized) return;
+    if (!self.window || (![LicenseSession shared].authorized && ![LicenseSession shared].locked)) return;
     self.window.hidden = NO;
     [self.window makeKeyAndVisible];
     if (self.window.rootViewController && self.window.rootViewController.view) {
-        [self.window.rootViewController.view bringSubviewToFront:_menuView];
+        UIView *front=[LicenseSession shared].locked ? MizzeFindLicenseLock(self.window.rootViewController.view) : _menuView;
+        if(front)[self.window.rootViewController.view bringSubviewToFront:front];
     }
     [_menuView setNeedsLayout];
     [_menuView layoutIfNeeded];
@@ -386,13 +398,22 @@ self.window.bounds = targetFrame;
     HUDMarkReady();
 }
 
+- (void)showLockedKey:(NSString *)message {
+    [self buildHUDWindow];
+    [_menuView hideMenu];
+    UIView *root=self.window.rootViewController.view;
+    for(UIView *view in root.subviews)if(![view isKindOfClass:MizzeLicenseLockView.class])view.hidden=YES;
+    MizzeShowLicenseLock(root,message);self.window.hidden=NO;
+}
 - (void)licenseBecameInvalid:(NSNotification *)notification {
-    if([notification.userInfo[@"reason"] isEqualToString:@"locked"]){self.window.hidden=YES;return;}
+    if([notification.userInfo[@"reason"] isEqualToString:@"locked"]){[self showLockedKey:notification.userInfo[@"message"]];return;}
     RequestExitHUDWithMessage(notification.userInfo[@"message"] ?: [LicenseSession shared].lastMessage);
 }
 - (void)licenseRestored:(NSNotification *)notification {
     if(![LicenseSession shared].authorized)return;
     [self buildHUDWindow];self.window.hidden=NO;
+    MizzeRemoveLicenseLock(self.window.rootViewController.view);
+    for(UIView *view in self.window.rootViewController.view.subviews)view.hidden=NO;
 }
 
 - (void)dealloc {

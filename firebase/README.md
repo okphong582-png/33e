@@ -1,15 +1,15 @@
-# Key V3: giữ key hiện có, mỗi key gắn một thiết bị
+# Key V4: thông báo khóa có ảnh, giữ key và mỗi key gắn một thiết bị
 
-Web `license-key.html` tạo key tại `licensesV3/<SHA-256>`, với `protocol: 3`.
-Rules chặn truy cập công khai tới `licenses` và `licensesV2`, nên app cũ không
+Web `license-key.html` tạo key tại `licensesV4/<SHA-256>`, với `protocol: 4`.
+Rules chặn truy cập công khai tới `licenses`, `licensesV2` và `licensesV3`, nên app cũ không
 dùng được các nhánh đó. Bản mới tiếp tục dùng cùng mã key sau khi chuyển dữ liệu.
 
 Mở **Cài đặt**, nhập token quản trị hiện có, sau đó **Rules → Áp dụng Rules**.
 Đóng app cũ trong lúc chuyển. Web tải bản sao dữ liệu key và Rules, chuyển key
-V1/V2 sang V3, rồi mới áp dụng Rules. Mã key, hash, hạn dùng, ghi chú và binding
+V1/V2/V3 sang V4, rồi mới áp dụng Rules. Mã key, hash, hạn dùng, ghi chú và binding
 được giữ. Key bị khóa chuyển thành khóa vĩnh viễn; key hết hạn vẫn hết hạn.
-V2 được ưu tiên nếu trùng hash với V1. Dữ liệu gốc không bị xóa. Chạy lại không
-ghi đè key V3 đã có; dữ liệu nguồn lỗi sẽ dừng trước bước áp dụng Rules.
+V3 được ưu tiên khi trùng hash, bao gồm trạng thái khóa và máy đã gỡ. Dữ liệu gốc không bị xóa. Chạy lại không
+ghi đè key V4 đã có; dữ liệu nguồn lỗi sẽ dừng trước bước áp dụng Rules.
 Cập nhật đè app cùng bundle ID để giữ key đã lưu; bản mới vẫn cần xác thực online.
 Secret được lưu trong localStorage khi bấm Lưu, không nằm trong HTML/app/dylib;
 để trống rồi lưu để xóa. Sửa Rules trên máy không tự cập nhật Firebase đang chạy.
@@ -25,7 +25,13 @@ viên; đóng app cũ trước khi gỡ rồi đăng nhập trên máy mới. Ph
 tra lại mỗi 8 giây và không tự chiếm lại khóa đã gỡ.
 
 Khi khóa key, nhập lời nhắn và thời gian theo phút/giờ/ngày hoặc vĩnh viễn.
-Client giữ key và binding trong lúc khóa, ẩn menu và hiển thị lời nhắn. Hết thời
+Web có xem trước ảnh và nội dung; để trống sẽ dùng “Tài khoản đã bị khóa.”.
+Ảnh `assets/license-lock.jpg` được nhúng vào dylib và TIPA qua
+`tools/embed_license_lock_image.cjs` → `sources/LicenseLockImage.inc`.
+Client giữ key và binding trong lúc khóa, ẩn menu và hiển thị ảnh kèm lời nhắn.
+Thông báo lắc một lần khi xuất hiện hoặc đổi lời nhắn; kiểm tra mạng định kỳ
+không lắc lại. Reduce Motion bỏ hiệu ứng. OK đóng thông báo, không mở khóa.
+Admin mở khóa sẽ gỡ thông báo và khôi phục menu sau xác thực online. Hết thời
 gian khóa sẽ kiểm tra online lại; admin bấm mở sẽ xóa `lock` ngay, giữ nguyên
 hạn dùng và binding. Client theo dõi thay đổi qua SSE rồi đọc HTTPS lại trước khi
 khôi phục quyền; mất mạng không được coi là mở khóa. Có kiểm tra mỗi 8 giây làm
