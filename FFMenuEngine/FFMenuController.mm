@@ -106,15 +106,15 @@
 - (void)updateStatus {
     LaraMemoryReader *reader = [LaraMemoryReader sharedInstance];
     if (reader.isKernelReady) {
-        if (reader.isAttached) {
+        if (reader.targetProcAddress != 0) {
             _statusLabel.text = [NSString stringWithFormat:@"DarkSword | PID: %d | Base: 0x%llx", reader.targetPID, (unsigned long long)reader.mainModuleBase];
             _statusLabel.textColor = [UIColor greenColor];
         } else {
-            _statusLabel.text = reader.lastError.length ? reader.lastError : @"DarkSword Ready | Not Attached";
+            _statusLabel.text = @"DarkSword Ready | Not Attached to FreeFire";
             _statusLabel.textColor = [UIColor yellowColor];
         }
     } else {
-        _statusLabel.text = reader.lastError.length ? reader.lastError : @"Run DarkSword in Lara first";
+        _statusLabel.text = @"Run DarkSword Exploit in Lara first";
         _statusLabel.textColor = [UIColor redColor];
     }
 }
@@ -180,18 +180,14 @@
     
     if ([key isEqualToString:@"attach"]) {
         LaraMemoryReader *reader = [LaraMemoryReader sharedInstance];
-        NSString *firstError = @"";
         BOOL success = [reader attachToProcessNamed:@"FreeFire"];
         if (!success) {
-            firstError = reader.lastError;
             success = [reader attachToProcessNamed:@"FreeFireMax"];
-            if (!success) {
-                NSLog(@"[FFMenu] FreeFire: %@; FreeFireMax: %@", firstError, reader.lastError);
-            }
         }
         [self updateStatus];
         if (!success) {
-            _statusLabel.text = [NSString stringWithFormat:@"FF: %@ | MAX: %@", firstError, reader.lastError];
+            _statusLabel.text = @"FreeFire process not running. Open game first.";
+            _statusLabel.textColor = [UIColor orangeColor];
         }
     }
 }
