@@ -27,14 +27,18 @@ public class UiSmokeTest {
         Bitmap bitmap=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(bitmap);
         File file=new File(activity.getActivity().getExternalFilesDir(null),name+".png");
         try(var output=new FileOutputStream(file)){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,output));}bitmap.recycle();
-        // Shell can write shared screenshots; it cannot copy app-private external files on Android 15.
+        // UTP removes app data, so capture directly into shared storage using single shell commands.
         String destination="/sdcard/Download/android-viet/"+activity.getActivity().getPackageName();
         String capture=destination+"/"+name+".png";
-        try(var descriptor=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("mkdir -p "+destination+"; screencap -p "+capture+"; test -s "+capture+" && echo CAPTURE_OK");
+        shell("mkdir -p "+destination);shell("screencap -p "+capture);
+        byte[] retained=shell("cat "+capture);
+        assertTrue("Retained screenshot must be a PNG",retained.length>8&&retained[0]==(byte)0x89&&retained[1]=='P'&&retained[2]=='N'&&retained[3]=='G');
+    }
+    private byte[] shell(String command)throws Exception{
+        try(var descriptor=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command);
             var input=new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor);
             var output=new java.io.ByteArrayOutputStream()){
-            byte[] buffer=new byte[1024];int n;while((n=input.read(buffer))!=-1)output.write(buffer,0,n);
-            assertTrue("Shell screenshot must be retained: "+output,output.toString("UTF-8").contains("CAPTURE_OK"));
+            byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1){if(output.size()+n>8*1024*1024)throw new java.io.IOException("Shell output too large");output.write(buffer,0,n);}return output.toByteArray();
         }
     }
     @Test public void loginRequiresKeyAndStartIsLocked() throws Throwable {
