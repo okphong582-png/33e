@@ -27,10 +27,15 @@ public class UiSmokeTest {
         Bitmap bitmap=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(bitmap);
         File file=new File(activity.getActivity().getExternalFilesDir(null),name+".png");
         try(var output=new FileOutputStream(file)){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,output));}bitmap.recycle();
-        // UTP uninstalls tested apps after the run, so retain screenshots outside app data.
+        // Shell can write shared screenshots; it cannot copy app-private external files on Android 15.
         String destination="/sdcard/Download/android-viet/"+activity.getActivity().getPackageName();
-        try(var descriptor=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("mkdir -p "+destination+"; cp "+file.getAbsolutePath()+" "+destination+"/"+name+".png");
-            var input=new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor)){while(input.read()!=-1){}}
+        String capture=destination+"/"+name+".png";
+        try(var descriptor=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("mkdir -p "+destination+"; screencap -p "+capture+"; test -s "+capture+" && echo CAPTURE_OK");
+            var input=new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor);
+            var output=new java.io.ByteArrayOutputStream()){
+            byte[] buffer=new byte[1024];int n;while((n=input.read(buffer))!=-1)output.write(buffer,0,n);
+            assertTrue("Shell screenshot must be retained: "+output,output.toString("UTF-8").contains("CAPTURE_OK"));
+        }
     }
     @Test public void loginRequiresKeyAndStartIsLocked() throws Throwable {
         activity.runOnUiThread(()->{
