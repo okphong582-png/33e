@@ -125,7 +125,8 @@ static const uint64_t OFF_TASK_MAP       = 0x28;  // map
 - (BOOL)enableJITAndPatchCSFlagsForProcess:(uint64_t)procAddress {
     if (!procAddress || !_isKernelReady) return NO;
     
-    uint64_t csflags_offset = off_proc_p_csflags ? off_proc_p_csflags : 0x300;
+    // Offset for p_csflags in proc_t on iOS 17-18
+    uint64_t csflags_offset = 0x300;
     uint32_t csflags = ds_kread32(procAddress + csflags_offset);
     
     // Set CS_DEBUGGED, CS_GET_TASK_ALLOW, CS_VALID
