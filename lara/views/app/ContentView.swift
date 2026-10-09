@@ -54,6 +54,14 @@ struct ContentView: View {
         }
     }
     
+    private var AlertsSection: some View {
+        Section {
+            if !mgr.hasOffsets {
+                PlainAlert(title: "No offsets found!", icon: "exclamationmark.triangle.fill", text: "Kernelcache offsets are missing. Click \"Run Exploit\" and then fetch the offsets.")
+            }
+        }
+    }
+
     private var FFMenuEngineSection: some View {
         Section(header: HeaderLabel(text: "Free Fire Menu Engine (iOS 17-18)", icon: "gamecontroller.fill")) {
             VStack(alignment: .leading, spacing: 8) {
@@ -61,7 +69,7 @@ struct ContentView: View {
                     Text("Exploit Status:")
                         .fontWeight(.semibold)
                     Spacer()
-                    if LaraFFBridge.shared().isExploitReady() {
+                    if mgr.dsready {
                         Text("Active (Kernel R/W Ready)")
                             .foregroundColor(.green)
                             .fontWeight(.bold)
@@ -86,6 +94,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.cyan)
+                .disabled(!mgr.dsready || mgr.dsrunning)
                 
                 Button(action: {
                     LaraFFBridge.shared().toggleMenuOverlay()
