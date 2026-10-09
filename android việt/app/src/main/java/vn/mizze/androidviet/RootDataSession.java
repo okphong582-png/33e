@@ -14,6 +14,9 @@ final class RootDataSession implements AutoCloseable {
     private static volatile long sampledAt;
     private static volatile boolean playersReady,aimReady,silentReady;
     private static volatile RootDataSession activeSession;
+    private static volatile Runnable frameListener;
+    static void listenFrames(Runnable listener){frameListener=listener;}
+    private static void frameChanged(){Runnable listener=frameListener;if(listener!=null)listener.run();}
     private static volatile long viewportEpoch;
     private static volatile JSONObject frame=new JSONObject();
     private static volatile long frameAt;
@@ -36,7 +39,7 @@ final class RootDataSession implements AutoCloseable {
     static JSONObject frame(){return playersReady()?frame:null;}
     static void viewport(int width,int height){if(width==viewportWidth&&height==viewportHeight)return;viewportWidth=width;viewportHeight=height;viewportEpoch++;playersReady=false;aimReady=false;silentReady=false;RootDataSession active=activeSession;if(active!=null)active.renew();}
     static int capabilityMask(){return (featuresReady()?1:0)|(playersReady()?2:0)|(aimReady()?4:0)|(silentReady()?8:0);}
-    private void reset(){featuresReady=false;playersReady=false;aimReady=false;frame=new JSONObject();
+    private void reset(){featuresReady=false;playersReady=false;aimReady=false;frame=new JSONObject();frameChanged();
         var edit=prefs.edit();for(String key:AndroidGameData.ACTIVE_KEYS)edit.putBoolean(key,false);edit.apply();}
     private static String quote(String value){return "'"+value.replace("'","'\"'\"'")+"'";}
     void start(){
@@ -52,20 +55,20 @@ final class RootDataSession implements AutoCloseable {
                     process=active;control=new BufferedWriter(new OutputStreamWriter(active.getOutputStream(),StandardCharsets.UTF_8));renew();
                 }
                 try(Reader input=new InputStreamReader(active.getInputStream(),StandardCharsets.UTF_8)){
-                    StringBuilder line=new StringBuilder();int c;
-                    while((c=input.read())!=-1){
+                    StringBuilder line=new StringBuilder();char[] chunk=new char[8192];int length;
+                    while((length=input.read(chunk))!=-1){for(int offset=0;offset<length;offset++){char c=chunk[offset];
                         if(c=='\n'){
                             try{JSONObject data=new JSONObject(line.toString());String next=data.optString("message","");
                                 if(data.optString("state").equals("local_player"))next+="\nTên đọc được: "+data.optString("name").replaceAll("[\\p{Cntrl}]","");
                                 if(!next.isEmpty()&&!closed){status=next+"\n"+data.optString("featureStatus","");featuresReady=data.optBoolean("featuresReady");sampledAt=SystemClock.elapsedRealtime();
                                     JSONObject nextFrame=data.optJSONObject("frame");long sample=nextFrame==null?0:nextFrame.optLong("sampleUptime");
                                     long now=SystemClock.elapsedRealtime();boolean fresh=nextFrame!=null&&FrameFreshness.accepts(sample,now,nextFrame.optLong("viewportEpoch"),viewportEpoch,nextFrame.optInt("width"),nextFrame.optInt("height"),viewportWidth,viewportHeight);
-                                    frame=nextFrame==null?new JSONObject():nextFrame;playersReady=fresh&&data.optBoolean("playersReady");aimReady=playersReady&&data.optBoolean("aimReady");silentReady=playersReady&&data.optBoolean("silentReady");frameAt=sample;
+                                    frame=nextFrame==null?new JSONObject():nextFrame;playersReady=fresh&&data.optBoolean("playersReady");aimReady=playersReady&&data.optBoolean("aimReady");silentReady=playersReady&&data.optBoolean("silentReady");frameAt=sample;frameChanged();
                                 }
                             }catch(Exception ignored){/* su diagnostics are not player data. */}
                             line.setLength(0);
-                        }else{if(line.length()>=262144)throw new IOException("Helper output too large");line.append((char)c);}
-                    }
+                        }else{if(line.length()>=262144)throw new IOException("Helper output too large");line.append(c);}
+                    }}
                 }
                 if(!closed){reset();}
                 if(!closed)status="Bộ đọc đã dừng; kiểm tra quyền root/SELinux và mở lại menu.";
@@ -84,7 +87,7 @@ final class RootDataSession implements AutoCloseable {
                 .put("fastFire",prefs.getBoolean("FastFire",false)).put("speed",prefs.getBoolean("RunSpeed",false))
                 .put("speedValue",prefs.getFloat("RunSpeedValue",6))
                 .put("silent",prefs.getBoolean("SilentAim",false)).put("silentFov",prefs.getFloat("SilentFovSize",18)).put("silentDistance",prefs.getFloat("SilentMaxDistance",100))
-                .put("skeleton",prefs.getBoolean("Skeleton",false)).put("axes",prefs.getBoolean("Line",false))
+                .put("balanced",prefs.getBoolean("BalancedRender",false)).put("skeleton",prefs.getBoolean("Skeleton",false)).put("axes",prefs.getBoolean("Line",false))
                 .put("cube",prefs.getBoolean("Box3D",false)).put("name",prefs.getBoolean("Name",false))
                 .put("head",prefs.getBoolean("AimHead",false)).put("neck",prefs.getBoolean("AimNeck",false))
                 .put("fire",prefs.getBoolean("AimbotFire",false)).put("scope",prefs.getBoolean("AimbotScope",false))

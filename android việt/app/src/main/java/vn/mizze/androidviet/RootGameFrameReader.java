@@ -16,6 +16,8 @@ final class RootGameFrameReader {
     private final Map<Long,GameGeometry.V> positions=new HashMap<>();
     private final Map<Long,GameGeometry.TRS> trs=new HashMap<>();
     private final Map<Long,Integer> ancestry=new HashMap<>();
+    private record Pool(long address,long array,int count,boolean unsafe){}
+    private final Map<Long,Pool> pools=new HashMap<>();
     RootGameFrameReader(RootReaderMain.Memory memory,long base,long game,long match,long local){this.m=memory;this.base=base;this.game=game;this.match=match;this.local=local;
         nodeMemory=new TransformNodeReader.Memory(){public long pointer(long address)throws Exception{return m.ptr(address);}public String string(long address)throws Exception{return m.ascii(address);}public int instruction(long address)throws Exception{return m.i32(address);}};
     }
@@ -38,19 +40,36 @@ final class RootGameFrameReader {
         if(data!=m.ptr(nativePtr+0x38)||index!=m.i32(nativePtr+0x40))throw new IOException("Transform changed during read");positions.put(managed,result);return result;
     }
     private GameGeometry.V bone(long player,int offset)throws Exception{
-        long node=m.ptr(player+offset);return transform(TransformNodeReader.resolve(node,base,nodeMemory));
+        long node=m.ptr(player+offset);if(!pointer(node))throw new IOException("Missing bone node");long klass=m.ptr(node);
+        long managed;if(m.verifiedNodes.contains(klass)){managed=m.ptr(node+0x10);if(!pointer(managed))throw new IOException("Missing managed bone");}
+        else{managed=TransformNodeReader.resolve(node,base,nodeMemory);m.verifiedNodes.add(klass);}
+        return transform(managed);
     }
     private GameGeometry.V maybeBone(long p,int offset){try{return bone(p,offset);}catch(Exception e){return null;}}
     private GameGeometry.V head(long p)throws Exception{try{return bone(p,0x6A0);}catch(Exception e){return bone(p,0xA00);}}
     private GameGeometry.V hip(long p)throws Exception{try{return bone(p,0x6A8);}catch(Exception e){return bone(p,0xA08);}}
     private int pri(long p,int index)throws Exception{
-        long pool=m.ptr(p+0x70);boolean unsafe=named(pool,"PRIDataPoolUnsafe","GCommon");
-        if(!unsafe&&!named(pool,"PRIDataPool","GCommon"))throw new IOException("Unknown PRI pool");
-        int count=m.i32(pool+0x18);long array=m.ptr(pool+0x10);
+        long pool=m.ptr(p+0x70);Pool layout=pools.get(p);
+        if(layout==null||layout.address()!=pool||layout.array()!=m.ptr(pool+0x10)){
+            boolean unsafe=named(pool,"PRIDataPoolUnsafe","GCommon");
+            if(!unsafe&&!named(pool,"PRIDataPool","GCommon"))throw new IOException("Unknown PRI pool");
+            layout=new Pool(pool,m.ptr(pool+0x10),m.i32(pool+0x18),unsafe);pools.put(p,layout);
+        }
+        boolean unsafe=layout.unsafe();int count=layout.count();long array=layout.array();
         if(count<index+1||count>4096||!pointer(array)||m.ptr(array+0x18)<index+1||m.ptr(array+0x18)>4096)throw new IOException("Invalid PRI array");
         long entry=m.ptr(array+0x20+index*8L);if(!pointer(entry))throw new IOException("Missing PRI entry");
         long value=unsafe?m.ptr(entry+0x18):entry+0x18;
         return PriValues.decode(index,m.read(value,PriValues.width(index)));
+    }
+    private boolean firing()throws Exception{
+        if(m.i32(base+0x6F0FBC4L)!=0xF943A260||m.i32(base+0x734323CL)!=0x39452260
+          ||m.i32(base+0x74793B8L)!=0xF9404A60||m.i32(base+0x74DA930L)!=0xB9401100)return false;
+        return LocalFireReader.firing(new LocalFireReader.Memory(){
+            public long pointer(long at)throws Exception{return m.ptr(at);}
+            public int integer(long at)throws Exception{return m.i32(at);}
+            public int byteValue(long at)throws Exception{return m.read(at,1)[0]&255;}
+            public boolean instance(long object,long klass)throws Exception{return m.instanceOf(object,klass);}
+        },base,local);
     }
     private float[] matrix(long at)throws Exception{ByteBuffer b=bytes(m.read(at,64));float[] a=new float[16];for(int i=0;i<16;i++){a[i]=b.getFloat();if(!Float.isFinite(a[i])||Math.abs(a[i])>100000)throw new IOException("Invalid camera matrix");}return a;}
     private void verify()throws Exception{
@@ -62,6 +81,19 @@ final class RootGameFrameReader {
         if(playerClass==0)throw new IOException("Local player class mismatch");
     }
     private JSONArray screen(GameGeometry.V v,float[] vp)throws JSONException{float[] p=v==null?null:GameGeometry.project(v,vp);return p==null?null:new JSONArray().put(p[0]).put(p[1]);}
+    private record RenderPlayer(long player,GameGeometry.V head,GameGeometry.V hip,int hp,int max,float distance){}
+    private JSONObject renderPlayer(RenderPlayer r,float[] vp,JSONObject config)throws Exception{
+        long p=r.player();GameGeometry.V h=r.head(),hips=r.hip();int hp=r.hp(),max=r.max();float distance=r.distance();
+        GameGeometry.V left=maybeBone(p,0x6D8),right=maybeBone(p,0x6E0);if(left!=null&&left.sub(hips).length()>4)left=null;if(right!=null&&right.sub(hips).length()>4)right=null;
+                JSONObject bones=new JSONObject().put("head",screen(h,vp)).put("hip",screen(hips,vp)).put("leftFoot",screen(left,vp)).put("rightFoot",screen(right,vp));
+                int[] offsets={0x6C0,0x6C8,0x720,0x718,0x730,0x728};String[] names={"leftShoulder","rightShoulder","leftHand","rightHand","leftElbow","rightElbow"};
+                if(config.optBoolean("skeleton",true))for(int i=0;i<offsets.length;i++){GameGeometry.V v=maybeBone(p,offsets[i]);if(v!=null&&v.sub(hips).length()<4)bones.put(names[i],screen(v,vp));}
+                String name=config.optBoolean("name",true)?m.managedString(m.ptr(p+0x490)).replaceAll("[\\p{Cntrl}]",""):"";
+                JSONArray axes=config.optBoolean("axes",true)?new JSONArray().put(screen(hips,vp)).put(screen(hips.add(new GameGeometry.V(.5f,0,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,.5f,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,0,.5f)),vp)):new JSONArray();
+                JSONArray cube=new JSONArray();float bottom=Math.min(left==null?hips.y():left.y(),right==null?hips.y():right.y()),top=h.y()+.15f;
+                if(config.optBoolean("cube",false))for(int corner=0;corner<8;corner++)cube.put(screen(new GameGeometry.V(hips.x()+((corner&1)==0?-.35f:.35f),(corner&2)==0?bottom:top,hips.z()+((corner&4)==0?-.25f:.25f)),vp));
+                return new JSONObject().put("name",name).put("hp",hp).put("maxHp",max).put("distance",distance).put("bones",bones).put("axes",axes).put("cube",cube);
+    }
     JSONObject read(JSONObject config,java.util.function.LongSupplier lease,java.util.function.BooleanSupplier unchanged)throws Exception{
         long started=SystemClock.elapsedRealtime();verify();
         long manager=m.ptr(game+0xD8),camera=pointer(manager)?m.ptr(manager+0x20):0;
@@ -80,12 +112,12 @@ final class RootGameFrameReader {
         for(int i=0;i<count;i++){long entry=entries+0x20+i*24L;if(m.i32(entry)<0)continue;long p=m.ptr(entry+16);if(!pointer(p)||!m.instanceOf(p,playerClass)||!seen.add(p))throw new IOException("Player entry mismatch");players.add(p);includesLocal|=p==local;}
         if(!includesLocal||players.size()!=count-free)throw new IOException("Dictionary/local player mismatch");
         int team=pri(local,34),localHP=pri(local,0),maxHP=pri(local,1);if(team>255||maxHP<1||maxHP>10000||localHP>maxHP)throw new IOException("Local PRI values invalid");
-        boolean firing=PriValues.firing(pri(local,21)),scope=pri(local,12)!=0;
+        boolean firing=firing(),scope=pri(local,12)!=0;
         float width=(float)config.optDouble("width",0),height=(float)config.optDouble("height",0);
         boolean silent=config.optBoolean("silent");
         float fov=(float)Math.max(5,Math.min(48,config.optDouble(silent?"silentFov":"fov",silent?18:40))),radius=Math.min(width,height)*fov/100;
         float maxDistance=(float)Math.max(50,Math.min(500,config.optDouble(silent?"silentDistance":"distance",silent?100:150)));
-        JSONArray output=new JSONArray();GameGeometry.V target=null;long targetPlayer=0;float[] targetScreen=null;float best=radius;
+        JSONArray output=new JSONArray();ArrayList<RenderPlayer> renderPlayers=new ArrayList<>();GameGeometry.V target=null;long targetPlayer=0;float[] targetScreen=null;float best=radius;
         for(long p:players){if(p==local)continue;
             try{
                 int enemyTeam=pri(p,34),hp=pri(p,0),max=pri(p,1);if(enemyTeam>255||hp<=0||max<1||max>10000||hp>max||team>0&&team==enemyTeam)continue;
@@ -93,15 +125,7 @@ final class RootGameFrameReader {
                 if(!h.valid()||!hips.valid()||torso<.1f||torso>3||distance<.1f||distance>maxDistance)continue;
                 GameGeometry.V aim=config.optBoolean("neck")&&!config.optBoolean("head")?GameGeometry.neck(h,hips):h;float[] point=GameGeometry.project(aim,vp);
                 float center=GameGeometry.centerDistance(point,width,height);if(center<best&&point[0]>=0&&point[0]<=1&&point[1]>=0&&point[1]<=1){best=center;target=aim;targetPlayer=p;targetScreen=point;}
-                GameGeometry.V left=maybeBone(p,0x6D8),right=maybeBone(p,0x6E0);if(left!=null&&left.sub(hips).length()>4)left=null;if(right!=null&&right.sub(hips).length()>4)right=null;
-                JSONObject bones=new JSONObject().put("head",screen(h,vp)).put("hip",screen(hips,vp)).put("leftFoot",screen(left,vp)).put("rightFoot",screen(right,vp));
-                int[] offsets={0x6C0,0x6C8,0x720,0x718,0x730,0x728};String[] names={"leftShoulder","rightShoulder","leftHand","rightHand","leftElbow","rightElbow"};
-                if(config.optBoolean("skeleton",true))for(int i=0;i<offsets.length;i++){GameGeometry.V v=maybeBone(p,offsets[i]);if(v!=null&&v.sub(hips).length()<4)bones.put(names[i],screen(v,vp));}
-                String name=config.optBoolean("name",true)?m.managedString(m.ptr(p+0x490)).replaceAll("[\\p{Cntrl}]",""):"";
-                JSONArray axes=config.optBoolean("axes",true)?new JSONArray().put(screen(hips,vp)).put(screen(hips.add(new GameGeometry.V(.5f,0,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,.5f,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,0,.5f)),vp)):new JSONArray();
-                JSONArray cube=new JSONArray();float bottom=Math.min(left==null?hips.y():left.y(),right==null?hips.y():right.y()),top=h.y()+.15f;
-                if(config.optBoolean("cube",false))for(int corner=0;corner<8;corner++)cube.put(screen(new GameGeometry.V(hips.x()+((corner&1)==0?-.35f:.35f),(corner&2)==0?bottom:top,hips.z()+((corner&4)==0?-.25f:.25f)),vp));
-                output.put(new JSONObject().put("name",name).put("hp",hp).put("maxHp",max).put("distance",distance).put("bones",bones).put("axes",axes).put("cube",cube));
+                renderPlayers.add(new RenderPlayer(p,h,hips,hp,max,distance));
 
             }catch(Exception ignored){/* One unloaded player never invalidates the dictionary or supplies fabricated data. */}
         }
@@ -123,7 +147,7 @@ final class RootGameFrameReader {
         else if((!silent||silentReady)&&target!=null&&localHP>0&&(!silent||firing)&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope)){
             // Re-read identity, target health/team and lease immediately before the only rotation write.
             if(SystemClock.elapsedRealtime()-started>300||SystemClock.elapsedRealtime()>=lease.getAsLong()||!unchanged.getAsBoolean())throw new IOException("Frame/lease expired before aim");
-            int currentTeam=pri(targetPlayer,34);if(pri(targetPlayer,0)>0&&!(team>0&&team==currentTeam)&&m.instanceOf(targetPlayer,playerClass)&&m.ptr(match+0xD8)==local&&m.i32(dictionary+0x2C)==version){
+            int currentTeam=pri(targetPlayer,34);if(pri(targetPlayer,0)>0&&!(team>0&&team==currentTeam)&&m.instanceOf(targetPlayer,playerClass)&&m.ptr(match+0xD8)==local&&m.i32(dictionary+0x2C)==version&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing(),pri(local,12)!=0)){
                 GameGeometry.Q rotation=GameGeometry.look(target.sub(cameraPos));if(rotation!=null){if(!silent){m.writeQuaternion(local+0x614,rotation);aimStatus="Aim: đã ghi rotation tới mục tiêu · cần kiểm tra trong trận.";}}
             }
         }else if(enabled&&target!=null)aimStatus="Aim: đã chọn mục tiêu, chờ điều kiện bắn/ngắm.";
@@ -131,17 +155,25 @@ final class RootGameFrameReader {
         final boolean writeSilent=silent&&silentReady&&enabled&&firing&&localHP>0&&target!=null
             &&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope);
         final long selected=targetPlayer;
-        silentController.apply(new AimRotationController.Memory(){
+        AimRotationController.Memory silentMemory=new AimRotationController.Memory(){
             public AimRotationController.Identity identity()throws Exception{
-                if((writeSilent&&SystemClock.elapsedRealtime()>=lease.getAsLong())||!unchanged.getAsBoolean()||RootReaderMain.processStart(m.pid)!=m.start)return null;
+                if(!unchanged.getAsBoolean()||RootReaderMain.processStart(m.pid)!=m.start)return null;
                 long[] c=RootReaderMain.context(m,base);
                 if(c==null||c[0]!=game||c[1]!=match||c[2]!=local||m.i32(dictionary+0x2C)!=version||m.read(local+0x420,1)[0]!=1)return null;
-                if(writeSilent&&(SystemClock.elapsedRealtime()-started>150||pri(local,21)!=2||pri(selected,0)<=0||!m.instanceOf(selected,playerClass)||(team>0&&pri(selected,34)==team)))return null;
+
                 return new AimRotationController.Identity(m.pid,m.start,match,local,m.ptr(local));
             }
             public GameGeometry.Q read(long at)throws Exception{return quaternion(at);}
             public void write(long at,GameGeometry.Q q)throws Exception{m.writeQuaternion(at,q);}
-        },writeSilent,writeSilent?GameGeometry.look(target.sub(cameraPos)):null);
+        };
+        GameGeometry.Q silentRotation=writeSilent?GameGeometry.look(target.sub(cameraPos)):null;
+        if(writeSilent&&silentRotation!=null)AimPulse.publish(started+100,()->{
+            boolean active=SystemClock.elapsedRealtime()<lease.getAsLong()&&unchanged.getAsBoolean()&&firing()&&pri(local,0)>0
+                &&pri(selected,0)>0&&m.instanceOf(selected,playerClass)&&!(team>0&&pri(selected,34)==team);
+            silentController.apply(silentMemory,active,active?silentRotation:null);
+        },()->silentController.apply(silentMemory,false,null));
+        else AimPulse.clear();
+        for(RenderPlayer player:renderPlayers)try{output.put(renderPlayer(player,vp,config));}catch(Exception ignored){}
         return new JSONObject().put("players",output).put("width",width).put("height",height).put("viewportEpoch",config.optLong("viewportEpoch")).put("sampleUptime",started).put("playersReady",true).put("aimReady",aimReady).put("silentReady",silentReady).put("aimStatus",aimStatus)
             .put("target",targetScreen==null?JSONObject.NULL:new JSONArray().put(targetScreen[0]).put(targetScreen[1])).put("playerCount",players.size());
     }

@@ -45,7 +45,7 @@ public final class OverlayService extends Service implements LicenseClient.Liste
             .addAction(new Notification.Action.Builder(null,"Dừng menu",stop).build()).build();
         if(Build.VERSION.SDK_INT>=34)startForeground(1,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);else startForeground(1,notification);
         if(BuildConfig.ROOT_EDITION&&rootData==null){rootData=new RootDataSession(this,license);rootData.start();}
-        expanded=true;showEsp();showOverlay();main.removeCallbacks(guard);main.removeCallbacks(render);main.post(render);main.post(guard);return START_NOT_STICKY;
+        expanded=true;showEsp();showOverlay();RootDataSession.listenFrames(()->main.post(render));main.removeCallbacks(guard);main.removeCallbacks(render);main.post(render);main.post(guard);return START_NOT_STICKY;
     }
     private final Runnable guard=new Runnable(){@Override public void run(){
         if(!license.authorized()||!Settings.canDrawOverlays(OverlayService.this)){stopSelf();return;}
@@ -54,7 +54,7 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         main.postDelayed(this,500);
     }};
     private org.json.JSONObject renderedFrame;
-    private final Runnable render=new Runnable(){@Override public void run(){org.json.JSONObject current=RootDataSession.frame();if(esp!=null&&current!=renderedFrame){renderedFrame=current;esp.postInvalidateOnAnimation();}main.postDelayed(this,ui.prefs.getBoolean("BalancedRender",false)?33:16);}};
+    private final Runnable render=new Runnable(){@Override public void run(){main.removeCallbacks(this);org.json.JSONObject current=RootDataSession.frame();if(esp!=null&&current!=renderedFrame){renderedFrame=current;esp.postInvalidateOnAnimation();}main.postDelayed(this,ui.prefs.getBoolean("BalancedRender",false)?33:250);}};
     private void showEsp(){
         if(!BuildConfig.ROOT_EDITION||esp!=null)return;
         esp=new EspView(this);espParams=new WindowManager.LayoutParams(-1,-1,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -119,6 +119,6 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         if("DarkTheme".equals(key)){if(overlay instanceof MenuPanel)page=((MenuPanel)overlay).page();showOverlay();}
     }
     @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(overlay instanceof MenuPanel)page=((MenuPanel)overlay).page();showOverlay();}
-    @Override public void onDestroy(){main.removeCallbacksAndMessages(null);if(esp!=null){try{manager.removeView(esp);}catch(RuntimeException ignored){}esp=null;}if(rootData!=null)rootData.close();removeOverlay();license.removeListener(this);ui.prefs.unregisterOnSharedPreferenceChangeListener(this);stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
+    @Override public void onDestroy(){RootDataSession.listenFrames(null);main.removeCallbacksAndMessages(null);if(esp!=null){try{manager.removeView(esp);}catch(RuntimeException ignored){}esp=null;}if(rootData!=null)rootData.close();removeOverlay();license.removeListener(this);ui.prefs.unregisterOnSharedPreferenceChangeListener(this);stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
     @Override public IBinder onBind(Intent intent){return null;}
 }
