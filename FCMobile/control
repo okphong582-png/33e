@@ -1,0 +1,8 @@
+Package: com.hoanghadev.fcm.menu
+Name: FC Mobile Menu
+Version: 0.1
+Architecture: iphoneos-arm
+Description: FC Mobile VN shot-error settings experiment
+Maintainer: HoangHaDev
+Author: HoangHaDev
+Section: Tweaks

@@ -1,0 +1,30 @@
+name: Build FC Mobile only
+on:
+  push:
+    branches: [codex/fc-mobile]
+    paths: ["FCMobile/**", ".github/workflows/fc-mobile.yml"]
+  workflow_dispatch:
+jobs:
+  build:
+    name: FC Mobile ${{ matrix.kind }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [dylib, tipa]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test settings restoration and process changes
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined FCMobile/tests/settings_test.cpp -o /tmp/fcm-test
+          /tmp/fcm-test
+      - name: Setup Theos
+        uses: Randomblock1/theos-action@v1
+      - name: Build FC Mobile
+        working-directory: FCMobile
+        run: make clean package BUILD_KIND=${{ matrix.kind }} FINALPACKAGE=1 FOR_RELEASE=1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FCMobile-${{ matrix.kind }}
+          path: FCMobile/packages/*.${{ matrix.kind }}
+          if-no-files-found: error
