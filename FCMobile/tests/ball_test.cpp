@@ -62,5 +62,21 @@ int main(){
     m.onRead=[&](uint64_t a){if(a==storage+0x40)m.seed(writer+0x230,history+0x1000);};
     assert(!reader.sample(image).visible);m.onRead={};m.bytes=saved;
     assert(reader.sample(image).visible&&m.writes==0);
+    // Regular matches have no Lua practice scene. Native match consumers use ball 0.
+    m.seed<uint64_t>(image+0xa263b60,0);m.seed(image+0xa3f4318,table);
+    m.seed<int32_t>(table+34*32+0x18,1);m.seed(balls,ball);
+    assert(reader.sample(image).visible&&m.writes==0);
+    m.seed<uint64_t>(image+0xa3f4318,0);assert(reader.sample(image).issue==fcm::BallIssue::source);m.seed(image+0xa3f4318,table);
+    m.seed<int32_t>(table+34*32+0x18,0);assert(reader.sample(image).issue==fcm::BallIssue::source);
+    m.seed<int32_t>(table+34*32+0x18,2);assert(reader.sample(image).issue==fcm::BallIssue::source);m.seed<int32_t>(table+34*32+0x18,1);
+    m.seed<uint64_t>(balls,0);assert(reader.sample(image).issue==fcm::BallIssue::ball);m.seed(balls,ball);
+    m.seed<int32_t>(history+0x9610,-1);assert(reader.sample(image).issue==fcm::BallIssue::history);m.seed<int32_t>(history+0x9610,601);
+    m.seed<int32_t>(manager+0x40,4);assert(reader.sample(image).issue==fcm::BallIssue::camera);m.seed<int32_t>(manager+0x40,3);
+    auto matchSaved=m.bytes;
+    m.onRead=[&](uint64_t a){if(a==storage+0x40)m.seed<uint64_t>(image+0xa3f4318,0);};
+    assert(reader.sample(image).issue==fcm::BallIssue::changing);m.onRead={};m.bytes=matchSaved;
+    m.onRead=[&](uint64_t a){if(a==storage+0x40)m.seed<int32_t>(table+34*32+0x18,0);};
+    assert(reader.sample(image).issue==fcm::BallIssue::changing);m.onRead={};m.bytes=matchSaved;
+    assert(reader.sample(image).visible&&m.writes==0);
     std::cout<<"FC Mobile ball projection and stale-sample rejection passed\n";
 }

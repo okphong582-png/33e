@@ -63,5 +63,8 @@ int main(){
     // A native mode reset can reuse the same object: do not restore the old mode's flag.
     assert(goal.update(m,image,true)==fcm::State::ready);writes=m.writes;
     m.seed<int32_t>(next+0xc4,1);assert(goal.update(m,image,false)==fcm::State::off&&m.bytes[next]==1&&m.writes==writes);
+    m.seed<uint64_t>(image+0xa263b60,0);m.seed(image+0xa3f4318,table);m.seed<int32_t>(table+123*32+0x18,1);
+    m.seed<uint8_t>(next,0);assert(goal.update(m,image,true)==fcm::State::ready&&m.bytes[next]==1);
+    assert(goal.update(m,image,false)==fcm::State::off&&m.bytes[next]==0);
     std::cout<<"FC Mobile Open Goal ownership, restoration and stale-root rejection passed\n";
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "ShotSettings.h"
+#include "ComponentRoot.h"
 namespace fcm {
 // Experimental native OpenGoalShootingLogic toggle, not a ball-physics redirect.
 class OpenGoal {
@@ -7,11 +8,10 @@ class OpenGoal {
     uint8_t original_=0;
     int32_t mode_=0;
     bool applied_=false;
-    static bool pointer(uint64_t p){return p>=0x10000&&p<0x0000800000000000ULL&&(p&7)==0;}
     static bool resolve(Memory &m,uint64_t image,uint64_t &object){
-        uint64_t registry=0,table=0,wrapper=0;
-        return m.read(image+0xa263b60,registry)&&pointer(registry)&&m.read(registry+8,table)&&pointer(table)&&
-            m.read(table+123*32+0x20,wrapper)&&pointer(wrapper)&&m.read(wrapper+8,object)&&pointer(object);
+        ComponentRoot root;
+        if(!resolveComponent(m,image,123,root)||!root.unchanged(m))return false;
+        object=root.object;return true;
     }
 public:
     bool applied()const{return applied_;}

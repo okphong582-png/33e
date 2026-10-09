@@ -6,6 +6,18 @@
 #include <memory>
 static UIColor *Mint(){return [UIColor colorWithRed:.35 green:.95 blue:.77 alpha:1];}
 static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontOfSize:size weight:weight];}
+static NSString *BallStatus(const fcm::BallSnapshot &ball){
+    if(ball.visible)return @"ESP: đang theo dõi bóng";
+    switch(ball.issue){
+        case fcm::BallIssue::source:return @"ESP: chưa có dữ liệu trận";
+        case fcm::BallIssue::ball:return @"ESP: chưa tìm thấy bóng";
+        case fcm::BallIssue::history:return @"ESP: chưa có vị trí bóng";
+        case fcm::BallIssue::camera:return @"ESP: chưa có camera hợp lệ";
+        case fcm::BallIssue::projection:return @"ESP: bóng ngoài khung hình";
+        case fcm::BallIssue::changing:return @"ESP: dữ liệu đang chuyển cảnh";
+        default:return @"ESP: chờ dữ liệu bóng";
+    }
+}
 @interface FCMBallView : UIView {
     fcm::BallSnapshot _ball;
 }
@@ -112,11 +124,11 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
         UILabel *credit=[UILabel new];credit.text=@"HoangHaDev";credit.textColor=Mint();credit.font=Font(11,UIFontWeightMedium);credit.frame=CGRectMake(20,47,190,16);[_panel addSubview:credit];
         _close=[self button:@"×" action:@selector(toggleMenu)];_close.frame=CGRectMake(244,12,44,44);_close.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter;_close.contentEdgeInsets=UIEdgeInsetsZero;_close.titleLabel.font=Font(25,UIFontWeightMedium);_close.accessibilityLabel=@"Đóng menu";[_panel addSubview:_close];
         UILabel *section=[UILabel new];section.text=@"BÓNG & HỖ TRỢ SÚT";section.textColor=[UIColor colorWithWhite:.5 alpha:1];section.font=Font(10,UIFontWeightSemibold);section.frame=CGRectMake(20,65,240,14);[_panel addSubview:section];
-        _aim=[[FCMFeatureRow alloc] initWithName:@"AimKill thử nghiệm" detail:@"Logic Open Goal của game" symbol:@"target"];[_aim addTarget:self action:@selector(toggleAim) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_aim];
+        _aim=[[FCMFeatureRow alloc] initWithName:@"AimKill thử nghiệm" detail:@"Open Goal · chưa dẫn đường bóng" symbol:@"target"];[_aim addTarget:self action:@selector(toggleAim) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_aim];
         _shot=[[FCMFeatureRow alloc] initWithName:@"Giảm sai số sút" detail:@"Bật trước khi vào trận" symbol:@"soccerball"];[_shot addTarget:self action:@selector(toggleShot) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_shot];
         _line=[[FCMFeatureRow alloc] initWithName:@"ESP line bóng" detail:@"Dây từ tâm màn hình đến bóng" symbol:@"scope"];[_line addTarget:self action:@selector(toggleLine) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_line];
         _divider=[UIView new];_divider.backgroundColor=[UIColor colorWithWhite:1 alpha:.08];[_panel addSubview:_divider];
-        _status=[UILabel new];_status.font=Font(11,UIFontWeightMedium);_status.textColor=[UIColor colorWithWhite:.65 alpha:1];_status.numberOfLines=1;_status.frame=CGRectMake(20,249,264,23);[_panel addSubview:_status];
+        _status=[UILabel new];_status.font=Font(11,UIFontWeightMedium);_status.textColor=[UIColor colorWithWhite:.65 alpha:1];_status.numberOfLines=2;[_panel addSubview:_status];
         [self updateButtons];
         __weak FCMOverlay *weak=self;
         _timer=[NSTimer timerWithTimeInterval:1.0/30.0 repeats:YES block:^(NSTimer *t){[weak tick];}];[NSRunLoop.mainRunLoop addTimer:_timer forMode:NSRunLoopCommonModes];
@@ -134,7 +146,7 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
     CGFloat maxX=MAX(safe.left+32,self.bounds.size.width-safe.right-32),maxY=MAX(safe.top+32,self.bounds.size.height-safe.bottom-32);
     _dot.center=CGPointMake(std::clamp(_dot.center.x,safe.left+32,maxX),std::clamp(_dot.center.y,safe.top+32,maxY));
     // Never assign a frame while a view has an animated transform.
-    CGFloat panelHeight=304;
+    CGFloat panelHeight=318;
     _panel.bounds=CGRectMake(0,0,304,panelHeight);
     CGFloat x=std::clamp(_dot.frame.origin.x,safe.left+8,MAX(safe.left+8,self.bounds.size.width-safe.right-312));
     CGFloat y=std::clamp(_dot.frame.origin.y,safe.top+8,MAX(safe.top+8,self.bounds.size.height-safe.bottom-panelHeight-8));
@@ -142,7 +154,7 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
     _aim.frame=CGRectMake(18,84,268,56);
     _shot.frame=CGRectMake(18,146,268,56);
     _line.frame=CGRectMake(18,208,268,56);
-    _divider.frame=CGRectMake(20,panelHeight-31,264,1);_status.frame=CGRectMake(20,panelHeight-26,264,22);
+    _divider.frame=CGRectMake(20,272,264,1);_status.frame=CGRectMake(20,278,264,32);
     _panel.layer.shadowPath=[UIBezierPath bezierPathWithRoundedRect:_panel.bounds cornerRadius:22].CGPath;
     if(self.geometryChanged)self.geometryChanged();
 }
@@ -191,6 +203,11 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
             }
             if(!aim&&line&&enabled&&snapshot.state==fcm::State::ready&&snapshot.shot!=fcm::State::ready)
                 s->_status.text=@"ESP bóng bật · tham số sút chưa cập nhật";
+            if(line&&snapshot.state!=fcm::State::disconnected&&snapshot.state!=fcm::State::unsupported&&snapshot.state!=fcm::State::denied){
+                NSString *ballStatus=BallStatus(snapshot.ball);
+                if(aim)s->_status.text=[ballStatus stringByAppendingFormat:@"\n%@",s->_status.text];
+                else s->_status.text=ballStatus;
+            }
         });
     });
 }

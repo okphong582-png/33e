@@ -20,17 +20,20 @@ The AimKill trial uses the Lua flag `lxSetOpenGoalShootingLogic`, which maps to 
 | Meaning | VA / field | Evidence |
 |---|---|---|
 | Component registry | `0x10a263b60` | `lxGetBallPos` callback `0x10268a55c` |
+| Regular gameplay component table | `0x10a3f4318` | `0x102adbd58..0x102adbd78` loads this table and resolves component 123; `0x102adc0a4..0x102adc0c0` resolves another gameplay singleton by the same format. Version 0.4 uses this table first. |
 | Scene and component table | registry `+0`, `+8` | Named Lua callbacks resolve native components through this table |
 | GameData component | ID 34, table `+ID*32+0x20` → wrapper `+8` | Component getter `0x102053c10`; runtime accessor `0x1026b3588` loads ball array at `GameData+0x38` |
 | Active ball index | scene `+0x226d8` | `lxGetActiveBall` callback `0x10268c5f8` |
 | Ball published history | ball `+0x90` → writer `+0x230` | `lxGetBallPos` and `lxGetBallSpeed` callbacks use this path |
 | Current frame and position | history `+0x9610`; slot `(frame%600)*64+0x10` | Position load at `0x10268a5c8..0x10268a604` |
+| Ball in regular gameplay | GameData ball index 0 | `0x1022d992c..0x1022d9980`: resolve component 34, call `0x1026b3588` with W1=0, load the same writer/history/position. `0x1022eecac..0x1022eecc4` independently uses ball index 0. |
+| Component record layout | slot `+0x18` count, `+0x20` records, record `+8` object | Generic lookup `0x102af6128..0x102af6168`; main-table readers require exactly one singleton record. |
 | Camera manager | `0x10a2bf528` | Constructor `0x102a5cff0`; native world projection `0x1029844e8..0x102984638` |
 | Active camera | index at manager `+0x40`; camera at manager `+index*8` | Index getter `0x1008dcee0`, camera getter `0x102a5cfdc` |
 | Camera type | vtable `0x10529d148` | RTTI `N15RenderFramework6CameraE`, typeinfo `0x10529d160` |
 | Projection and view | camera `+8` → storage; projection `+0`, view `+0x40` | Getters `0x102a5bedc`, `0x102a5bee4`; native projection uses column-major multiplication and negative camera Z in front |
 
-The ball line validates pointers, matrix values and camera type, then rechecks scene/ball/history/camera identity and the history frame before publishing a sample. The 12-slot upper bound is a conservative limit from the action-ball pool, not a claim that every scene has 12 active balls; an unreadable indexed ball entry is rejected. Mock-memory tests cover projection, quarter-turn camera rotation, translated cameras, invalid values, missing reads and concurrent root/frame replacement.
+The ball line validates pointers, matrix values and camera type, then rechecks source/ball/history/camera identity and the history frame before publishing a sample. The practice-ball fallback is bounded to 16, matching the 16 comparisons in `lxGetActionBallPos` at `0x10268a6e8..0x10268a824`; unreadable indexed ball entries are rejected. Mock-memory tests cover regular gameplay without a Lua scene, singleton counts, source replacement, specific failure categories, projection, quarter-turn camera rotation, translated cameras, invalid values, missing reads and concurrent root/frame replacement.
 
 ## AimKill trial — native Open Goal flag
 
