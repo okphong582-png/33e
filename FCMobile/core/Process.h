@@ -1,6 +1,7 @@
 #pragma once
 #include "ShotSettings.h"
 #include "BallReader.h"
+#include "OpenGoal.h"
 #include <mach/mach.h>
 #include <vector>
 #include <algorithm>
@@ -13,14 +14,15 @@ class Process final:public Memory {
     double lastConnect=-10;
     State connection=State::disconnected;
     ShotSettings shot;
+    OpenGoal openGoal;
     bool findImage();
     bool accepts(uint64_t header);
     void reset();
 public:
-    ~Process()override{restoreShot();reset();}
+    ~Process()override{restoreSettings();reset();}
     bool copy(uint64_t,void *,size_t)override;
     bool store(uint64_t,const void *,size_t)override;
-    Snapshot update(bool enabled,bool line);
-    void restoreShot();
+    Snapshot update(bool enabled,bool line,bool aim);
+    void restoreSettings();
 };
 }

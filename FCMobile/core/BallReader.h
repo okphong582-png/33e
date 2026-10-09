@@ -5,7 +5,7 @@ namespace fcm {
 struct Vec4 {float x=0,y=0,z=0,w=1;};
 struct Matrix {std::array<float,16> v{};};
 struct BallSnapshot {bool visible=false;float x=0,y=0;};
-struct Snapshot {State state=State::off;State shot=State::off;BallSnapshot ball;};
+struct Snapshot {State state=State::off;State shot=State::off;State aim=State::off;bool aimChanged=false;BallSnapshot ball;};
 inline bool pointer(uint64_t p){return p>=0x10000&&p<0x0000800000000000ULL&&(p&7)==0;}
 inline bool finite(const Matrix &m){for(float v:m.v)if(!std::isfinite(v)||std::fabs(v)>1e7f)return false;return true;}
 inline Vec4 transform(const Matrix &m,const Vec4 &p){

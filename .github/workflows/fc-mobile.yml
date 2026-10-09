@@ -22,6 +22,10 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined FCMobile/tests/ball_test.cpp -o /tmp/fcm-ball-test
           /tmp/fcm-ball-test
+      - name: Test experimental Open Goal ownership and restoration
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined FCMobile/tests/open_goal_test.cpp -o /tmp/fcm-goal-test
+          /tmp/fcm-goal-test
       - name: Setup Theos
         uses: Randomblock1/theos-action@v1
       - name: Build FC Mobile

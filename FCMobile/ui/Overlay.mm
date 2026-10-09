@@ -73,14 +73,14 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
     FCMBallView *_drawing;
     UIView *_panel;
     UIButton *_dot,*_close;
-    FCMFeatureRow *_shot,*_line;
+    FCMFeatureRow *_shot,*_line,*_aim;
     UIView *_divider;
     CAGradientLayer *_panelGradient;
     UILabel *_status;
     NSTimer *_timer;
     dispatch_queue_t _queue;
     std::shared_ptr<fcm::Process> _reader;
-    BOOL _busy,_enabled,_lineEnabled;
+    BOOL _busy,_enabled,_lineEnabled,_aimEnabled;
     CFTimeInterval _lastTick;
     CGPoint _touchStart,_dotStart;
     fcm::TouchState _touch;
@@ -111,7 +111,8 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
         UILabel *title=[UILabel new];title.text=@"FC Mobile";title.font=Font(23,UIFontWeightBold);title.textColor=UIColor.whiteColor;title.frame=CGRectMake(20,14,190,30);[_panel addSubview:title];
         UILabel *credit=[UILabel new];credit.text=@"HoangHaDev";credit.textColor=Mint();credit.font=Font(11,UIFontWeightMedium);credit.frame=CGRectMake(20,47,190,16);[_panel addSubview:credit];
         _close=[self button:@"×" action:@selector(toggleMenu)];_close.frame=CGRectMake(244,12,44,44);_close.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter;_close.contentEdgeInsets=UIEdgeInsetsZero;_close.titleLabel.font=Font(25,UIFontWeightMedium);_close.accessibilityLabel=@"Đóng menu";[_panel addSubview:_close];
-        UILabel *section=[UILabel new];section.text=@"BÓNG & HỖ TRỢ SÚT";section.textColor=[UIColor colorWithWhite:.5 alpha:1];section.font=Font(10,UIFontWeightSemibold);section.frame=CGRectMake(20,73,240,14);[_panel addSubview:section];
+        UILabel *section=[UILabel new];section.text=@"BÓNG & HỖ TRỢ SÚT";section.textColor=[UIColor colorWithWhite:.5 alpha:1];section.font=Font(10,UIFontWeightSemibold);section.frame=CGRectMake(20,65,240,14);[_panel addSubview:section];
+        _aim=[[FCMFeatureRow alloc] initWithName:@"AimKill thử nghiệm" detail:@"Logic Open Goal của game" symbol:@"target"];[_aim addTarget:self action:@selector(toggleAim) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_aim];
         _shot=[[FCMFeatureRow alloc] initWithName:@"Giảm sai số sút" detail:@"Bật trước khi vào trận" symbol:@"soccerball"];[_shot addTarget:self action:@selector(toggleShot) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_shot];
         _line=[[FCMFeatureRow alloc] initWithName:@"ESP line bóng" detail:@"Dây từ tâm màn hình đến bóng" symbol:@"scope"];[_line addTarget:self action:@selector(toggleLine) forControlEvents:UIControlEventTouchUpInside];[_panel addSubview:_line];
         _divider=[UIView new];_divider.backgroundColor=[UIColor colorWithWhite:1 alpha:.08];[_panel addSubview:_divider];
@@ -124,7 +125,7 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
 - (void)stop{[self stopWithCompletion:nil];}
 - (void)stopWithCompletion:(void (^)(void))completion{
     [_timer invalidate];_timer=nil;[_drawing setBall:{}];[self cancelScreenTouch];auto reader=_reader;
-    dispatch_async(_queue,^{reader->restoreShot();if(completion)dispatch_async(dispatch_get_main_queue(),completion);});
+    dispatch_async(_queue,^{reader->restoreSettings();if(completion)dispatch_async(dispatch_get_main_queue(),completion);});
 }
 - (void)dealloc{[_timer invalidate];}
 - (void)layoutSubviews{
@@ -133,13 +134,14 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
     CGFloat maxX=MAX(safe.left+32,self.bounds.size.width-safe.right-32),maxY=MAX(safe.top+32,self.bounds.size.height-safe.bottom-32);
     _dot.center=CGPointMake(std::clamp(_dot.center.x,safe.left+32,maxX),std::clamp(_dot.center.y,safe.top+32,maxY));
     // Never assign a frame while a view has an animated transform.
-    CGFloat panelHeight=272;
+    CGFloat panelHeight=304;
     _panel.bounds=CGRectMake(0,0,304,panelHeight);
     CGFloat x=std::clamp(_dot.frame.origin.x,safe.left+8,MAX(safe.left+8,self.bounds.size.width-safe.right-312));
     CGFloat y=std::clamp(_dot.frame.origin.y,safe.top+8,MAX(safe.top+8,self.bounds.size.height-safe.bottom-panelHeight-8));
     _panel.center=CGPointMake(x+152,y+panelHeight*.5);_panelGradient.frame=_panel.bounds;
-    _shot.frame=CGRectMake(18,93,268,64);
-    _line.frame=CGRectMake(18,165,268,64);
+    _aim.frame=CGRectMake(18,84,268,56);
+    _shot.frame=CGRectMake(18,146,268,56);
+    _line.frame=CGRectMake(18,208,268,56);
     _divider.frame=CGRectMake(20,panelHeight-31,264,1);_status.frame=CGRectMake(20,panelHeight-26,264,22);
     _panel.layer.shadowPath=[UIBezierPath bezierPathWithRoundedRect:_panel.bounds cornerRadius:22].CGPath;
     if(self.geometryChanged)self.geometryChanged();
@@ -147,7 +149,7 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
 - (UIControl *)controlAtPoint:(CGPoint)p{
     if(!self.userInteractionEnabled||self.hidden||self.alpha<.01)return nil;
     if(!_panel.hidden){
-        for(UIControl *control in @[_close,_shot,_line]){
+        for(UIControl *control in @[_close,_aim,_shot,_line]){
             CGPoint local=[self convertPoint:p toView:control];
             if(control.enabled&&!control.hidden&&CGRectContainsPoint(control.bounds,local))return control;
         }
@@ -167,26 +169,27 @@ static UIFont *Font(CGFloat size,UIFontWeight weight){return [UIFont systemFontO
     }
 }
 - (void)panDot:(UIPanGestureRecognizer *)g{CGPoint d=[g translationInView:self];_dot.center=CGPointMake(_dot.center.x+d.x,_dot.center.y+d.y);[g setTranslation:CGPointZero inView:self];[self setNeedsLayout];}
-- (void)updateButtons{[_shot setOn:_enabled animated:YES];[_line setOn:_lineEnabled animated:YES];}
+- (void)updateButtons{[_shot setOn:_enabled animated:YES];[_line setOn:_lineEnabled animated:YES];[_aim setOn:_aimEnabled animated:YES];}
 - (void)toggleShot{_enabled=!_enabled;_lastTick=0;[self updateButtons];[self tick];}
 - (void)toggleLine{_lineEnabled=!_lineEnabled;_lastTick=0;[_drawing setBall:{}];[self updateButtons];[self tick];}
-- (void)activateControl:(UIControl *)control{if(control==_dot||control==_close)[self toggleMenu];else if(control==_shot)[self toggleShot];else if(control==_line)[self toggleLine];}
+- (void)toggleAim{_aimEnabled=!_aimEnabled;_lastTick=0;[self updateButtons];[self tick];}
+- (void)activateControl:(UIControl *)control{if(control==_dot||control==_close)[self toggleMenu];else if(control==_shot)[self toggleShot];else if(control==_line)[self toggleLine];else if(control==_aim)[self toggleAim];}
 - (void)tick{
     if(!self.window||self.hidden||_busy)return;
     CFTimeInterval now=CACurrentMediaTime();if(!_lineEnabled&&now-_lastTick<.25)return;_lastTick=now;
-    _busy=YES;BOOL enabled=_enabled,line=_lineEnabled;auto reader=_reader;__weak FCMOverlay *weak=self;
-    dispatch_async(_queue,^{auto snapshot=reader->update(enabled,line);
-        dispatch_async(dispatch_get_main_queue(),^{FCMOverlay *s=weak;if(!s)return;s->_busy=NO;if(!s->_timer||enabled!=s->_enabled||line!=s->_lineEnabled)return;
+    _busy=YES;BOOL enabled=_enabled,line=_lineEnabled,aim=_aimEnabled;auto reader=_reader;__weak FCMOverlay *weak=self;
+    dispatch_async(_queue,^{auto snapshot=reader->update(enabled,line,aim);
+        dispatch_async(dispatch_get_main_queue(),^{FCMOverlay *s=weak;if(!s)return;s->_busy=NO;if(!s->_timer||enabled!=s->_enabled||line!=s->_lineEnabled||aim!=s->_aimEnabled)return;
             [s->_drawing setBall:line?snapshot.ball:fcm::BallSnapshot{}];
             switch(snapshot.state){
-                case fcm::State::ready:s->_status.text=line?@"Đang theo dõi bóng":@"Đã cập nhật tham số sút";break;
+                case fcm::State::ready:s->_status.text=aim?(snapshot.aimChanged?@"AimKill thử: đã bật logic Open Goal":@"Game đã bật sẵn logic Open Goal"):(line?@"Đang theo dõi bóng":@"Đã cập nhật tham số sút");break;
                 case fcm::State::unsupported:s->_status.text=@"Chỉ hỗ trợ FC Mobile VN 27.1.01";break;
                 case fcm::State::denied:s->_status.text=@"iOS chưa cấp quyền chỉnh game";break;
                 case fcm::State::disconnected:s->_status.text=@"Mở FC Mobile VN";break;
                 case fcm::State::off:s->_status.text=@"Chọn chức năng để bật";break;
-                default:s->_status.text=line?@"Chờ bóng trong khung hình":@"Chờ dữ liệu cài đặt sút";break;
+                default:s->_status.text=aim?@"Chờ dữ liệu logic sút":(line?@"Chờ bóng trong khung hình":@"Chờ dữ liệu cài đặt sút");break;
             }
-            if(line&&enabled&&snapshot.state==fcm::State::ready&&snapshot.shot!=fcm::State::ready)
+            if(!aim&&line&&enabled&&snapshot.state==fcm::State::ready&&snapshot.shot!=fcm::State::ready)
                 s->_status.text=@"ESP bóng bật · tham số sút chưa cập nhật";
         });
     });

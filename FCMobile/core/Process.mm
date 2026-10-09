@@ -8,7 +8,7 @@
 #include <string>
 namespace fcm {
 static double now(){timeval t{};gettimeofday(&t,nullptr);return t.tv_sec+t.tv_usec*1e-6;}
-void Process::reset(){shot.forget();if(owned&&task)mach_port_deallocate(mach_task_self(),task); task=0;owned=false;image=0;pid=0;}
+void Process::reset(){shot.forget();openGoal.forget();if(owned&&task)mach_port_deallocate(mach_task_self(),task); task=0;owned=false;image=0;pid=0;}
 bool Process::copy(uint64_t address,void *out,size_t size){
     if(!task||!address||size==0||size>65536||address>0x00007fffffffffffULL-size)return false;
     static_assert(sizeof(vm_address_t)==8,"FCM supports ARM64 address spaces");
@@ -19,7 +19,7 @@ bool Process::store(uint64_t address,const void *value,size_t size){
     if(!task||!value||address<0x10000||size==0||size>16||address>0x00007fffffffffffULL-size)return false;
     return vm_write(task,static_cast<vm_address_t>(address),reinterpret_cast<vm_offset_t>(value),static_cast<mach_msg_type_number_t>(size))==KERN_SUCCESS;
 }
-void Process::restoreShot(){if(image)shot.update(*this,image,false);}
+void Process::restoreSettings(){if(image){openGoal.update(*this,image,false);shot.update(*this,image,false);}}
 bool Process::accepts(uint64_t header){
     mach_header_64 h{};if(!read(header,h)||h.magic!=MH_MAGIC_64||h.cputype!=CPU_TYPE_ARM64||h.ncmds>512||h.sizeofcmds>65536)return false;
     std::vector<uint8_t> commands(h.sizeofcmds);if(!copy(header+sizeof(h),commands.data(),commands.size()))return false;
@@ -60,9 +60,9 @@ bool Process::findImage(){
 #endif
     return false;
 }
-Snapshot Process::update(bool enabled,bool line){
+Snapshot Process::update(bool enabled,bool line,bool aim){
     Snapshot result;
-    if(!enabled&&!line&&!shot.applied())return result;
+    if(!enabled&&!line&&!aim&&!shot.applied()&&!openGoal.applied())return result;
     if(task){uint32_t magic=0;if(image&&!read(image,magic))reset();}
     if(!image&&now()-lastConnect>1){
         lastConnect=now();reset();connection=State::disconnected;
@@ -78,10 +78,12 @@ Snapshot Process::update(bool enabled,bool line){
 #endif
         if(task)findImage();
     }
-    if(!image){result.state=connection;result.shot=connection;return result;}
+    if(!image){result.state=connection;result.shot=connection;result.aim=connection;return result;}
     result.shot=shot.update(*this,image,enabled);
+    result.aim=openGoal.update(*this,image,aim);result.aimChanged=openGoal.applied();
     if(line)result.ball=BallReader(*this).sample(image);
-    result.state=line?(result.ball.visible?State::ready:State::waiting):result.shot;
+    result.state=aim?result.aim:line?(result.ball.visible?State::ready:State::waiting):result.shot;
+    if(!aim&&openGoal.applied()&&result.aim!=State::off)result.state=result.aim;
     return result;
 }
 }

@@ -13,7 +13,7 @@ Source supplied locally: `com.garena.game.fcmobilevn_27.1.01_und3fined.ipa`. Exe
 | Serialized shot error multiplier | struct `+0x2a0` | Serializer `0x1022215e8`, string `mCustomizationShotErrorUserMod`; **not used for writes: live root unverified** |
 | Serialized shot speed multiplier | struct `+0x2b8` | Serializer `0x102221660`, string `mCustomizationShotSpeedUserMod`; **not modified** |
 
-The optional-looking Lua flag `lxSetOpenGoalShootingLogic` maps to component 123 (`GameplayLogicOverrideManager`), byte 0. Its consumers include shot evaluation, but a name alone does not prove guaranteed goal targeting. It is deliberately excluded from this implementation. Another nearby flag `+0x326` is `lxEnforceDinkedPass`, not a generic accuracy bypass; it is also excluded.
+The AimKill trial uses the Lua flag `lxSetOpenGoalShootingLogic`, which maps to component 123 (`GameplayLogicOverrideManager`), byte 0. The named setter and a shot-evaluation consumer are traced below. They identify a distinct native shooting-logic flag, but do not prove guaranteed goal targeting. Another nearby flag `+0x326` is `lxEnforceDinkedPass`, not a generic accuracy bypass; it remains excluded.
 
 ## Active ball and camera
 
@@ -32,8 +32,19 @@ The optional-looking Lua flag `lxSetOpenGoalShootingLogic` maps to component 123
 
 The ball line validates pointers, matrix values and camera type, then rechecks scene/ball/history/camera identity and the history frame before publishing a sample. The 12-slot upper bound is a conservative limit from the action-ball pool, not a claim that every scene has 12 active balls; an unreadable indexed ball entry is rejected. Mock-memory tests cover projection, quarter-turn camera rotation, translated cameras, invalid values, missing reads and concurrent root/frame replacement.
 
-## AimKill investigation — incomplete
+## AimKill trial — native Open Goal flag
+
+| Meaning | VA / field | Evidence |
+|---|---|---|
+| Component ID 123 | getter `0x102054180` | `MOV W9,#0x7b`, writes component ID |
+| Named Lua setter | `0x10269a7c8` | `lxSetOpenGoalShootingLogic` resolves registry table, wrapper `+0x20` then object `+8`; normalizes the input to boolean and stores byte 0 at `0x10269a818` |
+| Native shot evaluation | `0x102512974` | String `Shot::OpenGoal` passed to evaluator `0x10234d1dc`; after success, `0x102512a30` loads the component flag and branches on bit 0 to the path setting evaluation bit `0x20000` |
+| Constructor defaults | `0x1023c7c90` | Stores mode enum at `+0xc4`; byte 0 is `mode != 4` at `0x1023c7cac`. Thus the flag may already be enabled in normal play. |
+
+Writes are limited to this single boolean and are read back. Already-enabled flags are reported without taking write ownership. Restoration retains pending state during missing-pointer/denied-read intervals, respects externally changed values and never writes into a replaced component. Tests cover these cases and changing roots between read and write. The runtime profile still requires the exact image UUID. No automatic shot or every-goal guarantee is claimed.
+
+## Physical redirection — still unverified
 
 `lxLaunchBall` (`0x10268d3dc` wrapper → `0x10268ce50`) constructs simulation messages through `0x1021bb898`, which dispatches via a component virtual method. `lxSetBallPos` likewise constructs a physics command via `0x1021bac90`. These are not equivalent to changing the published position/velocity history. `mGoalXPos`/`mGoalZPos` have serialization at `0x102222f34`/`0x102222f48`, but the live root and which goal belongs to the opponent have not been verified. No writes to these unverified objects and no direct native simulation calls are included.
 
-UUID checking prevents the profile being used on another binary, including another regional build. No Unity or Free Fire/AOV offsets are reused. Game-memory writes remain limited to the identified two-byte setting. A replaced settings object is never used for restoration. The automated tests cover denied writes, repeated updates, disabling, transient missing pointers, object replacement, external setting changes, and malformed field values. Gameplay remains untested on device.
+UUID checking prevents the profile being used on another binary, including another regional build. No Unity or Free Fire/AOV offsets are reused. Game-memory writes remain limited to the identified two-byte shot setting and the Open Goal boolean. Replaced objects are never used for restoration. The automated tests cover denied writes, repeated updates, disabling, transient missing pointers, object replacement, external setting changes, and malformed field values. Gameplay remains untested on device.
