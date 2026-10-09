@@ -31,6 +31,7 @@ int main(){
     assert(goal.update(m,image,false)==fcm::State::off&&m.writes==0);
     assert(goal.update(m,image,true)==fcm::State::waiting&&m.writes==0);
     m.seed(image+0xa263b60,registry);m.seed(registry+8,table);m.seed(table+123*32+0x20,wrapper);m.seed(wrapper+8,object);
+    m.seed<int32_t>(object+0xc4,4);m.seed<int32_t>(next+0xc4,4);
     m.seed<uint8_t>(object,2);assert(goal.update(m,image,true)==fcm::State::unsupported&&m.writes==0);
     m.seed<uint8_t>(object,0);m.seed<uint8_t>(object+1,0x5a);m.writable=false;
     assert(goal.update(m,image,true)==fcm::State::denied&&!goal.applied());
@@ -57,5 +58,10 @@ int main(){
     assert(goal.update(m,image,true)==fcm::State::waiting&&m.writes==writes);m.onRead={};
     m.seed(wrapper+8,next);assert(goal.update(m,image,true)==fcm::State::ready);
     assert(goal.update(m,image,false)==fcm::State::off&&m.bytes[next]==0);
+    writes=m.writes;m.onRead=[&](uint64_t a){if(a==next)m.seed<int32_t>(next+0xc4,1);};
+    assert(goal.update(m,image,true)==fcm::State::waiting&&m.writes==writes);m.onRead={};m.seed<int32_t>(next+0xc4,4);
+    // A native mode reset can reuse the same object: do not restore the old mode's flag.
+    assert(goal.update(m,image,true)==fcm::State::ready);writes=m.writes;
+    m.seed<int32_t>(next+0xc4,1);assert(goal.update(m,image,false)==fcm::State::off&&m.bytes[next]==1&&m.writes==writes);
     std::cout<<"FC Mobile Open Goal ownership, restoration and stale-root rejection passed\n";
 }

@@ -41,7 +41,7 @@ The ball line validates pointers, matrix values and camera type, then rechecks s
 | Native shot evaluation | `0x102512974` | String `Shot::OpenGoal` passed to evaluator `0x10234d1dc`; after success, `0x102512a30` loads the component flag and branches on bit 0 to the path setting evaluation bit `0x20000` |
 | Constructor defaults | `0x1023c7c90` | Stores mode enum at `+0xc4`; byte 0 is `mode != 4` at `0x1023c7cac`. Thus the flag may already be enabled in normal play. |
 
-Writes are limited to this single boolean and are read back. Already-enabled flags are reported without taking write ownership. Restoration retains pending state during missing-pointer/denied-read intervals, respects externally changed values and never writes into a replaced component. Tests cover these cases and changing roots between read and write. The runtime profile still requires the exact image UUID. No automatic shot or every-goal guarantee is claimed.
+Writes are limited to this single boolean and are read back. Already-enabled flags are reported without taking write ownership. Restoration retains pending state during missing-pointer/denied-read intervals, respects externally changed values and never writes into a replaced component or after its mode enum changes. Tests cover these cases and changing roots/modes between read and write. The runtime profile still requires the exact image UUID. No automatic shot or every-goal guarantee is claimed.
 
 ## Physical redirection — still unverified
 
