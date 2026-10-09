@@ -1,0 +1,92 @@
+name: Android Viet APK
+on:
+  push:
+    paths:
+      - 'android việt/**'
+      - '.github/workflows/android-viet.yml'
+  pull_request:
+    paths:
+      - 'android việt/**'
+      - '.github/workflows/android-viet.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-viet-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: 'android việt'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build, lint and unit test both APKs
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testRootDebugUnitTest :app:testNoRootDebugUnitTest :app:lintRootDebug :app:lintNoRootDebug :app:assembleRootDebug :app:assembleNoRootDebug
+      - name: Name installable APKs
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/root/debug/app-root-debug.apk artifacts/android-viet-root-debug.apk
+          cp app/build/outputs/apk/noRoot/debug/app-noRoot-debug.apk artifacts/android-viet-no-root-debug.apk
+          sha256sum artifacts/*.apk > artifacts/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Android-Viet-Root-APK
+          path: 'android việt/artifacts/android-viet-root-debug.apk'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Android-Viet-No-Root-APK
+          path: 'android việt/artifacts/android-viet-no-root-debug.apk'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-Viet-Checks
+          path: |
+            android việt/artifacts/SHA256SUMS.txt
+            android việt/app/build/reports/
+  ui-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android 15 emulator smoke tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          working-directory: 'android việt'
+          script: |
+            chmod +x gradlew
+            ./gradlew --no-daemon :app:connectedRootDebugAndroidTest :app:connectedNoRootDebugAndroidTest
+            mkdir -p ui-screenshots
+            adb pull /sdcard/Android/data/vn.mizze.androidviet.root/files ui-screenshots/root
+            adb pull /sdcard/Android/data/vn.mizze.androidviet.noroot/files ui-screenshots/no-root
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-Viet-UI-Smoke
+          path: |
+            android việt/ui-screenshots/
+            android việt/app/build/reports/androidTests/
