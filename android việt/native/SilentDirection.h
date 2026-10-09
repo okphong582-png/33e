@@ -25,15 +25,11 @@ DispatchResult dispatch(Point desired,Read read,Write write,Current current,Orig
     if(!finite(desired)||!current()||!read(before)||!finite(before)) { original();return {}; }
     if(!write(desired)) { original();return {}; }
     if(!current()) {
-        Point after{};
-        bool failed=false;
-        if(read(after)&&std::memcmp(&after,&desired,sizeof(Point))==0) failed=!write(before);
-        original();return {false,failed};
+        original();return {};
     }
-    original();
-    Point after{};
-    if(current()&&read(after)&&std::memcmp(&after,&desired,sizeof(Point))==0)
-        return {true,!write(before)};
-    return {true,false};
+    const auto restore=[&]{Point after{};
+        return current()&&read(after)&&std::memcmp(&after,&desired,sizeof(Point))==0&&!write(before);};
+    try { original(); } catch(...) { restore();throw; }
+    return {true,restore()};
 }
 }

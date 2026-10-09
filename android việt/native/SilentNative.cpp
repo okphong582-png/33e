@@ -66,7 +66,7 @@ bool isA(uint64_t object,const char* name,const char* ns) {
 int pri(uint64_t player,int index) {
     const auto pool=ptr(player+0x70);const bool unsafe=named(pool,"PRIDataPoolUnsafe","GCommon");
     if(!unsafe&&!named(pool,"PRIDataPool","GCommon"))return -1;
-    const auto array=ptr(pool+0x10);const auto count=word(pool+0x18),length=ptr(array+0x18);
+    const auto array=ptr(pool+0x10);const auto count=word(pool+0x18);const auto length=ptr(array+0x18);
     if(count<=uint32_t(index)||count>4096||length<=uint32_t(index)||length>4096)return -1;
     const auto entry=ptr(array+0x20+index*8);if(!entry)return -1;
     const auto at=unsafe?ptr(entry+0x18):entry+0x18;
@@ -86,7 +86,7 @@ uint64_t weapon(uint64_t player) {
     const auto w=ptr(storage+(alternate?0xA8:0xA0));
     return ptr(w+0x60)==player?w:0;
 }
-bool firing(uint64_t base,uint64_t player,uint64_t w) {
+bool firing(uint64_t base,uint64_t w) {
     const auto expected=ptr(ptr(base+0xA741C20));if(!instance(w,expected))return false;
     const auto getter=ptr(ptr(w)+0xED8);
     if(getter==base+0x7499544)return byte(w+0x988)==1;
@@ -138,7 +138,7 @@ void redirect(uint64_t handler,const void* method) {
     if(!(p.flags&1)||!p.target||!silent::fresh(p.sample,p.lease,now())){call(handler,method);return;}
     const auto w=ptr(handler+0x10),info=ptr(handler+0x28);
     const int localTeam=pri(p.local,34),targetTeam=pri(p.target,34);
-    const bool fire=firing(p.base,p.local,w),scope=pri(p.local,12)==1;
+    const bool fire=firing(p.base,w),scope=pri(p.local,12)==1;
     const bool trigger=(p.flags&8)||((p.flags&2)&&fire)||((p.flags&4)&&scope)||((p.flags&16)&&fire&&scope);
     silent::Point origin{},desired{};
     if(!(p.flags&1)||!p.target||!silent::fresh(p.sample,p.lease,now())||!context(p)||!trigger||!fire||

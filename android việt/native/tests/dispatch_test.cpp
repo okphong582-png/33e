@@ -22,7 +22,7 @@ int main() {
     CHECK(result.redirected&&calls==1&&writes==1&&memory.y==1);
     calls=writes=0;int currentCalls=0;
     result=dispatch(desired,read,write,[&]{return ++currentCalls==1;},[&]{++calls;});
-    CHECK(!result.redirected&&calls==1&&writes==2&&memory.y==1);
+    CHECK(!result.redirected&&calls==1&&writes==1&&memory.x==1);
     calls=0;
     result=dispatch(desired,[](Point&){return false;},write,[]{return true;},[&]{++calls;});
     CHECK(!result.redirected&&calls==1);
@@ -32,4 +32,7 @@ int main() {
     calls=0;int attempt=0;
     result=dispatch(desired,read,[&](Point v){if(++attempt==2)return false;memory=v;return true;},[]{return true;},[&]{++calls;});
     CHECK(result.redirected&&result.restoreFailed&&calls==1);
+    memory={0,0,1};calls=0;
+    try {dispatch(desired,read,write,[]{return true;},[&]{++calls;throw 7;});CHECK(false);}
+    catch(int value){CHECK(value==7&&calls==1&&memory.z==1);}
 }
