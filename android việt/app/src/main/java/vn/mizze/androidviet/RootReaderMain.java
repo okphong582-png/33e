@@ -12,10 +12,11 @@ import java.util.*;
 public final class RootReaderMain {
     private static final long FACADE_CACHE=0xAC1E768L, MATCH_GAME_CACHE=0xAC232A0L;
     private static volatile long lease;
+    private static volatile JSONObject frameConfig=new JSONObject();
     private static volatile RootFeatureController.Config config=RootFeatureController.Config.off();
     private static final RootFeatureController features=new RootFeatureController();
-    
-    private static boolean pointer(long p){return p>=0x10000 && p<0x0001000000000000L && (p&7)==0;}
+
+    static boolean pointer(long p){return p>=0x10000 && p<0x0001000000000000L && (p&7)==0;}
     private record Mapping(long start,long end,String permissions,String file){}
     private static List<Mapping> maps(int pid)throws Exception{
         ArrayList<Mapping> result=new ArrayList<>();
@@ -24,7 +25,7 @@ public final class RootReaderMain {
             result.add(new Mapping(Long.parseUnsignedLong(range[0],16),Long.parseUnsignedLong(range[1],16),p[1],p.length==6?p[5]:""));
         }}return result;
     }
-    private static int gamePid(){
+    static int gamePid(){
         File[] files=new File("/proc").listFiles();if(files==null)return 0;
         for(File file:files){if(!file.getName().matches("[0-9]+"))continue;
             try(var in=new FileInputStream(new File(file,"cmdline"))){byte[] b=new byte[128];int n=in.read(b);if(n<=0)continue;int end=0;while(end<n&&b[end]!=0)end++;
@@ -32,7 +33,7 @@ public final class RootReaderMain {
             }catch(Exception ignored){}
         }return 0;
     }
-    private static final class Memory implements AutoCloseable {
+    static final class Memory implements AutoCloseable {
         final int pid;final long start;final FileInputStream input;final FileChannel channel;final List<Mapping> ranges;
         RandomAccessFile output;FileChannel writer;
         Memory(int pid)throws Exception{this.pid=pid;this.start=processStart(pid);ranges=maps(pid);input=new FileInputStream("/proc/"+pid+"/mem");channel=input.getChannel();}
@@ -50,6 +51,18 @@ public final class RootReaderMain {
             enableWrites();ByteBuffer data=ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);if(size==1)data.put((byte)bits);else data.putInt(bits);data.flip();
             int written=0;while(data.hasRemaining()){int n=writer.write(data,address+written);if(n<=0)throw new IOException("Short write");written+=n;}
         }
+        void writeQuaternion(long address,GameGeometry.Q q)throws Exception{
+            if(q==null||!q.valid())throw new IOException("Invalid quaternion");
+            boolean valid=false;for(Mapping range:ranges)if(range.permissions().startsWith("rw")&&address>=range.start()&&address<=range.end()-16){valid=true;break;}
+            if(!valid)throw new IOException("Quaternion outside data mapping");enableWrites();
+            ByteBuffer data=ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN).putFloat(q.x()).putFloat(q.y()).putFloat(q.z()).putFloat(q.w());data.flip();
+            int done=0;while(data.hasRemaining()){int n=writer.write(data,address+done);if(n<=0)throw new IOException("Short quaternion write");done+=n;}
+        }
+        long unityBase(){for(Mapping range:ranges){if(!range.permissions().startsWith("r")||!(range.file().contains("libunity.so")||range.file().contains("com.dts.freefireth")||range.file().contains("config.arm64")))continue;
+            try{byte[] h=read(range.start(),64);if(h[0]!=0x7f||h[1]!='E'||h[2]!='L'||h[3]!='F'||h[4]!=2||ByteBuffer.wrap(h).order(ByteOrder.LITTLE_ENDIAN).getShort(18)!=183)continue;
+                long b=range.start();if(i32(b+0x693054)==0xF9401C14&&i32(b+0xB79844)==0x91020260&&i32(b+0xB79904)==0x91030260&&i32(b+0x691590)==0xA941A408)return b;
+            }catch(Exception ignored){}
+        }return 0;}
         long ptr(long address)throws Exception{return ByteBuffer.wrap(read(address,8)).order(ByteOrder.LITTLE_ENDIAN).getLong();}
         int i32(long address)throws Exception{return ByteBuffer.wrap(read(address,4)).order(ByteOrder.LITTLE_ENDIAN).getInt();}
         String ascii(long address)throws Exception{byte[] data=read(address,96);int n=0;while(n<data.length&&data[n]!=0)n++;return new String(data,0,n,StandardCharsets.UTF_8);}
@@ -74,11 +87,11 @@ public final class RootReaderMain {
         }
         public void close()throws IOException{try{if(output!=null)output.close();}finally{input.close();}}
     }
-    private static long processStart(int pid)throws Exception{
+    static long processStart(int pid)throws Exception{
         String stat;try(BufferedReader in=new BufferedReader(new FileReader("/proc/"+pid+"/stat"))){stat=in.readLine();}
         return Long.parseLong(stat.substring(stat.lastIndexOf(')')+2).split(" +")[19]);
     }
-    private static long[] context(Memory m,long base)throws Exception{
+    static long[] context(Memory m,long base)throws Exception{
         long klass=m.ptr(base+FACADE_CACHE);
         if(!pointer(klass)||!m.ascii(m.ptr(klass+16)).equals("GameFacade")||!m.ascii(m.ptr(klass+24)).equals("COW"))return null;
         long statics=m.ptr(klass+0xB8),game=pointer(statics)?m.ptr(statics):0;
@@ -130,10 +143,14 @@ public final class RootReaderMain {
                 }
             }catch(Exception e){featureStatus="Chưa áp dụng được chức năng: quyền ghi, giá trị hoặc PlayerAttributes không khớp.";}
 
+            JSONObject frame=new JSONObject();String frameStatus="Chờ danh sách người chơi/camera Android.";
+            try{JSONObject desiredFrame=frameConfig;frame=new RootGameFrameReader(memory,base,game,match,player).read(desiredFrame,()->lease,()->frameConfig==desiredFrame);frameStatus="ESP: đã đọc "+frame.optInt("playerCount")+" người chơi, camera/xương/HP.\n"+frame.optString("aimStatus");}
+            catch(Exception e){frameStatus="ESP/Aim: "+e.getMessage();}
             if(name.isEmpty())return new JSONObject().put("state","waiting_name").put("message","Chờ tên người chơi trong trận.");
-            return new JSONObject().put("state","local_player").put("message","Đọc được chuỗi tên theo profile thử · Chưa kiểm chứng ESP/Aim.")
+            return new JSONObject().put("state","local_player").put("message","Đã đọc Local Name trong trận.")
                 .put("pid",pid).put("name",name).put("sampleUptime",SystemClock.elapsedRealtime())
-                .put("featuresReady",ready).put("featureStatus",featureStatus);
+                .put("featuresReady",ready).put("featureStatus",featureStatus+"\n"+frameStatus)
+                .put("frame",frame).put("playersReady",frame.optBoolean("playersReady")).put("aimReady",frame.optBoolean("aimReady"));
         }
     }
     public static void main(String[] args){
@@ -143,7 +160,7 @@ public final class RootReaderMain {
         lease=SystemClock.elapsedRealtime()+3000;
         Thread control=new Thread(()->{try(BufferedReader in=new BufferedReader(new InputStreamReader(System.in,StandardCharsets.UTF_8))){String line;
             while((line=in.readLine())!=null){if(line.length()>4096){lease=0;return;}if(line.equals("STOP")){lease=0;return;}
-            if(line.startsWith("CONFIG ")){JSONObject c=new JSONObject(line.substring(7));config=new RootFeatureController.Config(c.optBoolean("noReload"),c.optBoolean("fastFire"),c.optBoolean("speed"),(float)c.optDouble("speedValue",6));}
+            if(line.startsWith("CONFIG ")){JSONObject c=new JSONObject(line.substring(7));frameConfig=c;config=new RootFeatureController.Config(c.optBoolean("noReload"),c.optBoolean("fastFire"),c.optBoolean("speed"),(float)c.optDouble("speedValue",6));}
             if(line.startsWith("LEASE ")){
                 long requested=Long.parseLong(line.substring(6));lease=Math.min(requested,SystemClock.elapsedRealtime()+30000);
             }}lease=0;
@@ -151,7 +168,7 @@ public final class RootReaderMain {
         while(SystemClock.elapsedRealtime()<lease){
             try{System.out.println(snapshot().toString());}
             catch(Exception e){System.out.println("{\"state\":\"read_denied\",\"message\":\"Không đọc được bộ nhớ game (quyền hoặc SELinux).\"}");}
-            System.out.flush();try{Thread.sleep(200);}catch(InterruptedException e){break;}
+            System.out.flush();try{Thread.sleep(50);}catch(InterruptedException e){break;}
         }
         config=RootFeatureController.Config.off();
         for(int attempt=0;attempt<3&&features.changed();attempt++){

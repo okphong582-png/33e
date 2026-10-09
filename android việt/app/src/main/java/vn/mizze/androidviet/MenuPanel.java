@@ -22,7 +22,7 @@ final class MenuPanel extends LinearLayout {
     private int colorTarget;
     private TextView swatch;
     private TextView dataStatus;
-    private boolean builtReady;
+    private int builtReady;
     MenuPanel(Context context,Host host,int initialPage) {
         super(context);this.host=host;ui=new Ui(context);page=initialPage;
         setOrientation(VERTICAL);setPadding(ui.dp(14),ui.dp(8),ui.dp(14),ui.dp(12));
@@ -42,10 +42,10 @@ final class MenuPanel extends LinearLayout {
         addView(scroll,new LayoutParams(-1,0,1));build();
     }
     int page(){return page;}
-    void refreshDataStatus(){boolean ready=RootDataSession.featuresReady();if(ready!=builtReady){builtReady=ready;int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}if(dataStatus!=null){String status=RootDataSession.status();if(!status.contentEquals(dataStatus.getText()))dataStatus.setText(status);}}
+    void refreshDataStatus(){int ready=RootDataSession.capabilityMask();if(ready!=builtReady){builtReady=ready;int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}if(dataStatus!=null){String status=RootDataSession.status();if(!status.contentEquals(dataStatus.getText()))dataStatus.setText(status);}}
     private void scrollTopAndBuild(){build();scroll.post(()->scroll.scrollTo(0,0));}
     private void build(){
-        builtReady=RootDataSession.featuresReady();content.removeAllViews();swatch=null;dataStatus=null;
+        builtReady=RootDataSession.capabilityMask();content.removeAllViews();swatch=null;dataStatus=null;
         for(int i=0;i<4;i++){tabs[i].setTextColor(i==page?Ui.MINT:ui.muted());tabs[i].setBackground(ui.shape(i==page?0x1875DBBA:Color.TRANSPARENT,9));tabs[i].setSelected(i==page);}
         if(page==0 || page==1) notice(data.canApplyGameFeatures()?"Đã kết nối dữ liệu game":AndroidGameData.description());
         switch(page){case 0->aim();case 1->esp();case 2->colors();default->settings();}
@@ -86,13 +86,13 @@ final class MenuPanel extends LinearLayout {
         section("Nâng cao");gameToggle("Tự chọn tầm Silent","SilentAutoConfig");slider("Tầm chọn Silent (m)","SilentMaxDistance",10,150,100,true);
     }
     private void esp(){
-        gameToggle("Bật ESP","ESPEnabled");Button preset=ui.button("Áp dụng ESP tối giản",()->{});preset.setEnabled(data.canReadPlayers());preset.setAlpha(.48f);ui.add(content,preset,48,8);
+        gameToggle("Bật ESP","ESPEnabled");Button preset=ui.button("Áp dụng ESP tối giản",()->{ui.prefs.edit().putBoolean("ESPEnabled",true).putBoolean("CleanESP",true).putBoolean("Name",true).putBoolean("Health",true).putBoolean("Dis",true).putBoolean("Box",true).putBoolean("Skeleton",false).putBoolean("Line",false).putBoolean("Box3D",false).putBoolean("HeadRedDot",false).apply();build();});preset.setEnabled(data.canReadPlayers());preset.setAlpha(data.canReadPlayers()?1:.48f);ui.add(content,preset,48,8);
         String[][] fields={{"Khung góc mảnh","CleanESP"},{"Tên người chơi","Name"},{"Thanh máu","Health"},{"Trục XYZ","Line"},{"Khung người chơi","Box"},{"Xương người chơi","Skeleton"},{"Điểm đánh dấu đầu","HeadRedDot"},{"Khoảng cách","Dis"},{"Khung 3D (tắt = 2D)","Box3D"}};
         for(String[] f:fields)gameToggle(f[0],f[1]);slider("Tầm hiển thị ESP (m)","ESPMaxDistance",50,500,150,true);
         slider("Vàng khi máu ≤ (%)","HealthYellowPercent",10,90,50,true);slider("Đỏ khi máu ≤ (%)","HealthRedPercent",5,80,25,true);
     }
     private void colors(){
-        notice("Màu được lưu cho cấu hình giao diện. Chưa áp dụng ESP khi chưa có dữ liệu game.");
+        notice("Màu áp dụng cho khung ESP và vòng FOV khi có dữ liệu game.");
         LinearLayout row=ui.row();for(int i=0;i<2;i++){final int selected=i;Button b=ui.button(i==0?"Box":"FOV",()->{colorTarget=selected;build();});b.setTextColor(i==colorTarget?Ui.MINT:ui.muted());row.addView(b,new LayoutParams(0,ui.dp(44),1));}ui.add(content,row,44,10);
         swatch=ui.bold("",14,Color.BLACK);swatch.setGravity(Gravity.CENTER);ui.add(content,swatch,40,10);
         String prefix=colorTarget==0?"BoxColor":"FovColor";String[] labels={"Đỏ","Lục","Lam"},suffix={"R","G","B"};float[] defaults={.46f,.86f,.73f};

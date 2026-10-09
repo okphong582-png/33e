@@ -23,6 +23,8 @@ public final class OverlayService extends Service implements LicenseClient.Liste
     private RootDataSession rootData;
     private WindowManager manager;
     private View overlay;
+    private EspView esp;
+    private WindowManager.LayoutParams espParams;
     private WindowManager.LayoutParams params;
     private boolean expanded=true;
     private int page,x=16,y=24;
@@ -43,7 +45,7 @@ public final class OverlayService extends Service implements LicenseClient.Liste
             .addAction(new Notification.Action.Builder(null,"Dừng menu",stop).build()).build();
         if(Build.VERSION.SDK_INT>=34)startForeground(1,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);else startForeground(1,notification);
         if(BuildConfig.ROOT_EDITION&&rootData==null){rootData=new RootDataSession(this,license);rootData.start();}
-        expanded=true;showOverlay();main.removeCallbacks(guard);main.post(guard);return START_NOT_STICKY;
+        expanded=true;showEsp();showOverlay();main.removeCallbacks(guard);main.removeCallbacks(render);main.post(render);main.post(guard);return START_NOT_STICKY;
     }
     private final Runnable guard=new Runnable(){@Override public void run(){
         if(!license.authorized()||!Settings.canDrawOverlays(OverlayService.this)){stopSelf();return;}
@@ -51,6 +53,17 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         if(overlay instanceof MenuPanel)((MenuPanel)overlay).refreshDataStatus();
         main.postDelayed(this,500);
     }};
+    private final Runnable render=new Runnable(){@Override public void run(){if(esp!=null)esp.invalidate();main.postDelayed(this,ui.prefs.getBoolean("BalancedRender",false)?33:16);}};
+    private void showEsp(){
+        if(!BuildConfig.ROOT_EDITION||esp!=null)return;
+        esp=new EspView(this);espParams=new WindowManager.LayoutParams(-1,-1,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE|WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,PixelFormat.TRANSLUCENT);
+        espParams.gravity=Gravity.TOP|Gravity.START;espParams.alpha=.75f;
+        if(Build.VERSION.SDK_INT>=28)espParams.layoutInDisplayCutoutMode=WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        if(Build.VERSION.SDK_INT>=30)espParams.setFitInsetsTypes(0);
+        if(ui.prefs.getBoolean("AnLive",false))espParams.flags|=WindowManager.LayoutParams.FLAG_SECURE;
+        try{manager.addView(esp,espParams);}catch(RuntimeException e){esp=null;stopSelf();}
+    }
     private DisplayMetrics metrics(){DisplayMetrics dm=new DisplayMetrics();manager.getDefaultDisplay().getMetrics(dm);return dm;}
     private void showOverlay(){
         removeOverlay();ui=new Ui(this);DisplayMetrics dm=metrics();
@@ -74,7 +87,10 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         try{manager.addView(overlay,params);}
         catch(RuntimeException e){overlay=null;Toast.makeText(this,"Không thể mở menu nổi. Kiểm tra quyền hiển thị trên ứng dụng khác.",Toast.LENGTH_LONG).show();stopSelf();}
     }
-    private void updateSecure(){if(overlay==null||params==null)return;
+    private void updateSecure(){
+        if(esp!=null){if(ui.prefs.getBoolean("AnLive",false))espParams.flags|=WindowManager.LayoutParams.FLAG_SECURE;else espParams.flags&=~WindowManager.LayoutParams.FLAG_SECURE;
+            try{manager.updateViewLayout(esp,espParams);}catch(RuntimeException e){stopSelf();}}
+        if(overlay==null||params==null)return;
         if(ui.prefs.getBoolean("AnLive",false))params.flags|=WindowManager.LayoutParams.FLAG_SECURE;else params.flags&=~WindowManager.LayoutParams.FLAG_SECURE;
         try{manager.updateViewLayout(overlay,params);}catch(RuntimeException e){stopSelf();}
     }
@@ -96,10 +112,11 @@ public final class OverlayService extends Service implements LicenseClient.Liste
     private void removeOverlay(){if(overlay!=null){try{manager.removeView(overlay);}catch(RuntimeException ignored){}overlay=null;}}
     @Override public void onLicenseChanged(){if(!license.authorized()){Toast.makeText(this,license.message(),Toast.LENGTH_LONG).show();stopSelf();}}
     @Override public void onSharedPreferenceChanged(SharedPreferences prefs,String key){
+        if(rootData!=null)rootData.renew();
         if("AnLive".equals(key))updateSecure();
         if("DarkTheme".equals(key)){if(overlay instanceof MenuPanel)page=((MenuPanel)overlay).page();showOverlay();}
     }
     @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(overlay instanceof MenuPanel)page=((MenuPanel)overlay).page();showOverlay();}
-    @Override public void onDestroy(){main.removeCallbacksAndMessages(null);if(rootData!=null)rootData.close();removeOverlay();license.removeListener(this);ui.prefs.unregisterOnSharedPreferenceChangeListener(this);stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
+    @Override public void onDestroy(){main.removeCallbacksAndMessages(null);if(esp!=null){try{manager.removeView(esp);}catch(RuntimeException ignored){}esp=null;}if(rootData!=null)rootData.close();removeOverlay();license.removeListener(this);ui.prefs.unregisterOnSharedPreferenceChangeListener(this);stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
     @Override public IBinder onBind(Intent intent){return null;}
 }
