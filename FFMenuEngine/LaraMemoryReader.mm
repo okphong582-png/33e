@@ -1,9 +1,15 @@
 #import "LaraMemoryReader.h"
 #import <UIKit/UIKit.h>
-#import <mach/mach_vm.h>
 #import <mach-o/loader.h>
 extern "C" {
 #include "../lara/kexploit/darksword.h"
+// iPhoneOS deliberately rejects <mach/mach_vm.h>. As in Lara's vm.m,
+// declare the libSystem entry points using types from <mach/mach.h>.
+extern kern_return_t mach_vm_deallocate(task_t, mach_vm_address_t, mach_vm_size_t);
+extern kern_return_t mach_vm_read_overwrite(task_t, mach_vm_address_t, mach_vm_size_t,
+                                           mach_vm_address_t, mach_vm_size_t *);
+extern kern_return_t mach_vm_write(task_t, mach_vm_address_t, vm_offset_t,
+                                  mach_msg_type_number_t);
 }
 #include "../lara/kexploit/utils.h"
 #include "../lara/kexploit/offsets.h"
