@@ -49,7 +49,7 @@ Outputs:
 - app/build/outputs/apk/root/debug/app-root-debug.apk
 - app/build/outputs/apk/noRoot/debug/app-noRoot-debug.apk
 
-Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và tự thoát khi pipe cha đóng. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Chưa kiểm chứng trên điện thoại có Magisk/game thực tế.
+Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và từ chối chạy khi chưa có uid 0. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Chưa kiểm chứng trên điện thoại có Magisk/game thực tế.
 
 ## Cấu hình key
 

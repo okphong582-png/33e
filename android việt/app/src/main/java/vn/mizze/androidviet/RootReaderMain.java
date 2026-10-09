@@ -77,12 +77,14 @@ public final class RootReaderMain {
             long match=pointer(game)?memory.ptr(game+0x90):0,player=pointer(match)?memory.ptr(match+0xD8):0;
             if(!pointer(player))return new JSONObject().put("state","waiting_match").put("message","Đã khớp thư viện; chờ nhân vật trong trận.").put("pid",pid);
             String name=memory.managedString(memory.ptr(player+0x490));
+            if(name.isEmpty())return new JSONObject().put("state","waiting_name").put("message","Chờ tên người chơi trong trận.");
             return new JSONObject().put("state","local_player").put("message","Đọc được chuỗi tên theo profile thử · Chưa kiểm chứng ESP/Aim.")
                 .put("pid",pid).put("name",name).put("sampleUptime",SystemClock.elapsedRealtime());
         }
     }
     public static void main(String[] args){
         if(!BuildConfig.ROOT_EDITION){System.out.println("{\"state\":\"unsupported\"}");return;}
+        if(android.system.Os.getuid()!=0){System.out.println("{\"state\":\"root_required\",\"message\":\"Helper chưa có uid 0; cần cấp quyền root.\"}");return;}
         // A dead parent cannot leave a persistent root helper behind: lease is bounded to 30 seconds.
         lease=SystemClock.elapsedRealtime()+3000;
         Thread control=new Thread(()->{try(BufferedReader in=new BufferedReader(new InputStreamReader(System.in,StandardCharsets.UTF_8))){String line;

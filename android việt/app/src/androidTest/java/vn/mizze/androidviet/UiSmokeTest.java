@@ -81,19 +81,18 @@ public class UiSmokeTest {
         Thread.sleep(1200);assertFalse(serviceRunning(context));
         rootGranted.setBoolean(null,false);
     }
-    @Test public void readerHelperHonorsFlavorAndParentExit() throws Throwable {
+    @Test public void readerHelperRequiresRootAndHonorsFlavor() throws Throwable {
         var context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         ProcessBuilder builder=new ProcessBuilder("/system/bin/app_process","/system/bin","vn.mizze.androidviet.RootReaderMain");
         builder.environment().put("CLASSPATH",context.getApplicationInfo().sourceDir);
         Process helper=builder.redirectErrorStream(true).start();
         var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
         try{
-            if(BuildConfig.ROOT_EDITION){helper.getOutputStream().write(("LEASE "+(android.os.SystemClock.elapsedRealtime()+5000)+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));helper.getOutputStream().flush();}
             var line=executor.submit(()->{try(var input=new java.io.BufferedReader(new java.io.InputStreamReader(helper.getInputStream()))){String value;while((value=input.readLine())!=null){if(value.startsWith("{"))return value;}return "";}});
             var result=new org.json.JSONObject(line.get(5,java.util.concurrent.TimeUnit.SECONDS));
-            assertEquals(BuildConfig.ROOT_EDITION?"waiting_game":"unsupported",result.getString("state"));
+            assertEquals(BuildConfig.ROOT_EDITION?"root_required":"unsupported",result.getString("state"));
             helper.getOutputStream().close();
-            assertTrue("Helper must stop when the parent pipe closes",helper.waitFor(3,java.util.concurrent.TimeUnit.SECONDS));
+            assertTrue("Unprivileged helper must exit",helper.waitFor(3,java.util.concurrent.TimeUnit.SECONDS));
         }finally{helper.destroyForcibly();executor.shutdownNow();}
     }
     private boolean serviceRunning(android.content.Context context){
