@@ -1,5 +1,6 @@
 #import "LaraESPOverlayWindow.h"
 #import "LaraMemoryReader.h"
+#import "FFMenuController.h"
 #import <QuartzCore/QuartzCore.h>
 
 @interface ESPDrawView : UIView
@@ -126,7 +127,16 @@
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         CGRect screenBounds = [UIScreen mainScreen].bounds;
+        UIWindowScene *activeScene = nil;
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if ([scene isKindOfClass:UIWindowScene.class] &&
+                scene.activationState == UISceneActivationStateForegroundActive) {
+                activeScene = (UIWindowScene *)scene;
+                break;
+            }
+        }
         instance = [[LaraESPOverlayWindow alloc] initWithFrame:screenBounds];
+        if (activeScene) instance.windowScene = activeScene;
     });
     return instance;
 }
@@ -138,6 +148,9 @@
         self.backgroundColor = [UIColor clearColor];
         self.userInteractionEnabled = YES;
         self.opaque = NO;
+        UIViewController *root = [[UIViewController alloc] init];
+        root.view.backgroundColor = UIColor.clearColor;
+        self.rootViewController = root;
         
         // Default ESP Settings
         ESPConfig cfg;
@@ -153,9 +166,10 @@
         cfg.maxDistance = 400.0f;
         _espConfig = cfg;
         
-        _drawView = [[ESPDrawView alloc] initWithFrame:frame];
+        _drawView = [[ESPDrawView alloc] initWithFrame:self.bounds];
+        _drawView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _drawView.config = _espConfig;
-        [self addSubview:_drawView];
+        [root.view addSubview:_drawView];
         
         [self setupFloatingMenuButton];
     }
@@ -177,7 +191,7 @@
     [_menuButton addGestureRecognizer:pan];
     [_menuButton addTarget:self action:@selector(toggleMenuVisibility) forControlEvents:UIControlEventTouchUpInside];
     
-    [self addSubview:_menuButton];
+    [self.rootViewController.view addSubview:_menuButton];
 }
 
 - (void)handleMenuPan:(UIPanGestureRecognizer *)pan {
@@ -195,6 +209,20 @@
 
 - (void)startOverlayLoop {
     if (_displayLink) return;
+    // SwiftUI apps need a window scene; retry if created before activation.
+    if (!self.windowScene) {
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if ([scene isKindOfClass:UIWindowScene.class] &&
+                scene.activationState == UISceneActivationStateForegroundActive) {
+                self.windowScene = (UIWindowScene *)scene;
+                break;
+            }
+        }
+    }
+    if (!self.windowScene) {
+        NSLog(@"[LaraESPOverlayWindow] No active Lara scene. Retry when foregrounded.");
+        return;
+    }
     
     self.hidden = NO;
     _isOverlayActive = YES;
@@ -240,7 +268,8 @@
     
     // If user touches interactive controls (menu button / menu container), intercept touch
     if (hitView == _menuButton || [hitView isDescendantOfView:_menuButton] ||
-        (_menuContainerView && [hitView isDescendantOfView:_menuContainerView])) {
+        (_menuContainerView && hitView != _menuContainerView &&
+         [hitView isDescendantOfView:_menuContainerView])) {
         return hitView;
     }
     
@@ -249,7 +278,13 @@
 }
 
 - (void)toggleMenuVisibility {
-    NSLog(@"[LaraESPOverlayWindow] Menu Button Toggled");
+    [[FFMenuController sharedMenu] toggleMenu];
+}
+
+- (void)setMenuContainer:(UIView *)menuContainer {
+    _menuContainerView = menuContainer;
+    // Keep FF accessible while the full-screen transparent menu view is open.
+    [self.rootViewController.view bringSubviewToFront:_menuButton];
 }
 
 @end

@@ -51,6 +51,11 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .onChange(of: mgr.dsready) { _, ready in
+                if ready {
+                    LaraFFBridge.shared().startFFEngine()
+                }
+            }
         }
     }
     

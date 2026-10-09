@@ -30,8 +30,16 @@
             // 3. Attach Menu Controller
             FFMenuController *menu = [FFMenuController sharedMenu];
             menu.overlayWindow = overlay;
-            [overlay addSubview:menu.view];
-            [menu hideMenu];
+            UIViewController *root = overlay.rootViewController;
+            if (menu.parentViewController != root) {
+                [root addChildViewController:menu];
+                menu.view.frame = root.view.bounds;
+                menu.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+                [root.view addSubview:menu.view];
+                [menu didMoveToParentViewController:root];
+            }
+            [overlay setMenuContainer:menu.view];
+            [menu showMenu];
         });
     } else {
         NSLog(@"[LaraFFBridge] Exploit initialization deferred or failed.");

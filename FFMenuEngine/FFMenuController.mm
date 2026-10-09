@@ -98,6 +98,11 @@
     ];
 }
 
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    _blurContainer.center = CGPointMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds));
+}
+
 - (void)updateStatus {
     LaraMemoryReader *reader = [LaraMemoryReader sharedInstance];
     if (reader.isKernelReady) {

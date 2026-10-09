@@ -33,6 +33,7 @@ typedef struct {
 - (void)startOverlayLoop;
 - (void)stopOverlayLoop;
 - (void)toggleMenuVisibility;
+- (void)setMenuContainer:(UIView *)menuContainer;
 
 @end
 
