@@ -21,7 +21,6 @@ final class MenuPanel extends LinearLayout {
     private int page;
     private int colorTarget;
     private TextView swatch;
-    private TextView dataStatus;
     private int builtReady;
     MenuPanel(Context context,Host host,int initialPage) {
         super(context);this.host=host;ui=new Ui(context);page=initialPage;
@@ -42,12 +41,11 @@ final class MenuPanel extends LinearLayout {
         addView(scroll,new LayoutParams(-1,0,1));build();
     }
     int page(){return page;}
-    void refreshDataStatus(){int ready=RootDataSession.capabilityMask();if(ready!=builtReady){builtReady=ready;int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}if(dataStatus!=null){String status=RootDataSession.status();if(!status.contentEquals(dataStatus.getText()))dataStatus.setText(status);}}
+    void refreshDataStatus(){int ready=RootDataSession.capabilityMask();if(ready!=builtReady){builtReady=ready;int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}}
     private void scrollTopAndBuild(){build();scroll.post(()->scroll.scrollTo(0,0));}
     private void build(){
-        builtReady=RootDataSession.capabilityMask();content.removeAllViews();swatch=null;dataStatus=null;
+        builtReady=RootDataSession.capabilityMask();content.removeAllViews();swatch=null;
         for(int i=0;i<4;i++){tabs[i].setTextColor(i==page?Ui.MINT:ui.muted());tabs[i].setBackground(ui.shape(i==page?0x1875DBBA:Color.TRANSPARENT,9));tabs[i].setSelected(i==page);}
-        if(page==0 || page==1) notice(data.canApplyGameFeatures()?"Đã kết nối dữ liệu game":AndroidGameData.description());
         switch(page){case 0->aim();case 1->esp();case 2->colors();default->settings();}
         TextView credit=ui.label("HoangHaDev",10,ui.muted());credit.setGravity(Gravity.CENTER);ui.add(content,credit,36,0);
     }
@@ -59,8 +57,10 @@ final class MenuPanel extends LinearLayout {
         TextView label=ui.label(title,14,ui.text());row.addView(label,new LayoutParams(0,-1,1));
         CrossCheck box=new CrossCheck(getContext(),value);row.addView(box,new LayoutParams(ui.dp(34),ui.dp(34)));
         row.setEnabled(available);box.setEnabled(available);row.setAlpha(available?1:.48f);
-        row.setContentDescription(title+(available?"":" · Chờ backend/dữ liệu game"));
-        if(available)row.setOnClickListener(v->{boolean next=!ui.prefs.getBoolean(key,fallback);ui.prefs.edit().putBoolean(key,next).apply();box.setChecked(next);host.settingsChanged();});
+        row.setContentDescription(title+(available?"":" · Chưa sẵn sàng"));
+        if(available)row.setOnClickListener(v->{boolean next=!ui.prefs.getBoolean(key,fallback);var edit=ui.prefs.edit().putBoolean(key,next);
+            if(next&&key.equals("AimHead"))edit.putBoolean("AimNeck",false);if(next&&key.equals("AimNeck"))edit.putBoolean("AimHead",false);
+            edit.apply();box.setChecked(next);host.settingsChanged();if(key.equals("AimHead")||key.equals("AimNeck")){int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}});
         ui.add(content,row,54,8);
     }
     private void slider(String title,String key,float min,float max,float fallback,boolean game){
@@ -86,8 +86,8 @@ final class MenuPanel extends LinearLayout {
         section("Nâng cao");gameToggle("Tự chọn tầm Silent","SilentAutoConfig");slider("Tầm chọn Silent (m)","SilentMaxDistance",10,150,100,true);
     }
     private void esp(){
-        gameToggle("Bật ESP","ESPEnabled");Button preset=ui.button("Áp dụng ESP tối giản",()->{ui.prefs.edit().putBoolean("ESPEnabled",true).putBoolean("CleanESP",true).putBoolean("Name",true).putBoolean("Health",true).putBoolean("Dis",true).putBoolean("Box",true).putBoolean("Skeleton",false).putBoolean("Line",false).putBoolean("Box3D",false).putBoolean("HeadRedDot",false).apply();build();});preset.setEnabled(data.canReadPlayers());preset.setAlpha(data.canReadPlayers()?1:.48f);ui.add(content,preset,48,8);
-        String[][] fields={{"Khung góc mảnh","CleanESP"},{"Tên người chơi","Name"},{"Thanh máu","Health"},{"Trục XYZ","Line"},{"Khung người chơi","Box"},{"Xương người chơi","Skeleton"},{"Điểm đánh dấu đầu","HeadRedDot"},{"Khoảng cách","Dis"},{"Khung 3D (tắt = 2D)","Box3D"}};
+        gameToggle("Bật ESP","ESPEnabled");Button preset=ui.button("Áp dụng ESP tối giản",()->{ui.prefs.edit().putBoolean("ESPEnabled",true).putBoolean("CleanESP",true).putBoolean("Name",true).putBoolean("Health",true).putBoolean("Dis",true).putBoolean("Box",true).putBoolean("TracerLine",true).putBoolean("Skeleton",false).putBoolean("Line",false).putBoolean("Box3D",false).putBoolean("HeadRedDot",false).apply();build();});preset.setEnabled(data.canReadPlayers());preset.setAlpha(data.canReadPlayers()?1:.48f);ui.add(content,preset,48,8);
+        String[][] fields={{"Khung góc mảnh","CleanESP"},{"Tên người chơi","Name"},{"Thanh máu","Health"},{"Trục XYZ","Line"},{"Đường nối tới người chơi","TracerLine"},{"Khung người chơi","Box"},{"Xương người chơi","Skeleton"},{"Điểm đánh dấu đầu","HeadRedDot"},{"Khoảng cách","Dis"},{"Khung 3D (tắt = 2D)","Box3D"}};
         for(String[] f:fields)gameToggle(f[0],f[1]);slider("Tầm hiển thị ESP (m)","ESPMaxDistance",50,500,150,true);
         slider("Vàng khi máu ≤ (%)","HealthYellowPercent",10,90,50,true);slider("Đỏ khi máu ≤ (%)","HealthRedPercent",5,80,25,true);
     }
@@ -103,11 +103,10 @@ final class MenuPanel extends LinearLayout {
         swatch.setBackground(ui.shape(Color.rgb(r,g,b),9));swatch.setText(String.format(Locale.ROOT,"#%02X%02X%02X",r,g,b));swatch.setTextColor(r*.299+g*.587+b*.114>153?Color.BLACK:Color.WHITE);
     }
     private void settings(){
-        notice(AndroidGameData.description());section("Nút nổi");gameToggle("Ghost","GhostModeFloating");gameToggle("FakeLag","FakeLagFloating");gameToggle("Fly","FlyFloating");gameToggle("Ẩn nút chức năng","HideFeatureButtons");gameToggle("Nút Speed","RunSpeedFloating");
+        section("Khởi động");toggle("Tự bật khi vào trận","AutoFeatures",BuildConfig.ROOT_EDITION,false);section("Nút nổi");gameToggle("Ghost","GhostModeFloating");gameToggle("FakeLag","FakeLagFloating");gameToggle("Fly","FlyFloating");gameToggle("Ẩn nút chức năng","HideFeatureButtons");gameToggle("Nút Speed","RunSpeedFloating");
         section("Di chuyển");slider("Độ cao Fly (m)","FlyHeight",1,6,4,true);gameToggle("Speed","RunSpeed");
         slider("Tốc độ (m/s)","RunSpeedValue",.1f,30,6,true);
         section("Hiệu ứng nhân vật");gameToggle("Spin · chỉ mình thấy","VisualSpin");slider("Vòng / giây","VisualSpinSpeed",.1f,3,.5f,true);
-        if(BuildConfig.ROOT_EDITION){ section("Quyền root"); notice(RootAccess.detail()); dataStatus=ui.label("",12,ui.muted());ui.add(content,dataStatus,-2,8);refreshDataStatus(); }
         section("Giao diện Android");toggle("Ẩn khi chụp / quay","AnLive",false,false);toggle("Giao diện tối","DarkTheme",true,false);
         // No game renderer exists in the non-root adapter, so FPS must not claim to affect it.
         gameToggle("Tiết kiệm pin (30 FPS)","BalancedRender");

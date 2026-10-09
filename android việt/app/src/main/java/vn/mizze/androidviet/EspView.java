@@ -31,6 +31,7 @@ final class EspView extends View {
             paint.setColor(boxColor);paint.setStyle(Paint.Style.STROKE);
             float[] head=point(bones.optJSONArray("head")),hip=point(bones.optJSONArray("hip")),left=point(bones.optJSONArray("leftFoot")),right=point(bones.optJSONArray("rightFoot"));
             if(head==null||hip==null)continue;
+            if(enabled("TracerLine"))canvas.drawLine(getWidth()/2f,getHeight(),hip[0],hip[1],paint);
             float bottom=Math.max(left==null?hip[1]:left[1],right==null?hip[1]:right[1]),top=head[1]-4*density,height=bottom-top;
             if(height<=2||height>getHeight()*3)continue;float width=height*.42f,cx=(head[0]+hip[0])/2,leftX=cx-width/2,rightX=cx+width/2;
             if(enabled("Box")){

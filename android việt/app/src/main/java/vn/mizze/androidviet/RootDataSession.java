@@ -21,6 +21,7 @@ final class RootDataSession implements AutoCloseable {
     private BufferedWriter control;
     private long sentDeadline;
     private String sentConfig="";
+    private final FeatureAutoStart autoStart=new FeatureAutoStart();
     private final android.content.SharedPreferences prefs;
     private final String apk;
     private final LicenseClient license;
@@ -74,6 +75,7 @@ final class RootDataSession implements AutoCloseable {
         long deadline=license.leaseDeadline();
         if(deadline<=SystemClock.elapsedRealtime()){close();return;}
         try{
+            if(prefs.getBoolean("AutoFeatures",BuildConfig.ROOT_EDITION)){String[] keys=autoStart.claim(capabilityMask());if(keys.length>0){var edit=prefs.edit();for(String key:keys)edit.putBoolean(key,true);edit.apply();}}
             if(deadline!=sentDeadline){control.write("LEASE "+deadline+"\n");sentDeadline=deadline;}
             String next=new JSONObject().put("noReload",prefs.getBoolean("ShootNoReload",false))
                 .put("fastFire",prefs.getBoolean("FastFire",false)).put("speed",prefs.getBoolean("RunSpeed",false))
