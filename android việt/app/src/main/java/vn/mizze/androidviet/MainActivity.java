@@ -27,6 +27,7 @@ public final class MainActivity extends Activity implements LicenseClient.Listen
     private Button login, start, logout;
     private boolean starting;
     private boolean builtDark;
+    private boolean notificationsRequested;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);ui=new Ui(this);license=((MizzeApp)getApplication()).license();build();
         license.addListener(this);license.startWatching();update();
@@ -82,12 +83,19 @@ public final class MainActivity extends Activity implements LicenseClient.Listen
             catch(Exception e){new AlertDialog.Builder(this).setMessage("Mở Cài đặt → Ứng dụng → Android Việt → Hiển thị trên ứng dụng khác, rồi bấm Start lại.").setPositiveButton("OK",null).show();}
             status.setText("Cho phép hiển thị trên ứng dụng khác, quay lại rồi nhấn Start.");return;
         }
-        if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
+        if(Build.VERSION.SDK_INT>=33 && !notificationsRequested && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+            notificationsRequested=true;
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},10);
+            return;
+        }
         if(BuildConfig.ROOT_EDITION){
             starting=true;update();status.setText("Đang xin quyền root. Chọn Cho phép trong Magisk/SuperSU…");
             RootAccess.request((ok,detail)->{starting=false;if(isFinishing()||isDestroyed())return;update();status.setText(detail);if(ok)launchOverlay();});
         }else launchOverlay();
+    }
+    @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] results){
+        super.onRequestPermissionsResult(requestCode,permissions,results);
+        if(requestCode==10)startMenu(); // Notification denial does not revoke overlay permission.
     }
     private void launchOverlay(){
         if(!license.authorized()){update();return;}

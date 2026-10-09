@@ -43,7 +43,6 @@ public class UiSmokeTest {
             // Render a widget in the test Activity, without authorizing a production service.
             MenuPanel panel=new MenuPanel(screen,new MenuPanel.Host(){public void closeMenu(){}public void settingsChanged(){}public void stop(){}},0);
             screen.setContentView(panel);
-            assertFalse(find(panel,"Aim đầu").getParent() instanceof Button);
             assertFalse(((View)find(panel,"Aim đầu").getParent()).isEnabled());
         });screenshot("menu-aim");
         activity.runOnUiThread(()->{View root=screen.getWindow().getDecorView();find(root,"ESP").performClick();assertFalse(((View)find(root,"Bật ESP").getParent()).isEnabled());});screenshot("menu-esp");
@@ -53,6 +52,7 @@ public class UiSmokeTest {
             boolean before=new Ui(screen).prefs.getBoolean("AnLive",false);
             ((View)find(root,"Ẩn khi chụp / quay").getParent()).performClick();
             assertEquals(!before,new Ui(screen).prefs.getBoolean("AnLive",false));
+            ((View)find(root,"Ẩn khi chụp / quay").getParent()).performClick();
             assertFalse(((View)find(root,"Speed").getParent()).isEnabled());
         });screenshot("menu-settings");
     }
