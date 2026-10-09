@@ -5,7 +5,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * LaraMemoryReader
- * Cross-process user-memory backend using Lara's DarkSword VM mapping.
+ * Cross-Process Memory Reader & CS_Flags / JIT Patcher Engine via DarkSword
+ * iOS 17.0 - 18.7.1 & iOS 26.0 - 26.0.1
  */
 @interface LaraMemoryReader : NSObject
 
@@ -15,13 +16,11 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign, readonly) uint64_t targetMapAddress;
 @property (nonatomic, assign, readonly) uint64_t mainModuleBase;
 @property (nonatomic, assign, readonly) BOOL isKernelReady;
-@property (nonatomic, assign, readonly) BOOL isAttached;
-@property (nonatomic, copy, readonly) NSString *lastError;
 
 + (instancetype)sharedInstance;
 
 /**
- * Check that Lara's existing DarkSword initialization has completed
+ * Initialize kernel exploit primitives via DarkSword engine
  */
 - (BOOL)initializeKernelExploit;
 
@@ -29,7 +28,11 @@ NS_ASSUME_NONNULL_BEGIN
  * Attach to target process by executable name (e.g., "FreeFire", "FreeFireMax")
  */
 - (BOOL)attachToProcessNamed:(NSString *)processName;
-- (void)detach;
+
+/**
+ * Enable JIT execution & Patch CS_Flags (CS_GET_TASK_ALLOW | CS_DEBUGGED) for target process
+ */
+- (BOOL)enableJITAndPatchCSFlagsForProcess:(uint64_t)procAddress;
 
 /**
  * Read memory buffer from target process at virtual address
@@ -46,8 +49,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (float)readFloat:(uint64_t)address;
 
 /**
- * Write memory buffer through the target's DarkSword VM mapping.
- * A failed multi-page write may have written earlier pages.
+ * Write memory buffer to target process memory (requires kernel write)
  */
 - (BOOL)writeMemoryAtAddress:(uint64_t)address buffer:(const void *)buffer size:(size_t)size;
 
