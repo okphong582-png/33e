@@ -26,6 +26,7 @@ struct ContentView: View {
         NavigationStack {
             List {
                 AlertsSection
+                FFMenuEngineSection
                 KRWSection
                 RCSection
                 ActionsSection
@@ -53,11 +54,56 @@ struct ContentView: View {
         }
     }
     
-    private var AlertsSection: some View {
-        Section {
-            if !mgr.hasOffsets {
-                PlainAlert(title: "No offsets found!", icon: "exclamationmark.triangle.fill", text: "Kernelcache offsets are missing. Click \"Run Exploit\" and then fetch the offsets.")
+    }
+    
+    private var FFMenuEngineSection: some View {
+        Section(header: HeaderLabel(text: "Free Fire Menu Engine (iOS 17-18)", icon: "gamecontroller.fill")) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Exploit Status:")
+                        .fontWeight(.semibold)
+                    Spacer()
+                    if LaraFFBridge.shared().isExploitReady() {
+                        Text("Active (Kernel R/W Ready)")
+                            .foregroundColor(.green)
+                            .fontWeight(.bold)
+                    } else {
+                        Text("Not Active")
+                            .foregroundColor(.red)
+                    }
+                }
+                .font(.subheadline)
+                
+                Button(action: {
+                    LaraFFBridge.shared().startFFEngine()
+                }) {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "play.circle.fill")
+                        Text("Start FF Menu & ESP Overlay")
+                            .fontWeight(.bold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.cyan)
+                
+                Button(action: {
+                    LaraFFBridge.shared().toggleMenuOverlay()
+                }) {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "square.on.square.dashed")
+                        Text("Toggle ESP Menu Overlay")
+                            .fontWeight(.semibold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.bordered)
             }
+            .padding(.vertical, 4)
         }
     }
     
