@@ -222,12 +222,14 @@
     
     // Perform memory read via LaraMemoryReader & update entities
     LaraMemoryReader *reader = [LaraMemoryReader sharedInstance];
-    if (reader.isKernelReady && reader.targetProcAddress != 0) {
+    if (reader.isAttached) {
         // Example mock entity structure for overlay visualization test
         NSMutableArray *list = [NSMutableArray array];
         
         // Populate tracking coordinates from memory reader
         _drawView.entitiesToDraw = list;
+    } else {
+        _drawView.entitiesToDraw = [NSMutableArray array];
     }
     
     [_drawView setNeedsDisplay];

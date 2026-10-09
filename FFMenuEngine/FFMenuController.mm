@@ -44,7 +44,8 @@
     [_blurContainer.contentView addSubview:header];
     
     // Status Label
-    _statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 46, 280, 20)];
+    _statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 46, 280, 28)];
+    _statusLabel.numberOfLines = 2;
     _statusLabel.text = @"DarkSword: Waiting for Exploit...";
     _statusLabel.textColor = [UIColor lightGrayColor];
     _statusLabel.font = [UIFont systemFontOfSize:11 weight:UIFontWeightMedium];
@@ -100,15 +101,15 @@
 - (void)updateStatus {
     LaraMemoryReader *reader = [LaraMemoryReader sharedInstance];
     if (reader.isKernelReady) {
-        if (reader.targetPID != 0) {
-            _statusLabel.text = [NSString stringWithFormat:@"Kernel R/W Active | Attached PID: %d", reader.targetPID];
+        if (reader.isAttached) {
+            _statusLabel.text = [NSString stringWithFormat:@"DarkSword | PID: %d | Base: 0x%llx", reader.targetPID, (unsigned long long)reader.mainModuleBase];
             _statusLabel.textColor = [UIColor greenColor];
         } else {
-            _statusLabel.text = @"Kernel R/W Active | Not Attached";
+            _statusLabel.text = reader.lastError.length ? reader.lastError : @"DarkSword Ready | Not Attached";
             _statusLabel.textColor = [UIColor yellowColor];
         }
     } else {
-        _statusLabel.text = @"DarkSword: Exploit Not Active";
+        _statusLabel.text = reader.lastError.length ? reader.lastError : @"Run DarkSword in Lara first";
         _statusLabel.textColor = [UIColor redColor];
     }
 }
@@ -140,6 +141,8 @@
     }
     
     NSDictionary *item = _menuSections[indexPath.section][@"items"][indexPath.row];
+    cell.accessoryView = nil;
+    cell.accessoryType = UITableViewCellAccessoryNone;
     cell.textLabel.text = item[@"title"];
     
     NSString *type = item[@"type"];
@@ -172,11 +175,19 @@
     
     if ([key isEqualToString:@"attach"]) {
         LaraMemoryReader *reader = [LaraMemoryReader sharedInstance];
+        NSString *firstError = @"";
         BOOL success = [reader attachToProcessNamed:@"FreeFire"];
         if (!success) {
+            firstError = reader.lastError;
             success = [reader attachToProcessNamed:@"FreeFireMax"];
+            if (!success) {
+                NSLog(@"[FFMenu] FreeFire: %@; FreeFireMax: %@", firstError, reader.lastError);
+            }
         }
         [self updateStatus];
+        if (!success) {
+            _statusLabel.text = [NSString stringWithFormat:@"FF: %@ | MAX: %@", firstError, reader.lastError];
+        }
     }
 }
 

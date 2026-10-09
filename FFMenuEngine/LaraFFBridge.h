@@ -4,7 +4,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LaraFFBridge : NSObject
 
-+ (instancetype)sharedBridge;
++ (instancetype)sharedBridge NS_SWIFT_NAME(shared());
 
 /**
  * Initialize Lara FF Menu Engine with DarkSword Exploit

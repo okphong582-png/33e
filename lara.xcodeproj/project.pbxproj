@@ -95,6 +95,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		F1A2B3C4D5E6000000000001 /* FFMenuEngine */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FFMenuEngine;
+			sourceTree = "<group>";
+		};
 		CC1C8B3B2F71DF9C00206982 /* lara */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -216,6 +221,7 @@
 		CC1C8B302F71DF9C00206982 = {
 			isa = PBXGroup;
 			children = (
+				F1A2B3C4D5E6000000000001 /* FFMenuEngine */,
 				15F0240B2FBB9510004BD090 /* OverwriteFiles */,
 				CC1C8B3B2F71DF9C00206982 /* lara */,
 				CC1C8B3A2F71DF9C00206982 /* Products */,
@@ -273,6 +279,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				F1A2B3C4D5E6000000000001 /* FFMenuEngine */,
 				CC1C8B3B2F71DF9C00206982 /* lara */,
 			);
 			name = lara;
