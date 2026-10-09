@@ -142,6 +142,8 @@ final class laramgr: ObservableObject {
                     self.dsfailed = false
                     self.kernbase = ds_get_kernel_base()
                     self.kernslide = ds_get_kernel_slide()
+                    offsets_init()
+                    self.hasOffsets = true
                     self.logmsg("\n(ds) exploit success!")
                     self.logmsg(String(format: "(ds) kernel_base:  0x%llx", self.kernbase))
                     self.logmsg(String(format: "(ds) kernel_slide: 0x%llx\n", self.kernslide))
