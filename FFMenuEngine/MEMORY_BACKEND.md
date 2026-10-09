@@ -35,6 +35,17 @@ including `LC_ID_DYLIB`; it does not assume a fixed ASLR base.
 The existing DarkSword VM mapper and its kernel offsets still require testing
 on the actual supported device. Windows cannot build or run this iOS target.
 
+## Menu window
+
+When `mgr.dsready` becomes true, Lara opens the FF menu in a transparent UIWindow
+attached to its foreground UIWindowScene. The FF button toggles the menu, and
+empty space passes touches through to Lara's underlying UI. The Start button
+can reopen it if initialization finished before the view appeared.
+
+This window belongs to Lara. Its high window level does not make it a system
+overlay across applications. Displaying the menu over Free Fire while Lara is
+backgrounded is not implemented or validated by this change.
+
 The overlay's `renderFrame` still has an empty entity list. This backend change
 does not supply game-version-specific entity offsets, camera matrices or the
 entity traversal needed to draw live ESP.
