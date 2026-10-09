@@ -2,6 +2,8 @@
 #import "LaraMemoryReader.h"
 #import "LaraESPOverlayWindow.h"
 #import "FFMenuController.h"
+#include "../lara/kexploit/darksword.h"
+#include "../lara/kexploit/pe/rc.h"
 
 @implementation LaraFFBridge
 
@@ -15,16 +17,19 @@
 }
 
 - (void)startFFEngine {
-    NSLog(@"[LaraFFBridge] Starting Lara FF Engine...");
+    NSLog(@"[LaraFFBridge] Starting Lara System-Wide FF Engine...");
     
     // 1. Initialize DarkSword Kernel Exploit
     BOOL kReady = [[LaraMemoryReader sharedInstance] initializeKernelExploit];
     if (kReady) {
-        NSLog(@"[LaraFFBridge] Exploit ready. Starting ESP Overlay Window...");
+        NSLog(@"[LaraFFBridge] Exploit ready. Initializing System-Wide Floating Overlay...");
         
-        // 2. Start ESP Overlay Window CADisplayLink Loop
+        // 2. Start System-Wide ESP Overlay Window
         dispatch_async(dispatch_get_main_queue(), ^{
             LaraESPOverlayWindow *overlay = [LaraESPOverlayWindow sharedOverlay];
+            
+            // Set window level to highest system status bar level for cross-app visibility
+            overlay.windowLevel = UIWindowLevelStatusBar + 9999.0;
             [overlay startOverlayLoop];
             
             // 3. Attach Menu Controller
@@ -40,6 +45,8 @@
             }
             [overlay setMenuContainer:menu.view];
             [menu showMenu];
+            
+            NSLog(@"[LaraFFBridge] System-Wide Overlay Window Activated across Home Screen and Apps!");
         });
     } else {
         NSLog(@"[LaraFFBridge] Exploit initialization deferred or failed.");
