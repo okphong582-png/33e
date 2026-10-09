@@ -48,7 +48,8 @@
     "Nickname": "0x6F2797C ldr x0, [x19, #0x490]",
     "UnityView": "Camera icall 0x41CB48 -> 0xB797E8 returns nativeCamera+0x80 at 0xB79844",
     "UnityProjection": "Camera icall 0x41CD5C -> 0xB79858 returns nativeCamera+0xC0 at 0xB79904",
-    "UnityPosition": "Transform icall 0x45EA4C -> 0x691584; 0x69304C supplies TransformData and index for TRS parent traversal"
+    "UnityPosition": "Transform icall 0x45EA4C -> 0x691584; 0x69304C supplies TransformData and index for TRS parent traversal",
+    "TransformNodeGetter": "All three getters: F9400800 (ldr x0,[x0,#0x10]) then D65F03C0 (ret); each checked for the selected runtime class"
   },
   "limitations": [
     "Silent/AimKill/Ghost/FakeLag/Fly/Spin have no Android backend. ESP/Aim require matching live camera, dictionary, transform and PRI data.",
@@ -106,7 +107,27 @@
       "arms": "TransformNode fields verified in Android metadata at +6C0/+6C8/+720/+718/+730/+728; semantic arm assignments follow matching iOS rig and need device confirmation"
     },
     "pri": "Player +0x70; safe PRIDataPool +0x10 array +0x20[index*8] -> entry +0x18 ushort. Unsafe variant entry +0x18 -> pointer -> ushort. HP 0/max 1, firing 21 (2 active), scope 12, team 34 (UInt8; native getter 0x7056BF4)",
-    "aim": "Normal mode Player +0x614 Quaternion; 0x6F2C8B0..BC stores four floats. Globals class cache 0xAC1E810 static +0xE4 must be 0. Neck target uses iOS AimPoint estimate at most 10cm below actual head."
+    "aim": "Normal mode Player +0x614 Quaternion; 0x6F2C8B0..BC stores four floats. Globals class cache 0xAC1E810 static +0xE4 must be 0. Neck target uses iOS AimPoint estimate at most 10cm below actual head.",
+    "transformNodes": [
+      {
+        "name": "TransformNode",
+        "namespace": "",
+        "getter": "0x3793898",
+        "offset": "0x10"
+      },
+      {
+        "name": "BFOONIGAIFK",
+        "namespace": "",
+        "getter": "0x70D847C",
+        "offset": "0x10"
+      },
+      {
+        "name": "TransformNode",
+        "namespace": "GCommon",
+        "getter": "0x8251764",
+        "offset": "0x10"
+      }
+    ]
   },
   "unitySignatures": [
     {

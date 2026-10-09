@@ -59,3 +59,5 @@ Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; s
 ## Cấu hình key
 
 app/src/main/res/raw/license_config.json dùng cùng database public-client của iOS. Không có service-account/admin secret trong APK. Firebase Rules v4 quyết định quyền đọc từng hash và binding. Không sửa dữ liệu live trong quá trình build/test. Cần key do chủ hệ thống cấp để kiểm chứng kết nối thực tế.
+
+Sửa lỗi cloudphone “Unknown transform node”: bộ đọc nhận đủ ba lớp ITransformNode trong metadata Android, gồm BFOONIGAIFK (getter 0x70D847C), TransformNode namespace rỗng (0x3793898) và GCommon.TransformNode (0x8251764). Xác minh lệnh getter +0x10/ret trước khi theo con trỏ; tên/namespace khác hoặc code đã đổi vẫn bị từ chối.

@@ -11,10 +11,13 @@ import static vn.mizze.androidviet.RootReaderMain.pointer;
 final class RootGameFrameReader {
     private final RootReaderMain.Memory m; private final long base,game,match,local;
     private long playerClass;
+    private final TransformNodeReader.Memory nodeMemory;
     private final Map<Long,GameGeometry.V> positions=new HashMap<>();
     private final Map<Long,GameGeometry.TRS> trs=new HashMap<>();
     private final Map<Long,Integer> ancestry=new HashMap<>();
-    RootGameFrameReader(RootReaderMain.Memory memory,long base,long game,long match,long local){this.m=memory;this.base=base;this.game=game;this.match=match;this.local=local;}
+    RootGameFrameReader(RootReaderMain.Memory memory,long base,long game,long match,long local){this.m=memory;this.base=base;this.game=game;this.match=match;this.local=local;
+        nodeMemory=new TransformNodeReader.Memory(){public long pointer(long address)throws Exception{return m.ptr(address);}public String string(long address)throws Exception{return m.ascii(address);}public int instruction(long address)throws Exception{return m.i32(address);}};
+    }
     private static ByteBuffer bytes(byte[] b){return ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN);}
     private boolean named(long object,String name,String namespace)throws Exception{
         if(!pointer(object))return false;long k=m.ptr(object);return pointer(k)&&m.ascii(m.ptr(k+16)).equals(name)&&m.ascii(m.ptr(k+24)).equals(namespace);
@@ -34,8 +37,7 @@ final class RootGameFrameReader {
         if(data!=m.ptr(nativePtr+0x38)||index!=m.i32(nativePtr+0x40))throw new IOException("Transform changed during read");positions.put(managed,result);return result;
     }
     private GameGeometry.V bone(long player,int offset)throws Exception{
-        long node=m.ptr(player+offset);if(!pointer(node))throw new IOException("Missing bone");long k=m.ptr(node);
-        if(!pointer(k)||!m.ascii(m.ptr(k+16)).equals("TransformNode"))throw new IOException("Unknown transform node");return transform(m.ptr(node+0x10));
+        long node=m.ptr(player+offset);return transform(TransformNodeReader.resolve(node,base,nodeMemory));
     }
     private GameGeometry.V maybeBone(long p,int offset){try{return bone(p,offset);}catch(Exception e){return null;}}
     private GameGeometry.V head(long p)throws Exception{try{return bone(p,0x6A0);}catch(Exception e){return bone(p,0xA00);}}
