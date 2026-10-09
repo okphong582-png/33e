@@ -79,20 +79,39 @@
 - (void)buildMenuItems {
     _menuSections = @[
         @{
-            @"section": @"Kernel Memory Engine",
+            @"section": @"Kernel Engine & Process Status",
             @"items": @[
-                @{@"title": @"Attach to FreeFire", @"type": @"action", @"key": @"attach"}
+                @{@"title": @"Auto-Attach to FreeFire / Max", @"type": @"action", @"key": @"attach"}
             ]
         },
         @{
-            @"section": @"ESP Overlay Options",
+            @"section": @"Aimbot & Targeting (Mizze Engine)",
             @"items": @[
-                @{@"title": @"ESP Box", @"type": @"switch", @"key": @"box"},
+                @{@"title": @"Enable Auto Aimbot", @"type": @"switch", @"key": @"aimbot"},
+                @{@"title": @"Silent Aim (Memory Injected)", @"type": @"switch", @"key": @"silent_aim"},
+                @{@"title": @"FOV Circle Indicator", @"type": @"switch", @"key": @"fov"},
+                @{@"title": @"Smooth Aimbot Tracking", @"type": @"switch", @"key": @"smooth_aim"},
+                @{@"title": @"Target Priority: Head", @"type": @"switch", @"key": @"aim_head"}
+            ]
+        },
+        @{
+            @"section": @"ESP Visuals (Mizze ESP)",
+            @"items": @[
+                @{@"title": @"ESP 2D Box", @"type": @"switch", @"key": @"box"},
                 @{@"title": @"ESP Snaplines", @"type": @"switch", @"key": @"line"},
-                @{@"title": @"ESP Distance", @"type": @"switch", @"key": @"dist"},
+                @{@"title": @"ESP Distance Meter", @"type": @"switch", @"key": @"dist"},
                 @{@"title": @"ESP Health Bar", @"type": @"switch", @"key": @"hp"},
-                @{@"title": @"FOV Circle", @"type": @"switch", @"key": @"fov"},
-                @{@"title": @"Crosshair Overlay", @"type": @"switch", @"key": @"crosshair"}
+                @{@"title": @"ESP Skeleton / Bones", @"type": @"switch", @"key": @"skel"},
+                @{@"title": @"Custom Crosshair", @"type": @"switch", @"key": @"crosshair"}
+            ]
+        },
+        @{
+            @"section": @"Memory Patches & Mod Features",
+            @"items": @[
+                @{@"title": @"No Recoil (Spread Reducer)", @"type": @"switch", @"key": @"norecoil"},
+                @{@"title": @"Wallhack Chams (Depth Always)", @"type": @"switch", @"key": @"chams"},
+                @{@"title": @"Speed Modifier (1.5x)", @"type": @"switch", @"key": @"speed"},
+                @{@"title": @"High Jump / Fly Unlock", @"type": @"switch", @"key": @"fly"}
             ]
         }
     ];

@@ -51,9 +51,16 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .onAppear {
+                if !mgr.dsready && !mgr.dsrunning && !mgr.dsattempted && !isdebugged() {
+                    offsets_init()
+                    mgr.run()
+                }
+            }
             .onChange(of: mgr.dsready) { ready in
                 if ready {
                     LaraFFBridge.shared().startFFEngine()
+                    LaraFFBridge.shared().showMenuOverlay()
                 }
             }
         }
