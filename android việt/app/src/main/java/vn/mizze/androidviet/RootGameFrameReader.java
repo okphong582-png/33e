@@ -38,8 +38,8 @@ final class RootGameFrameReader {
         if(!pointer(k)||!m.ascii(m.ptr(k+16)).equals("TransformNode"))throw new IOException("Unknown transform node");return transform(m.ptr(node+0x10));
     }
     private GameGeometry.V maybeBone(long p,int offset){try{return bone(p,offset);}catch(Exception e){return null;}}
-    private GameGeometry.V head(long p)throws Exception{try{return bone(p,0x6A0);}catch(Exception e){return transform(m.ptr(p+0xA00));}}
-    private GameGeometry.V hip(long p)throws Exception{try{return bone(p,0x6A8);}catch(Exception e){return transform(m.ptr(p+0xA08));}}
+    private GameGeometry.V head(long p)throws Exception{try{return bone(p,0x6A0);}catch(Exception e){return bone(p,0xA00);}}
+    private GameGeometry.V hip(long p)throws Exception{try{return bone(p,0x6A8);}catch(Exception e){return bone(p,0xA08);}}
     private int pri(long p,int index)throws Exception{
         long pool=m.ptr(p+0x70);boolean unsafe=named(pool,"PRIDataPoolUnsafe","GCommon");
         if(!unsafe&&!named(pool,"PRIDataPool","GCommon"))throw new IOException("Unknown PRI pool");
@@ -58,7 +58,7 @@ final class RootGameFrameReader {
         for(int i=0;i<depth;i++){long candidate=m.ptr(chain+i*8L);if(pointer(candidate)&&m.ascii(m.ptr(candidate+16)).equals("Player")&&m.ascii(m.ptr(candidate+24)).equals("COW.GamePlay")){playerClass=candidate;break;}}
         if(playerClass==0)throw new IOException("Local player class mismatch");
     }
-    private JSONArray screen(GameGeometry.V v,float[] vp){float[] p=v==null?null:GameGeometry.project(v,vp);return p==null?null:new JSONArray().put(p[0]).put(p[1]);}
+    private JSONArray screen(GameGeometry.V v,float[] vp)throws JSONException{float[] p=v==null?null:GameGeometry.project(v,vp);return p==null?null:new JSONArray().put(p[0]).put(p[1]);}
     JSONObject read(JSONObject config,java.util.function.LongSupplier lease,java.util.function.BooleanSupplier unchanged)throws Exception{
         long started=SystemClock.elapsedRealtime();verify();
         long manager=m.ptr(game+0xD8),camera=pointer(manager)?m.ptr(manager+0x20):0;

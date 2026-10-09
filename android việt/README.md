@@ -22,9 +22,13 @@ Hai bản cài cùng lúc được. ANDROID_ID phụ thuộc thiết bị, user 
 - Đã nối backend ghi dữ liệu cho **Không nạp đạn, Bắn nhanh (2×), Speed**. Nút chỉ mở khi thư viện, class/owner PlayerAttributes, quyền mở bộ nhớ ghi và giá trị dữ liệu khớp. Thay đổi gửi đến helper, ghi đúng trường dữ liệu và đọc lại xác nhận; trạng thái trong Thiết lập phân biệt yêu cầu với kết quả ghi.
 - Bắn nhanh giảm FireIntervalScale về 0.5 lần baseline, không nhân dồn mỗi tick. Speed dùng ForceSetRunAndDashSpeed, giới hạn 0.1–30 m/s. Đây là giá trị client, chưa xác nhận tác động thực tế trong game/server.
 - Khi tắt chức năng, helper khôi phục baseline nếu trường vẫn giữ giá trị helper đã ghi. Giá trị do game thay đổi được giữ lại. Không ghi khôi phục qua PID tái sử dụng, trận hoặc đối tượng khác. Mất phiên/đóng menu/pipe cha đóng sẽ thử khôi phục tối đa ba lần trước khi helper thoát; không thể bảo đảm khôi phục nếu bị kill ngay, game đã thay đối tượng hoặc quyền ghi bị thu hồi.
-- Mỗi lần mở/dừng menu, ba công tắc game trở về tắt. Không tự bật chức năng từ cấu hình của lần chạy trước. No Root không gọi su hoặc backend ghi.
+- Mỗi lần mở/dừng menu, các công tắc áp dụng game trở về tắt. Không tự bật chức năng từ cấu hình của lần chạy trước. No Root không gọi su hoặc backend ghi.
 
-**Aim, ESP, AimKill, Silent, Ghost, FakeLag, Fly và Spin chưa có backend Android và vẫn khóa.** Không bật nút giả. Ba chức năng PlayerAttributes đã có backend thật nhưng cần người dùng thử trên cloudphone để kiểm chứng kết quả trong trận.
+- Đã nối bộ đọc **ESP** thật: Match dictionary → Player → TransformData và PRI, cùng camera Unity. Vẽ tên, HP, khoảng cách, xương, điểm đầu, khung 2D/3D, trục XYZ; hỗ trợ màu và preset tối giản. Chỉ vẽ frame còn mới dưới 500 ms, không dùng dữ liệu mô phỏng trong app.
+- **Aim đầu/cổ** chọn mục tiêu trong FOV, loại nhân vật local/đồng đội/HP bằng 0; điều kiện bắn, ngắm, luôn luôn hoặc fire + scope. Ghi Quaternion +0x614 khi chế độ getter/setter, rotation cũ, quyền ghi và match còn khớp. Aim cổ dùng cùng ước lượng iOS: tối đa 10 cm dưới đầu thật. Tắt Aim ngừng ghi, không khôi phục góc nhìn cũ.
+- Mỗi lần ghi Aim kiểm tra cấu hình không bị thay, frame dưới 300 ms và lease còn hạn; thay PID/starttime/trận/nhân vật/dictionary sẽ bỏ frame. Lớp vẽ không nhận chạm, alpha cửa sổ 0.75, mất phiên thì bị tháo cùng menu.
+
+**Silent, AimKill, Aimlag, Ghost, FakeLag, Fly và Spin chưa có backend Android và vẫn khóa.** Không thể xác nhận mọi chức năng hoạt động 100% chỉ từ Local Name. ESP/Aim và ba trường PlayerAttributes có backend bộ nhớ thật nhưng chưa được thử trong trận trên cloudphone; IFix hoặc cập nhật game có thể làm dữ liệu/chế độ khác. Các xương tay dựa trên field Android phù hợp rig iOS, vẫn cần xác nhận trực tiếp.
 
 Profile trong profiles/free-fire-1.132.1-arm64.json ghi hash binary, lệnh ARM64 và trường dữ liệu. Metadata version 31 sử dụng method stride 40. Mỗi lần ghi kiểm tra lại PID/starttime, match/player, class PlayerAttributes và owner. Không sửa mã thực thi, không tiêm lệnh vào game, không tắt SELinux. IFix/hot patch và logic server có thể làm thay đổi tác dụng dù trường ghi đã được đọc lại. XAPK/APK game/thư viện gốc chỉ giữ tại máy, không đưa lên GitHub.
 
@@ -34,7 +38,8 @@ Profile trong profiles/free-fire-1.132.1-arm64.json ghi hash binary, lệnh ARM6
 2. Cài APK, nhập key hợp lệ từ hệ thống Firebase hiện có.
 3. Bấm Start, cho phép Hiển thị trên ứng dụng khác; quay lại bấm Start.
 4. Bản Root: chọn Cho phép trong Magisk/SuperSU. Bản No Root bỏ qua bước này.
-5. Chạm m để mở menu; dùng Dừng menu trong Thiết lập hoặc thông báo để tắt.
+5. Mở Free Fire thường 1.132.1 ARM64 và vào trận. Thiết lập hiển thị tên đọc được và trạng thái từng backend. ESP/Aim mở khi camera/xương/PRI khớp; bật ESP hoặc preset, rồi chọn các mục muốn vẽ. Aim đầu/cổ cần chọn thêm điều kiện kích hoạt.
+6. Chạm m để mở menu; dùng Dừng menu trong Thiết lập hoặc thông báo để tắt.
 
 ## Build
 
@@ -49,7 +54,7 @@ Outputs:
 - app/build/outputs/apk/root/debug/app-root-debug.apk
 - app/build/outputs/apk/noRoot/debug/app-noRoot-debug.apk
 
-Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và từ chối chạy khi chưa có uid 0. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Đường đọc tên đã được người dùng xác nhận trên cloudphone; ba chức năng ghi chưa được xác nhận trong trận.
+Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và từ chối chạy khi chưa có uid 0. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Đường đọc tên đã được người dùng xác nhận trên cloudphone; ESP/Aim và các chức năng ghi chưa được xác nhận trong trận. Unit test thêm phép chiếu, LookRotation, TRS và vòng lặp/giới hạn traversal; smoke test thêm capability frame còn mới/quá hạn và surface vẽ/xóa đúng. Frame dùng trong test là fixture gắn bằng reflection, không có trong ứng dụng sản xuất.
 
 ## Cấu hình key
 
