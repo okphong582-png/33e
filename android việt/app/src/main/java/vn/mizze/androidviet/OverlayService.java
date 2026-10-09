@@ -53,7 +53,8 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         if(overlay instanceof MenuPanel)((MenuPanel)overlay).refreshDataStatus();
         main.postDelayed(this,500);
     }};
-    private final Runnable render=new Runnable(){@Override public void run(){if(esp!=null)esp.invalidate();main.postDelayed(this,ui.prefs.getBoolean("BalancedRender",false)?33:16);}};
+    private org.json.JSONObject renderedFrame;
+    private final Runnable render=new Runnable(){@Override public void run(){org.json.JSONObject current=RootDataSession.frame();if(esp!=null&&current!=renderedFrame){renderedFrame=current;esp.postInvalidateOnAnimation();}main.postDelayed(this,ui.prefs.getBoolean("BalancedRender",false)?33:16);}};
     private void showEsp(){
         if(!BuildConfig.ROOT_EDITION||esp!=null)return;
         esp=new EspView(this);espParams=new WindowManager.LayoutParams(-1,-1,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -113,6 +114,7 @@ public final class OverlayService extends Service implements LicenseClient.Liste
     @Override public void onLicenseChanged(){if(!license.authorized()){Toast.makeText(this,license.message(),Toast.LENGTH_LONG).show();stopSelf();}}
     @Override public void onSharedPreferenceChanged(SharedPreferences prefs,String key){
         if(rootData!=null)rootData.renew();
+        if(esp!=null)esp.postInvalidateOnAnimation();
         if("AnLive".equals(key))updateSecure();
         if("DarkTheme".equals(key)){if(overlay instanceof MenuPanel)page=((MenuPanel)overlay).page();showOverlay();}
     }

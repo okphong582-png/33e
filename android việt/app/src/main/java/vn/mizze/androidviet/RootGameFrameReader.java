@@ -11,6 +11,7 @@ import static vn.mizze.androidviet.RootReaderMain.pointer;
 final class RootGameFrameReader {
     private final RootReaderMain.Memory m; private final long base,game,match,local;
     private long playerClass;
+    private static final AimRotationController silentController=new AimRotationController();
     private final TransformNodeReader.Memory nodeMemory;
     private final Map<Long,GameGeometry.V> positions=new HashMap<>();
     private final Map<Long,GameGeometry.TRS> trs=new HashMap<>();
@@ -81,8 +82,9 @@ final class RootGameFrameReader {
         int team=pri(local,34),localHP=pri(local,0),maxHP=pri(local,1);if(team>255||maxHP<1||maxHP>10000||localHP>maxHP)throw new IOException("Local PRI values invalid");
         boolean firing=pri(local,21)==2,scope=pri(local,12)!=0;
         float width=(float)config.optDouble("width",0),height=(float)config.optDouble("height",0);
-        float fov=(float)Math.max(5,Math.min(48,config.optDouble("fov",40))),radius=Math.min(width,height)*fov/100;
-        float maxDistance=(float)Math.max(50,Math.min(500,config.optDouble("distance",150)));
+        boolean silent=config.optBoolean("silent");
+        float fov=(float)Math.max(5,Math.min(48,config.optDouble(silent?"silentFov":"fov",silent?18:40))),radius=Math.min(width,height)*fov/100;
+        float maxDistance=(float)Math.max(50,Math.min(500,config.optDouble(silent?"silentDistance":"distance",silent?100:150)));
         JSONArray output=new JSONArray();GameGeometry.V target=null;long targetPlayer=0;float[] targetScreen=null;float best=radius;
         for(long p:players){if(p==local)continue;
             try{
@@ -92,11 +94,11 @@ final class RootGameFrameReader {
                 GameGeometry.V left=maybeBone(p,0x6D8),right=maybeBone(p,0x6E0);if(left!=null&&left.sub(hips).length()>4)left=null;if(right!=null&&right.sub(hips).length()>4)right=null;
                 JSONObject bones=new JSONObject().put("head",screen(h,vp)).put("hip",screen(hips,vp)).put("leftFoot",screen(left,vp)).put("rightFoot",screen(right,vp));
                 int[] offsets={0x6C0,0x6C8,0x720,0x718,0x730,0x728};String[] names={"leftShoulder","rightShoulder","leftHand","rightHand","leftElbow","rightElbow"};
-                for(int i=0;i<offsets.length;i++){GameGeometry.V v=maybeBone(p,offsets[i]);if(v!=null&&v.sub(hips).length()<4)bones.put(names[i],screen(v,vp));}
-                String name=m.managedString(m.ptr(p+0x490));
-                JSONArray axes=new JSONArray().put(screen(hips,vp)).put(screen(hips.add(new GameGeometry.V(.5f,0,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,.5f,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,0,.5f)),vp));
+                if(config.optBoolean("skeleton",true))for(int i=0;i<offsets.length;i++){GameGeometry.V v=maybeBone(p,offsets[i]);if(v!=null&&v.sub(hips).length()<4)bones.put(names[i],screen(v,vp));}
+                String name=config.optBoolean("name",true)?m.managedString(m.ptr(p+0x490)).replaceAll("[\\p{Cntrl}]",""):"";
+                JSONArray axes=config.optBoolean("axes",true)?new JSONArray().put(screen(hips,vp)).put(screen(hips.add(new GameGeometry.V(.5f,0,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,.5f,0)),vp)).put(screen(hips.add(new GameGeometry.V(0,0,.5f)),vp)):new JSONArray();
                 JSONArray cube=new JSONArray();float bottom=Math.min(left==null?hips.y():left.y(),right==null?hips.y():right.y()),top=h.y()+.15f;
-                for(int corner=0;corner<8;corner++)cube.put(screen(new GameGeometry.V(hips.x()+((corner&1)==0?-.35f:.35f),(corner&2)==0?bottom:top,hips.z()+((corner&4)==0?-.25f:.25f)),vp));
+                if(config.optBoolean("cube",false))for(int corner=0;corner<8;corner++)cube.put(screen(new GameGeometry.V(hips.x()+((corner&1)==0?-.35f:.35f),(corner&2)==0?bottom:top,hips.z()+((corner&4)==0?-.25f:.25f)),vp));
                 output.put(new JSONObject().put("name",name).put("hp",hp).put("maxHp",max).put("distance",distance).put("bones",bones).put("axes",axes).put("cube",cube));
                 GameGeometry.V aim=config.optBoolean("neck")&&!config.optBoolean("head")?GameGeometry.neck(h,hips):h;float[] point=GameGeometry.project(aim,vp);
                 float center=GameGeometry.centerDistance(point,width,height);if(center<best&&point[0]>=0&&point[0]<=1&&point[1]>=0&&point[1]<=1){best=center;target=aim;targetPlayer=p;targetScreen=point;}
@@ -107,19 +109,37 @@ final class RootGameFrameReader {
         // Alternate game aim mode takes a different setter path; do not write its normal field.
         long globalsCache=m.ptr(base+0xA72E9C8L),globals=pointer(globalsCache)?m.ptr(globalsCache):0,statics=pointer(globals)?m.ptr(globals+0xB8):0;
         boolean aimReady=pointer(statics)&&m.read(statics+0xE4,1)[0]==0&&quaternion(local+0x614).valid();
+        boolean silentReady=aimReady&&m.read(local+0x420,1)[0]==1&&quaternion(local+0x628).valid()
+            &&m.i32(base+0x6F8E15CL)==0xBD462A60&&m.i32(base+0x6F8E168L)==0xBD463663
+            &&m.i32(base+0x6EF7240L)==0x39508260&&m.i32(base+0x6F8E1CCL)==0x3C814100
+            &&m.i32(base+0x7480920L)==0x97EC35FC&&m.i32(base+0x7480980L)==0x94AD337D;
         String aimStatus="Aim: chờ mục tiêu trong FOV.";
         boolean enabled=config.optBoolean("head")||config.optBoolean("neck");
         if(aimReady){try{m.enableWrites();}catch(Exception e){aimReady=false;}}
         if(!aimReady)aimStatus="Aim: chưa khớp quyền ghi/rotation/chế độ game.";
         else if(!enabled)aimStatus="Aim đang tắt.";
-        else if(target!=null&&localHP>0&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope)){
+        else if((!silent||silentReady)&&target!=null&&localHP>0&&(!silent||firing)&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope)){
             // Re-read identity, target health/team and lease immediately before the only rotation write.
             if(SystemClock.elapsedRealtime()-started>300||SystemClock.elapsedRealtime()>=lease.getAsLong()||!unchanged.getAsBoolean())throw new IOException("Frame/lease expired before aim");
             int currentTeam=pri(targetPlayer,34);if(pri(targetPlayer,0)>0&&!(team>0&&team==currentTeam)&&m.instanceOf(targetPlayer,playerClass)&&m.ptr(match+0xD8)==local&&m.i32(dictionary+0x2C)==version){
-                GameGeometry.Q rotation=GameGeometry.look(target.sub(cameraPos));if(rotation!=null){m.writeQuaternion(local+0x614,rotation);aimStatus="Aim: đã ghi rotation tới mục tiêu · cần kiểm tra trong trận.";}
+                GameGeometry.Q rotation=GameGeometry.look(target.sub(cameraPos));if(rotation!=null){if(!silent)m.writeQuaternion(local+0x614,rotation);aimStatus="Aim: đã ghi rotation tới mục tiêu · cần kiểm tra trong trận.";}
             }
         }else if(enabled&&target!=null)aimStatus="Aim: đã chọn mục tiêu, chờ điều kiện bắn/ngắm.";
-        return new JSONObject().put("players",output).put("sampleUptime",started).put("playersReady",true).put("aimReady",aimReady).put("aimStatus",aimStatus)
+        final boolean writeSilent=silent&&silentReady&&enabled&&firing&&localHP>0&&target!=null
+            &&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope);
+        final long selected=targetPlayer;
+        silentController.apply(new AimRotationController.Memory(){
+            public AimRotationController.Identity identity()throws Exception{
+                if((writeSilent&&SystemClock.elapsedRealtime()>=lease.getAsLong())||!unchanged.getAsBoolean()||RootReaderMain.processStart(m.pid)!=m.start)return null;
+                long[] c=RootReaderMain.context(m,base);
+                if(c==null||c[0]!=game||c[1]!=match||c[2]!=local||m.i32(dictionary+0x2C)!=version||m.read(local+0x420,1)[0]!=1)return null;
+                if(writeSilent&&(SystemClock.elapsedRealtime()-started>150||pri(local,21)!=2||pri(selected,0)<=0||!m.instanceOf(selected,playerClass)||(team>0&&pri(selected,34)==team)))return null;
+                return new AimRotationController.Identity(m.pid,m.start,match,local,m.ptr(local));
+            }
+            public GameGeometry.Q read(long at)throws Exception{return quaternion(at);}
+            public void write(long at,GameGeometry.Q q)throws Exception{m.writeQuaternion(at,q);}
+        },writeSilent,writeSilent?GameGeometry.look(target.sub(cameraPos)):null);
+        return new JSONObject().put("players",output).put("width",width).put("height",height).put("viewportEpoch",config.optLong("viewportEpoch")).put("sampleUptime",started).put("playersReady",true).put("aimReady",aimReady).put("silentReady",silentReady).put("aimStatus",aimStatus)
             .put("target",targetScreen==null?JSONObject.NULL:new JSONArray().put(targetScreen[0]).put(targetScreen[1])).put("playerCount",players.size());
     }
 }

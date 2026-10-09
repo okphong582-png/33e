@@ -121,7 +121,9 @@ public class UiSmokeTest {
             sample.setLong(null,0);assertFalse(new AndroidGameData().available("FastFire"));
         }finally{ready.setBoolean(null,false);sample.setLong(null,0);prefs.edit().putBoolean("FastFire",false).putBoolean("ShootNoReload",false).putBoolean("RunSpeed",false).apply();}
     }
+    private void resetViewportFixture()throws Exception{for(String key:new String[]{"viewportWidth","viewportHeight","viewportEpoch"}){var field=RootDataSession.class.getDeclaredField(key);field.setAccessible(true);if(key.equals("viewportEpoch"))field.setLong(null,0);else field.setInt(null,0);}}
     @Test public void espAndAimRequireFreshPlayerFrames()throws Throwable{
+        resetViewportFixture();
         var players=RootDataSession.class.getDeclaredField("playersReady");players.setAccessible(true);
         var aiming=RootDataSession.class.getDeclaredField("aimReady");aiming.setAccessible(true);
         var at=RootDataSession.class.getDeclaredField("frameAt");at.setAccessible(true);
@@ -149,7 +151,9 @@ public class UiSmokeTest {
             data.set(null,new org.json.JSONObject().put("players",new org.json.JSONArray().put(new org.json.JSONObject().put("bones",bones).put("hp",100).put("maxHp",200).put("name","TEST FIXTURE").put("distance",30))));
             players.setBoolean(null,true);at.setLong(null,android.os.SystemClock.elapsedRealtime());prefs.edit().putBoolean("ESPEnabled",true).putBoolean("Skeleton",true).putBoolean("Box",true).putBoolean("TracerLine",true).putBoolean("Name",false).putBoolean("ShowFov",false).putBoolean("AimTargetLine",false).apply();
             activity.runOnUiThread(()->{
-                EspView view=new EspView(screen);view.layout(0,0,400,400);Bitmap bitmap=Bitmap.createBitmap(400,400,Bitmap.Config.ARGB_8888);view.draw(new android.graphics.Canvas(bitmap));
+                EspView view=new EspView(screen);view.layout(0,0,400,400);
+                try{var epoch=RootDataSession.class.getDeclaredField("viewportEpoch");epoch.setAccessible(true);((org.json.JSONObject)data.get(null)).put("width",400).put("height",400).put("viewportEpoch",epoch.getLong(null));players.setBoolean(null,true);at.setLong(null,android.os.SystemClock.elapsedRealtime());}catch(Exception e){throw new AssertionError(e);}
+                Bitmap bitmap=Bitmap.createBitmap(400,400,Bitmap.Config.ARGB_8888);view.draw(new android.graphics.Canvas(bitmap));
                 assertEquals(BuildConfig.ROOT_EDITION,android.graphics.Color.alpha(bitmap.getPixel(200,160))>0);assertEquals(BuildConfig.ROOT_EDITION,android.graphics.Color.alpha(bitmap.getPixel(200,350))>0);bitmap.eraseColor(android.graphics.Color.TRANSPARENT);
                 try{at.setLong(null,0);}catch(Exception e){throw new AssertionError(e);}view.draw(new android.graphics.Canvas(bitmap));assertEquals(0,android.graphics.Color.alpha(bitmap.getPixel(200,160)));bitmap.recycle();
             });
