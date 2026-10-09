@@ -22,13 +22,13 @@ public class UiSmokeTest {
         if(root instanceof TextView && ((TextView)root).getText().toString().equals(text))return (TextView)root;
         if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){TextView v=find(((ViewGroup)root).getChildAt(i),text);if(v!=null)return v;}return null;
     }
-    private void screenshot(String name) throws Exception {
+    private void screenshot(String name) throws Throwable {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();Thread.sleep(250);
         Bitmap bitmap=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(bitmap);
         File file=new File(activity.getActivity().getExternalFilesDir(null),name+".png");
         try(var output=new FileOutputStream(file)){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,output));}bitmap.recycle();
     }
-    @Test public void loginRequiresKeyAndStartIsLocked() throws Exception {
+    @Test public void loginRequiresKeyAndStartIsLocked() throws Throwable {
         activity.runOnUiThread(()->{
             View root=activity.getActivity().getWindow().getDecorView();
             assertNotNull(find(root,"Tập trung.\nChơi theo ý bạn."));
@@ -37,7 +37,7 @@ public class UiSmokeTest {
             assertNotNull(find(root,"Vui lòng nhập key hợp lệ."));
         });screenshot("login");
     }
-    @Test public void menuTabsShowRealCapabilityAndSettingsPersist() throws Exception {
+    @Test public void menuTabsShowRealCapabilityAndSettingsPersist() throws Throwable {
         MainActivity screen=activity.getActivity();
         activity.runOnUiThread(()->{
             // Render a widget in the test Activity, without authorizing a production service.
@@ -57,7 +57,7 @@ public class UiSmokeTest {
         });screenshot("menu-settings");
     }
 
-    @Test public void overlayRunsAndStopsOnLeaseExpiry() throws Exception {
+    @Test public void overlayRunsAndStopsOnLeaseExpiry() throws Throwable {
         var instrumentation=InstrumentationRegistry.getInstrumentation();
         var context=instrumentation.getTargetContext();
         // Test-only shell appop and in-memory lease fixture; no production bypass or live Firebase write.

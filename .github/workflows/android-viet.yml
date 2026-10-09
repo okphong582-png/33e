@@ -31,7 +31,7 @@ jobs:
       - name: Build, lint and unit test both APKs
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon :app:testRootDebugUnitTest :app:testNoRootDebugUnitTest :app:lintRootDebug :app:lintNoRootDebug :app:assembleRootDebug :app:assembleNoRootDebug
+          ./gradlew --no-daemon :app:testRootDebugUnitTest :app:testNoRootDebugUnitTest :app:lintRootDebug :app:lintNoRootDebug :app:assembleRootDebug :app:assembleNoRootDebug :app:assembleRootDebugAndroidTest :app:assembleNoRootDebugAndroidTest
       - name: Name installable APKs
         run: |
           mkdir -p artifacts
