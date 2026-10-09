@@ -28,14 +28,14 @@ final class RootDataSession implements AutoCloseable {
     private String sentConfig="";
     private final FeatureAutoStart autoStart=new FeatureAutoStart();
     private final android.content.SharedPreferences prefs;
-    private final String apk;
+    private final String apk,nativeDirectory;
     private final LicenseClient license;
-    RootDataSession(Context context,LicenseClient license){this.apk=context.getApplicationInfo().sourceDir;this.license=license;this.prefs=context.getSharedPreferences("menu",Context.MODE_PRIVATE);}
+    RootDataSession(Context context,LicenseClient license){this.apk=context.getApplicationInfo().sourceDir;this.nativeDirectory=context.getApplicationInfo().nativeLibraryDir;this.license=license;this.prefs=context.getSharedPreferences("menu",Context.MODE_PRIVATE);}
     static String status(){return status;}
     static boolean featuresReady(){return BuildConfig.ROOT_EDITION&&featuresReady&&SystemClock.elapsedRealtime()-sampledAt<2500;}
     static boolean playersReady(){return BuildConfig.ROOT_EDITION&&playersReady&&FrameFreshness.accepts(frameAt,SystemClock.elapsedRealtime(),frame.optLong("viewportEpoch"),viewportEpoch,frame.optInt("width"),frame.optInt("height"),viewportWidth,viewportHeight);}
     static boolean aimReady(){return playersReady()&&aimReady;}
-    static boolean silentReady(){return false;}
+    static boolean silentReady(){return playersReady()&&silentReady;}
     static JSONObject frame(){return playersReady()?frame:null;}
     static void viewport(int width,int height){if(width==viewportWidth&&height==viewportHeight)return;viewportWidth=width;viewportHeight=height;viewportEpoch++;playersReady=false;aimReady=false;silentReady=false;RootDataSession active=activeSession;if(active!=null)active.renew();}
     static int capabilityMask(){return (featuresReady()?1:0)|(playersReady()?2:0)|(aimReady()?4:0)|(silentReady()?8:0);}
@@ -49,7 +49,7 @@ final class RootDataSession implements AutoCloseable {
         Thread reader=new Thread(()->{
             Process active=null;
             try{
-                active=new ProcessBuilder("su","-c","CLASSPATH="+quote(apk)+" exec /system/bin/app_process /system/bin vn.mizze.androidviet.RootReaderMain").redirectErrorStream(true).start();
+                active=new ProcessBuilder("su","-c","CLASSPATH="+quote(apk)+" exec /system/bin/app_process /system/bin vn.mizze.androidviet.RootReaderMain "+quote(nativeDirectory)).redirectErrorStream(true).start();
                 synchronized(this){
                     if(closed){active.destroy();return;}
                     process=active;control=new BufferedWriter(new OutputStreamWriter(active.getOutputStream(),StandardCharsets.UTF_8));renew();

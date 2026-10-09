@@ -79,7 +79,7 @@ final class MenuPanel extends LinearLayout {
     }
     private void gameToggle(String title,String key){toggle(title,key,false,true);}
     private void aim(){
-        section("Loại aim");gameToggle("Aim đầu","AimHead");gameToggle("Aim cổ","AimNeck");gameToggle("Silent Aim · chưa hỗ trợ","SilentAim");
+        section("Loại aim");gameToggle("Aim đầu","AimHead");gameToggle("Aim cổ","AimNeck");gameToggle("Bật Silent Aim","SilentAim");
         section("Kích hoạt");gameToggle("Khi bắn","AimbotFire");gameToggle("Khi mở ngắm","AimbotScope");gameToggle("Luôn luôn","AimHipAlways");gameToggle("Fire + Scope (cùng lúc)","AimFireAndScope");
         gameToggle("Aimlag khi ngắm","AimLag");gameToggle("Dây tới mục tiêu","AimTargetLine");
         slider("FOV (%)","FovSize",5,48,40,true);slider("FOV Silent (%)","SilentFovSize",5,48,18,true);

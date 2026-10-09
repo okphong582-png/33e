@@ -148,9 +148,11 @@ final class RootGameFrameReader {
             &&m.i32(base+0x6F29380L)==0xBD06166B&&m.i32(base+0x6F2938CL)==0xBD062268
             &&m.i32(base+0x706F954L)==0x12001C08;
         boolean silentReady=false;
+        if(unchanged.getAsBoolean()&&SystemClock.elapsedRealtime()<lease.getAsLong())silentReady=SilentNativeSession.update(m,base,game,match,local,targetPlayer,target,started,lease.getAsLong(),config);
+        if(!unchanged.getAsBoolean()){SilentNativeSession.stop();silentReady=false;}
         String aimStatus="Aim: chờ mục tiêu trong FOV.";
         boolean enabled=AimWritePolicy.normal(config.optBoolean("head"),config.optBoolean("neck"),silent);
-        if(aimReady){try{m.enableWrites();}catch(Exception e){aimReady=false;silentReady=false;}}
+        if(aimReady){try{m.enableWrites();}catch(Exception e){aimReady=false;}}
         if(!aimReady)aimStatus="Aim: chưa khớp quyền ghi/rotation/chế độ game.";
         else if(!enabled)aimStatus="Aim đang tắt.";
         else if((!silent||silentReady)&&target!=null&&localHP>0&&(!silent||firing)&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope)){
@@ -160,7 +162,7 @@ final class RootGameFrameReader {
                 GameGeometry.Q rotation=GameGeometry.look(target.sub(cameraPos));if(rotation!=null){if(!silent){m.writeQuaternion(local+0x614,rotation);aimStatus="Aim: đã ghi rotation tới mục tiêu · cần kiểm tra trong trận.";}}
             }
         }else if(enabled&&target!=null)aimStatus="Aim: đã chọn mục tiêu, chờ điều kiện bắn/ngắm.";
-        if(silent)aimStatus="Silent Aim chưa có đường hướng đạn đã kiểm chứng; đã dừng ghi.";
+        if(silent)aimStatus=SilentNativeSession.status();
         for(RenderPlayer player:renderPlayers)try{output.put(renderPlayer(player,vp,config));}catch(Exception ignored){}
         return new JSONObject().put("players",output).put("width",width).put("height",height).put("viewportEpoch",config.optLong("viewportEpoch")).put("sampleUptime",started).put("playersReady",true).put("aimReady",aimReady).put("silentReady",silentReady).put("aimStatus",aimStatus)
             .put("target",targetScreen==null?JSONObject.NULL:new JSONArray().put(targetScreen[0]).put(targetScreen[1])).put("playerCount",players.size());

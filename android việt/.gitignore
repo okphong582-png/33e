@@ -8,3 +8,8 @@ local.properties
 artifacts/
 *.xapk
 analysis/
+
+.build-native/
+.build-native-tests/
+app/src/root/jniLibs/
+native-loader-review/

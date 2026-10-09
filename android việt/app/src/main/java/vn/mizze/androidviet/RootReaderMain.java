@@ -152,7 +152,7 @@ public final class RootReaderMain {
 
             JSONObject frame=new JSONObject();String frameStatus="Chờ danh sách người chơi/camera Android.";
             try{JSONObject desiredFrame=frameConfig;frame=new RootGameFrameReader(memory,base,game,match,player).read(desiredFrame,()->lease,()->frameConfig==desiredFrame);frameStatus="ESP: đã đọc "+frame.optInt("playerCount")+" người chơi, camera/xương/HP.\n"+frame.optString("aimStatus");}
-            catch(Exception e){frameStatus="ESP/Aim: "+e.getMessage();}
+            catch(Exception e){SilentNativeSession.stop();frameStatus="ESP/Aim: "+e.getMessage();}
             if(name.isEmpty())return new JSONObject().put("state","waiting_name").put("message","Chờ tên người chơi trong trận.");
             return new JSONObject().put("state","local_player").put("message","Đã đọc Local Name trong trận.")
                 .put("pid",pid).put("name",name).put("sampleUptime",SystemClock.elapsedRealtime())
@@ -162,12 +162,13 @@ public final class RootReaderMain {
     }
     public static void main(String[] args){
         if(!BuildConfig.ROOT_EDITION){System.out.println("{\"state\":\"unsupported\"}");return;}
+        if(args.length==1)SilentNativeSession.configure(args[0]);
         if(android.system.Os.getuid()!=0){System.out.println("{\"state\":\"root_required\",\"message\":\"Helper chưa có uid 0; cần cấp quyền root.\"}");return;}
         // A dead parent cannot leave a persistent root helper behind: lease is bounded to 30 seconds.
         lease=SystemClock.elapsedRealtime()+3000;
         Thread control=new Thread(()->{try(BufferedReader in=new BufferedReader(new InputStreamReader(System.in,StandardCharsets.UTF_8))){String line;
             while((line=in.readLine())!=null){if(line.length()>4096){lease=0;return;}if(line.equals("STOP")){lease=0;return;}
-            if(line.startsWith("CONFIG ")){JSONObject c=new JSONObject(line.substring(7));frameConfig=c;config=new RootFeatureController.Config(c.optBoolean("noReload"),c.optBoolean("fastFire"),c.optBoolean("speed"),(float)c.optDouble("speedValue",6));}
+            if(line.startsWith("CONFIG ")){JSONObject c=new JSONObject(line.substring(7));frameConfig=c;if(!c.optBoolean("silent"))SilentNativeSession.stop();config=new RootFeatureController.Config(c.optBoolean("noReload"),c.optBoolean("fastFire"),c.optBoolean("speed"),(float)c.optDouble("speedValue",6));}
             if(line.startsWith("LEASE ")){
                 long requested=Long.parseLong(line.substring(6));lease=Math.min(requested,SystemClock.elapsedRealtime()+30000);
             }}lease=0;
@@ -175,7 +176,7 @@ public final class RootReaderMain {
         while(SystemClock.elapsedRealtime()<lease){
             long cycle=SystemClock.elapsedRealtime();
             try{System.out.println(snapshot().toString());}
-            catch(Exception e){releaseMemory();System.out.println("{\"state\":\"read_denied\",\"message\":\"Không đọc được bộ nhớ game (quyền hoặc SELinux).\"}");}
+            catch(Exception e){SilentNativeSession.stop();releaseMemory();System.out.println("{\"state\":\"read_denied\",\"message\":\"Không đọc được bộ nhớ game (quyền hoặc SELinux).\"}");}
             System.out.flush();try{Thread.sleep(Math.max(1,(frameConfig.optBoolean("balanced")?33:16)-(SystemClock.elapsedRealtime()-cycle)));}catch(InterruptedException e){break;}
         }
         config=RootFeatureController.Config.off();
@@ -184,6 +185,6 @@ public final class RootReaderMain {
         for(int attempt=0;attempt<3&&features.changed();attempt++){
             try{snapshot();Thread.sleep(100);}catch(Exception ignored){}
         }
-        releaseMemory();
+        SilentNativeSession.stop();releaseMemory();
     }
 }
