@@ -1,0 +1,56 @@
+{
+  "package": "com.dts.freefireth",
+  "versionName": "1.132.1",
+  "versionCode": 2019121229,
+  "abi": "arm64-v8a",
+  "unity": "2018.4.12f1",
+  "metadataVersion": 31,
+  "metadataMethodStride": 40,
+  "status": "static-analysis-only; device validation pending",
+  "sha256": {
+    "libil2cpp": "bf70daa86a1c0224b6e0191918a7912829615858f31eb2c4fd644d020effbdff",
+    "metadata": "b5c17097aff9a98563d16a6ad6fe81f09879264b1bc5c4643f40f8d7d129422f"
+  },
+  "runtimeSignature": [
+    {
+      "rva": "0x71BCD10",
+      "u32": "0xF81E0FFE"
+    },
+    {
+      "rva": "0x6F2797C",
+      "u32": "0xF9424A60"
+    },
+    {
+      "rva": "0xA5C7FB0",
+      "u64": 43627
+    },
+    {
+      "rva": "0xA5C7F90",
+      "u64": 103553
+    }
+  ],
+  "chain": {
+    "gameFacadeClassCache": "0xAC1E768",
+    "matchGameClassCache": "0xAC232A0",
+    "classStaticFields": "0xB8",
+    "currentGame": "0x0",
+    "match": "0x90",
+    "localPlayer": "0xD8",
+    "nickname": "0x490",
+    "stringLength": "0x10",
+    "stringChars": "0x14"
+  },
+  "evidence": {
+    "CurrentLocalPlayer": "0x71BD10C calls 0x731571C then 0x7202038 using CurrentGame static +0",
+    "MatchGameMatch": "0x7315754 ldr x0, [x19, #0x90]",
+    "MatchLocalPlayer": "0x7202070 ldr x0, [x19, #0xd8]",
+    "Nickname": "0x6F2797C ldr x0, [x19, #0x490]"
+  },
+  "limitations": [
+    "Read-only experimental local nickname snapshot; not a player list or ESP data.",
+    "IFix hot patches may change getter behavior without replacing this ELF.",
+    "Runtime checks validate selected instructions/counts/classes, not the whole file SHA256.",
+    "su uid 0 does not guarantee SELinux allows /proc/PID/mem.",
+    "No Root flavor never reads other process memory."
+  ]
+}

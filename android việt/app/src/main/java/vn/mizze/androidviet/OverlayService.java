@@ -20,6 +20,7 @@ public final class OverlayService extends Service implements LicenseClient.Liste
     private final Handler main=new Handler(Looper.getMainLooper());
     private LicenseClient license;
     private Ui ui;
+    private RootDataSession rootData;
     private WindowManager manager;
     private View overlay;
     private WindowManager.LayoutParams params;
@@ -38,13 +39,16 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         PendingIntent stop=PendingIntent.getService(this,1,new Intent(this,OverlayService.class).setAction(STOP),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
         Notification notification=new Notification.Builder(this,"menu").setSmallIcon(R.drawable.ic_mizze)
             .setContentTitle(BuildConfig.ROOT_EDITION?"Android Việt · Root":"Android Việt · No Root")
-            .setContentText("Menu nổi đang chạy · Chưa có dữ liệu game").setContentIntent(open).setOngoing(true)
+            .setContentText("Menu nổi đang chạy · Xem trạng thái trong Thiết lập").setContentIntent(open).setOngoing(true)
             .addAction(new Notification.Action.Builder(null,"Dừng menu",stop).build()).build();
         if(Build.VERSION.SDK_INT>=34)startForeground(1,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);else startForeground(1,notification);
+        if(BuildConfig.ROOT_EDITION&&rootData==null){rootData=new RootDataSession(this,license);rootData.start();}
         expanded=true;showOverlay();main.removeCallbacks(guard);main.post(guard);return START_NOT_STICKY;
     }
     private final Runnable guard=new Runnable(){@Override public void run(){
         if(!license.authorized()||!Settings.canDrawOverlays(OverlayService.this)){stopSelf();return;}
+        if(rootData!=null)rootData.renew();
+        if(overlay instanceof MenuPanel)((MenuPanel)overlay).refreshDataStatus();
         main.postDelayed(this,500);
     }};
     private DisplayMetrics metrics(){DisplayMetrics dm=new DisplayMetrics();manager.getDefaultDisplay().getMetrics(dm);return dm;}
@@ -96,6 +100,6 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         if("DarkTheme".equals(key)){if(overlay instanceof MenuPanel)page=((MenuPanel)overlay).page();showOverlay();}
     }
     @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(overlay instanceof MenuPanel)page=((MenuPanel)overlay).page();showOverlay();}
-    @Override public void onDestroy(){main.removeCallbacksAndMessages(null);removeOverlay();license.removeListener(this);ui.prefs.unregisterOnSharedPreferenceChangeListener(this);stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
+    @Override public void onDestroy(){main.removeCallbacksAndMessages(null);if(rootData!=null)rootData.close();removeOverlay();license.removeListener(this);ui.prefs.unregisterOnSharedPreferenceChangeListener(this);stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
     @Override public IBinder onBind(Intent intent){return null;}
 }

@@ -54,6 +54,7 @@ final class LicenseClient {
     }
     static String normalize(String key) { return key.trim().toUpperCase(Locale.ROOT); }
     boolean authorized() { return SystemClock.elapsedRealtime() < deadline; }
+    long leaseDeadline() { return authorized() ? deadline : 0; }
     boolean busy() { return busy; }
     String message() { return message; }
     long expiresAt() { return expires; }

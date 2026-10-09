@@ -18,11 +18,15 @@ Hai bản cài cùng lúc được. ANDROID_ID phụ thuộc thiết bị, user 
 - Định danh Android dựa trên ANDROID_ID, namespace khác iOS. Key đã gắn với iPhone cần admin gỡ máy hoặc cấp key khác.
 - Kiểm tra khóa/hết hạn/xóa/disabled/binding mismatch; dùng Date HTTPS và đồng hồ monotonic, lease tối đa 30 giây, polling mỗi 8 giây. Không nhận lease từ PUT, không lưu lease qua restart. Chưa có SSE tức thì như iOS.
 - Start yêu cầu quyền overlay; menu kéo được, thu gọn bằng ×, mở bằng m, xử lý xoay màn hình và dừng từ thông báo. Mất quyền hoặc hết phiên thì dừng. Theme và FLAG_SECURE áp dụng cho cửa sổ ứng dụng.
-- Root thực sự kiểm tra uid 0 và đọc /proc/PID/maps của com.dts.freefireth để chẩn đoán libil2cpp.so. Không tắt SELinux. Đây chỉ là bản đồ thư viện, chưa phải dữ liệu người chơi.
+- Root kiểm tra uid 0 qua su. Khi menu mở, chạy helper app_process đọc /proc/PID/maps và /proc/PID/mem của com.dts.freefireth; kiểm tra ARM64, chữ ký lệnh, số lượng metadata và class trước khi thử đọc chuỗi tên local player mỗi giây. Không tắt SELinux và không ghi bộ nhớ game.
+- Helper chỉ sống trong phiên key hợp lệ, dừng khi đóng menu/mất key/pipe cha đóng. Lease helper bị chặn tối đa 30 giây, kể cả tiến trình ứng dụng chết.
+- Tab Thiết lập hiển thị trạng thái thật: chờ game, sai profile, chờ trận, bị từ chối đọc hoặc chuỗi tên đọc được. Đây là đường đọc thử nghiệm chưa được xác nhận trên điện thoại có game, không phải ESP/Aim hoàn chỉnh.
 
-**Aim, ESP, AimKill, Silent, FastFire, NoReload, Ghost, FakeLag, Fly, Speed và Spin chưa hoạt động trong cả hai APK.** Các mục có trong menu nhưng bị vô hiệu hóa, không báo bật thành công. Workspace chưa có APK/libil2cpp.so/global-metadata.dat hoặc profile Android đã xác minh, chưa có số phiên bản game Android. Quyền root riêng lẻ không cung cấp layout dữ liệu. Không dùng offset iOS/Mach/UnityFramework trên Android. No Root không thể đọc bộ nhớ game khác bằng API thông thường.
+**Aim, ESP, AimKill, Silent, FastFire, NoReload, Ghost, FakeLag, Fly, Speed và Spin chưa hoạt động trong cả hai APK.** Các mục có trong menu nhưng bị vô hiệu hóa, không báo bật thành công. Đã phân tích XAPK Free Fire 1.132.1 do người dùng cung cấp; profile ARM64 mới chỉ được kiểm chứng tĩnh. Quyền root vẫn có thể bị SELinux chặn đọc. Không dùng offset iOS/Mach/UnityFramework trên Android. No Root không thể đọc bộ nhớ game khác bằng API thông thường.
 
-Muốn triển khai phần game cần đúng binary Android và profile đã kiểm chứng, cùng backend native chạy với quyền phù hợp. AndroidGameData.java hiện trả capability không hỗ trợ. Không có snapshot game giả hay toggle giả.
+Profile trong profiles/free-fire-1.132.1-arm64.json ghi hash binary gốc và bằng chứng getter ARM64. Metadata mang version 31 nhưng method stride 40 (khác công cụ dump chuẩn); không dùng layout iOS. Đường đọc: GameFacade.static_fields → CurrentGame → MatchGame.m_Match → LocalPlayer → NickName. Helper kiểm tra type hierarchy của MatchGame và System.String. Chữ ký runtime là kiểm tra cục bộ, không thay cho xác minh toàn bộ SHA-256. IFix/hot patch có thể đổi hành vi getter.
+
+AndroidGameData.java vẫn trả capability không hỗ trợ Aim/ESP vì chưa có danh sách địch, transform/camera và backend chức năng được kiểm chứng. Không có snapshot game giả hay toggle giả. XAPK, APK game, thư viện gốc và metadata được giữ tại máy, không đưa lên GitHub.
 
 ## Cài và chạy
 
@@ -45,7 +49,7 @@ Outputs:
 - app/build/outputs/apk/root/debug/app-root-debug.apk
 - app/build/outputs/apk/noRoot/debug/app-noRoot-debug.apk
 
-Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu và kiểm tra service overlay tự dừng khi lease hết. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Chưa kiểm chứng trên điện thoại có Magisk/game thực tế.
+Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và tự thoát khi pipe cha đóng. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Chưa kiểm chứng trên điện thoại có Magisk/game thực tế.
 
 ## Cấu hình key
 

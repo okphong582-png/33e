@@ -21,6 +21,7 @@ final class MenuPanel extends LinearLayout {
     private int page;
     private int colorTarget;
     private TextView swatch;
+    private TextView dataStatus;
     MenuPanel(Context context,Host host,int initialPage) {
         super(context);this.host=host;ui=new Ui(context);page=initialPage;
         setOrientation(VERTICAL);setPadding(ui.dp(14),ui.dp(8),ui.dp(14),ui.dp(12));
@@ -40,9 +41,10 @@ final class MenuPanel extends LinearLayout {
         addView(scroll,new LayoutParams(-1,0,1));build();
     }
     int page(){return page;}
+    void refreshDataStatus(){if(dataStatus!=null){String status=RootDataSession.status();if(!status.contentEquals(dataStatus.getText()))dataStatus.setText(status);}}
     private void scrollTopAndBuild(){build();scroll.post(()->scroll.scrollTo(0,0));}
     private void build(){
-        content.removeAllViews();swatch=null;
+        content.removeAllViews();swatch=null;dataStatus=null;
         for(int i=0;i<4;i++){tabs[i].setTextColor(i==page?Ui.MINT:ui.muted());tabs[i].setBackground(ui.shape(i==page?0x1875DBBA:Color.TRANSPARENT,9));tabs[i].setSelected(i==page);}
         if(page==0 || page==1) notice(data.canApplyGameFeatures()?"Đã kết nối dữ liệu game":AndroidGameData.description());
         switch(page){case 0->aim();case 1->esp();case 2->colors();default->settings();}
@@ -105,7 +107,7 @@ final class MenuPanel extends LinearLayout {
         LinearLayout speed=ui.row();speed.setPadding(ui.dp(14),0,ui.dp(12),0);speed.setBackground(ui.shape(ui.raised(),10));speed.addView(ui.label("Tốc độ (m/s)",14,ui.text()),new LayoutParams(0,-1,1));
         EditText number=new EditText(getContext());number.setText("6.00");number.setTextSize(14);number.setTextColor(Ui.MINT);number.setEnabled(false);number.setContentDescription("Tốc độ (m/s) · Chưa có dữ liệu game");speed.addView(number,new LayoutParams(ui.dp(90),-1));speed.setAlpha(.48f);ui.add(content,speed,58,8);
         section("Hiệu ứng nhân vật");gameToggle("Spin · chỉ mình thấy","VisualSpin");slider("Vòng / giây","VisualSpinSpeed",.1f,3,.5f,true);
-        if(BuildConfig.ROOT_EDITION){ section("Quyền root"); notice(RootAccess.detail()); notice("Chỉ xác minh quyền và bản đồ tiến trình; chưa giải mã dữ liệu người chơi."); }
+        if(BuildConfig.ROOT_EDITION){ section("Quyền root"); notice(RootAccess.detail()); dataStatus=ui.label("",12,ui.muted());ui.add(content,dataStatus,-2,8);refreshDataStatus(); }
         section("Giao diện Android");toggle("Ẩn khi chụp / quay","AnLive",false,false);toggle("Giao diện tối","DarkTheme",true,false);
         // No game renderer exists in the non-root adapter, so FPS must not claim to affect it.
         gameToggle("Tiết kiệm pin (30 FPS)","BalancedRender");

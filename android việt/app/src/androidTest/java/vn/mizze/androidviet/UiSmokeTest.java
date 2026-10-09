@@ -27,6 +27,10 @@ public class UiSmokeTest {
         Bitmap bitmap=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(bitmap);
         File file=new File(activity.getActivity().getExternalFilesDir(null),name+".png");
         try(var output=new FileOutputStream(file)){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,output));}bitmap.recycle();
+        // UTP uninstalls tested apps after the run, so retain screenshots outside app data.
+        String destination="/sdcard/Download/android-viet/"+activity.getActivity().getPackageName();
+        try(var descriptor=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("mkdir -p "+destination+"; cp "+file.getAbsolutePath()+" "+destination+"/"+name+".png");
+            var input=new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor)){while(input.read()!=-1){}}
     }
     @Test public void loginRequiresKeyAndStartIsLocked() throws Throwable {
         activity.runOnUiThread(()->{
@@ -76,6 +80,21 @@ public class UiSmokeTest {
         activity.runOnUiThread(()->{try{deadline.setLong(client,0);}catch(Exception e){throw new AssertionError(e);}});
         Thread.sleep(1200);assertFalse(serviceRunning(context));
         rootGranted.setBoolean(null,false);
+    }
+    @Test public void readerHelperHonorsFlavorAndParentExit() throws Throwable {
+        var context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        ProcessBuilder builder=new ProcessBuilder("/system/bin/app_process","/system/bin","vn.mizze.androidviet.RootReaderMain");
+        builder.environment().put("CLASSPATH",context.getApplicationInfo().sourceDir);
+        Process helper=builder.redirectErrorStream(true).start();
+        var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
+        try{
+            if(BuildConfig.ROOT_EDITION){helper.getOutputStream().write(("LEASE "+(android.os.SystemClock.elapsedRealtime()+5000)+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));helper.getOutputStream().flush();}
+            var line=executor.submit(()->{try(var input=new java.io.BufferedReader(new java.io.InputStreamReader(helper.getInputStream()))){String value;while((value=input.readLine())!=null){if(value.startsWith("{"))return value;}return "";}});
+            var result=new org.json.JSONObject(line.get(5,java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(BuildConfig.ROOT_EDITION?"waiting_game":"unsupported",result.getString("state"));
+            helper.getOutputStream().close();
+            assertTrue("Helper must stop when the parent pipe closes",helper.waitFor(3,java.util.concurrent.TimeUnit.SECONDS));
+        }finally{helper.destroyForcibly();executor.shutdownNow();}
     }
     private boolean serviceRunning(android.content.Context context){
         var manager=(android.app.ActivityManager)context.getSystemService(android.content.Context.ACTIVITY_SERVICE);
