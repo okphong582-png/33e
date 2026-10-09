@@ -14,6 +14,7 @@ final class AndroidGameData {
         "No Root: APK độc lập chưa có quyền đọc hoặc sửa bộ nhớ Free Fire; chức năng game chưa khả dụng.";}
     static boolean attribute(String key){return key.equals("ShootNoReload")||key.equals("FastFire")||key.equals("RunSpeed")||key.equals("RunSpeedValue");}
     static boolean implemented(String key){return BuildConfig.ROOT_EDITION&&(attribute(key)||ESP_KEYS.contains(key)||AIM_KEYS.contains(key)||AIM_VISUAL_KEYS.contains(key)||SILENT_KEYS.contains(key));}
+    static boolean configurableAim(String key){return BuildConfig.ROOT_EDITION&&(AIM_KEYS.contains(key)||SILENT_KEYS.contains(key)||AIM_VISUAL_KEYS.contains(key));}
     boolean available(String key){return BuildConfig.ROOT_EDITION&&(SILENT_KEYS.contains(key)?RootDataSession.silentReady():attribute(key)?RootDataSession.featuresReady():ESP_KEYS.contains(key)||AIM_VISUAL_KEYS.contains(key)?RootDataSession.playersReady():AIM_KEYS.contains(key)&&RootDataSession.aimReady());}
     boolean canReadPlayers(){return RootDataSession.playersReady();}
     boolean canApplyGameFeatures(){return RootDataSession.capabilityMask()!=0;}

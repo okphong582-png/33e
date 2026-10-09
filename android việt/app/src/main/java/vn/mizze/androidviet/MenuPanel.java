@@ -52,7 +52,7 @@ final class MenuPanel extends LinearLayout {
     private void section(String text){TextView v=ui.bold(text,14,Ui.MINT);v.setPadding(ui.dp(4),ui.dp(8),0,0);ui.add(content,v,40,0);}
     private void notice(String text){TextView v=ui.label(text,12,ui.muted());v.setPadding(ui.dp(8),ui.dp(6),ui.dp(8),ui.dp(6));ui.add(content,v,-2,8);}
     private void toggle(String title,String key,boolean fallback,boolean game){
-        boolean available=!game || data.available(key) || AndroidGameData.implemented(key)&&ui.prefs.getBoolean(key,fallback);boolean value=(!game||AndroidGameData.implemented(key)) && ui.prefs.getBoolean(key,fallback);
+        boolean available=!game || AndroidGameData.configurableAim(key) || data.available(key) || AndroidGameData.implemented(key)&&ui.prefs.getBoolean(key,fallback);boolean value=(!game||AndroidGameData.implemented(key)) && ui.prefs.getBoolean(key,fallback);
         LinearLayout row=ui.row();row.setPadding(ui.dp(14),0,ui.dp(12),0);row.setBackground(ui.shape(ui.raised(),10));
         TextView label=ui.label(title,14,ui.text());row.addView(label,new LayoutParams(0,-1,1));
         CrossCheck box=new CrossCheck(getContext(),value);row.addView(box,new LayoutParams(ui.dp(34),ui.dp(34)));
@@ -73,14 +73,14 @@ final class MenuPanel extends LinearLayout {
             label.setText(title+"   "+formatted);};update.run();
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}
             public void onProgressChanged(SeekBar s,int n,boolean fromUser){if(fromUser){ui.prefs.edit().putFloat(key,min+(max-min)*n/1000f).apply();update.run();updateSwatch();}}});
-        seek.setEnabled(!game || data.available(key));row.setAlpha(seek.isEnabled()?1:.48f);row.addView(seek,new LayoutParams(-1,ui.dp(48)));ui.add(content,row,88,8);
+        seek.setEnabled(!game || AndroidGameData.configurableAim(key) || data.available(key));row.setAlpha(seek.isEnabled()?1:.48f);row.addView(seek,new LayoutParams(-1,ui.dp(48)));ui.add(content,row,88,8);
     }
     private void gameToggle(String title,String key){toggle(title,key,false,true);}
     private void aim(){
         section("Loại aim");gameToggle("Aim đầu","AimHead");gameToggle("Aim cổ","AimNeck");gameToggle("Bật Silent Aim","SilentAim");
         section("Kích hoạt");gameToggle("Khi bắn","AimbotFire");gameToggle("Khi mở ngắm","AimbotScope");gameToggle("Luôn luôn","AimHipAlways");gameToggle("Fire + Scope (cùng lúc)","AimFireAndScope");
         gameToggle("Aimlag khi ngắm","AimLag");gameToggle("Dây tới mục tiêu","AimTargetLine");
-        slider("FOV (%)","FovSize",5,48,40,true);slider("FOV Silent / AimKill (%)","SilentFovSize",5,48,18,true);
+        slider("FOV (%)","FovSize",5,48,40,true);slider("FOV Silent (%)","SilentFovSize",5,48,18,true);
         gameToggle("Hiện vòng FOV","ShowFov");gameToggle("AimKill","AutoFireFloating");slider("Tỷ lệ headshot (%)","SilentHeadPercent",0,100,75,true);
         section("Súng");gameToggle("Bắn nhanh (2×)","FastFire");gameToggle("Không nạp đạn","ShootNoReload");
         section("Nâng cao");gameToggle("Tự chọn tầm Silent","SilentAutoConfig");slider("Tầm chọn Silent (m)","SilentMaxDistance",10,150,100,true);

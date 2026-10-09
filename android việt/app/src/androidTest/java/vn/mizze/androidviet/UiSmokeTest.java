@@ -56,7 +56,10 @@ public class UiSmokeTest {
             // Render a widget in the test Activity, without authorizing a production service.
             MenuPanel panel=new MenuPanel(screen,new MenuPanel.Host(){public void closeMenu(){}public void settingsChanged(){}public void stop(){}},0);
             screen.setContentView(panel);
-            assertFalse(((View)find(panel,"Aim đầu").getParent()).isEnabled());
+            assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Aim đầu").getParent()).isEnabled());
+            assertFalse(new AndroidGameData().available("AimHead"));
+            assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Bật Silent Aim").getParent()).isEnabled());
+            if(BuildConfig.ROOT_EDITION){((View)find(panel,"Bật Silent Aim").getParent()).performClick();assertTrue(new Ui(screen).prefs.getBoolean("SilentAim",false));assertFalse(new AndroidGameData().available("SilentAim"));((View)find(panel,"Bật Silent Aim").getParent()).performClick();}
         });screenshot("menu-aim");
         activity.runOnUiThread(()->{View root=screen.getWindow().getDecorView();find(root,"ESP").performClick();assertFalse(((View)find(root,"Bật ESP").getParent()).isEnabled());});screenshot("menu-esp");
         activity.runOnUiThread(()->find(screen.getWindow().getDecorView(),"Màu sắc").performClick());screenshot("menu-colors");
@@ -114,14 +117,14 @@ public class UiSmokeTest {
             activity.runOnUiThread(()->{
                 MenuPanel panel=new MenuPanel(screen,new MenuPanel.Host(){public void closeMenu(){}public void settingsChanged(){}public void stop(){}},0);screen.setContentView(panel);
                 View fast=(View)find(panel,"Bắn nhanh (2×)").getParent();assertEquals(BuildConfig.ROOT_EDITION,fast.isEnabled());
-                assertFalse(((View)find(panel,"Aim đầu").getParent()).isEnabled());
+                assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Aim đầu").getParent()).isEnabled());
                 if(BuildConfig.ROOT_EDITION){fast.performClick();assertTrue(prefs.getBoolean("FastFire",false));fast.performClick();assertFalse(prefs.getBoolean("FastFire",true));}
                 find(panel,"Thiết lập").performClick();assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Speed").getParent()).isEnabled());
             });screenshot("menu-supported-controls");
             sample.setLong(null,0);assertFalse(new AndroidGameData().available("FastFire"));
         }finally{ready.setBoolean(null,false);sample.setLong(null,0);prefs.edit().putBoolean("FastFire",false).putBoolean("ShootNoReload",false).putBoolean("RunSpeed",false).apply();}
     }
-    private void resetViewportFixture()throws Exception{for(String key:new String[]{"viewportWidth","viewportHeight","viewportEpoch"}){var field=RootDataSession.class.getDeclaredField(key);field.setAccessible(true);if(key.equals("viewportEpoch"))field.setLong(null,0);else field.setInt(null,0);}}
+    private void resetViewportFixture()throws Exception{var f=RootDataSession.class.getDeclaredField("frame");f.setAccessible(true);f.set(null,new org.json.JSONObject());for(String key:new String[]{"viewportWidth","viewportHeight","viewportEpoch"}){var field=RootDataSession.class.getDeclaredField(key);field.setAccessible(true);if(key.equals("viewportEpoch"))field.setLong(null,0);else field.setInt(null,0);}}
     @Test public void espAndAimRequireFreshPlayerFrames()throws Throwable{
         resetViewportFixture();
         var players=RootDataSession.class.getDeclaredField("playersReady");players.setAccessible(true);
@@ -133,7 +136,7 @@ public class UiSmokeTest {
             activity.runOnUiThread(()->{
                 MenuPanel panel=new MenuPanel(screen,new MenuPanel.Host(){public void closeMenu(){}public void settingsChanged(){}public void stop(){}},0);screen.setContentView(panel);
                 assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Aim đầu").getParent()).isEnabled());
-                assertFalse(((View)find(panel,"Bật Silent Aim").getParent()).isEnabled());
+                assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Bật Silent Aim").getParent()).isEnabled());
                 if(BuildConfig.ROOT_EDITION){((View)find(panel,"Aim đầu").getParent()).performClick();assertTrue(prefs.getBoolean("AimHead",false));((View)find(panel,"Aim cổ").getParent()).performClick();assertFalse(prefs.getBoolean("AimHead",true));assertTrue(prefs.getBoolean("AimNeck",false));prefs.edit().putBoolean("AimNeck",false).apply();}
                 find(panel,"ESP").performClick();assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Bật ESP").getParent()).isEnabled());
                 if(BuildConfig.ROOT_EDITION){find(panel,"Áp dụng ESP tối giản").performClick();assertTrue(prefs.getBoolean("ESPEnabled",false));assertTrue(prefs.getBoolean("Name",false));assertTrue(prefs.getBoolean("Health",false));assertTrue(prefs.getBoolean("TracerLine",false));}

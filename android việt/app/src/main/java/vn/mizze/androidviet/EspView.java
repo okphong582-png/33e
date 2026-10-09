@@ -26,7 +26,7 @@ final class EspView extends View {
         super.onDraw(canvas);JSONObject frame=RootDataSession.frame();if(frame==null){points.clear();drawnFrame=null;return;}if(frame!=drawnFrame){points.clear();drawnFrame=frame;}
         float density=getResources().getDisplayMetrics().density;
         paint.setStrokeWidth(Math.max(1,density));paint.setTextSize(12*density);paint.setTextAlign(Paint.Align.CENTER);paint.setStyle(Paint.Style.STROKE);
-        if(enabled("ShowFov")){paint.setColor(color("FovColor"));canvas.drawCircle(getWidth()/2f,getHeight()/2f,Math.min(getWidth(),getHeight())*Math.max(5,Math.min(48,value("FovSize",40)))/100,paint);}
+        if(enabled("ShowFov")){paint.setColor(color("FovColor"));canvas.drawCircle(getWidth()/2f,getHeight()/2f,Math.min(getWidth(),getHeight())*Math.max(5,Math.min(48,value(enabled("SilentAim")?"SilentFovSize":"FovSize",enabled("SilentAim")?18:40)))/100,paint);}
         if(enabled("AimTargetLine")){paint.setColor(color("FovColor"));line(canvas,new float[]{getWidth()/2f,getHeight()/2f},point(frame.optJSONArray("target")));}
         if(!enabled("ESPEnabled"))return;JSONArray players=frame.optJSONArray("players");if(players==null)return;
         int boxColor=color("BoxColor");
