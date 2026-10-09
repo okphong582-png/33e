@@ -1,5 +1,11 @@
 #import "LaraMemoryReader.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "../lara/kexploit/darksword.h"
+#ifdef __cplusplus
+}
+#endif
 #include "../lara/kexploit/offsets.h"
 #include "../lara/kexploit/utils.h"
 #include <sys/sysctl.h>
