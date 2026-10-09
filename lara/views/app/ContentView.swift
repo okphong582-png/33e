@@ -54,8 +54,6 @@ struct ContentView: View {
         }
     }
     
-    }
-    
     private var FFMenuEngineSection: some View {
         Section(header: HeaderLabel(text: "Free Fire Menu Engine (iOS 17-18)", icon: "gamecontroller.fill")) {
             VStack(alignment: .leading, spacing: 8) {
