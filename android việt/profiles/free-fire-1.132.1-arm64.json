@@ -6,7 +6,7 @@
   "unity": "2018.4.12f1",
   "metadataVersion": 31,
   "metadataMethodStride": 40,
-  "status": "static-analysis-only; device validation pending",
+  "status": "local nickname confirmed by user on rooted cloudphone; attribute writes pending device testing",
   "sha256": {
     "libil2cpp": "bf70daa86a1c0224b6e0191918a7912829615858f31eb2c4fd644d020effbdff",
     "metadata": "b5c17097aff9a98563d16a6ad6fe81f09879264b1bc5c4643f40f8d7d129422f"
@@ -47,10 +47,47 @@
     "Nickname": "0x6F2797C ldr x0, [x19, #0x490]"
   },
   "limitations": [
-    "Read-only experimental local nickname snapshot; not a player list or ESP data.",
+    "Only NoReload, FireIntervalScale and ForceSetRunAndDashSpeed are writable; Aim/ESP have no backend yet.",
     "IFix hot patches may change getter behavior without replacing this ELF.",
     "Runtime checks validate selected instructions/counts/classes, not the whole file SHA256.",
     "su uid 0 does not guarantee SELinux allows /proc/PID/mem.",
     "No Root flavor never reads other process memory."
+  ],
+  "features": {
+    "attributes": "Player +0x768; class PlayerAttributes/COW.GamePlay; owner +0x20 must equal local player",
+    "noReload": {
+      "offset": "0x111",
+      "evidence": "0x744FC7C calls Player.get_Attributes; 0x744FC84 ldrb w8,[x0,#0x111]"
+    },
+    "fastFire": {
+      "offset": "0x258",
+      "evidence": "0x7C25C10 loads float; 0x7C25C68 stores float"
+    },
+    "speed": {
+      "offset": "0x3C8",
+      "evidence": "0x7C21838 loads ForceSetRunAndDashSpeed for run/dash"
+    }
+  },
+  "featureSignatures": [
+    {
+      "rva": "0x6F089C8",
+      "u32": "0xF943B674"
+    },
+    {
+      "rva": "0x7C25C10",
+      "u32": "0xBD425A60"
+    },
+    {
+      "rva": "0x7C25C68",
+      "u32": "0xBD025A68"
+    },
+    {
+      "rva": "0x7C21838",
+      "u32": "0xBD43CA80"
+    },
+    {
+      "rva": "0x744FC84",
+      "u32": "0x39444408"
+    }
   ]
 }

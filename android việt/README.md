@@ -18,15 +18,15 @@ Hai bản cài cùng lúc được. ANDROID_ID phụ thuộc thiết bị, user 
 - Định danh Android dựa trên ANDROID_ID, namespace khác iOS. Key đã gắn với iPhone cần admin gỡ máy hoặc cấp key khác.
 - Kiểm tra khóa/hết hạn/xóa/disabled/binding mismatch; dùng Date HTTPS và đồng hồ monotonic, lease tối đa 30 giây, polling mỗi 8 giây. Không nhận lease từ PUT, không lưu lease qua restart. Chưa có SSE tức thì như iOS.
 - Start yêu cầu quyền overlay; menu kéo được, thu gọn bằng ×, mở bằng m, xử lý xoay màn hình và dừng từ thông báo. Mất quyền hoặc hết phiên thì dừng. Theme và FLAG_SECURE áp dụng cho cửa sổ ứng dụng.
-- Root kiểm tra uid 0 qua su. Khi menu mở, chạy helper app_process đọc /proc/PID/maps và /proc/PID/mem của com.dts.freefireth; kiểm tra ARM64, chữ ký lệnh, số lượng metadata và class trước khi thử đọc chuỗi tên local player mỗi giây. Không tắt SELinux và không ghi bộ nhớ game.
-- Helper chỉ sống trong phiên key hợp lệ, dừng khi đóng menu/mất key/pipe cha đóng. Lease helper bị chặn tối đa 30 giây, kể cả tiến trình ứng dụng chết.
-- Tab Thiết lập hiển thị trạng thái thật: chờ game, sai profile, chờ trận, bị từ chối đọc hoặc chuỗi tên đọc được. Đây là đường đọc thử nghiệm chưa được xác nhận trên điện thoại có game, không phải ESP/Aim hoàn chỉnh.
+- Root kiểm tra uid 0 và dùng helper app_process đọc /proc/PID/maps, /proc/PID/mem của com.dts.freefireth. Người dùng đã xác nhận tên đọc được đúng trên cloudphone root.
+- Đã nối backend ghi dữ liệu cho **Không nạp đạn, Bắn nhanh (2×), Speed**. Nút chỉ mở khi thư viện, class/owner PlayerAttributes, quyền mở bộ nhớ ghi và giá trị dữ liệu khớp. Thay đổi gửi đến helper, ghi đúng trường dữ liệu và đọc lại xác nhận; trạng thái trong Thiết lập phân biệt yêu cầu với kết quả ghi.
+- Bắn nhanh giảm FireIntervalScale về 0.5 lần baseline, không nhân dồn mỗi tick. Speed dùng ForceSetRunAndDashSpeed, giới hạn 0.1–30 m/s. Đây là giá trị client, chưa xác nhận tác động thực tế trong game/server.
+- Khi tắt chức năng, helper khôi phục baseline nếu trường vẫn giữ giá trị helper đã ghi. Giá trị do game thay đổi được giữ lại. Không ghi khôi phục qua PID tái sử dụng, trận hoặc đối tượng khác. Mất phiên/đóng menu/pipe cha đóng sẽ thử khôi phục tối đa ba lần trước khi helper thoát; không thể bảo đảm khôi phục nếu bị kill ngay, game đã thay đối tượng hoặc quyền ghi bị thu hồi.
+- Mỗi lần mở/dừng menu, ba công tắc game trở về tắt. Không tự bật chức năng từ cấu hình của lần chạy trước. No Root không gọi su hoặc backend ghi.
 
-**Aim, ESP, AimKill, Silent, FastFire, NoReload, Ghost, FakeLag, Fly, Speed và Spin chưa hoạt động trong cả hai APK.** Các mục có trong menu nhưng bị vô hiệu hóa, không báo bật thành công. Đã phân tích XAPK Free Fire 1.132.1 do người dùng cung cấp; profile ARM64 mới chỉ được kiểm chứng tĩnh. Quyền root vẫn có thể bị SELinux chặn đọc. Không dùng offset iOS/Mach/UnityFramework trên Android. No Root không thể đọc bộ nhớ game khác bằng API thông thường.
+**Aim, ESP, AimKill, Silent, Ghost, FakeLag, Fly và Spin chưa có backend Android và vẫn khóa.** Không bật nút giả. Ba chức năng PlayerAttributes đã có backend thật nhưng cần người dùng thử trên cloudphone để kiểm chứng kết quả trong trận.
 
-Profile trong profiles/free-fire-1.132.1-arm64.json ghi hash binary gốc và bằng chứng getter ARM64. Metadata mang version 31 nhưng method stride 40 (khác công cụ dump chuẩn); không dùng layout iOS. Đường đọc: GameFacade.static_fields → CurrentGame → MatchGame.m_Match → LocalPlayer → NickName. Helper kiểm tra type hierarchy của MatchGame và System.String. Chữ ký runtime là kiểm tra cục bộ, không thay cho xác minh toàn bộ SHA-256. IFix/hot patch có thể đổi hành vi getter.
-
-AndroidGameData.java vẫn trả capability không hỗ trợ Aim/ESP vì chưa có danh sách địch, transform/camera và backend chức năng được kiểm chứng. Không có snapshot game giả hay toggle giả. XAPK, APK game, thư viện gốc và metadata được giữ tại máy, không đưa lên GitHub.
+Profile trong profiles/free-fire-1.132.1-arm64.json ghi hash binary, lệnh ARM64 và trường dữ liệu. Metadata version 31 sử dụng method stride 40. Mỗi lần ghi kiểm tra lại PID/starttime, match/player, class PlayerAttributes và owner. Không sửa mã thực thi, không tiêm lệnh vào game, không tắt SELinux. IFix/hot patch và logic server có thể làm thay đổi tác dụng dù trường ghi đã được đọc lại. XAPK/APK game/thư viện gốc chỉ giữ tại máy, không đưa lên GitHub.
 
 ## Cài và chạy
 
@@ -49,7 +49,7 @@ Outputs:
 - app/build/outputs/apk/root/debug/app-root-debug.apk
 - app/build/outputs/apk/noRoot/debug/app-noRoot-debug.apk
 
-Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và từ chối chạy khi chưa có uid 0. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Chưa kiểm chứng trên điện thoại có Magisk/game thực tế.
+Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và từ chối chạy khi chưa có uid 0. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Đường đọc tên đã được người dùng xác nhận trên cloudphone; ba chức năng ghi chưa được xác nhận trong trận.
 
 ## Cấu hình key
 

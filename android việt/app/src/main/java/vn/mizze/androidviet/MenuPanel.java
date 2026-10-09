@@ -22,6 +22,7 @@ final class MenuPanel extends LinearLayout {
     private int colorTarget;
     private TextView swatch;
     private TextView dataStatus;
+    private boolean builtReady;
     MenuPanel(Context context,Host host,int initialPage) {
         super(context);this.host=host;ui=new Ui(context);page=initialPage;
         setOrientation(VERTICAL);setPadding(ui.dp(14),ui.dp(8),ui.dp(14),ui.dp(12));
@@ -41,10 +42,10 @@ final class MenuPanel extends LinearLayout {
         addView(scroll,new LayoutParams(-1,0,1));build();
     }
     int page(){return page;}
-    void refreshDataStatus(){if(dataStatus!=null){String status=RootDataSession.status();if(!status.contentEquals(dataStatus.getText()))dataStatus.setText(status);}}
+    void refreshDataStatus(){boolean ready=RootDataSession.featuresReady();if(ready!=builtReady){builtReady=ready;int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}if(dataStatus!=null){String status=RootDataSession.status();if(!status.contentEquals(dataStatus.getText()))dataStatus.setText(status);}}
     private void scrollTopAndBuild(){build();scroll.post(()->scroll.scrollTo(0,0));}
     private void build(){
-        content.removeAllViews();swatch=null;dataStatus=null;
+        builtReady=RootDataSession.featuresReady();content.removeAllViews();swatch=null;dataStatus=null;
         for(int i=0;i<4;i++){tabs[i].setTextColor(i==page?Ui.MINT:ui.muted());tabs[i].setBackground(ui.shape(i==page?0x1875DBBA:Color.TRANSPARENT,9));tabs[i].setSelected(i==page);}
         if(page==0 || page==1) notice(data.canApplyGameFeatures()?"Đã kết nối dữ liệu game":AndroidGameData.description());
         switch(page){case 0->aim();case 1->esp();case 2->colors();default->settings();}
@@ -53,12 +54,12 @@ final class MenuPanel extends LinearLayout {
     private void section(String text){TextView v=ui.bold(text,14,Ui.MINT);v.setPadding(ui.dp(4),ui.dp(8),0,0);ui.add(content,v,40,0);}
     private void notice(String text){TextView v=ui.label(text,12,ui.muted());v.setPadding(ui.dp(8),ui.dp(6),ui.dp(8),ui.dp(6));ui.add(content,v,-2,8);}
     private void toggle(String title,String key,boolean fallback,boolean game){
-        boolean available=!game || data.canApplyGameFeatures();boolean value=available && ui.prefs.getBoolean(key,fallback);
+        boolean available=!game || data.available(key) || AndroidGameData.implemented(key)&&ui.prefs.getBoolean(key,fallback);boolean value=(!game||AndroidGameData.implemented(key)) && ui.prefs.getBoolean(key,fallback);
         LinearLayout row=ui.row();row.setPadding(ui.dp(14),0,ui.dp(12),0);row.setBackground(ui.shape(ui.raised(),10));
         TextView label=ui.label(title,14,ui.text());row.addView(label,new LayoutParams(0,-1,1));
         CrossCheck box=new CrossCheck(getContext(),value);row.addView(box,new LayoutParams(ui.dp(34),ui.dp(34)));
         row.setEnabled(available);box.setEnabled(available);row.setAlpha(available?1:.48f);
-        row.setContentDescription(title+(available?"":" · Chưa có dữ liệu game"));
+        row.setContentDescription(title+(available?"":" · Chờ backend/dữ liệu game"));
         if(available)row.setOnClickListener(v->{boolean next=!ui.prefs.getBoolean(key,fallback);ui.prefs.edit().putBoolean(key,next).apply();box.setChecked(next);host.settingsChanged();});
         ui.add(content,row,54,8);
     }
@@ -72,7 +73,7 @@ final class MenuPanel extends LinearLayout {
             label.setText(title+"   "+formatted);};update.run();
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}
             public void onProgressChanged(SeekBar s,int n,boolean fromUser){if(fromUser){ui.prefs.edit().putFloat(key,min+(max-min)*n/1000f).apply();update.run();updateSwatch();}}});
-        seek.setEnabled(!game || data.canApplyGameFeatures());row.setAlpha(seek.isEnabled()?1:.48f);row.addView(seek,new LayoutParams(-1,ui.dp(48)));ui.add(content,row,88,8);
+        seek.setEnabled(!game || data.available(key));row.setAlpha(seek.isEnabled()?1:.48f);row.addView(seek,new LayoutParams(-1,ui.dp(48)));ui.add(content,row,88,8);
     }
     private void gameToggle(String title,String key){toggle(title,key,false,true);}
     private void aim(){
@@ -104,8 +105,7 @@ final class MenuPanel extends LinearLayout {
     private void settings(){
         notice(AndroidGameData.description());section("Nút nổi");gameToggle("Ghost","GhostModeFloating");gameToggle("FakeLag","FakeLagFloating");gameToggle("Fly","FlyFloating");gameToggle("Ẩn nút chức năng","HideFeatureButtons");gameToggle("Nút Speed","RunSpeedFloating");
         section("Di chuyển");slider("Độ cao Fly (m)","FlyHeight",1,6,4,true);gameToggle("Speed","RunSpeed");
-        LinearLayout speed=ui.row();speed.setPadding(ui.dp(14),0,ui.dp(12),0);speed.setBackground(ui.shape(ui.raised(),10));speed.addView(ui.label("Tốc độ (m/s)",14,ui.text()),new LayoutParams(0,-1,1));
-        EditText number=new EditText(getContext());number.setText("6.00");number.setTextSize(14);number.setTextColor(Ui.MINT);number.setEnabled(false);number.setContentDescription("Tốc độ (m/s) · Chưa có dữ liệu game");speed.addView(number,new LayoutParams(ui.dp(90),-1));speed.setAlpha(.48f);ui.add(content,speed,58,8);
+        slider("Tốc độ (m/s)","RunSpeedValue",.1f,30,6,true);
         section("Hiệu ứng nhân vật");gameToggle("Spin · chỉ mình thấy","VisualSpin");slider("Vòng / giây","VisualSpinSpeed",.1f,3,.5f,true);
         if(BuildConfig.ROOT_EDITION){ section("Quyền root"); notice(RootAccess.detail()); dataStatus=ui.label("",12,ui.muted());ui.add(content,dataStatus,-2,8);refreshDataStatus(); }
         section("Giao diện Android");toggle("Ẩn khi chụp / quay","AnLive",false,false);toggle("Giao diện tối","DarkTheme",true,false);

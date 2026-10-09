@@ -104,6 +104,23 @@ public class UiSmokeTest {
             assertTrue("Unprivileged helper must exit",helper.waitFor(3,java.util.concurrent.TimeUnit.SECONDS));
         }finally{helper.destroyForcibly();executor.shutdownNow();}
     }
+    @Test public void supportedRootControlsRequireFreshBackend() throws Throwable {
+        var ready=RootDataSession.class.getDeclaredField("featuresReady");ready.setAccessible(true);
+        var sample=RootDataSession.class.getDeclaredField("sampledAt");sample.setAccessible(true);
+        var screen=activity.getActivity();var prefs=new Ui(screen).prefs;
+        try{
+            // Capability fixture only; no game process or memory write is performed by this widget test.
+            ready.setBoolean(null,true);sample.setLong(null,android.os.SystemClock.elapsedRealtime());
+            activity.runOnUiThread(()->{
+                MenuPanel panel=new MenuPanel(screen,new MenuPanel.Host(){public void closeMenu(){}public void settingsChanged(){}public void stop(){}},0);screen.setContentView(panel);
+                View fast=(View)find(panel,"Bắn nhanh (2×)").getParent();assertEquals(BuildConfig.ROOT_EDITION,fast.isEnabled());
+                assertFalse(((View)find(panel,"Aim đầu").getParent()).isEnabled());
+                if(BuildConfig.ROOT_EDITION){fast.performClick();assertTrue(prefs.getBoolean("FastFire",false));fast.performClick();assertFalse(prefs.getBoolean("FastFire",true));}
+                find(panel,"Thiết lập").performClick();assertEquals(BuildConfig.ROOT_EDITION,((View)find(panel,"Speed").getParent()).isEnabled());
+            });screenshot("menu-supported-controls");
+            sample.setLong(null,0);assertFalse(new AndroidGameData().available("FastFire"));
+        }finally{ready.setBoolean(null,false);sample.setLong(null,0);prefs.edit().putBoolean("FastFire",false).putBoolean("ShootNoReload",false).putBoolean("RunSpeed",false).apply();}
+    }
     private boolean serviceRunning(android.content.Context context){
         var manager=(android.app.ActivityManager)context.getSystemService(android.content.Context.ACTIVITY_SERVICE);
         for(var service:manager.getRunningServices(100))if(service.service.getClassName().equals(OverlayService.class.getName()))return true;

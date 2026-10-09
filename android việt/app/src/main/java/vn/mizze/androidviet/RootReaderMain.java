@@ -8,10 +8,13 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-/** Read-only root helper, launched with app_process. No game writes or injected calls. */
+/** Root helper: bounded reads and validated PlayerAttributes writes; no injected calls. */
 public final class RootReaderMain {
     private static final long FACADE_CACHE=0xAC1E768L, MATCH_GAME_CACHE=0xAC232A0L;
     private static volatile long lease;
+    private static volatile RootFeatureController.Config config=RootFeatureController.Config.off();
+    private static final RootFeatureController features=new RootFeatureController();
+    
     private static boolean pointer(long p){return p>=0x10000 && p<0x0001000000000000L && (p&7)==0;}
     private record Mapping(long start,long end,String permissions,String file){}
     private static List<Mapping> maps(int pid)throws Exception{
@@ -30,14 +33,22 @@ public final class RootReaderMain {
         }return 0;
     }
     private static final class Memory implements AutoCloseable {
-        final FileInputStream input;final FileChannel channel;final List<Mapping> ranges;
-        Memory(int pid)throws Exception{ranges=maps(pid);input=new FileInputStream("/proc/"+pid+"/mem");channel=input.getChannel();}
+        final int pid;final long start;final FileInputStream input;final FileChannel channel;final List<Mapping> ranges;
+        RandomAccessFile output;FileChannel writer;
+        Memory(int pid)throws Exception{this.pid=pid;this.start=processStart(pid);ranges=maps(pid);input=new FileInputStream("/proc/"+pid+"/mem");channel=input.getChannel();}
         byte[] read(long address,int count)throws Exception{
             if(count<0||count>4096)throw new IOException("Invalid read size");boolean valid=false;
             for(Mapping m:ranges)if(m.permissions().startsWith("r")&&address>=m.start()&&address<=m.end()-count){valid=true;break;}
             if(!valid)throw new IOException("Address outside readable mapping");
             ByteBuffer buffer=ByteBuffer.allocate(count);int done=0;
             while(done<count){int n=channel.read(buffer,address+done);if(n<=0)throw new EOFException();done+=n;}return buffer.array();
+        }
+        void enableWrites()throws IOException{if(writer==null){output=new RandomAccessFile("/proc/"+pid+"/mem","rw");writer=output.getChannel();}}
+        void write(long address,int size,int bits)throws Exception{
+            boolean valid=false;for(Mapping m:ranges)if(m.permissions().startsWith("rw")&&address>=m.start()&&address<=m.end()-size){valid=true;break;}
+            if(!valid||size!=1&&size!=4)throw new IOException("Not a writable data mapping");
+            enableWrites();ByteBuffer data=ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);if(size==1)data.put((byte)bits);else data.putInt(bits);data.flip();
+            int written=0;while(data.hasRemaining()){int n=writer.write(data,address+written);if(n<=0)throw new IOException("Short write");written+=n;}
         }
         long ptr(long address)throws Exception{return ByteBuffer.wrap(read(address,8)).order(ByteOrder.LITTLE_ENDIAN).getLong();}
         int i32(long address)throws Exception{return ByteBuffer.wrap(read(address,4)).order(ByteOrder.LITTLE_ENDIAN).getInt();}
@@ -61,8 +72,37 @@ public final class RootReaderMain {
                 }catch(Exception ignored){}
             }return 0;
         }
-        public void close()throws IOException{input.close();}
+        public void close()throws IOException{try{if(output!=null)output.close();}finally{input.close();}}
     }
+    private static long processStart(int pid)throws Exception{
+        String stat;try(BufferedReader in=new BufferedReader(new FileReader("/proc/"+pid+"/stat"))){stat=in.readLine();}
+        return Long.parseLong(stat.substring(stat.lastIndexOf(')')+2).split(" +")[19]);
+    }
+    private static long[] context(Memory m,long base)throws Exception{
+        long klass=m.ptr(base+FACADE_CACHE);
+        if(!pointer(klass)||!m.ascii(m.ptr(klass+16)).equals("GameFacade")||!m.ascii(m.ptr(klass+24)).equals("COW"))return null;
+        long statics=m.ptr(klass+0xB8),game=pointer(statics)?m.ptr(statics):0;
+        if(!m.instanceOf(game,m.ptr(base+MATCH_GAME_CACHE)))return null;
+        long match=m.ptr(game+0x90),player=pointer(match)?m.ptr(match+0xD8):0;
+        return pointer(player)?new long[]{game,match,player}:null;
+    }
+    private static RootFeatureController.Identity attributes(Memory m,long base)throws Exception{
+        if(processStart(m.pid)!=m.start||gamePid()!=m.pid)return null;
+        long[] live=context(m,base);if(live==null)return null;
+        long attrs=m.ptr(live[2]+0x768);if(!pointer(attrs)||m.ptr(attrs+0x20)!=live[2])return null;
+        long klass=m.ptr(attrs);
+        if(!m.ascii(m.ptr(klass+16)).equals("PlayerAttributes")||!m.ascii(m.ptr(klass+24)).equals("COW.GamePlay"))return null;
+        return new RootFeatureController.Identity(m.pid,m.start,base,live[1],live[2],attrs,klass);
+    }
+    private static boolean featureSignatures(Memory m,long base)throws Exception{
+        return m.i32(base+0x6F089C8L)==0xF943B674&&m.i32(base+0x7C25C10L)==0xBD425A60&&
+            m.i32(base+0x7C25C68L)==0xBD025A68&&m.i32(base+0x7C21838L)==0xBD43CA80&&m.i32(base+0x744FC84L)==0x39444408;
+    }
+    private static RootFeatureController.Memory access(Memory m,long base,boolean restoring){return new RootFeatureController.Memory(){
+        public RootFeatureController.Identity identity()throws Exception{return attributes(m,base);}
+        public int read(long address,int size)throws Exception{return size==1?m.read(address,1)[0]&255:m.i32(address);}
+        public void write(long address,int size,int bits)throws Exception{if(!restoring&&SystemClock.elapsedRealtime()>=lease)throw new IOException("Lease expired");m.write(address,size,bits);}
+    };}
     private static JSONObject snapshot()throws Exception{
         int pid=gamePid();if(pid==0)return new JSONObject().put("state","waiting_game").put("message","Chưa mở Free Fire thường.");
         try(Memory memory=new Memory(pid)){
@@ -77,9 +117,23 @@ public final class RootReaderMain {
             long match=pointer(game)?memory.ptr(game+0x90):0,player=pointer(match)?memory.ptr(match+0xD8):0;
             if(!pointer(player))return new JSONObject().put("state","waiting_match").put("message","Đã khớp thư viện; chờ nhân vật trong trận.").put("pid",pid);
             String name=memory.managedString(memory.ptr(player+0x490));
+            String featureStatus="Chờ PlayerAttributes để mở chức năng.";boolean ready=false;
+            try{
+                if(featureSignatures(memory,base)&&attributes(memory,base)!=null){
+                    RootFeatureController.Identity identity=attributes(memory,base);
+                    int reload=memory.read(identity.attributes()+0x111,1)[0]&255;
+                    float fire=Float.intBitsToFloat(memory.i32(identity.attributes()+0x258)),run=Float.intBitsToFloat(memory.i32(identity.attributes()+0x3C8));
+                    if(reload>1||!Float.isFinite(fire)||fire<.05f||fire>16||!Float.isFinite(run)||run<0||run>1000)throw new IOException("Invalid attributes fields");
+                    memory.enableWrites();ready=true;
+                    RootFeatureController.Config desired=SystemClock.elapsedRealtime()<lease?config:RootFeatureController.Config.off();
+                    featureStatus=features.update(access(memory,base,!desired.noReload()&&!desired.fastFire()&&!desired.speed()),desired);
+                }
+            }catch(Exception e){featureStatus="Chưa áp dụng được chức năng: quyền ghi, giá trị hoặc PlayerAttributes không khớp.";}
+
             if(name.isEmpty())return new JSONObject().put("state","waiting_name").put("message","Chờ tên người chơi trong trận.");
             return new JSONObject().put("state","local_player").put("message","Đọc được chuỗi tên theo profile thử · Chưa kiểm chứng ESP/Aim.")
-                .put("pid",pid).put("name",name).put("sampleUptime",SystemClock.elapsedRealtime());
+                .put("pid",pid).put("name",name).put("sampleUptime",SystemClock.elapsedRealtime())
+                .put("featuresReady",ready).put("featureStatus",featureStatus);
         }
     }
     public static void main(String[] args){
@@ -88,14 +142,20 @@ public final class RootReaderMain {
         // A dead parent cannot leave a persistent root helper behind: lease is bounded to 30 seconds.
         lease=SystemClock.elapsedRealtime()+3000;
         Thread control=new Thread(()->{try(BufferedReader in=new BufferedReader(new InputStreamReader(System.in,StandardCharsets.UTF_8))){String line;
-            while((line=in.readLine())!=null){if(line.equals("STOP")){lease=0;return;}if(line.startsWith("LEASE ")){
+            while((line=in.readLine())!=null){if(line.length()>4096){lease=0;return;}if(line.equals("STOP")){lease=0;return;}
+            if(line.startsWith("CONFIG ")){JSONObject c=new JSONObject(line.substring(7));config=new RootFeatureController.Config(c.optBoolean("noReload"),c.optBoolean("fastFire"),c.optBoolean("speed"),(float)c.optDouble("speedValue",6));}
+            if(line.startsWith("LEASE ")){
                 long requested=Long.parseLong(line.substring(6));lease=Math.min(requested,SystemClock.elapsedRealtime()+30000);
             }}lease=0;
         }catch(Exception e){lease=0;}},"lease");control.setDaemon(true);control.start();
         while(SystemClock.elapsedRealtime()<lease){
             try{System.out.println(snapshot().toString());}
             catch(Exception e){System.out.println("{\"state\":\"read_denied\",\"message\":\"Không đọc được bộ nhớ game (quyền hoặc SELinux).\"}");}
-            System.out.flush();try{Thread.sleep(1000);}catch(InterruptedException e){break;}
+            System.out.flush();try{Thread.sleep(200);}catch(InterruptedException e){break;}
+        }
+        config=RootFeatureController.Config.off();
+        for(int attempt=0;attempt<3&&features.changed();attempt++){
+            try{snapshot();Thread.sleep(100);}catch(Exception ignored){}
         }
     }
 }
