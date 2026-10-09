@@ -250,7 +250,7 @@
     
     // Perform memory read via LaraMemoryReader & update entities
     LaraMemoryReader *reader = [LaraMemoryReader sharedInstance];
-    if (reader.isAttached) {
+    if (reader.isKernelReady && reader.targetProcAddress != 0) {
         // Example mock entity structure for overlay visualization test
         NSMutableArray *list = [NSMutableArray array];
         
