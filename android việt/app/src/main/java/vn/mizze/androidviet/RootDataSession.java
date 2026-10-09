@@ -78,7 +78,7 @@ final class RootDataSession implements AutoCloseable {
         long deadline=license.leaseDeadline();
         if(deadline<=SystemClock.elapsedRealtime()){close();return;}
         try{
-            if(prefs.getBoolean("AutoFeatures",BuildConfig.ROOT_EDITION)){String[] keys=autoStart.claim(capabilityMask());if(keys.length>0){var edit=prefs.edit();for(String key:keys)edit.putBoolean(key,true);edit.apply();}}
+            if(prefs.getBoolean("AutoFeatures",BuildConfig.ROOT_EDITION)){String[] keys=autoStart.claim(capabilityMask());if(keys.length>0){var edit=prefs.edit();for(String key:keys){if(key.equals("AimHead")&&(prefs.getBoolean("AimHead",false)||prefs.getBoolean("AimNeck",false)||prefs.getBoolean("SilentAim",false)))continue;edit.putBoolean(key,true);}edit.apply();}}
             if(deadline!=sentDeadline){control.write("LEASE "+deadline+"\n");sentDeadline=deadline;}
             String next=new JSONObject().put("noReload",prefs.getBoolean("ShootNoReload",false))
                 .put("fastFire",prefs.getBoolean("FastFire",false)).put("speed",prefs.getBoolean("RunSpeed",false))

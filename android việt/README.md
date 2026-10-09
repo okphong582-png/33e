@@ -22,13 +22,13 @@ Hai bản cài cùng lúc được. ANDROID_ID phụ thuộc thiết bị, user 
 - Đã nối backend ghi dữ liệu cho **Không nạp đạn, Bắn nhanh (2×), Speed**. Nút chỉ mở khi thư viện, class/owner PlayerAttributes, quyền mở bộ nhớ ghi và giá trị dữ liệu khớp. Thay đổi gửi đến helper, ghi đúng trường dữ liệu và đọc lại xác nhận; helper phân biệt yêu cầu với kết quả ghi; log kỹ thuật được giữ nội bộ, không hiện trong menu.
 - Bắn nhanh giảm FireIntervalScale về 0.5 lần baseline, không nhân dồn mỗi tick. Speed dùng ForceSetRunAndDashSpeed, giới hạn 0.1–30 m/s. Đây là giá trị client, chưa xác nhận tác động thực tế trong game/server.
 - Khi tắt chức năng, helper khôi phục baseline nếu trường vẫn giữ giá trị helper đã ghi. Giá trị do game thay đổi được giữ lại. Không ghi khôi phục qua PID tái sử dụng, trận hoặc đối tượng khác. Mất phiên/đóng menu/pipe cha đóng sẽ thử khôi phục tối đa ba lần trước khi helper thoát; không thể bảo đảm khôi phục nếu bị kill ngay, game đã thay đối tượng hoặc quyền ghi bị thu hồi.
-- Mỗi lần mở menu, chờ backend hợp lệ rồi tự bật một lần: súng/Speed, ESP và Aim đầu khi bắn hoặc ngắm. Có công tắc Tự bật khi vào trận để tắt hành vi này. Tắt thủ công trong phiên được giữ nguyên, không bị ép bật lại mỗi frame. Aim đầu/cổ là hai lựa chọn loại trừ nhau; mặc định tự bật Aim đầu. Khi dừng menu, công tắc áp dụng trở về tắt. No Root không gọi su hoặc backend ghi.
+- Mỗi lần mở menu, chờ backend hợp lệ rồi tự bật một lần: súng/Speed, ESP và Aim đầu khi bắn. Có công tắc Tự bật khi vào trận để tắt hành vi này. Tắt thủ công trong phiên được giữ nguyên, không bị ép bật lại mỗi frame. Aim đầu/cổ là hai lựa chọn loại trừ nhau; mặc định tự bật Aim đầu. Khi dừng menu, công tắc áp dụng trở về tắt. No Root không gọi su hoặc backend ghi.
 
-- Đã nối bộ đọc **ESP** thật: Match dictionary → Player → TransformData và PRI, cùng camera Unity. Vẽ tên, HP, khoảng cách, xương, điểm đầu, khung 2D/3D, trục XYZ; hỗ trợ màu và preset tối giản. Chỉ vẽ frame còn mới dưới 500 ms, không dùng dữ liệu mô phỏng trong app.
+- Đã nối bộ đọc **ESP** thật: Match dictionary → Player → TransformData và PRI, cùng camera Unity. Vẽ tên, HP, khoảng cách, xương, điểm đầu, khung 2D/3D, trục XYZ; hỗ trợ màu và preset tối giản. Chỉ vẽ frame còn mới dưới 250 ms, không dùng dữ liệu mô phỏng trong app.
 - **Aim đầu/cổ** chọn mục tiêu trong FOV, loại nhân vật local/đồng đội/HP bằng 0; điều kiện bắn, ngắm, luôn luôn hoặc fire + scope. Ghi Quaternion +0x614 khi chế độ getter/setter, rotation cũ, quyền ghi và match còn khớp. Aim cổ dùng cùng ước lượng iOS: tối đa 10 cm dưới đầu thật. Tắt Aim ngừng ghi, không khôi phục góc nhìn cũ.
 - Mỗi lần ghi Aim kiểm tra cấu hình không bị thay, frame dưới 300 ms và lease còn hạn; thay PID/starttime/trận/nhân vật/dictionary sẽ bỏ frame. Lớp vẽ không nhận chạm, alpha cửa sổ 0.75, mất phiên thì bị tháo cùng menu.
 
-**Silent, AimKill, Aimlag, Ghost, FakeLag, Fly và Spin chưa có backend Android và vẫn khóa.** Không thể xác nhận mọi chức năng hoạt động 100% chỉ từ Local Name. ESP/Aim và ba trường PlayerAttributes có backend bộ nhớ thật nhưng chưa được thử trong trận trên cloudphone; IFix hoặc cập nhật game có thể làm dữ liệu/chế độ khác. Các xương tay dựa trên field Android phù hợp rig iOS, vẫn cần xác nhận trực tiếp.
+**AimKill, Aimlag, Ghost, FakeLag, Fly và Spin chưa có backend Android và vẫn khóa.** Silent có đường quaternion phụ thử nghiệm, chưa được xác nhận hiệu quả trong trận. Không thể xác nhận mọi chức năng hoạt động 100% chỉ từ Local Name. ESP/Aim và ba trường PlayerAttributes có backend bộ nhớ thật nhưng chưa được thử trong trận trên cloudphone; IFix hoặc cập nhật game có thể làm dữ liệu/chế độ khác. Các xương tay dựa trên field Android phù hợp rig iOS, vẫn cần xác nhận trực tiếp.
 
 Profile trong profiles/free-fire-1.132.1-arm64.json ghi hash binary, lệnh ARM64 và trường dữ liệu. Metadata version 31 sử dụng method stride 40. Mỗi lần ghi kiểm tra lại PID/starttime, match/player, class PlayerAttributes và owner. Không sửa mã thực thi, không tiêm lệnh vào game, không tắt SELinux. IFix/hot patch và logic server có thể làm thay đổi tác dụng dù trường ghi đã được đọc lại. XAPK/APK game/thư viện gốc chỉ giữ tại máy, không đưa lên GitHub.
 
@@ -38,7 +38,7 @@ Profile trong profiles/free-fire-1.132.1-arm64.json ghi hash binary, lệnh ARM6
 2. Cài APK, nhập key hợp lệ từ hệ thống Firebase hiện có.
 3. Bấm Start, cho phép Hiển thị trên ứng dụng khác; quay lại bấm Start.
 4. Bản Root: chọn Cho phép trong Magisk/SuperSU. Bản No Root bỏ qua bước này.
-5. Mở Free Fire thường 1.132.1 ARM64 và vào trận. Menu không hiện log kỹ thuật theo yêu cầu. ESP/Aim mở khi camera/xương/PRI khớp; bật ESP hoặc preset, rồi chọn các mục muốn vẽ. Aim đầu/cổ cần chọn thêm điều kiện kích hoạt.
+5. Mở Free Fire thường 1.132.1 ARM64 và vào trận. Menu không hiện log kỹ thuật theo yêu cầu. ESP/Aim mở khi camera/xương/PRI khớp; bật ESP hoặc preset, rồi chọn các mục muốn vẽ. Chọn Aim đầu/cổ/Silent tự chọn điều kiện Khi bắn nếu chưa có điều kiện nào.
 6. Chạm m để mở menu; dùng Dừng menu trong Thiết lập hoặc thông báo để tắt.
 
 ## Build
@@ -54,7 +54,7 @@ Outputs:
 - app/build/outputs/apk/root/debug/app-root-debug.apk
 - app/build/outputs/apk/noRoot/debug/app-noRoot-debug.apk
 
-Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu, kiểm tra service overlay tự dừng khi lease hết, helper tuân thủ Root/No Root và từ chối chạy khi chưa có uid 0. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Đường đọc tên đã được người dùng xác nhận trên cloudphone; ESP/Aim và các chức năng ghi chưa được xác nhận trong trận. Unit test thêm phép chiếu, LookRotation, TRS và vòng lặp/giới hạn traversal; smoke test thêm capability frame còn mới/quá hạn và surface vẽ/xóa đúng. Frame dùng trong test là fixture gắn bằng reflection, không có trong ứng dụng sản xuất.
+Workflow .github/workflows/android-viet.yml chạy một lần trên push: build hai APK, unit test và lint. Không chạy hoặc build instrumentation/smoke test theo yêu cầu người dùng. Các mã smoke test cũ vẫn lưu trong source nhưng không thuộc workflow.
 
 ## Cấu hình key
 
@@ -62,7 +62,7 @@ app/src/main/res/raw/license_config.json dùng cùng database public-client củ
 
 Sửa lỗi cloudphone “Unknown transform node”: bộ đọc nhận đủ ba lớp ITransformNode trong metadata Android, gồm BFOONIGAIFK (getter 0x70D847C), TransformNode namespace rỗng (0x3793898) và GCommon.TransformNode (0x8251764). Xác minh lệnh getter +0x10/ret trước khi theo con trỏ; tên/namespace khác hoặc code đã đổi vẫn bị từ chối.
 
-ESP có Đường nối tới người chơi riêng với Trục XYZ; preset tối giản cũng bật đường nối. Tự bật chỉ áp dụng backend đã có dữ liệu hợp lệ, không mở giả Silent/AimKill/Aimlag hoặc chức năng chưa có backend.
+ESP có Đường nối tới người chơi riêng với Trục XYZ; preset tối giản cũng bật đường nối. Tự bật chỉ áp dụng backend đã có dữ liệu hợp lệ, không mở giả AimKill/Aimlag hoặc chức năng chưa có backend.
 
 ### ESP synchronization and auxiliary Aim update
 
@@ -71,3 +71,9 @@ The root reader reuses its process memory channel, searches mappings by address,
 Silent Aim uses local auxiliary quaternion +0x628, independently of normal camera aim +0x614. Availability requires the local-player marker, valid quaternion and verified Android getter/reset/weapon consumer instructions. While Silent is selected, normal aim writes are suspended; auxiliary writes require firing, a fresh target and the chosen head/neck point. On stopping the trigger or switching off, restore follows the game's reset semantics only if the last written quaternion remains unchanged. The game's own reset can race external writes; Silent effectiveness must still be checked on the actual ARM64 game. Silent headshot percentage, AutoConfig and AimKill remain unavailable. Automatic Aim now selects head and firing only; neck is selectable. Technical status stays out of the menu.
 
 Aim controls can be configured before a frame is available on the Root flavor. Configuration does not bypass helper readiness, identity, trigger or lease checks. Unsupported modes and No Root game controls remain unavailable.
+
+### Aim trigger regression fix
+
+Android get_IsFiringFromPRI (0x706F948–0x706F95C) calls UInt8 index 21 and compares its low byte to 2. IsSighting index 12 calls Bool, also one byte. Reading these fields as UInt16 allowed the adjacent byte to block firing or spuriously enable scope; PriValues now preserves the exact widths, with neighboring-byte regression coverage. HP/maxHP remain UInt16; team remains UInt8.
+
+The static E4 flag is no longer treated as readiness: SetAimRotation writes normal quaternion +0x614 in both branches (0x6F2C8B0 and 0x6F29380). Exact instruction checks, valid quaternion, local-player marker, process/match/target/lease checks still apply. Silent now operates when selected alone; head is its default point, neck can be chosen. Aim selection precedes optional ESP serialization so a failing name/shape cannot discard a valid target. Backend auto-start preserves an already selected neck/Silent mode. Runtime results still need confirmation on the actual game; the fixes and unit tests do not demonstrate successful aim in-game.

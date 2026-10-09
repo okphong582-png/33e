@@ -50,7 +50,7 @@ final class RootGameFrameReader {
         if(count<index+1||count>4096||!pointer(array)||m.ptr(array+0x18)<index+1||m.ptr(array+0x18)>4096)throw new IOException("Invalid PRI array");
         long entry=m.ptr(array+0x20+index*8L);if(!pointer(entry))throw new IOException("Missing PRI entry");
         long value=unsafe?m.ptr(entry+0x18):entry+0x18;
-        return index==34?m.read(value,1)[0]&255:bytes(m.read(value,2)).getShort()&65535;
+        return PriValues.decode(index,m.read(value,PriValues.width(index)));
     }
     private float[] matrix(long at)throws Exception{ByteBuffer b=bytes(m.read(at,64));float[] a=new float[16];for(int i=0;i<16;i++){a[i]=b.getFloat();if(!Float.isFinite(a[i])||Math.abs(a[i])>100000)throw new IOException("Invalid camera matrix");}return a;}
     private void verify()throws Exception{
@@ -80,7 +80,7 @@ final class RootGameFrameReader {
         for(int i=0;i<count;i++){long entry=entries+0x20+i*24L;if(m.i32(entry)<0)continue;long p=m.ptr(entry+16);if(!pointer(p)||!m.instanceOf(p,playerClass)||!seen.add(p))throw new IOException("Player entry mismatch");players.add(p);includesLocal|=p==local;}
         if(!includesLocal||players.size()!=count-free)throw new IOException("Dictionary/local player mismatch");
         int team=pri(local,34),localHP=pri(local,0),maxHP=pri(local,1);if(team>255||maxHP<1||maxHP>10000||localHP>maxHP)throw new IOException("Local PRI values invalid");
-        boolean firing=pri(local,21)==2,scope=pri(local,12)!=0;
+        boolean firing=PriValues.firing(pri(local,21)),scope=pri(local,12)!=0;
         float width=(float)config.optDouble("width",0),height=(float)config.optDouble("height",0);
         boolean silent=config.optBoolean("silent");
         float fov=(float)Math.max(5,Math.min(48,config.optDouble(silent?"silentFov":"fov",silent?18:40))),radius=Math.min(width,height)*fov/100;
@@ -91,6 +91,8 @@ final class RootGameFrameReader {
                 int enemyTeam=pri(p,34),hp=pri(p,0),max=pri(p,1);if(enemyTeam>255||hp<=0||max<1||max>10000||hp>max||team>0&&team==enemyTeam)continue;
                 GameGeometry.V h=head(p),hips=hip(p);float torso=h.sub(hips).length(),distance=hips.sub(localHip).length();
                 if(!h.valid()||!hips.valid()||torso<.1f||torso>3||distance<.1f||distance>maxDistance)continue;
+                GameGeometry.V aim=config.optBoolean("neck")&&!config.optBoolean("head")?GameGeometry.neck(h,hips):h;float[] point=GameGeometry.project(aim,vp);
+                float center=GameGeometry.centerDistance(point,width,height);if(center<best&&point[0]>=0&&point[0]<=1&&point[1]>=0&&point[1]<=1){best=center;target=aim;targetPlayer=p;targetScreen=point;}
                 GameGeometry.V left=maybeBone(p,0x6D8),right=maybeBone(p,0x6E0);if(left!=null&&left.sub(hips).length()>4)left=null;if(right!=null&&right.sub(hips).length()>4)right=null;
                 JSONObject bones=new JSONObject().put("head",screen(h,vp)).put("hip",screen(hips,vp)).put("leftFoot",screen(left,vp)).put("rightFoot",screen(right,vp));
                 int[] offsets={0x6C0,0x6C8,0x720,0x718,0x730,0x728};String[] names={"leftShoulder","rightShoulder","leftHand","rightHand","leftElbow","rightElbow"};
@@ -100,31 +102,32 @@ final class RootGameFrameReader {
                 JSONArray cube=new JSONArray();float bottom=Math.min(left==null?hips.y():left.y(),right==null?hips.y():right.y()),top=h.y()+.15f;
                 if(config.optBoolean("cube",false))for(int corner=0;corner<8;corner++)cube.put(screen(new GameGeometry.V(hips.x()+((corner&1)==0?-.35f:.35f),(corner&2)==0?bottom:top,hips.z()+((corner&4)==0?-.25f:.25f)),vp));
                 output.put(new JSONObject().put("name",name).put("hp",hp).put("maxHp",max).put("distance",distance).put("bones",bones).put("axes",axes).put("cube",cube));
-                GameGeometry.V aim=config.optBoolean("neck")&&!config.optBoolean("head")?GameGeometry.neck(h,hips):h;float[] point=GameGeometry.project(aim,vp);
-                float center=GameGeometry.centerDistance(point,width,height);if(center<best&&point[0]>=0&&point[0]<=1&&point[1]>=0&&point[1]<=1){best=center;target=aim;targetPlayer=p;targetScreen=point;}
+
             }catch(Exception ignored){/* One unloaded player never invalidates the dictionary or supplies fabricated data. */}
         }
         if(m.ptr(dictionary+0x18)!=entries||m.i32(dictionary+0x20)!=count||m.i32(dictionary+0x2C)!=version||m.ptr(match+0xD8)!=local||m.ptr(match+0x148)!=dictionary||RootReaderMain.processStart(m.pid)!=m.start)throw new IOException("Match changed during frame");
         long[] live=RootReaderMain.context(m,base);if(live==null||live[0]!=game||live[1]!=match||live[2]!=local)throw new IOException("Current match changed");
-        // Alternate game aim mode takes a different setter path; do not write its normal field.
-        long globalsCache=m.ptr(base+0xA72E9C8L),globals=pointer(globalsCache)?m.ptr(globalsCache):0,statics=pointer(globals)?m.ptr(globals+0xB8):0;
-        boolean aimReady=pointer(statics)&&m.read(statics+0xE4,1)[0]==0&&quaternion(local+0x614).valid();
+        // Both SetAimRotation branches write +0x614. The E4 mode flag is not a readiness flag.
+        boolean aimReady=quaternion(local+0x614).valid()&&m.read(local+0x420,1)[0]==1
+            &&m.i32(base+0x6F29380L)==0xBD06166B&&m.i32(base+0x6F2938CL)==0xBD062268
+            &&m.i32(base+0x706F954L)==0x12001C08;
         boolean silentReady=aimReady&&m.read(local+0x420,1)[0]==1&&quaternion(local+0x628).valid()
             &&m.i32(base+0x6F8E15CL)==0xBD462A60&&m.i32(base+0x6F8E168L)==0xBD463663
             &&m.i32(base+0x6EF7240L)==0x39508260&&m.i32(base+0x6F8E1CCL)==0x3C814100
             &&m.i32(base+0x7480920L)==0x97EC35FC&&m.i32(base+0x7480980L)==0x94AD337D;
         String aimStatus="Aim: chờ mục tiêu trong FOV.";
-        boolean enabled=config.optBoolean("head")||config.optBoolean("neck");
-        if(aimReady){try{m.enableWrites();}catch(Exception e){aimReady=false;}}
+        boolean enabled=config.optBoolean("head")||config.optBoolean("neck")||silent;
+        if(aimReady){try{m.enableWrites();}catch(Exception e){aimReady=false;silentReady=false;}}
         if(!aimReady)aimStatus="Aim: chưa khớp quyền ghi/rotation/chế độ game.";
         else if(!enabled)aimStatus="Aim đang tắt.";
         else if((!silent||silentReady)&&target!=null&&localHP>0&&(!silent||firing)&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope)){
             // Re-read identity, target health/team and lease immediately before the only rotation write.
             if(SystemClock.elapsedRealtime()-started>300||SystemClock.elapsedRealtime()>=lease.getAsLong()||!unchanged.getAsBoolean())throw new IOException("Frame/lease expired before aim");
             int currentTeam=pri(targetPlayer,34);if(pri(targetPlayer,0)>0&&!(team>0&&team==currentTeam)&&m.instanceOf(targetPlayer,playerClass)&&m.ptr(match+0xD8)==local&&m.i32(dictionary+0x2C)==version){
-                GameGeometry.Q rotation=GameGeometry.look(target.sub(cameraPos));if(rotation!=null){if(!silent)m.writeQuaternion(local+0x614,rotation);aimStatus="Aim: đã ghi rotation tới mục tiêu · cần kiểm tra trong trận.";}
+                GameGeometry.Q rotation=GameGeometry.look(target.sub(cameraPos));if(rotation!=null){if(!silent){m.writeQuaternion(local+0x614,rotation);aimStatus="Aim: đã ghi rotation tới mục tiêu · cần kiểm tra trong trận.";}}
             }
         }else if(enabled&&target!=null)aimStatus="Aim: đã chọn mục tiêu, chờ điều kiện bắn/ngắm.";
+        if(silent&&!silentReady)aimStatus="Silent: chưa khớp quaternion phụ/signature/quyền ghi.";
         final boolean writeSilent=silent&&silentReady&&enabled&&firing&&localHP>0&&target!=null
             &&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope);
         final long selected=targetPlayer;

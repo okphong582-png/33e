@@ -59,8 +59,10 @@ final class MenuPanel extends LinearLayout {
         row.setEnabled(available);box.setEnabled(available);row.setAlpha(available?1:.48f);
         row.setContentDescription(title+(available?"":" · Chưa sẵn sàng"));
         if(available)row.setOnClickListener(v->{boolean next=!ui.prefs.getBoolean(key,fallback);var edit=ui.prefs.edit().putBoolean(key,next);
+            if(next&&(key.equals("AimHead")||key.equals("AimNeck")||key.equals("SilentAim"))
+                &&!ui.prefs.getBoolean("AimbotFire",false)&&!ui.prefs.getBoolean("AimbotScope",false)&&!ui.prefs.getBoolean("AimHipAlways",false)&&!ui.prefs.getBoolean("AimFireAndScope",false))edit.putBoolean("AimbotFire",true);
             if(next&&key.equals("AimHead"))edit.putBoolean("AimNeck",false);if(next&&key.equals("AimNeck"))edit.putBoolean("AimHead",false);
-            edit.apply();box.setChecked(next);host.settingsChanged();if(key.equals("AimHead")||key.equals("AimNeck")){int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}});
+            edit.apply();box.setChecked(next);host.settingsChanged();if(key.equals("AimHead")||key.equals("AimNeck")||key.equals("SilentAim")){int y=scroll.getScrollY();build();scroll.post(()->scroll.scrollTo(0,y));}});
         ui.add(content,row,54,8);
     }
     private void slider(String title,String key,float min,float max,float fallback,boolean game){
