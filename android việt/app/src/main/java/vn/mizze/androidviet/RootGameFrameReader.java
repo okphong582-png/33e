@@ -11,7 +11,6 @@ import static vn.mizze.androidviet.RootReaderMain.pointer;
 final class RootGameFrameReader {
     private final RootReaderMain.Memory m; private final long base,game,match,local;
     private long playerClass;
-    private static final AimRotationController silentController=new AimRotationController();
     private final TransformNodeReader.Memory nodeMemory;
     private final Map<Long,GameGeometry.V> positions=new HashMap<>();
     private final Map<Long,GameGeometry.TRS> trs=new HashMap<>();
@@ -60,6 +59,19 @@ final class RootGameFrameReader {
         long entry=m.ptr(array+0x20+index*8L);if(!pointer(entry))throw new IOException("Missing PRI entry");
         long value=unsafe?m.ptr(entry+0x18):entry+0x18;
         return PriValues.decode(index,m.read(value,PriValues.width(index)));
+    }
+    private boolean canAim(long player)throws Exception{
+        if(m.i32(base+0x6F157F8L)!=0xF94EA660||m.i32(base+0x70DA738L)!=0xF9401260||m.i32(base+0x70DCF54L)!=0xB9401260)return false;
+        return TargetLifeReader.canAim(new TargetLifeReader.Memory(){
+            public long pointer(long at)throws Exception{return m.ptr(at);}
+            public int integer(long at)throws Exception{return m.i32(at);}
+            public boolean controller(long object)throws Exception{return named(object,"GFLBFKKDAMK","");}
+            public boolean poseNode(long object)throws Exception{
+                long k=m.ptr(object);int depth=m.read(k+0x130,1)[0]&255;long chain=m.ptr(k+0xC8);
+                if(depth<1||depth>32||!RootReaderMain.pointer(chain))return false;
+                for(int i=0;i<depth;i++){long parent=m.ptr(chain+i*8L);if(m.ascii(m.ptr(parent+0x10)).equals("EIILAKAAIOP")&&m.ascii(m.ptr(parent+0x18)).isEmpty())return true;}return false;
+            }
+        },player);
     }
     private boolean firing()throws Exception{
         if(m.i32(base+0x6F0FBC4L)!=0xF943A260||m.i32(base+0x734323CL)!=0x39452260
@@ -124,7 +136,7 @@ final class RootGameFrameReader {
                 GameGeometry.V h=head(p),hips=hip(p);float torso=h.sub(hips).length(),distance=hips.sub(localHip).length();
                 if(!h.valid()||!hips.valid()||torso<.1f||torso>3||distance<.1f||distance>maxDistance)continue;
                 GameGeometry.V aim=config.optBoolean("neck")&&!config.optBoolean("head")?GameGeometry.neck(h,hips):h;float[] point=GameGeometry.project(aim,vp);
-                float center=GameGeometry.centerDistance(point,width,height);if(center<best&&point[0]>=0&&point[0]<=1&&point[1]>=0&&point[1]<=1){best=center;target=aim;targetPlayer=p;targetScreen=point;}
+                float center=GameGeometry.centerDistance(point,width,height);if(center<best&&point[0]>=0&&point[0]<=1&&point[1]>=0&&point[1]<=1&&canAim(p)){best=center;target=aim;targetPlayer=p;targetScreen=point;}
                 renderPlayers.add(new RenderPlayer(p,h,hips,hp,max,distance));
 
             }catch(Exception ignored){/* One unloaded player never invalidates the dictionary or supplies fabricated data. */}
@@ -135,44 +147,20 @@ final class RootGameFrameReader {
         boolean aimReady=quaternion(local+0x614).valid()&&m.read(local+0x420,1)[0]==1
             &&m.i32(base+0x6F29380L)==0xBD06166B&&m.i32(base+0x6F2938CL)==0xBD062268
             &&m.i32(base+0x706F954L)==0x12001C08;
-        boolean silentReady=aimReady&&m.read(local+0x420,1)[0]==1&&quaternion(local+0x628).valid()
-            &&m.i32(base+0x6F8E15CL)==0xBD462A60&&m.i32(base+0x6F8E168L)==0xBD463663
-            &&m.i32(base+0x6EF7240L)==0x39508260&&m.i32(base+0x6F8E1CCL)==0x3C814100
-            &&m.i32(base+0x7480920L)==0x97EC35FC&&m.i32(base+0x7480980L)==0x94AD337D;
+        boolean silentReady=false;
         String aimStatus="Aim: chờ mục tiêu trong FOV.";
-        boolean enabled=config.optBoolean("head")||config.optBoolean("neck")||silent;
+        boolean enabled=AimWritePolicy.normal(config.optBoolean("head"),config.optBoolean("neck"),silent);
         if(aimReady){try{m.enableWrites();}catch(Exception e){aimReady=false;silentReady=false;}}
         if(!aimReady)aimStatus="Aim: chưa khớp quyền ghi/rotation/chế độ game.";
         else if(!enabled)aimStatus="Aim đang tắt.";
         else if((!silent||silentReady)&&target!=null&&localHP>0&&(!silent||firing)&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope)){
             // Re-read identity, target health/team and lease immediately before the only rotation write.
             if(SystemClock.elapsedRealtime()-started>300||SystemClock.elapsedRealtime()>=lease.getAsLong()||!unchanged.getAsBoolean())throw new IOException("Frame/lease expired before aim");
-            int currentTeam=pri(targetPlayer,34);if(pri(targetPlayer,0)>0&&!(team>0&&team==currentTeam)&&m.instanceOf(targetPlayer,playerClass)&&m.ptr(match+0xD8)==local&&m.i32(dictionary+0x2C)==version&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing(),pri(local,12)!=0)){
+            int currentTeam=pri(targetPlayer,34);if(pri(targetPlayer,0)>0&&canAim(targetPlayer)&&!(team>0&&team==currentTeam)&&m.instanceOf(targetPlayer,playerClass)&&m.ptr(match+0xD8)==local&&m.i32(dictionary+0x2C)==version&&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing(),pri(local,12)!=0)){
                 GameGeometry.Q rotation=GameGeometry.look(target.sub(cameraPos));if(rotation!=null){if(!silent){m.writeQuaternion(local+0x614,rotation);aimStatus="Aim: đã ghi rotation tới mục tiêu · cần kiểm tra trong trận.";}}
             }
         }else if(enabled&&target!=null)aimStatus="Aim: đã chọn mục tiêu, chờ điều kiện bắn/ngắm.";
-        if(silent&&!silentReady)aimStatus="Silent: chưa khớp quaternion phụ/signature/quyền ghi.";
-        final boolean writeSilent=silent&&silentReady&&enabled&&firing&&localHP>0&&target!=null
-            &&GameGeometry.trigger(config.optBoolean("always"),config.optBoolean("fire"),config.optBoolean("scope"),config.optBoolean("both"),firing,scope);
-        final long selected=targetPlayer;
-        AimRotationController.Memory silentMemory=new AimRotationController.Memory(){
-            public AimRotationController.Identity identity()throws Exception{
-                if(!unchanged.getAsBoolean()||RootReaderMain.processStart(m.pid)!=m.start)return null;
-                long[] c=RootReaderMain.context(m,base);
-                if(c==null||c[0]!=game||c[1]!=match||c[2]!=local||m.i32(dictionary+0x2C)!=version||m.read(local+0x420,1)[0]!=1)return null;
-
-                return new AimRotationController.Identity(m.pid,m.start,match,local,m.ptr(local));
-            }
-            public GameGeometry.Q read(long at)throws Exception{return quaternion(at);}
-            public void write(long at,GameGeometry.Q q)throws Exception{m.writeQuaternion(at,q);}
-        };
-        GameGeometry.Q silentRotation=writeSilent?GameGeometry.look(target.sub(cameraPos)):null;
-        if(writeSilent&&silentRotation!=null)AimPulse.publish(started+100,()->{
-            boolean active=SystemClock.elapsedRealtime()<lease.getAsLong()&&unchanged.getAsBoolean()&&firing()&&pri(local,0)>0
-                &&pri(selected,0)>0&&m.instanceOf(selected,playerClass)&&!(team>0&&pri(selected,34)==team);
-            silentController.apply(silentMemory,active,active?silentRotation:null);
-        },()->silentController.apply(silentMemory,false,null));
-        else AimPulse.clear();
+        if(silent)aimStatus="Silent Aim chưa có đường hướng đạn đã kiểm chứng; đã dừng ghi.";
         for(RenderPlayer player:renderPlayers)try{output.put(renderPlayer(player,vp,config));}catch(Exception ignored){}
         return new JSONObject().put("players",output).put("width",width).put("height",height).put("viewportEpoch",config.optLong("viewportEpoch")).put("sampleUptime",started).put("playersReady",true).put("aimReady",aimReady).put("silentReady",silentReady).put("aimStatus",aimStatus)
             .put("target",targetScreen==null?JSONObject.NULL:new JSONArray().put(targetScreen[0]).put(targetScreen[1])).put("playerCount",players.size());

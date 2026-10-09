@@ -167,7 +167,7 @@ public final class RootReaderMain {
         lease=SystemClock.elapsedRealtime()+3000;
         Thread control=new Thread(()->{try(BufferedReader in=new BufferedReader(new InputStreamReader(System.in,StandardCharsets.UTF_8))){String line;
             while((line=in.readLine())!=null){if(line.length()>4096){lease=0;return;}if(line.equals("STOP")){lease=0;return;}
-            if(line.startsWith("CONFIG ")){JSONObject c=new JSONObject(line.substring(7));if(!c.optBoolean("silent"))AimPulse.clear();frameConfig=c;config=new RootFeatureController.Config(c.optBoolean("noReload"),c.optBoolean("fastFire"),c.optBoolean("speed"),(float)c.optDouble("speedValue",6));}
+            if(line.startsWith("CONFIG ")){JSONObject c=new JSONObject(line.substring(7));frameConfig=c;config=new RootFeatureController.Config(c.optBoolean("noReload"),c.optBoolean("fastFire"),c.optBoolean("speed"),(float)c.optDouble("speedValue",6));}
             if(line.startsWith("LEASE ")){
                 long requested=Long.parseLong(line.substring(6));lease=Math.min(requested,SystemClock.elapsedRealtime()+30000);
             }}lease=0;
@@ -178,7 +178,6 @@ public final class RootReaderMain {
             catch(Exception e){releaseMemory();System.out.println("{\"state\":\"read_denied\",\"message\":\"Không đọc được bộ nhớ game (quyền hoặc SELinux).\"}");}
             System.out.flush();try{Thread.sleep(Math.max(1,(frameConfig.optBoolean("balanced")?33:16)-(SystemClock.elapsedRealtime()-cycle)));}catch(InterruptedException e){break;}
         }
-        AimPulse.stop();
         config=RootFeatureController.Config.off();
         frameConfig=new JSONObject();
         try{snapshot();}catch(Exception ignored){}

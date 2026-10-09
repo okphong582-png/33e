@@ -35,7 +35,7 @@ final class RootDataSession implements AutoCloseable {
     static boolean featuresReady(){return BuildConfig.ROOT_EDITION&&featuresReady&&SystemClock.elapsedRealtime()-sampledAt<2500;}
     static boolean playersReady(){return BuildConfig.ROOT_EDITION&&playersReady&&FrameFreshness.accepts(frameAt,SystemClock.elapsedRealtime(),frame.optLong("viewportEpoch"),viewportEpoch,frame.optInt("width"),frame.optInt("height"),viewportWidth,viewportHeight);}
     static boolean aimReady(){return playersReady()&&aimReady;}
-    static boolean silentReady(){return playersReady()&&silentReady;}
+    static boolean silentReady(){return false;}
     static JSONObject frame(){return playersReady()?frame:null;}
     static void viewport(int width,int height){if(width==viewportWidth&&height==viewportHeight)return;viewportWidth=width;viewportHeight=height;viewportEpoch++;playersReady=false;aimReady=false;silentReady=false;RootDataSession active=activeSession;if(active!=null)active.renew();}
     static int capabilityMask(){return (featuresReady()?1:0)|(playersReady()?2:0)|(aimReady()?4:0)|(silentReady()?8:0);}
