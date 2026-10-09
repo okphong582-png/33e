@@ -5,8 +5,8 @@
 <key>CFBundleName</key><string>FCMMenu</string>
 <key>CFBundleExecutable</key><string>FCMMenu</string>
 <key>CFBundleIdentifier</key><string>com.hoanghadev.fcm.menu</string>
-<key>CFBundleVersion</key><string>1</string>
-<key>CFBundleShortVersionString</key><string>0.1</string>
+<key>CFBundleVersion</key><string>2</string>
+<key>CFBundleShortVersionString</key><string>0.2</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>MinimumOSVersion</key><string>14.0</string>
 <key>LSRequiresIPhoneOS</key><true/>

@@ -200,7 +200,7 @@ static void WriteStatus(NSString *s){
     context=menuContext;level=self.menuWindow.windowLevel;call.target=self.menuHosting;[call setArgument:&context atIndex:2];
     if(!strcmp(levelType,"f")){float floatLevel=level;[call setArgument:&floatLevel atIndex:3];}else [call setArgument:&level atIndex:3];
     [call invoke];[HUDOverlay setNeedsLayout];[HUDOverlay layoutIfNeeded];[CATransaction flush];
-    [@{@"session":HUDSession?:@"",@"message":@"Đã đăng ký menu — bấm nút A để mở",@"pid":@(getpid()),@"ready":@YES} writeToFile:StatusPath atomically:YES];
+    [@{@"session":HUDSession?:@"",@"message":@"Đã đăng ký menu — bấm nút FC để mở",@"pid":@(getpid()),@"ready":@YES} writeToFile:StatusPath atomically:YES];
 }
 @end
 static BOOL RouteDigitizer(void *event,unsigned int depth,const CGPoint *singlePoint){
@@ -285,7 +285,7 @@ static void HIDCallback(void *target,void *ref,void *service,void *event){
     [super viewDidLoad];self.view.backgroundColor=[UIColor colorWithWhite:.055 alpha:1];
     UIStackView *stack=[[UIStackView alloc] init];stack.axis=UILayoutConstraintAxisVertical;stack.spacing=14;stack.translatesAutoresizingMaskIntoConstraints=NO;[self.view addSubview:stack];
     UILabel *title=[UILabel new];title.text=@"FCM";title.font=[UIFont systemFontOfSize:44 weight:UIFontWeightBold];title.textColor=[UIColor colorWithRed:.35 green:.95 blue:.77 alpha:1];title.textAlignment=NSTextAlignmentCenter;[stack addArrangedSubview:title];
-    UILabel *subtitle=[UILabel new];subtitle.text=@"Hỗ trợ sút · Bản thử nghiệm";subtitle.font=[UIFont systemFontOfSize:17 weight:UIFontWeightMedium];subtitle.textColor=UIColor.whiteColor;subtitle.textAlignment=NSTextAlignmentCenter;[stack addArrangedSubview:subtitle];
+    UILabel *subtitle=[UILabel new];subtitle.text=@"ESP bóng · Hỗ trợ sút";subtitle.font=[UIFont systemFontOfSize:17 weight:UIFontWeightMedium];subtitle.textColor=UIColor.whiteColor;subtitle.textAlignment=NSTextAlignmentCenter;[stack addArrangedSubview:subtitle];
     self.start=[UIButton buttonWithType:UIButtonTypeSystem];[self.start setTitle:@"Bật menu nổi" forState:UIControlStateNormal];self.start.backgroundColor=[UIColor colorWithRed:.35 green:.95 blue:.77 alpha:1];[self.start setTitleColor:UIColor.blackColor forState:UIControlStateNormal];self.start.titleLabel.font=[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold];self.start.layer.cornerRadius=16;[self.start.heightAnchor constraintEqualToConstant:56].active=YES;[self.start addTarget:self action:@selector(launch) forControlEvents:UIControlEventTouchUpInside];[stack addArrangedSubview:self.start];
     UIButton *stop=[UIButton buttonWithType:UIButtonTypeSystem];[stop setTitle:@"Tắt menu" forState:UIControlStateNormal];stop.titleLabel.font=[UIFont systemFontOfSize:16 weight:UIFontWeightMedium];stop.backgroundColor=[UIColor colorWithWhite:.11 alpha:1];stop.layer.cornerRadius=14;stop.layer.borderWidth=1;stop.layer.borderColor=[UIColor colorWithWhite:.23 alpha:1].CGColor;[stop setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];[stop.heightAnchor constraintEqualToConstant:44].active=YES;[stop addTarget:self action:@selector(stopHUD) forControlEvents:UIControlEventTouchUpInside];[stack addArrangedSubview:stop];
     self.status=[UILabel new];self.status.text=@"FC Mobile VN · 27.1.01";self.status.numberOfLines=3;self.status.textAlignment=NSTextAlignmentCenter;self.status.textColor=[UIColor colorWithWhite:.65 alpha:1];self.status.font=[UIFont systemFontOfSize:13];[stack addArrangedSubview:self.status];

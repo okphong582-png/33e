@@ -15,4 +15,25 @@ Source supplied locally: `com.garena.game.fcmobilevn_27.1.01_und3fined.ipa`. Exe
 
 The optional-looking Lua flag `lxSetOpenGoalShootingLogic` maps to component 123 (`GameplayLogicOverrideManager`), byte 0. Its consumers include shot evaluation, but a name alone does not prove guaranteed goal targeting. It is deliberately excluded from this implementation. Another nearby flag `+0x326` is `lxEnforceDinkedPass`, not a generic accuracy bypass; it is also excluded.
 
-UUID checking prevents the profile being used on another binary, including another regional build. No Unity or Free Fire/AOV offsets are reused. Runtime access is limited to the identified two-byte setting. A replaced settings object is never used for restoration. The automated tests cover denied writes, repeated updates, disabling, transient missing pointers, object replacement, external setting changes, and malformed field values. Gameplay remains untested on device.
+## Active ball and camera
+
+| Meaning | VA / field | Evidence |
+|---|---|---|
+| Component registry | `0x10a263b60` | `lxGetBallPos` callback `0x10268a55c` |
+| Scene and component table | registry `+0`, `+8` | Named Lua callbacks resolve native components through this table |
+| GameData component | ID 34, table `+ID*32+0x20` → wrapper `+8` | Component getter `0x102053c10`; runtime accessor `0x1026b3588` loads ball array at `GameData+0x38` |
+| Active ball index | scene `+0x226d8` | `lxGetActiveBall` callback `0x10268c5f8` |
+| Ball published history | ball `+0x90` → writer `+0x230` | `lxGetBallPos` and `lxGetBallSpeed` callbacks use this path |
+| Current frame and position | history `+0x9610`; slot `(frame%600)*64+0x10` | Position load at `0x10268a5c8..0x10268a604` |
+| Camera manager | `0x10a2bf528` | Constructor `0x102a5cff0`; native world projection `0x1029844e8..0x102984638` |
+| Active camera | index at manager `+0x40`; camera at manager `+index*8` | Index getter `0x1008dcee0`, camera getter `0x102a5cfdc` |
+| Camera type | vtable `0x10529d148` | RTTI `N15RenderFramework6CameraE`, typeinfo `0x10529d160` |
+| Projection and view | camera `+8` → storage; projection `+0`, view `+0x40` | Getters `0x102a5bedc`, `0x102a5bee4`; native projection uses column-major multiplication and negative camera Z in front |
+
+The ball line validates pointers, matrix values and camera type, then rechecks scene/ball/history/camera identity and the history frame before publishing a sample. The 12-slot upper bound is a conservative limit from the action-ball pool, not a claim that every scene has 12 active balls; an unreadable indexed ball entry is rejected. Mock-memory tests cover projection, quarter-turn camera rotation, translated cameras, invalid values, missing reads and concurrent root/frame replacement.
+
+## AimKill investigation — incomplete
+
+`lxLaunchBall` (`0x10268d3dc` wrapper → `0x10268ce50`) constructs simulation messages through `0x1021bb898`, which dispatches via a component virtual method. `lxSetBallPos` likewise constructs a physics command via `0x1021bac90`. These are not equivalent to changing the published position/velocity history. `mGoalXPos`/`mGoalZPos` have serialization at `0x102222f34`/`0x102222f48`, but the live root and which goal belongs to the opponent have not been verified. No writes to these unverified objects and no direct native simulation calls are included.
+
+UUID checking prevents the profile being used on another binary, including another regional build. No Unity or Free Fire/AOV offsets are reused. Game-memory writes remain limited to the identified two-byte setting. A replaced settings object is never used for restoration. The automated tests cover denied writes, repeated updates, disabling, transient missing pointers, object replacement, external setting changes, and malformed field values. Gameplay remains untested on device.

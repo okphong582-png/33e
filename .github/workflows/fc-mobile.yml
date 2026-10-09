@@ -18,6 +18,10 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined FCMobile/tests/settings_test.cpp -o /tmp/fcm-test
           /tmp/fcm-test
+      - name: Test ball projection and stale samples
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined FCMobile/tests/ball_test.cpp -o /tmp/fcm-ball-test
+          /tmp/fcm-ball-test
       - name: Setup Theos
         uses: Randomblock1/theos-action@v1
       - name: Build FC Mobile

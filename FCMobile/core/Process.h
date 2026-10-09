@@ -1,5 +1,6 @@
 #pragma once
 #include "ShotSettings.h"
+#include "BallReader.h"
 #include <mach/mach.h>
 #include <vector>
 #include <algorithm>
@@ -19,7 +20,7 @@ public:
     ~Process()override{restoreShot();reset();}
     bool copy(uint64_t,void *,size_t)override;
     bool store(uint64_t,const void *,size_t)override;
-    State update(bool enabled);
+    Snapshot update(bool enabled,bool line);
     void restoreShot();
 };
 }

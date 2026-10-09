@@ -1,4 +1,4 @@
-# FC Mobile VN — experimental shot setting
+# FC Mobile VN — ball line and experimental shot setting
 
 Target: `com.garena.game.fcmobilevn`, version 27.1.01, executable `FIFAMobile`, ARM64, UUID `d46eb47ff9e83033950b0513ab05f6c0`.
 
@@ -6,7 +6,11 @@ Outputs: `FCMobile-Menu.dylib` for injection, and `FCMobile-Menu.tipa` containin
 
 The checkbox sets **GcShotErrorUser to 0** using its verified data field and marks it changed, matching the native setter. Enable before entering a match, because the confirmed consumer copies this setting into pre-match customization data. The toggle defaults off; turning it off restores the previous setting if the same object still exists. No game code, goalkeeper behavior, collision, network validation, or shot power is patched.
 
+**ESP line bóng** is an independent checkbox, initially off. It draws a mint line from screen center to the active ball, using the game's native camera view/projection matrices. The reader runs on a serial worker queue, at up to 30 Hz while the line is enabled and 4 Hz otherwise. Missing data, off-screen/behind-camera balls, changed scenes, replaced ball histories or changed cameras clear the line. Drawing never receives touches; only menu controls do. Status text remains inside the menu. The ball reader performs no game-memory writes.
+
 This is an experimental configuration change, **not a verified every-shot-goals implementation**. Static analysis proves the property identity and access path; it does not establish whether every FC Mobile mode honors this customization value. On-device confirmation is still required. The menu says “Đã cập nhật tham số sút” only after reading the changed value back; that message does not mean an in-match goal has been verified.
+
+**AimKill is not implemented.** The identified ball position history is a published state buffer, not a confirmed physics command target. Native `lxLaunchBall` builds and dispatches simulation messages; direct edits to the history buffer cannot establish a real shot or an accepted goal. Opponent-goal selection, shot ownership/timing and live simulation message handling still need verification. This build does not expose an AimKill checkbox that falsely reports success.
 
 Build only this folder:
 
@@ -17,4 +21,6 @@ make clean package BUILD_KIND=tipa FINALPACKAGE=1 FOR_RELEASE=1
 
 The isolated `codex/fc-mobile` branch triggers `fc-mobile.yml` only. Other game workflows remain unchanged.
 
-To test: open FC Mobile VN, enable the setting in the lobby, enter the same training scenario with and without the setting, compare shot spread at the same power/direction, and check that switching off restores the setting. If gameplay does not change, the next step is a live trace of the pre-match customization consumer, not guessing additional offsets.
+To test: open FC Mobile VN and enter a match, enable ESP line bóng, rotate/change the camera and verify the line follows the ball. Switch it off and confirm the line disappears while game touches still work. Ball projection is tested with mock memory and several camera poses; real device rendering remains unverified.
+
+For the shot setting, enable it in the lobby, enter the same training scenario with and without it, compare shot spread at the same power/direction, and check that switching off restores the setting. If gameplay does not change, the next step is a live trace of the pre-match customization consumer, not guessing additional offsets.

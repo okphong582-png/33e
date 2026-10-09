@@ -60,8 +60,9 @@ bool Process::findImage(){
 #endif
     return false;
 }
-State Process::update(bool enabled){
-    if(!enabled&&!shot.applied())return State::off;
+Snapshot Process::update(bool enabled,bool line){
+    Snapshot result;
+    if(!enabled&&!line&&!shot.applied())return result;
     if(task){uint32_t magic=0;if(image&&!read(image,magic))reset();}
     if(!image&&now()-lastConnect>1){
         lastConnect=now();reset();connection=State::disconnected;
@@ -77,7 +78,10 @@ State Process::update(bool enabled){
 #endif
         if(task)findImage();
     }
-    if(!image)return connection;
-    return shot.update(*this,image,enabled);
+    if(!image){result.state=connection;result.shot=connection;return result;}
+    result.shot=shot.update(*this,image,enabled);
+    if(line)result.ball=BallReader(*this).sample(image);
+    result.state=line?(result.ball.visible?State::ready:State::waiting):result.shot;
+    return result;
 }
 }
