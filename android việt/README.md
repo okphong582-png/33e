@@ -9,7 +9,7 @@
 | Root | vn.mizze.androidviet.root | Start xin quyền bằng su qua Magisk/SuperSU. Từ chối hoặc hết 60 giây thì không mở menu. |
 | No Root | vn.mizze.androidviet.noroot | Không gọi su; dùng quyền Hiển thị trên ứng dụng khác. |
 
-Hai bản cài cùng lúc được; nên cấp key riêng từng bản vì định danh thiết bị phụ thuộc app/signing. Đây là APK debug ký để cài thử, chưa phải release có khóa ký ổn định.
+Hai bản cài cùng lúc được. ANDROID_ID phụ thuộc thiết bị, user và khóa ký; cùng khóa ký trên cùng máy có thể dùng chung key đã gắn. Đổi khóa ký có thể cần admin gỡ binding. Đây là APK debug ký để cài thử, chưa phải release có khóa ký ổn định.
 
 ## Phạm vi hoạt động thực tế
 
@@ -45,7 +45,7 @@ Outputs:
 - app/build/outputs/apk/root/debug/app-root-debug.apk
 - app/build/outputs/apk/noRoot/debug/app-noRoot-debug.apk
 
-Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Ảnh test chỉ render widget, không bypass key hoặc giả dữ liệu game. Chưa kiểm chứng trên điện thoại có Magisk/game thực tế.
+Workflow .github/workflows/android-viet.yml build hai APK, unit test và lint; smoke test giao diện trên emulator Android 15. Smoke test render menu và kiểm tra service overlay tự dừng khi lease hết. Lease của test chỉ gán bằng reflection trong tiến trình instrumentation; APK không có đường bypass key, test không ghi Firebase hoặc giả dữ liệu game. Chưa kiểm chứng trên điện thoại có Magisk/game thực tế.
 
 ## Cấu hình key
 

@@ -56,4 +56,30 @@ public class UiSmokeTest {
             assertFalse(((View)find(root,"Speed").getParent()).isEnabled());
         });screenshot("menu-settings");
     }
+
+    @Test public void overlayRunsAndStopsOnLeaseExpiry() throws Exception {
+        var instrumentation=InstrumentationRegistry.getInstrumentation();
+        var context=instrumentation.getTargetContext();
+        // Test-only shell appop and in-memory lease fixture; no production bypass or live Firebase write.
+        try(var descriptor=instrumentation.getUiAutomation().executeShellCommand("appops set "+context.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+            var input=new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor)) { while(input.read()!=-1){} }
+        assertTrue(android.provider.Settings.canDrawOverlays(context));
+        LicenseClient client=((MizzeApp)context.getApplicationContext()).license();
+        var deadline=LicenseClient.class.getDeclaredField("deadline");deadline.setAccessible(true);
+        var rootGranted=RootAccess.class.getDeclaredField("granted");rootGranted.setAccessible(true);
+        activity.runOnUiThread(()->{
+            try{deadline.setLong(client,android.os.SystemClock.elapsedRealtime()+15000);rootGranted.setBoolean(null,BuildConfig.ROOT_EDITION);}
+            catch(Exception e){throw new AssertionError(e);}
+            context.startForegroundService(new android.content.Intent(context,OverlayService.class));
+        });
+        Thread.sleep(1200);assertTrue(serviceRunning(context));screenshot("overlay");
+        activity.runOnUiThread(()->{try{deadline.setLong(client,0);}catch(Exception e){throw new AssertionError(e);}});
+        Thread.sleep(1200);assertFalse(serviceRunning(context));
+        rootGranted.setBoolean(null,false);
+    }
+    private boolean serviceRunning(android.content.Context context){
+        var manager=(android.app.ActivityManager)context.getSystemService(android.content.Context.ACTIVITY_SERVICE);
+        for(var service:manager.getRunningServices(100))if(service.service.getClassName().equals(OverlayService.class.getName()))return true;
+        return false;
+    }
 }
