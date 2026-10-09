@@ -12,8 +12,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)startFFEngine;
 
 /**
- * Toggle menu overlay on screen
+ * Show / Toggle menu overlay on screen
  */
+- (void)showMenuOverlay;
 - (void)toggleMenuOverlay;
 
 /**

@@ -61,6 +61,15 @@ struct ContentView: View {
                 if ready {
                     LaraFFBridge.shared().startFFEngine()
                     LaraFFBridge.shared().showMenuOverlay()
+                    #if !DISABLE_REMOTECALL
+                    if !mgr.rcready && !mgr.rcrunning {
+                        mgr.rcinit(process: "SpringBoard", migbypass: false) { success in
+                            if success {
+                                mgr.logmsg("SpringBoard RemoteCall Injection succeeded! Floating overlay active across all apps.")
+                            }
+                        }
+                    }
+                    #endif
                 }
             }
         }

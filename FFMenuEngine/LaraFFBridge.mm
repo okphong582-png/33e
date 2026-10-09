@@ -53,6 +53,12 @@
     }
 }
 
+- (void)showMenuOverlay {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[FFMenuController sharedMenu] showMenu];
+    });
+}
+
 - (void)toggleMenuOverlay {
     dispatch_async(dispatch_get_main_queue(), ^{
         [[FFMenuController sharedMenu] toggleMenu];
