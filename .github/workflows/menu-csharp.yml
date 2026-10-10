@@ -1,0 +1,39 @@
+name: Build CSharp IFix Menu
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'menu/**'
+      - '.github/workflows/menu-csharp.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile CSharp builder
+        shell: pwsh
+        run: |
+          $compilerPath = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+          & $compilerPath /nologo /warnaserror+ /optimize+ /out:menu/MenuBuilder.exe menu/Program.cs menu/Bindings.cs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Emit IFix bytes
+        shell: pwsh
+        run: |
+          & ./menu/MenuBuilder.exe menu/dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check binary and menu control flow
+        run: node menu/test-menu.cjs
+      - name: Upload menu artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Assembly-CSharp-patch-menu
+          path: |
+            menu/dist/Assembly-CSharp-patch.bytes
+            menu/dist/SHA256SUMS.txt
+            menu/README.md
+          if-no-files-found: error
