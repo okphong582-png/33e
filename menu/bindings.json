@@ -3,17 +3,24 @@
   "version": "1.132.1",
   "types": [
     "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
     "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "UnityEngine.Camera, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.Component, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
     "COW.GamePlay.SceneEditBoxSelectTool, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
     "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-    "COW.GamePlay.PlayerAttributes, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "COW.GamePlay.JMAGGLCNGIG, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "COW.GameFacade, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "System.Collections.IList, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "UnityEngine.Screen, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "System.Collections.ICollection, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
     "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
@@ -24,7 +31,6 @@
   ],
   "externMethods": [
     {
-      "generic": false,
       "owner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "op_Equality",
       "args": [],
@@ -32,61 +38,61 @@
         "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
         "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
       ],
+      "generic": false,
       "parameterIsGeneric": [
         false,
         false
       ]
     },
     {
-      "generic": false,
       "owner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "Find",
       "args": [],
       "parameters": [
         "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
       ],
+      "generic": false,
       "parameterIsGeneric": [
         false
       ]
     },
     {
-      "generic": false,
       "owner": "UnityEngine.Component, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "get_transform",
       "args": [],
       "parameters": [],
+      "generic": false,
       "parameterIsGeneric": []
     },
     {
-      "generic": false,
       "owner": "UnityEngine.Component, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "get_gameObject",
       "args": [],
       "parameters": [],
+      "generic": false,
       "parameterIsGeneric": []
     },
     {
-      "generic": false,
       "owner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": ".ctor",
       "args": [],
       "parameters": [
         "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
       ],
+      "generic": false,
       "parameterIsGeneric": [
         false
       ]
     },
     {
-      "generic": false,
       "owner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "get_transform",
       "args": [],
       "parameters": [],
+      "generic": false,
       "parameterIsGeneric": []
     },
     {
-      "generic": false,
       "owner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": ".ctor",
       "args": [],
@@ -95,6 +101,7 @@
         "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
         "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
       ],
+      "generic": false,
       "parameterIsGeneric": [
         false,
         false,
@@ -102,9 +109,359 @@
       ]
     },
     {
-      "generic": false,
       "owner": "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "set_localScale",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "AddComponent",
+      "args": [],
+      "parameters": [
+        "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "DontDestroyOnLoad",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_localScale",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "<>iFixBaseProxy_get_IsMovableEntity",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_current",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_name",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "op_Inequality",
+      "args": [],
+      "parameters": [
+        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": ".ctor",
+      "args": [],
+      "parameters": [
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_mousePosition",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_type",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "Contains",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "Use",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_matrix",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_color",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_identity",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "set_matrix",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_whiteTexture",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "owner": "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": ".ctor",
+      "args": [],
+      "parameters": [
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "set_color",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "DrawTexture",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "Label",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "generic": false,
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "IsInStealth",
+      "args": [],
+      "parameters": [],
+      "generic": false,
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "COW.GameFacade, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "CurrentMatch",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "COW.GamePlay.JMAGGLCNGIG, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "ILPNGCMEFFI",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "UnityEngine.Camera, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_main",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "System.Collections.IList, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "get_Item",
+      "args": [],
+      "parameters": [
+        "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Collections.ICollection, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "get_Count",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "IsLocalPlayer",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "get_CurHP",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "IsLocalTeammate",
+      "args": [],
+      "parameters": [
+        "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_activeInHierarchy",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "get_RootTransform",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "GetHeadTF",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_position",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "UnityEngine.Camera, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "WorldToScreenPoint",
       "args": [],
       "parameters": [
         "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
@@ -115,227 +472,53 @@
     },
     {
       "generic": false,
+      "owner": "UnityEngine.Screen, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_height",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "UnityEngine.Screen, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "get_width",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "IsNaN",
+      "args": [],
+      "parameters": [
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "IsInfinity",
+      "args": [],
+      "parameters": [
+        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
       "owner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "AddComponent",
+      "name": "GetComponent",
       "args": [],
       "parameters": [
         "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=null"
       ],
       "parameterIsGeneric": [
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "DontDestroyOnLoad",
-      "args": [],
-      "parameters": [
-        "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-      ],
-      "parameterIsGeneric": [
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "COW.GamePlay.PlayerAttributes, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
-      "name": "get_FireIntervalScale",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
-      "name": "<>iFixBaseProxy_get_IsMovableEntity",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_current",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_name",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "name": "op_Inequality",
-      "args": [],
-      "parameters": [
-        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-      ],
-      "parameterIsGeneric": [
-        false,
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": ".ctor",
-      "args": [],
-      "parameters": [
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-      ],
-      "parameterIsGeneric": [
-        false,
-        false,
-        false,
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_mousePosition",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_type",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "Contains",
-      "args": [],
-      "parameters": [
-        "UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-      ],
-      "parameterIsGeneric": [
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "Use",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_matrix",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_color",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_identity",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "set_matrix",
-      "args": [],
-      "parameters": [
-        "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-      ],
-      "parameterIsGeneric": [
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "get_whiteTexture",
-      "args": [],
-      "parameters": [],
-      "parameterIsGeneric": []
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": ".ctor",
-      "args": [],
-      "parameters": [
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-        "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-      ],
-      "parameterIsGeneric": [
-        false,
-        false,
-        false,
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "set_color",
-      "args": [],
-      "parameters": [
-        "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-      ],
-      "parameterIsGeneric": [
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "DrawTexture",
-      "args": [],
-      "parameters": [
-        "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-        "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-      ],
-      "parameterIsGeneric": [
-        false,
-        false
-      ]
-    },
-    {
-      "generic": false,
-      "owner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "name": "Label",
-      "args": [],
-      "parameters": [
-        "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-      ],
-      "parameterIsGeneric": [
-        false,
         false
       ]
     }
@@ -369,7 +552,26 @@
     146,
     147,
     148,
-    149
+    149,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217,
+    218
   ],
   "fields": [
     {
@@ -381,30 +583,46 @@
       "isNew": false,
       "owner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "y"
+    },
+    {
+      "isNew": false,
+      "owner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "z"
     }
   ],
   "fixes": [
     {
       "method": {
-        "generic": false,
         "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
         "name": "get_IsMovableEntity",
         "args": [],
         "parameters": [],
+        "generic": false,
         "parameterIsGeneric": []
       },
       "id": 0
     },
     {
       "method": {
-        "generic": false,
         "owner": "COW.GamePlay.SceneEditBoxSelectTool, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
         "name": "OnGUI",
         "args": [],
         "parameters": [],
+        "generic": false,
         "parameterIsGeneric": []
       },
       "id": 1
+    },
+    {
+      "method": {
+        "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+        "name": "IsReallyInStealth",
+        "args": [],
+        "parameters": [],
+        "generic": false,
+        "parameterIsGeneric": []
+      },
+      "id": 2
     }
   ]
 }
