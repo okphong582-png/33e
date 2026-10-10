@@ -13,7 +13,8 @@ namespace UnityEngine
     public struct Rect {public float x {get;set;}public float y {get;set;}public float width {get;set;}public float height {get;set;}public Rect(float a,float b,float c,float d){this=new Rect();x=a;y=b;width=c;height=d;}public bool Contains(Vector2 p){return p.x>=x&&p.x<x+width&&p.y>=y&&p.y<y+height;}}
     public class Camera:Component {public static Camera main {get;set;}public Vector3 WorldToScreenPoint(Vector3 p){return p;}}
     public static class Screen {public static int height {get{return 720;}}public static int width {get{return 1280;}}}
-    public static class Time {public static float unscaledDeltaTime {get{return .016f;}}public static float realtimeSinceStartup {get{return 0;}}}
+    public static class Application {public static string persistentDataPath {get{return "";}}}
+    public static class Time {public static int frameCount {get{return 0;}}public static float unscaledDeltaTime {get{return .016f;}}public static float realtimeSinceStartup {get{return 0;}}}
     public static class Mathf {public static float Sqrt(float f){return (float)Math.Sqrt(f);}public static float Sin(float f){return (float)Math.Sin(f);}public static float Cos(float f){return (float)Math.Cos(f);}public static float Atan2(float y,float x){return (float)Math.Atan2(y,x);}public static float Clamp(float v,float a,float b){return Math.Max(a,Math.Min(b,v));}public static float Lerp(float a,float b,float t){return a+(b-a)*Math.Min(1,Math.Max(0,t));}}
     public static class PlayerPrefs {public static string GetString(string k,string d){return d;}public static void SetString(string k,string v){}public static void DeleteKey(string k){} }
     public static class SystemInfo {public static string deviceUniqueIdentifier {get{return "test-device";}}}

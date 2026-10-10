@@ -4,6 +4,7 @@ namespace COW.GamePlay
 {
     public partial class SceneEditBoxSelectTool
     {
+        public static bool MzInSilent;
         public static CGKJLKPMGDJ MzChangedAim;
         public static Player MzAimOwner;
         public static GameObject MzAppliedObject;
@@ -45,13 +46,13 @@ namespace COW.GamePlay
                         Vector2 feet,top;if(!MzProject(cam,root,out feet)||!MzProject(cam,head,out top))continue;
                         float h=feet.y-top.y,w=h*.5f,x=(feet.x+top.x)*.5f-w*.5f,y=top.y;if(!MzFinite(h)||h<=4||h>Screen.height*2||x+w<0||x>Screen.width||y+h<0||y>Screen.height)continue;shown++;
                         GUI.color=MzEspColor;if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
-                        if(MzSwitch[4]){string name=p.NickName;if(name!=null){if(name.Length>24)name=name.Substring(0,24);MzText(x-22,y-25,w+150,name);}}
+                        if(MzSwitch[4]){string name=MzSafeName(p.NickName);if(name!=null){MzText(x-22,y-25,w+150,name);}}
                         if(MzSwitch[6])MzText(x,y+h+4,w+80,((int)distance).ToString()+" m");
                         if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);GUI.color=MzHealthColor;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
                         GUI.color=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
                         if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}
                         if(MzSwitch[7]){GUI.color=MzEspColor;MzSampleSkeleton(cam,p,top,feet);}
-                    }catch(Exception){MzTrimCommands(before);}
+                    }catch(Exception e){MzTrimCommands(before);MzLogFault("esp-player",e);}
                 }
             }catch(Exception){}finally{MzDrawingEsp=false;}
         }
@@ -62,8 +63,9 @@ namespace COW.GamePlay
         }
         public static void MzRunAim()
         {
+            if(!MzOnThread())return;
             try {
-                if(!MzSwitch[11]&&!MzSwitch[12]){MzRestoreSilent();return;}var local=COW.GameFacade.GetLocalPlayerOrObServer();if(!MzSwitch[12]||local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring())MzRestoreSilent();
+                if(!MzSwitch[11]&&!MzSwitch[12]){MzRestoreSilent();return;}if(COW.GameFacade.CurrentMatch()==null){MzRestoreSilent();return;}var local=COW.GameFacade.GetLocalPlayerOrObServer();if(!MzSwitch[12]||local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring())MzRestoreSilent();
                 if(local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring()||(!MzSwitch[11]&&!MzSwitch[12]))return;var target=MzPickTarget();if(target==null)return;
                 if(MzSwitch[14]){Vector2 p;if(MzProject(Camera.main,target.GetHeadTF().position,out p)){MzTint(1,.76f,.3f,1);MzLine(Screen.width*.5f,Screen.height*.5f,p.x,p.y,1.5f);}}
                 if(MzSwitch[11]){var camera=Camera.main;var cameraTransform=camera==null?null:camera.transform;var headTransform=target.GetHeadTF();if(cameraTransform==null||headTransform==null)return;Vector3 origin=cameraTransform.position,point=headTransform.position;Vector3 direction=point-origin;if(!MzPoint(origin)||!MzPoint(point))return;if(MzPoint(direction)&&Vector3.Distance(new Vector3(),direction)>.01f)local.SetAimRotation(Quaternion.LookRotation(direction),true);}
@@ -72,6 +74,7 @@ namespace COW.GamePlay
         public static bool MzSame(Vector3 a,Vector3 b){return a.x==b.x&&a.y==b.y&&a.z==b.z;}
         public static void MzRestoreSilent()
         {
+            if(!MzOnThread())return;
             try {
                 var a=MzChangedAim;
                 // Restore only if native code has not replaced our values.
@@ -80,12 +83,13 @@ namespace COW.GamePlay
         }
         public static void MzSilent(Player local,CGKJLKPMGDJ result)
         {
+            if(!MzOnThread()||MzInSilent||!MzSwitch[12])return;MzInSilent=true;
             try {
                 if(local==null||!local.IsLocalPlayer())return;MzRestoreSilent();if(!MzInitialized||!MzAuthorized()||!MzSwitch[12]||result==null||local.CurHP<=0||!local.IsFiring())return;var target=MzPickTarget();if(target==null||target.HeadCollider==null)return;
                 Vector3 point=target.GetHeadTF().position,origin=local.AimStartPostion,delta=point-origin;if(!MzPoint(point)||!MzPoint(origin)||Vector3.Distance(new Vector3(),delta)<=.01f)return;Vector3 direction=Vector3.Normalize(delta);if(!MzPoint(direction))return;
                 MzChangedAim=result;MzAimOwner=local;MzAppliedObject=target.gameObject;MzAppliedCollider=target.HeadCollider;MzOldAimObject=result.JHAINOBIFMA;MzOldAimCollider=result.JINDNOFABKB;MzOldHpc=result.HPCOJHGFEEG;MzOldDoj=result.DOJDNHCGFGK;MzOldDirection=result.HLDECMJFKJK;MzOldOrigin=result.EKPLMDDKOGB;MzOldOnm=result.ONMKMEGMHOL;MzOldDkp=result.DKPDBLLJEAA;MzOldEfm=result.EFMBNPNFGHM;MzOldCeo=result.CEOKOILBODN;MzOldClo=result.CLOLKHNMNEK;MzAppliedPoint=point;MzAppliedOrigin=origin;MzAppliedDirection=direction;
                 result.JHAINOBIFMA=target.gameObject;result.JINDNOFABKB=target.HeadCollider;result.HPCOJHGFEEG=point;result.DOJDNHCGFGK=point;result.HLDECMJFKJK=direction;result.EKPLMDDKOGB=origin;result.ONMKMEGMHOL=origin;result.DKPDBLLJEAA=true;result.EFMBNPNFGHM=false;result.CEOKOILBODN=false;result.CLOLKHNMNEK=false;
-            }catch(Exception){MzRestoreSilent();}
+            }catch(Exception e){MzRestoreSilent();MzLogFault("silent",e);}finally{MzInSilent=false;}
         }
     }
 }

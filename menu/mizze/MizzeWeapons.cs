@@ -10,6 +10,7 @@ namespace COW.GamePlay
         public static string MzWeaponMessage;
         public static void MzRestoreWeapon()
         {
+            if(!MzOnThread())return;
             var attributes=MzWeaponAttributes;
             try{if(attributes!=null&&MzFastApplied&&attributes.FireIntervalScale==MzAppliedFireScale)attributes.FireIntervalScale=MzOldFireScale;}catch(Exception){}
             try{if(attributes!=null&&MzAmmoApplied){if(attributes.IsAmmoFree)attributes.IsAmmoFree=MzOldFreeAmmo;if(attributes.ShootNoReload)attributes.ShootNoReload=MzOldNoReload;}}catch(Exception){}
@@ -17,12 +18,13 @@ namespace COW.GamePlay
         }
         public static void MzWeaponPoll()
         {
+            if(!MzOnThread())return;
             if(!MzSwitch[15]&&!MzSwitch[16]){if(MzWeaponAttributes!=null||MzFastApplied||MzAmmoApplied)MzRestoreWeapon();MzWeaponMessage="Bật chức năng khi đang trong trận";return;}
             if(!MzAuthorized()){MzRestoreWeapon();MzWeaponMessage="Cần khóa hợp lệ";return;}
             float now=Time.realtimeSinceStartup;if(now<MzNextWeapon)return;MzNextWeapon=now+.1f;
             try{
-                var match=COW.GameFacade.CurrentMatch();var player=COW.GameFacade.GetLocalPlayerOrObServer();
-                if(match==null||player==null||!player.IsLocalPlayer()||player.CurHP<=0){MzRestoreWeapon();MzWeaponMessage="Chờ nhân vật trong trận";return;}
+                var match=COW.GameFacade.CurrentMatch();if(match==null){MzRestoreWeapon();MzWeaponMessage="Chờ nhân vật trong trận";return;}var player=COW.GameFacade.GetLocalPlayerOrObServer();
+                if(player==null||!player.IsLocalPlayer()||player.CurHP<=0){MzRestoreWeapon();MzWeaponMessage="Chờ nhân vật trong trận";return;}
                 var attributes=player.get_Attributes();if(attributes==null){MzRestoreWeapon();MzWeaponMessage="Chưa có thuộc tính vũ khí";return;}
                 if(attributes!=MzWeaponAttributes){MzRestoreWeapon();MzWeaponAttributes=attributes;}
                 if(MzSwitch[15]){

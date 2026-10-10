@@ -16,12 +16,12 @@ namespace UnityEngine
     public class Component:Object {public GameObject gameObject {get;set;}public Transform transform {get{return gameObject.transform;}}}
     public class GameObject:Object
     {
-        public static Dictionary<string,GameObject> World=new Dictionary<string,GameObject>();public static bool FailAdd;
+        public static Dictionary<string,GameObject> World=new Dictionary<string,GameObject>();public static bool FailAdd;public static int FindCalls,AddCalls;public static Action OnAdd;
         public Transform transform {get;private set;}public bool activeInHierarchy {get;set;}public Component Added;
         public GameObject(string n){name=n;transform=new Transform();activeInHierarchy=true;World[n]=this;}
-        public static GameObject Find(string n){GameObject g;return World.TryGetValue(n,out g)?g:null;}
+        public static GameObject Find(string n){FindCalls++;GameObject g;return World.TryGetValue(n,out g)?g:null;}
         public Component GetComponent(Type t){return Added!=null&&t.IsInstanceOfType(Added)?Added:null;}
-        public Component AddComponent(Type t){if(FailAdd)throw new Exception("creation failure");Added=(Component)Activator.CreateInstance(t);Added.gameObject=this;return Added;}
+        public Component AddComponent(Type t){AddCalls++;if(OnAdd!=null)OnAdd();if(FailAdd)throw new Exception("creation failure");Added=(Component)Activator.CreateInstance(t);Added.gameObject=this;return Added;}
     }
     public class Transform:Component {public Vector3 position {get;set;}public Vector3 localScale {get;set;}}
     public class Collider:Component {}
@@ -36,9 +36,10 @@ namespace UnityEngine
     public struct Quaternion {public Vector3 Direction;public float Angle;public static Quaternion Euler(float a,float b,float c){return new Quaternion {Angle=c};}public static Quaternion LookRotation(Vector3 d){return new Quaternion {Direction=Vector3.Normalize(d)};}}
     public struct Matrix4x4 {public static int TrsCalls;public Vector3 Position,Scale;public float Angle;public int Tag;public static Matrix4x4 identity {get{return new Matrix4x4 {Tag=1,Scale=new Vector3(1,1,1)};}}public static Matrix4x4 TRS(Vector3 p,Quaternion q,Vector3 s){TrsCalls++;return new Matrix4x4 {Position=p,Scale=s,Angle=q.Angle,Tag=2};}}
     public struct Rect {public float x {get;set;}public float y {get;set;}public float width {get;set;}public float height {get;set;}public Rect(float a,float b,float c,float d){this=new Rect();x=a;y=b;width=c;height=d;}public bool Contains(Vector2 p){return p.x>=x&&p.x<x+width&&p.y>=y&&p.y<y+height;}}
-    public class Camera:Component {public static Camera main {get;set;}public static int ProjectionCalls;public bool FailProjection;public Vector3 WorldToScreenPoint(Vector3 p){ProjectionCalls++;p=p-transform.position;if(FailProjection)throw new Exception("projection failure");return new Vector3(640+p.x*1000/p.z,360+p.y*1000/p.z,p.z);}}
+    public class Camera:Component {public static Camera main {get;set;}public static int ProjectionCalls;public bool FailProjection;public static Action OnProjection;public Vector3 WorldToScreenPoint(Vector3 p){ProjectionCalls++;if(OnProjection!=null)OnProjection();p=p-transform.position;if(FailProjection)throw new Exception("projection failure");return new Vector3(640+p.x*1000/p.z,360+p.y*1000/p.z,p.z);}}
     public static class Screen {public static int Width=1280,Height=720;public static int height {get{return Height;}}public static int width {get{return Width;}}}
-    public static class Time {public static float Now;public static float unscaledDeltaTime {get{return .016f;}}public static float realtimeSinceStartup {get{return Now;}}}
+    public static class Application {public static string TestFolder=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"Mizze-test-"+Guid.NewGuid().ToString("N"));public static string persistentDataPath {get{System.IO.Directory.CreateDirectory(TestFolder);return TestFolder;}}}
+    public static class Time {public static int Frame;public static int frameCount {get{return Frame;}}public static float Now;public static float unscaledDeltaTime {get{return .016f;}}public static float realtimeSinceStartup {get{return Now;}}}
     public static class Mathf {public static float Sqrt(float f){return (float)Math.Sqrt(f);}public static float Sin(float f){return (float)Math.Sin(f);}public static float Cos(float f){return (float)Math.Cos(f);}public static float Atan2(float y,float x){return (float)Math.Atan2(y,x);}public static float Clamp(float v,float a,float b){return Math.Max(a,Math.Min(b,v));}public static float Lerp(float a,float b,float t){return a+(b-a)*Math.Min(1,Math.Max(0,t));}}
     public static class PlayerPrefs {public static Dictionary<string,string> Saved=new Dictionary<string,string>();public static string GetString(string k,string d){string v;return Saved.TryGetValue(k,out v)?v:d;}public static void SetString(string k,string v){Saved[k]=v;}public static void DeleteKey(string k){Saved.Remove(k);}}
     public static class SystemInfo {public static string deviceUniqueIdentifier {get{return "offline-device";}}}
@@ -62,10 +63,10 @@ namespace UnityEngine
     public static class GUI
     {
         static GUISkin Skin=new GUISkin {font=new Font {Name="game-original"}};public static GUISkin skin {get{return Skin;}set{Skin=value;}}
-        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
+        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static bool FailTexture;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
         public static void Label(Rect r,string s){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Text=s});}
         public static void Label(Rect r,string s,GUIStyle style){Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
-        public static void DrawTexture(Rect r,Texture t){NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
+        public static void DrawTexture(Rect r,Texture t){if(FailTexture)throw new Exception("GUI texture failure");NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
         public static void DrawTexture(Rect r,Texture t,ScaleMode m,bool a,float aspect,Color c,float b,float radius){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=c,Radius=radius});}
     }
 }
@@ -101,7 +102,7 @@ namespace GCommon
 namespace COW
 {
     public class UIModelRole {}
-    public static class GameFacade {public static UIModelRole m_modelRole;public static UIModelRole UIModelRole {get{return m_modelRole;}}public static GamePlay.JMAGGLCNGIG Match;public static GamePlay.Player Local;public static GamePlay.JMAGGLCNGIG CurrentMatch(){return Match;}public static GamePlay.Player GetLocalPlayerOrObServer(){return Local;}}
+    public static class GameFacade {public static UIModelRole m_modelRole;public static UIModelRole UIModelRole {get{return m_modelRole;}}public static GamePlay.JMAGGLCNGIG Match;public static GamePlay.Player Local;public static GamePlay.JMAGGLCNGIG CurrentMatch(){return Match;}public static int LocalCalls;public static GamePlay.Player GetLocalPlayerOrObServer(){LocalCalls++;return Local;}}
 }
 namespace COW.GamePlay
 {
@@ -119,9 +120,9 @@ namespace COW.GamePlay
         public PlayerAttributes Attributes=new PlayerAttributes();public int AttributeReads;public PlayerAttributes get_Attributes(){AttributeReads++;return Attributes;}
         public bool IsReallyInStealth(){return IsInStealth();}public CGKJLKPMGDJ LastAimingInfoFromWeapon {get{return FDMIEDDNCEC;}}
         public CGKJLKPMGDJ FDMIEDDNCEC=new CGKJLKPMGDJ();public bool Local,Team,Stealth,Firing,Movable=true;public int HP=100,MaximumHP=200,StealthCalls,AimCalls;public string Nick="Enemy test";public UnityEngine.Vector3 Origin;public UnityEngine.Quaternion LastRotation;
-        public bool IsInStealth(){StealthCalls++;return Stealth;}public bool IsLocalPlayer(){return Local;}public bool FailHP;public int CurHP {get{if(FailHP)throw new Exception("despawn getter");return HP;}}public int MaxHP {get{return MaximumHP;}}public bool FailNick;public string NickName {get{if(FailNick)throw new Exception("despawn after box");return Nick;}}public bool IsLocalTeammate(bool b){return Team;}
+        public int LocalReads,HeadReads;public Action OnHead;public bool IsInStealth(){StealthCalls++;return Stealth;}public bool IsLocalPlayer(){LocalReads++;return Local;}public bool FailHP;public int CurHP {get{if(FailHP)throw new Exception("despawn getter");return HP;}}public int MaxHP {get{return MaximumHP;}}public bool FailNick;public string NickName {get{if(FailNick)throw new Exception("despawn after box");return Nick;}}public bool IsLocalTeammate(bool b){return Team;}
         public UnityEngine.Transform Root,Head,Neck,ArmL,ArmR,HandL,HandR,LegL,LegR,FootL,FootR;public UnityEngine.Collider Collider;
-        public UnityEngine.Transform RootTransform {get{return Root;}}public UnityEngine.Transform GetHeadTF(){return Head;}public UnityEngine.Transform NeckBone {get{return Neck;}}public UnityEngine.Transform ArmBoneLeft {get{return ArmL;}}public UnityEngine.Transform ArmBoneRight {get{return ArmR;}}public UnityEngine.Transform HandBoneLeft {get{return HandL;}}public UnityEngine.Transform HandBoneRight {get{return HandR;}}public UnityEngine.Transform LegBoneLeft {get{return LegL;}}public UnityEngine.Transform LegBoneRight {get{return LegR;}}public UnityEngine.Transform FootBoneLeft {get{return FootL;}}public UnityEngine.Transform FootBoneRight {get{return FootR;}}
+        public UnityEngine.Transform RootTransform {get{return Root;}}public UnityEngine.Transform GetHeadTF(){HeadReads++;if(OnHead!=null)OnHead();return Head;}public UnityEngine.Transform NeckBone {get{return Neck;}}public UnityEngine.Transform ArmBoneLeft {get{return ArmL;}}public UnityEngine.Transform ArmBoneRight {get{return ArmR;}}public UnityEngine.Transform HandBoneLeft {get{return HandL;}}public UnityEngine.Transform HandBoneRight {get{return HandR;}}public UnityEngine.Transform LegBoneLeft {get{return LegL;}}public UnityEngine.Transform LegBoneRight {get{return LegR;}}public UnityEngine.Transform FootBoneLeft {get{return FootL;}}public UnityEngine.Transform FootBoneRight {get{return FootR;}}
         public UnityEngine.Collider HeadCollider {get{return Collider;}}public UnityEngine.Vector3 AimStartPostion {get{return Origin;}}public bool IsFiring(){return Firing;}public void SetAimRotation(UnityEngine.Quaternion q,bool b){LastRotation=q;AimCalls++;}
     }
 }

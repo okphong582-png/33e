@@ -2,32 +2,33 @@
 
 Nguồn C# riêng biên dịch bằng Tencent InjectFix, mục tiêu TH iOS **1.132.1**, Assembly-CSharp 0.86.0.518. File xuất: Assembly-CSharp-patch.bytes, artifact Mizze-Assembly-CSharp-patch trong workflow Build CSharp IFix Menu.
 
-## Bản sửa renderer sau phản hồi văng
+## Bản kiểm tra xung đột sau phản hồi vẫn văng
 
-Người dùng báo cả bản Mesh và bản tối ưu giao diện vẫn văng, đồng thời nghi có xung đột. Chưa có crash stack để xác định nguyên nhân. Bản này loại các đường tác động lên trạng thái render/font dùng chung; không coi máy yếu là nguyên nhân đã được chứng minh.
+Các bản trước vẫn văng trên thiết bị người dùng. Chưa có crash stack nên chưa xác định được nguyên nhân native; những thay đổi dưới đây sửa các đường xung đột có thể chứng minh trong mã và bổ sung khả năng ghi lỗi, không phải xác nhận hết văng trên iPhone.
 
-- **Bỏ hoàn toàn Mesh/Material/Shader/GL/Graphics.DrawMeshNow.** ESP chỉ phát lệnh GUI.DrawTexture/GUI.Label; bytecode cuối được kiểm tra không còn descriptor của các API trên.
-- **Bỏ tạo font OS và GUIStyle.SetDefaultFont.** Dùng font Unicode sẵn của game với GUIStyle riêng, vẫn giữ cỡ chữ, màu và dấu tiếng Việt. Không sửa font mặc định dùng chung.
-- Chặn OnGUI lồng nhau; trả lại GUI.color/contentColor/matrix trong finally. Ảnh hưởng lên native state vẫn cần thử thực tế trên máy.
-- Xương dùng bộ đệm cố định 11 điểm màn hình: root/head đã chiếu sẵn, chín xương còn lại mỗi điểm chiếu một lần. Không giữ Player/Transform trong bộ đệm hình học. Mỗi người có mười cạnh xương như trước.
-- Hình học được cập nhật mỗi 33 ms (khoảng 30 Hz), dùng 66 ms nếu lượt lấy mẫu tốn hơn 8 ms. Giữa các lần lấy mẫu chỉ vẽ dữ liệu màn hình đã lưu.
-- Giới hạn 192 lệnh, duyệt tối đa 64 mục; tối đa 12 người với ESP đơn giản, sáu người nếu bật 3D/xương/XYZ. Dừng lấy mẫu giữa các người khi vượt 4 ms; đây là hạn mức công việc, không phải kết luận về nguyên nhân văng. Người vượt giới hạn không được hiển thị trong lượt đó.
-- Chừa đủ 32 lệnh trước khi vẽ một người; nếu getter báo lỗi giữa chừng thì hoàn lại toàn bộ hình của người đó. Đổi match/camera/kích thước màn hình hoặc tắt ESP xóa bộ đệm.
+- InjectFix NewFieldInfo giữ giá trị static trong dictionary theo tên trường. package.cjs nay thêm namespace từ SHA256 của nguồn C# vào tên trường mới. Một bản mới không lấy MzInitialized/array/native wrapper của bản trước khi nạp lại trong cùng tiến trình. Regression đặt trạng thái cũ có array sai kích thước trước khi nạp bytecode mới và xác nhận trạng thái được tách. Nạp lại cùng mã nguồn giữ cùng namespace.
+- **Bỏ hook Player.IsReallyInStealth**. Chỉ tạo driver qua UIModelRole; kiểm tra stealth của game không chạy phần khởi tạo menu nữa. Chặn MzEnsure lồng nhau và ghi nhận luồng tạo driver; các đường render/aim/silent/vũ khí chỉ chạy trên luồng này. Đây là giảm đường tác động lên vòng cập nhật game, không chứng minh game đã gọi các hook từ luồng khác.
+- Getter aiming khi silent tắt chỉ trả record gốc, không gọi các native getter bổ sung. Silent và renderer có guard riêng để callback native không lồng vào chính thao tác đang chạy. OnGUI vẫn có guard và trả lại GUI.color/contentColor/matrix trong finally. Aim/vũ khí chạy tối đa một lần mỗi Time.frameCount dù có nhiều lượt Repaint.
+- ESP kiểm tra local player còn sống, local, active và đủ root/head trước khi đọc đối thủ. Chuyển sang observer, chết hoặc thiếu actor thì xóa hình cũ, không đọc skeleton đối thủ.
+- **ESP và FOV mặc định tắt khi mở app**; bật trong menu sau khi vào trận. Khi cả hai tắt, renderer trả ngay mà không lấy match/camera/player. Texture vòng chỉ được dựng nếu chức năng tương ứng bật, chuẩn bị trước lúc phát lệnh vẽ.
+- Sau ba ngoại lệ managed liên tiếp ở renderer, dừng ESP và hiện trạng thái trong tiêu đề. Chạm Bật ESP để thử lại chủ động. Lỗi riêng của một người hoàn lại toàn bộ hình người đó và tiếp tục người khác. Lỗi đầu tiên ghi stage + exception stack vào **Documents/Mizze-error.log**, chỉ ghi một lần; các frame thành công không ghi đĩa. Tên người chơi giữ dấu tiếng Việt, bỏ control/UTF-16 lỗi và không cắt giữa cặp surrogate.
+- Vẫn không dùng Mesh/Material/Shader/GL/Graphics.DrawMeshNow, font OS hoặc GUIStyle.SetDefaultFont. Không giữ Player/Transform trong bộ đệm hình học. Xương dùng 11 điểm màn hình, chín bone bổ sung mỗi điểm chiếu một lần.
+- Giữ lấy mẫu mỗi33ms, dùng66ms nếu sample tốn hơn8ms;192 lệnh, tối đa64 mục,12 người ESP đơn giản hoặc6 người với3D/xương/XYZ, dừng giữa người khi quá4ms. Các giới hạn này hạn chế công việc; chưa đo FPS/độ trễ thật trên iPhone.
 
-try/catch xử lý ngoại lệ managed; không chặn được mọi lỗi native như EXC_BAD_ACCESS. **Chưa xác nhận hết văng hoặc đo FPS trên iPhone.**
+**Ngoại lệ native/EXC_BAD_ACCESS, watchdog, jetsam hoặc game chủ động thoát không thể được chặn bằng các catch C# này.** Nếu vẫn thoát về Home: lấy báo cáo Free Fire/UnityFramework tương ứng trong iOS Cài đặt → Quyền riêng tư & Bảo mật → Phân tích & Cải tiến → Dữ liệu phân tích; JetsamEvent nếu không có báo cáo ứng dụng. File .ips và Mizze-error.log nếu tồn tại mới cho biết tầng nào lỗi. Log managed không có nghĩa là đã bắt được crash native.
 
 ## Giao diện và sử dụng
 
 1. Giữ file cũ dự phòng. Thay patch trong Documents của đúng game bằng file mới rồi tắt hẳn, mở lại game. Loader của bản game gốc vẫn cần localConfig.json với testCodePatch=true; bytecode chạy sau bước kiểm tra này.
 2. Ban đầu chỉ có nút tròn Mizze, kính tối bán trong suốt và viền mint. Chạm để mở/đóng; kéo nút hoặc thanh tiêu đề để di chuyển. Menu 382×440, nút 80×80 theo kích thước thiết kế, tự scale theo màn hình.
 3. KHÓA → Nhập khóa Mizze. Khóa hợp lệ mới cho phép ESP/aim chạy. Backend licensesV4 của repo 33e.
-4. ESP có hai trang; AIM có aim đầu khi bắn, silent khi bắn, FOV, line mục tiêu và thanh chỉnh FOV/tầm; MÀU có 18 mẫu và ba thanh RGB cho ESP/FOV/máu, lưu khi chạm mẫu hoặc nhả thanh.
+4. Bật ESP hoặc Vòng FOV khi cần; hai công tắc này không tự bật sau khi mở app. ESP có hai trang; AIM có aim đầu khi bắn, silent khi bắn, FOV, line mục tiêu và thanh chỉnh FOV/tầm; MÀU có 18 mẫu và ba thanh RGB cho ESP/FOV/máu, lưu khi chạm mẫu hoặc nhả thanh.
 
 Panel dùng nền tối60% alpha, viền sáng20% và phản chiếu24%; nút dùng lòng kính58%. Chữ giữ độ đục đầy đủ. Đây là lớp kính bằng GUI, không làm blur ảnh nền game và không thêm shader/GL/RenderTexture.
 
 UI chỉ vẽ ở Repaint, lượt chạm vẫn xử lý công tắc/slider/kéo nhưng không vẽ. Cache texture nền, GUIStyle, ma trận scale và chuỗi giá trị slider; chỉ đổi khi cần. Animation dừng ở đích và ngừng cập nhật toggle ẩn khi cửa sổ đã đóng. Tiêu đề25, nội dung20, nhãn nhỏ16, thông báo18; chữ UTF-8 có dấu. Bản trước có nền trắng vì overload bo góc cần explicit color; bản hiện tại truyền tint trực tiếp.
 
-Bốn hook: GameFacade.get_UIModelRole, Player.IsReallyInStealth, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI. Giữ return gốc và không hook movement. Driver được tạo sớm từ UIModelRole hoặc fallback stealth, cache và DontDestroyOnLoad. Chưa xác nhận hook sảnh chạy ở mọi giai đoạn trên iPhone.
+Ba hook: GameFacade.get_UIModelRole, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI. Giữ return gốc, không hook movement hoặc stealth. Driver được tạo từ UIModelRole, cache và DontDestroyOnLoad. Chưa xác nhận hook sảnh chạy ở mọi giai đoạn trên iPhone.
 
 ## ESP và aim
 
@@ -57,7 +58,7 @@ SimpleJSON thiếu field trả JSONLazyCreator Tag=None/IsNull=false: bản hi�
 
 verify-declarations.cjs đối chiếu extern/field với dump TH cung cấp; bindings-evidence.json ghi khai báo. test.cjs chạy **bytecode cuối** bằng Tencent VM pinned5ba42eb8f63fe37134a3c78690f97d8425e13588 với opcode game. Unity/game/network là doubles offline, không thay thế crash log/thử iPhone.
 
-Regression gồm lobby/drag/animation/toggle/palette, trạng thái GUI, lọc và hình học ESP, danh sách150 mục với toàn bộ ESP bật, hủy đối tượng/getter lỗi, resource texture, cập nhật theo lịch, từng xương chỉ chiếu một lần, không dùng Mesh/GL/font-global, bộ đệm cố định, aim/silent, key binding/expiry/races. SVG xuất từ lệnh vẽ bytecode; không phải ảnh chụp game.
+Regression gồm lobby/drag/animation/toggle/palette, trạng thái GUI, lọc và hình học ESP, danh sách150 mục với toàn bộ ESP bật, hủy đối tượng/getter lỗi, resource texture, cập nhật theo lịch, từng xương chỉ chiếu một lần, không dùng Mesh/GL/font-global, bộ đệm cố định, aim/silent, key binding/expiry/races, legacy state isolation, gọi lồng và luồng phụ, local actor chưa sẵn sàng, surrogate tên, circuit breaker và log lỗi. SVG xuất từ lệnh vẽ bytecode; không phải ảnh chụp game.
 
 ## Build
 
@@ -71,4 +72,4 @@ node menu/mizze/verify-declarations.cjs <TH dump Assembly directory>
 node menu/mizze/test.cjs
 ~~~
 
-Bindings chỉ là khai báo compile, body giả không được đưa vào patch; RuntimeApis.cs chỉ dùng test. CompilerHost.cs chọn bốn fix và helperMz*; package.cjs đổi magic/flag phù hợp game và giữ bytecode do compiler sinh.
+Bindings chỉ là khai báo compile, body giả không được đưa vào patch; RuntimeApis.cs chỉ dùng test. CompilerHost.cs chọn ba fix và helperMz*; package.cjs đổi magic/flag phù hợp game và giữ bytecode do compiler sinh.

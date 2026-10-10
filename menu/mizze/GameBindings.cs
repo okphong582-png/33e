@@ -48,10 +48,10 @@ namespace COW.GamePlay
         public PlayerAttributes get_Attributes(){return null;}
         public CGKJLKPMGDJ FDMIEDDNCEC;
         public bool IsInStealth(){return false;}
-        public bool IsReallyInStealth(){bool result=IsInStealth();SceneEditBoxSelectTool.MzEnsure();return result;}
+        public bool IsReallyInStealth(){return IsInStealth();}
         public CGKJLKPMGDJ LastAimingInfoFromWeapon
         {
-            get {var result=FDMIEDDNCEC;SceneEditBoxSelectTool.MzSilent(this,result);return result;}
+            get {var result=FDMIEDDNCEC;if(SceneEditBoxSelectTool.MzInitialized&&SceneEditBoxSelectTool.MzSwitch[12])SceneEditBoxSelectTool.MzSilent(this,result);return result;}
         }
         public bool IsLocalPlayer(){return false;}
         public int CurHP {get {return 0;}}
