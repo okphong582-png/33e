@@ -80,7 +80,7 @@ public final class MainActivity extends Activity implements LicenseClient.Listen
         if(starting || !license.authorized())return;
         if(!Settings.canDrawOverlays(this)){
             try{startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName())));}
-            catch(Exception e){new AlertDialog.Builder(this).setMessage("Mở Cài đặt → Ứng dụng → Android Việt → Hiển thị trên ứng dụng khác, rồi bấm Start lại.").setPositiveButton("OK",null).show();}
+            catch(Exception e){new AlertDialog.Builder(this).setMessage("Mở Cài đặt → Ứng dụng → "+getString(R.string.app_name)+" → Hiển thị trên ứng dụng khác, rồi bấm Start lại.").setPositiveButton("OK",null).show();}
             status.setText("Cho phép hiển thị trên ứng dụng khác, quay lại rồi nhấn Start.");return;
         }
         if(Build.VERSION.SDK_INT>=33 && !notificationsRequested && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){

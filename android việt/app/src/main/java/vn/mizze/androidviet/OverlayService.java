@@ -36,11 +36,11 @@ public final class OverlayService extends Service implements LicenseClient.Liste
         if(intent!=null&&STOP.equals(intent.getAction())){stopSelf();return START_NOT_STICKY;}
         if(!license.authorized() || !Settings.canDrawOverlays(this) || (BuildConfig.ROOT_EDITION&&!RootAccess.granted())){stopSelf();return START_NOT_STICKY;}
         NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        nm.createNotificationChannel(new NotificationChannel("menu","Menu Android Việt",NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel("menu","Menu "+getString(R.string.app_name),NotificationManager.IMPORTANCE_LOW));
         PendingIntent open=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent stop=PendingIntent.getService(this,1,new Intent(this,OverlayService.class).setAction(STOP),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
         Notification notification=new Notification.Builder(this,"menu").setSmallIcon(R.drawable.ic_mizze)
-            .setContentTitle(BuildConfig.ROOT_EDITION?"Android Việt · Root":"Android Việt · No Root")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText("Menu nổi đang chạy · Xem trạng thái trong Thiết lập").setContentIntent(open).setOngoing(true)
             .addAction(new Notification.Action.Builder(null,"Dừng menu",stop).build()).build();
         if(Build.VERSION.SDK_INT>=34)startForeground(1,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);else startForeground(1,notification);
