@@ -16,14 +16,14 @@ android {
             dimension 'access'
             applicationIdSuffix '.root'
             versionNameSuffix '-root'
-            resValue 'string', 'app_name', 'Android Việt · Root'
+            resValue 'string', 'app_name', 'Mizze'
             buildConfigField 'boolean', 'ROOT_EDITION', 'true'
         }
         noRoot {
             dimension 'access'
             applicationIdSuffix '.noroot'
             versionNameSuffix '-noroot'
-            resValue 'string', 'app_name', 'Android Việt · No Root'
+            resValue 'string', 'app_name', 'Mizze'
             buildConfigField 'boolean', 'ROOT_EDITION', 'false'
         }
     }
