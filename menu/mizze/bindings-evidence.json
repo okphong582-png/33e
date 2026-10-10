@@ -333,6 +333,31 @@
     "declaration": "public List<Player> ILPNGCMEFFI() { }"
   },
   {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Screen",
+    "method": "get_height",
+    "parameters": [],
+    "declaration": "public static int get_height() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Screen",
+    "method": "get_width",
+    "parameters": [],
+    "declaration": "public static int get_width() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "method": "Clamp",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Clamp(float value, float min, float max) { }"
+  },
+  {
     "assembly": "mscorlib",
     "owner": "System.Collections.IList",
     "method": "get_Item",
@@ -431,13 +456,6 @@
   },
   {
     "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Screen",
-    "method": "get_height",
-    "parameters": [],
-    "declaration": "public static int get_height() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Vector2",
     "method": ".ctor",
     "parameters": [
@@ -445,13 +463,6 @@
       "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public void .ctor(float x, float y) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Screen",
-    "method": "get_width",
-    "parameters": [],
-    "declaration": "public static int get_width() { }"
   },
   {
     "assembly": "mscorlib",
@@ -562,17 +573,6 @@
       "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
     ],
     "declaration": "public static void set_contentColor(Color value) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Mathf",
-    "method": "Clamp",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public static float Clamp(float value, float min, float max) { }"
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
@@ -927,6 +927,64 @@
   },
   {
     "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Shader",
+    "method": "Find",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static Shader Find(string name) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Material",
+    "method": ".ctor",
+    "parameters": [
+      "UnityEngine.Shader, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void .ctor(Shader shader) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Material",
+    "method": "SetInt",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetInt(string name, int value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mesh",
+    "method": ".ctor",
+    "parameters": [],
+    "declaration": "public void .ctor() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mesh",
+    "method": "MarkDynamic",
+    "parameters": [],
+    "declaration": "public void MarkDynamic() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Object",
+    "method": "Destroy",
+    "parameters": [
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Destroy(object obj) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "method": "get_whiteTexture",
+    "parameters": [],
+    "declaration": "public static Texture2D get_whiteTexture() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Mathf",
     "method": "Sqrt",
     "parameters": [
@@ -984,15 +1042,6 @@
     "declaration": "public void Apply(bool updateMipmaps, bool makeNoLongerReadable) { }"
   },
   {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Object",
-    "method": "Destroy",
-    "parameters": [
-      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-    ],
-    "declaration": "public static void Destroy(object obj) { }"
-  },
-  {
     "assembly": "UnityEngine.IMGUIModule",
     "owner": "UnityEngine.GUI",
     "method": "set_color",
@@ -1046,10 +1095,31 @@
   },
   {
     "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Texture2D",
-    "method": "get_whiteTexture",
+    "owner": "UnityEngine.Rect",
+    "method": "get_x",
     "parameters": [],
-    "declaration": "public static Texture2D get_whiteTexture() { }"
+    "declaration": "public float get_x() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Rect",
+    "method": "get_y",
+    "parameters": [],
+    "declaration": "public float get_y() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Rect",
+    "method": "get_width",
+    "parameters": [],
+    "declaration": "public float get_width() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Rect",
+    "method": "get_height",
+    "parameters": [],
+    "declaration": "public float get_height() { }"
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
@@ -1241,6 +1311,94 @@
     "method": "get_FootBoneRight",
     "parameters": [],
     "declaration": "public Transform get_FootBoneRight() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mesh",
+    "method": "Clear",
+    "parameters": [],
+    "declaration": "public void Clear() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mesh",
+    "method": "SetVertices",
+    "parameters": [
+      "UnityEngine.Vector3[], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetVertices(Vector3[] inVertices, int start, int length) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mesh",
+    "method": "SetColors",
+    "parameters": [
+      "UnityEngine.Color[], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetColors(Color[] inColors, int start, int length) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mesh",
+    "method": "SetTriangles",
+    "parameters": [
+      "System.Int32[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetTriangles(int[] triangles, int trianglesStart, int trianglesLength, int submesh, bool calculateBounds, int baseVertex) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Material",
+    "method": "SetPass",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public bool SetPass(int pass) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GL",
+    "method": "PushMatrix",
+    "parameters": [],
+    "declaration": "public static void PushMatrix() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GL",
+    "method": "LoadPixelMatrix",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static void LoadPixelMatrix(float left, float right, float bottom, float top) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Graphics",
+    "method": "DrawMeshNow",
+    "parameters": [
+      "UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void DrawMeshNow(Mesh mesh, Matrix4x4 matrix) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GL",
+    "method": "PopMatrix",
+    "parameters": [],
+    "declaration": "public static void PopMatrix() { }"
   },
   {
     "assembly": "Assembly-CSharp",

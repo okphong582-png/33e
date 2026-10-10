@@ -28,6 +28,18 @@ Trong game, field JSON bị thiếu trả `JSONLazyCreator`: `Tag=None (7)` và 
 
 Regression test đã tái hiện bản cũ từ chối key hợp lệ khi mock phản ánh JSONLazyCreator, rồi xác nhận bản mới chấp nhận trường lock bị thiếu/null và từ chối lock sai kiểu. Bộ test cũng mô phỏng overload vẽ dùng explicit color để lỗi nền trắng không còn lọt qua kiểm thử.
 
+## Renderer gom mesh và bỏ file JSON bằng bản IPA riêng
+
+Bản 1702b3d vẫn bị người dùng báo văng khi nhiều ESP bật. Bản này qua **933 kiểm tra bytecode offline**, gồm shader không có, GPU draw/SetPass lỗi, hồi phục có thời gian chờ, bộ đệm tái sử dụng và đếm riêng các thao tác native GUI. Bản mới gom khung, xương, đường nối, trục XYZ và thanh máu thành một Mesh dùng vertex color: một DrawMeshNow mỗi Repaint thay cho hàng trăm DrawTexture/GUI.matrix. Dữ liệu đỉnh/màu/chỉ số dùng bộ đệm cố định, mesh upload khi mẫu ESP thay đổi. Tên và khoảng cách vẫn dùng GUI.Label; dấu đầu/FOV vẫn dùng hai texture cache. Loop bỏ qua nét đã gom trước mọi thao tác GUI.color/matrix/texture lookup. Mock có bộ đếm native operation tách khỏi các quad giả dùng để xuất preview.
+
+Material dùng Hidden/Internal-Colored, alpha blending, Cull Off, ZWrite Off, ZTest Always. Nếu shader không có hoặc SetPass/draw lỗi, giải phóng mesh/material, khôi phục GL stack trong finally, thử lại sau 5 giây; fallback giảm xuống tối đa ba người và 96 nét. Không khẳng định shader này có sẵn trên mọi bản game: tình trạng thực tế phải xác nhận trên thiết bị. Mọi tính năng ESP vẫn có toggle; giới hạn số người là để giữ tải có giới hạn.
+
+**Với app đang cài, file bytes vẫn cần loader được bật.** File localConfig.json cung cấp chỉ chứa testCodePatch=true. Native get_TestCodePatch tại RVA 0x507c3e0 đọc m_LocalConfig (static offset 0x130), rồi testCodePatch (offset 0x3FC). StartLauncher gọi getter tại 0x50913cc và bỏ qua đường test patch nếu false. Vì kiểm tra diễn ra trước khi đọc bytecode, sửa file bytes không thể tự kích hoạt loader.
+
+Đã tạo riêng biến thể IPA từ đúng IPA TH 1.132.1 do người dùng cung cấp: thay đúng 8 byte đầu getter thành ARM64 mov w0,#1; ret. Công cụ native-loader.cjs kiểm tra SHA256 toàn UnityFramework và bytes cũ trước khi sửa, tạo file mới, đọc lại framework để xác minh. IPA gốc giữ nguyên. Bản IPA mới cần **ký lại** trước khi cài, sau đó dán Assembly-CSharp-patch.bytes vào Documents như cũ; không cần localConfig.json trong biến thể đó. Chưa cài/thử trên iPhone, chưa ký bởi công cụ này. Không áp dụng thay đổi native cho phiên bản khác.
+
+Kiểm tra archive riêng xác nhận 3.286 entry còn lại giữ nguyên compressed data; chỉ 8 byte native đổi. Tên entry dùng dấu slash chuẩn ZIP thay vì backslash của archive gốc. IPA khoảng 994 MB được giao tại workspace, không commit binary game vào GitHub. Source công cụ và bằng chứng loader được commit; GitHub vẫn build artifact bytes như trước.
+
 ## Sửa đường vẽ đông địch và lệch hướng ngắm
 
 Renderer mới dùng bộ đệm cố định 512 lệnh (Rect/Color/Matrix/string/Texture), không giữ Player/Transform trong bộ đệm. Vị trí được đọc khoảng 13 lần/giây, giảm xuống khoảng 8 lần/giây nếu lượt đọc tốn hơn 25 ms; các Repaint ở giữa chỉ vẽ dữ liệu đã chiếu. Giới hạn tối đa 16 người nhìn thấy và dừng lượt lấy mẫu sau khoảng 12 ms giữa các người; người vượt giới hạn sẽ không được vẽ trong lượt đó. Đổi match/camera/kích thước màn hình xóa bộ đệm; tắt ESP xóa lệnh ngay. Đây là đánh đổi độ cập nhật theo chuyển động (khoảng 75–120 ms cộng thời gian lấy mẫu) để giảm số lần gọi game/native.
@@ -48,7 +60,7 @@ Tab **MÀU** có 18 mẫu và ba thanh RGB, chỉnh độc lập màu ESP (khung
 
 Font OS ưu tiên Avenir Next, Helvetica Neue, Arial, được tạo một lần. Nếu không tải được thì dùng font sẵn của game. Menu tạm đặt font khi vẽ và hoàn lại font của game trong finally. API [CreateDynamicFontFromOSFont](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Font.CreateDynamicFontFromOSFont.html) chọn font có trên máy và có ký tự cần vẽ; hình xem trước offline dùng Arial, chưa xác nhận font cụ thể trên iPhone. API GUIStyle.font đã bị strip trong dump này nên không gọi setter không tồn tại.
 
-Bản này qua **887 kiểm tra**, gồm 1.200 khung hình liên tiếp với 150 mục, toàn bộ ESP bật, GC cưỡng bức, đối tượng bị hủy, getter HP ném lỗi, bảng màu/RGB/lưu màu, font hoàn lại và UTF-8 trong bytecode. Các API vẫn là mock; 1.200 khung hình kiểm thử không tương đương thời lượng chơi thật trên iPhone.
+Bản này qua kiểm tra trên bytecode cuối, gồm 1.200 khung hình liên tiếp với 150 mục, toàn bộ ESP bật, GC cưỡng bức, đối tượng bị hủy, getter HP ném lỗi, bảng màu/RGB/lưu màu, font hoàn lại và UTF-8 trong bytecode. Các API vẫn là mock; 1.200 khung hình kiểm thử không tương đương thời lượng chơi thật trên iPhone.
 
 ## Key và tương thích thiết bị
 
@@ -58,9 +70,9 @@ Giao thức protocol=4: enabled, expiresAt theo giờ server, lock.until/message
 
 ## Kiểm chứng và giới hạn
 
-`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 177 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
+`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 195 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
 
-`test.cjs` chạy **file bytes cuối** trong interpreter Tencent pinned `5ba42eb8f63fe37134a3c78690f97d8425e13588`, với opcode của game. API Unity/game/network là test double offline. Kiểm tra bao gồm model sảnh, giữ return của game, vòng đời driver, kéo/toggle/animation, hình học ESP và lọc mục tiêu, aim khi bắn/FOV, silent và hoàn lại dữ liệu, khóa/hết hạn/binding/key đổi giữa request. Các SVG preview được ghi từ lệnh vẽ của chính bytecode trong harness, không phải ảnh chụp game.
+`test.cjs` chạy **file bytes cuối** trong interpreter Tencent pinned `5ba42eb8f63fe37134a3c78690f97d8425e13588`, với opcode của game. API Unity/game/network là test double offline. Kiểm tra bao gồm model sảnh, giữ return của game, vòng đời driver, kéo/toggle/animation, hình học ESP và lọc mục tiêu, aim khi bắn/FOV, silent và hoàn lại dữ liệu, khóa/hết hạn/binding/key đổi giữa request. Các SVG preview được ghi từ lệnh vẽ của chính bytecode trong harness; quad mesh được mock chuyển về hình học từ vertex thực tế đã upload, không phải ảnh chụp game.
 
 Người dùng đã gửi ảnh xác nhận bản Mizze trước hiện trong game, đồng thời phát hiện lỗi nền trắng/chữ nhỏ/đọc lock. **Bản sửa mới chưa được chạy trực tiếp trên iPhone**, và chưa xác thực key cụ thể của người dùng với backend thật. Aim đã nối API và có kiểm thử logic, nhưng chưa xác nhận hiệu quả bắn thực tế, việc server chấp nhận hướng bắn, hay tương thích các phiên bản khác. Việc biên dịch thành công không đồng nghĩa tất cả tính năng hoạt động trên thiết bị. Không hỗ trợ Android.
 

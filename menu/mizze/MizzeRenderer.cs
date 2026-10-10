@@ -5,12 +5,14 @@ namespace COW.GamePlay
     public partial class SceneEditBoxSelectTool
     {
         public static Texture2D MzRing,MzHeadRing;
+        public static Texture2D MzWhite;
         public static Rect[] MzRects;
         public static Color[] MzColors;
         public static Matrix4x4[] MzMatrices;
         public static string[] MzTexts;
         public static Texture[] MzTextures;
         public static bool[] MzRotated;
+        public static bool[] MzSolids;
         public static int MzCommandCount,MzEspWidth,MzEspHeight;
         public static bool MzBuilding;
         public static float MzNextEsp,MzEspSampleStarted;
@@ -38,28 +40,30 @@ namespace COW.GamePlay
         }
         public static void MzRendererInit()
         {
-            if(MzRects==null){MzRects=new Rect[512];MzColors=new Color[512];MzMatrices=new Matrix4x4[512];MzTexts=new string[512];MzTextures=new Texture[512];MzRotated=new bool[512];}
+            MzBatchInit();if(MzWhite==null)MzWhite=Texture2D.whiteTexture;if(MzRects==null){MzRects=new Rect[512];MzColors=new Color[512];MzMatrices=new Matrix4x4[512];MzTexts=new string[512];MzTextures=new Texture[512];MzRotated=new bool[512];MzSolids=new bool[512];}
             if(MzRing==null){MzRing=MzCreateRing(256,1.5f);MzNextEsp=0;}if(MzHeadRing==null){MzHeadRing=MzCreateRing(32,3);MzNextEsp=0;}
         }
         public static void MzClearCommands()
         {
-            MzTrimCommands(0);
+            MzTrimCommands(0);MzQuadCount=0;MzBatchDirty=true;
         }
         public static void MzTrimCommands(int count)
         {
-            for(int i=count;i<MzCommandCount;i++){MzTexts[i]=null;MzTextures[i]=null;}MzCommandCount=count;
+            for(int i=count;i<MzCommandCount;i++){MzTexts[i]=null;MzTextures[i]=null;}MzCommandCount=count;if(MzQuadCounts!=null)MzQuadCount=MzQuadCounts[count];MzBatchDirty=true;
         }
         public static void MzCommand(Rect rect,Matrix4x4 matrix,bool rotated,string text,Texture texture)
         {
-            if(MzCommandCount>=512)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=GUI.color;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;
+            if(MzCommandCount>=512)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=GUI.color;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;MzSolids[i]=text==null&&System.Object.ReferenceEquals(texture,MzWhite);if(MzQuadCounts!=null)MzQuadCounts[MzCommandCount]=MzQuadCount;
         }
         public static void MzDrawCommands()
         {
             var matrix=GUI.matrix;var tint=GUI.color;bool previous=false;var identity=Matrix4x4.identity;
-            var rects=MzRects;var colors=MzColors;var matrices=MzMatrices;var turns=MzRotated;var texts=MzTexts;var textures=MzTextures;int count=MzCommandCount;
+            var rects=MzRects;var colors=MzColors;var matrices=MzMatrices;var turns=MzRotated;var texts=MzTexts;var textures=MzTextures;var solids=MzSolids;int count=MzCommandCount;bool batched=MzDrawBatch();int fallback=0;
+            if(!batched&&MzQuadCount>96){MzNextEsp=0;return;}
             try{MzStyles();var style=MzLabelStyle;for(int i=0;i<count;i++){
+                if(batched&&solids[i])continue;
                 bool rotated=turns[i];if(rotated||previous)GUI.matrix=rotated?matrices[i]:identity;previous=rotated;GUI.color=colors[i];
-                if(texts[i]!=null)GUI.Label(rects[i],texts[i],style);else {var texture=textures[i];if(texture!=null)GUI.DrawTexture(rects[i],texture);}
+                if(texts[i]!=null)GUI.Label(rects[i],texts[i],style);else {var texture=textures[i];if(solids[i]&&fallback++>=96)continue;if(texture!=null)GUI.DrawTexture(rects[i],texture);}
             }}finally{GUI.matrix=matrix;GUI.color=tint;}
         }
         public static void MzRender()

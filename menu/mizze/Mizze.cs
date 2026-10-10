@@ -30,7 +30,7 @@ namespace COW.GamePlay
         public static void MzFill(float x,float y,float w,float h,float radius)
         {
             if(!MzFinite(x)||!MzFinite(y)||!MzFinite(w)||!MzFinite(h)||w<=0||h<=0)return;
-            if(MzBuilding){MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,Texture2D.whiteTexture);return;}
+            if(MzBuilding){MzQuad(new Vector3(x,y,0),new Vector3(x+w,y,0),new Vector3(x+w,y+h,0),new Vector3(x,y+h,0));MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,MzWhite);return;}
             // Rounded DrawTexture uses its explicit color.
             var tint=GUI.color;try{GUI.color=new Color(1,1,1,1);GUI.DrawTexture(new Rect(x,y,w,h),Texture2D.whiteTexture,ScaleMode.StretchToFill,true,0,tint,0,radius);}finally{GUI.color=tint;}
         }
@@ -56,7 +56,10 @@ namespace COW.GamePlay
             if(dy==0)rect=new Rect((ax<bx?ax:bx)-width*.5f,ay-width*.5f,length+width,width);
             else if(dx==0)rect=new Rect(ax-width*.5f,(ay<by?ay:by)-width*.5f,width,length+width);
             else {rotated=true;lineMatrix=Matrix4x4.TRS(new Vector3(ax,ay,0),Quaternion.Euler(0,0,Mathf.Atan2(dy,dx)*57.29578f),new Vector3(1,1,1));rect=new Rect(-width*.5f,-width*.5f,length+width,width);}
-            if(MzBuilding){MzCommand(rect,lineMatrix,rotated,null,Texture2D.whiteTexture);return;}
+            if(MzBuilding){
+                if(rotated){float ux=dx/length,uy=dy/length,half=width*.5f,sx=ax-ux*half,sy=ay-uy*half,ex=bx+ux*half,ey=by+uy*half,nx=-uy*half,ny=ux*half;MzQuad(new Vector3(sx-nx,sy-ny,0),new Vector3(ex-nx,ey-ny,0),new Vector3(ex+nx,ey+ny,0),new Vector3(sx+nx,sy+ny,0));}
+                else MzQuad(new Vector3(rect.x,rect.y,0),new Vector3(rect.x+rect.width,rect.y,0),new Vector3(rect.x+rect.width,rect.y+rect.height,0),new Vector3(rect.x,rect.y+rect.height,0));
+                MzCommand(rect,lineMatrix,rotated,null,MzWhite);return;}
             var old=GUI.matrix;try{if(rotated)GUI.matrix=lineMatrix;GUI.DrawTexture(rect,Texture2D.whiteTexture);}finally{if(rotated)GUI.matrix=old;}
         }
         public static void MzCircle(float cx,float cy,float radius,float width)

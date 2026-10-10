@@ -33,7 +33,7 @@ namespace COW.GamePlay
                 var cam=Camera.main;var match=COW.GameFacade.CurrentMatch();if(cam==null||match==null)return;
                 var cameraTransform=cam.transform;if(cameraTransform==null)return;Vector3 cameraPosition=cameraTransform.position;if(!MzPoint(cameraPosition))return;
                 if(!MzSwitch[0])return;var players=match.ILPNGCMEFFI();if(players==null)return;int count=players.Count;if(count>128)count=128;int shown=0;
-                for(int i=0;i<count&&shown<16&&MzCommandCount+40<=512;i++){
+                for(int i=0;i<count&&shown<(MzBatchReady?16:3)&&MzCommandCount+40<=512;i++){
                     if(i>0&&Time.realtimeSinceStartup-MzEspSampleStarted>.012f)break;
                     int before=MzCommandCount;
                     // The native roster can shrink during a scene/round change. No transform is retained across frames.
