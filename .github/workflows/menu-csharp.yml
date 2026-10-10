@@ -45,7 +45,25 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & ./menu/runtime-test/RuntimeTest.exe menu/dist/Assembly-CSharp-patch.bytes
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Upload menu artifact
+      - name: Compile Mizze CSharp into IFix
+        run: node menu/mizze/build.cjs .ifix-runtime
+      - name: Package Mizze for TH iOS
+        run: node menu/mizze/package.cjs
+      - name: Execute Mizze bytes and verify bindings
+        run: node menu/mizze/test.cjs
+      - name: Upload Mizze menu artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-Assembly-CSharp-patch
+          path: |
+            menu/mizze/dist/Assembly-CSharp-patch.bytes
+            menu/mizze/dist/SHA256SUMS.txt
+            menu/mizze/dist/manifest.json
+            menu/mizze/dist/methods.tsv
+            menu/mizze/dist/*.svg
+            menu/mizze/README.md
+          if-no-files-found: error
+      - name: Upload ESP Box fallback artifact
         uses: actions/upload-artifact@v4
         with:
           name: Assembly-CSharp-patch-menu

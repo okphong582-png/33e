@@ -1,5 +1,10 @@
 # Menu C# ESP Box cho Free Fire TH iOS
 
+**Bản mở rộng mới:** [Mizze](mizze/README.md) có nút tròn kéo được, ESP nhiều kiểu,
+aim đầu/silent khi bắn, FOV và key. Tải artifact `Mizze-Assembly-CSharp-patch`.
+Phần bên dưới mô tả bản ESP Box dự phòng; bản này đã được người dùng xác nhận
+hiện menu trong trận. Bản Mizze mới chưa được thử trên iPhone.
+
 Mã C# trong thư mục này **sinh bytecode IFix thực**, không đổi tên DLL thành
 `.bytes`. Đầu ra: `dist/Assembly-CSharp-patch.bytes` và `SHA256SUMS.txt`.
 Đây là bộ phát bytecode cho menu cụ thể, không phải trình biên dịch C# tổng quát.
