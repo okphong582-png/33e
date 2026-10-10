@@ -27,7 +27,8 @@
     "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
     "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-    "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
   ],
   "externMethods": [
     {
@@ -147,14 +148,6 @@
     {
       "owner": "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "name": "get_localScale",
-      "args": [],
-      "parameters": [],
-      "generic": false,
-      "parameterIsGeneric": []
-    },
-    {
-      "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
-      "name": "<>iFixBaseProxy_get_IsMovableEntity",
       "args": [],
       "parameters": [],
       "generic": false,
@@ -535,7 +528,6 @@
     13,
     14,
     54,
-    57,
     93,
     94,
     95,
@@ -594,7 +586,7 @@
     {
       "method": {
         "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
-        "name": "get_IsMovableEntity",
+        "name": "IsReallyInStealth",
         "args": [],
         "parameters": [],
         "generic": false,
@@ -612,17 +604,6 @@
         "parameterIsGeneric": []
       },
       "id": 1
-    },
-    {
-      "method": {
-        "owner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
-        "name": "IsReallyInStealth",
-        "args": [],
-        "parameters": [],
-        "generic": false,
-        "parameterIsGeneric": []
-      },
-      "id": 2
     }
   ]
 }

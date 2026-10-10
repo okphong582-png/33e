@@ -19,7 +19,7 @@ jobs:
         shell: pwsh
         run: |
           $compilerPath = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-          & $compilerPath /nologo /warnaserror+ /optimize+ /out:menu\MenuBuilder.exe .\menu\Program.cs .\menu\Bindings.cs
+          & $compilerPath /nologo /warnaserror+ /optimize+ /out:menu\MenuBuilder.exe .\menu\Program.cs .\menu\Bindings.cs .\menu\GameCode.cs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Emit IFix bytes
         shell: pwsh
@@ -28,6 +28,23 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check binary and menu control flow
         run: node menu/test-menu.cjs
+      - name: Checkout pinned Tencent InjectFix interpreter
+        uses: actions/checkout@v4
+        with:
+          repository: Tencent/InjectFix
+          ref: 5ba42eb8f63fe37134a3c78690f97d8425e13588
+          path: .ifix-runtime
+          persist-credentials: false
+      - name: Execute bytes in upstream interpreter
+        shell: pwsh
+        run: |
+          node menu/prepare-runtime-test.cjs .ifix-runtime
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $compilerPath = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+          & $compilerPath /nologo /unsafe /warnaserror+ /nowarn:0169 /optimize+ /out:menu\runtime-test\RuntimeTest.exe .\menu\runtime-test\*.cs .\menu\RuntimeTest.cs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./menu/runtime-test/RuntimeTest.exe menu/dist/Assembly-CSharp-patch.bytes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload menu artifact
         uses: actions/upload-artifact@v4
         with:

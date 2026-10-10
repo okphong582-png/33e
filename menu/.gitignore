@@ -2,3 +2,4 @@ MenuBuilder.exe
 dist/
 bin/
 obj/
+runtime-test/

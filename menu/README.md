@@ -29,7 +29,7 @@ thay đổi trong `menu/`. Không cần Unity Editor hoặc khóa ký iOS để 
 Build cục bộ trên Windows (.NET Framework 4.x):
 
 ```bat
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /warnaserror+ /optimize+ /out:menu\MenuBuilder.exe menu\Program.cs menu\Bindings.cs
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /warnaserror+ /optimize+ /out:menu\MenuBuilder.exe menu\Program.cs menu\Bindings.cs menu\GameCode.cs
 menu\MenuBuilder.exe menu\dist
 node menu/test-menu.cjs
 ```
@@ -40,11 +40,13 @@ mẫu cũ SHA256
 và mẫu mới do người dùng cung cấp SHA256
 `bbf79061f89b7a54b495cb9760b164b1725266821f20f6d37aae77a9b9c98ec7`.
 Các lời gọi ESP đọc tên/kiểu tham số từ bảng extern; không sao chép bytecode
-gameplay của mẫu. Ba fix là `Player.get_IsMovableEntity`,
-`Player.IsReallyInStealth` (hai đường tạo driver, giữ kết quả getter gốc),
-và `SceneEditBoxSelectTool.OnGUI`. Hàm VM thứ tư tự viết xử lý ESP Box.
+gameplay của mẫu. Hai fix là `Player.IsReallyInStealth` (tạo driver, giữ kết quả
+`IsInStealth` gốc) và `SceneEditBoxSelectTool.OnGUI`. Hàm VM thứ ba tự viết xử lý
+ESP Box. Không thay thế `get_IsMovableEntity` hoặc lời gọi điều khiển di chuyển.
 Trạng thái bật/tắt nằm ở `localScale.y` của GameObject riêng `__33e_menu_driver`.
-Bootstrap khôi phục component nếu bị mất, không tạo nhiều driver.
+Bootstrap khôi phục component nếu bị mất, không tạo nhiều driver. Việc tạo
+component có `catch` để lỗi UI không truyền ra luồng cập nhật nhân vật. ESP cũng
+có `catch` riêng để lỗi lấy dữ liệu không ngăn phần menu được vẽ.
 
 `Program.cs`: `Bootstrap` tạo driver; `Menu` vẽ công tắc luôn hiện; `Boxes`
 lọc/chiếu nhân vật; `BoxRect` vẽ 4 cạnh. Tham số độ dày là 2 pixel, tỉ lệ
@@ -60,12 +62,40 @@ hiện trong trận; chưa bảo đảm ở sảnh. Không suy ra tương thích
 hoặc phiên bản khác từ dữ liệu 1.132.1. Build/test thành công chưa xác nhận
 bridge, loader và thực thi trên iPhone.
 
-`test-menu.cjs` chạy các instruction đã sinh với Unity/game giả lập: hai đường
-bootstrap, trả kết quả getter gốc, menu luôn hiện, bật/tắt, hình học 4 cạnh,
+`test-menu.cjs` chạy các instruction đã sinh với Unity/game giả lập: bootstrap,
+trả kết quả gốc, menu luôn hiện, bật/tắt, hình học 4 cạnh,
 lọc mục tiêu, dữ liệu không hữu hạn, điểm sau camera, thiếu trận/camera,
 giới hạn vòng lặp, không ghi player và khôi phục GUI color/matrix. Kiểm thử này
 không kiểm tra IL2CPP stripping, bridge dispatch, lifecycle component, loader,
 touch thực tế hoặc việc thực thi trên điện thoại.
+
+Workflow còn chạy bytecode bằng **interpreter Tencent InjectFix thật**, khóa ở
+commit `5ba42eb8f63fe37134a3c78690f97d8425e13588`. `prepare-runtime-test.cjs`
+chỉ thay số enum opcode theo dump game, giữ nguyên thân interpreter;
+`RuntimeTest.cs` cung cấp Unity/game giả lập và kiểm tra tạo driver, kết quả gốc,
+menu, ESP, nút bật/tắt, giới hạn danh sách, khôi phục GUI và bắt lỗi component/
+projection. Kiểm thử này vẫn không chạy loader hoặc IL2CPP trên iPhone.
+
+Chạy kiểm thử interpreter cục bộ:
+
+```bat
+git clone https://github.com/Tencent/InjectFix .ifix-runtime
+git -C .ifix-runtime checkout 5ba42eb8f63fe37134a3c78690f97d8425e13588
+node menu/prepare-runtime-test.cjs .ifix-runtime
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /unsafe /out:menu\runtime-test\RuntimeTest.exe menu\runtime-test\*.cs menu\RuntimeTest.cs
+menu\runtime-test\RuntimeTest.exe menu\dist\Assembly-CSharp-patch.bytes
+```
+
+## Sửa lỗi bản trước
+
+Bản commit `ca1294c` dùng sai 5 opcode và thay thế getter di chuyển. Người dùng
+báo nhân vật đứng yên, menu không hiện. Bản đó không dùng tiếp.
+`Newobj=105`, `Brtrue=114`, `Ldtype=124`, `Pop=160`, `Bne_Un=166` đã được đối chiếu
+trực tiếp với enum trong dump IFix.Core 1.132.1. Bộ phát nay dùng `GameCode.cs`
+thay vì số rời; kiểm thử cũ đã dùng cùng bảng sai nên không phát hiện lỗi.
+Bản sửa bỏ getter di chuyển, giữ cách tạo driver qua `IsReallyInStealth` của
+mẫu Kai và bỏ điều kiện chạm 4 ngón. Cần thay file rồi khởi động lại game hoàn
+toàn để loại các hàm cũ còn trong bộ nhớ.
 
 Tham khảo định dạng VM:
 [Tencent InjectFix VirtualMachine.cs](https://github.com/Tencent/InjectFix/blob/master/Source/VSProj/Src/Core/VirtualMachine.cs)

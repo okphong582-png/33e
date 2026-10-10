@@ -5,8 +5,9 @@ using System.Collections.Generic;
 static class Bindings {
 public const int SceneType = 10;
 public const int PlayerType = 3;
-public static readonly Dictionary<int,int> External = new Dictionary<int,int> { {0,0},{2,1},{4,2},{7,3},{9,4},{10,5},{11,6},{12,7},{13,8},{14,9},{54,10},{57,11},{93,12},{94,13},{95,14},{129,15},{130,16},{131,17},{132,18},{138,19},{141,20},{142,21},{143,22},{144,23},{145,24},{146,25},{147,26},{148,27},{149,28},{200,29},{201,30},{202,31},{203,32},{204,33},{205,34},{206,35},{207,36},{208,37},{209,38},{210,39},{211,40},{212,41},{213,42},{214,43},{215,44},{216,45},{217,46},{218,47} };
-public static void Header(BinaryWriter w) { w.Write(0x66a319b20db4a2cbUL); w.Write("IFix.ILFixInterfaceBridge, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"); w.Write(26);
+public const int ExceptionType = 26;
+public static readonly Dictionary<int,int> External = new Dictionary<int,int> { {0,0},{2,1},{4,2},{7,3},{9,4},{10,5},{11,6},{12,7},{13,8},{14,9},{54,10},{93,11},{94,12},{95,13},{129,14},{130,15},{131,16},{132,17},{138,18},{141,19},{142,20},{143,21},{144,22},{145,23},{146,24},{147,25},{148,26},{149,27},{200,28},{201,29},{202,30},{203,31},{204,32},{205,33},{206,34},{207,35},{208,36},{209,37},{210,38},{211,39},{212,40},{213,41},{214,42},{215,43},{216,44},{217,45},{218,46} };
+public static void Header(BinaryWriter w) { w.Write(0x66a319b20db4a2cbUL); w.Write("IFix.ILFixInterfaceBridge, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"); w.Write(27);
 w.Write("UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
 w.Write("System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089");
 w.Write("UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
@@ -33,8 +34,9 @@ w.Write("UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=ne
 w.Write("UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
 w.Write("UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
 w.Write("UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+w.Write("System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089");
 }
-public static void Externs(BinaryWriter w) { w.Write(48);
+public static void Externs(BinaryWriter w) { w.Write(47);
 w.Write(false); w.Write(2); w.Write("op_Equality"); w.Write(2);
 w.Write(2);
 w.Write(2);
@@ -56,7 +58,6 @@ w.Write(11);
 w.Write(false); w.Write(2); w.Write("DontDestroyOnLoad"); w.Write(1);
 w.Write(2);
 w.Write(false); w.Write(7); w.Write("get_localScale"); w.Write(0);
-w.Write(false); w.Write(3); w.Write("<>iFixBaseProxy_get_IsMovableEntity"); w.Write(0);
 w.Write(false); w.Write(22); w.Write("get_current"); w.Write(0);
 w.Write(false); w.Write(2); w.Write("get_name"); w.Write(0);
 w.Write(false); w.Write(5); w.Write("op_Inequality"); w.Write(2);
@@ -121,12 +122,10 @@ public static void Tail(BinaryWriter w) { w.Write(3);
 w.Write(false); w.Write(0); w.Write("x");
 w.Write(false); w.Write(0); w.Write("y");
 w.Write(false); w.Write(0); w.Write("z");
-w.Write(0); w.Write(0); w.Write("IFix.WrappersManagerImpl, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"); w.Write(", Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"); w.Write((byte)0); w.Write(3);
-w.Write(false); w.Write(3); w.Write("get_IsMovableEntity"); w.Write(0);
+w.Write(0); w.Write(0); w.Write("IFix.WrappersManagerImpl, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"); w.Write(", Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"); w.Write((byte)0); w.Write(2);
+w.Write(false); w.Write(3); w.Write("IsReallyInStealth"); w.Write(0);
 w.Write(0);
 w.Write(false); w.Write(10); w.Write("OnGUI"); w.Write(0);
 w.Write(1);
-w.Write(false); w.Write(3); w.Write("IsReallyInStealth"); w.Write(0);
-w.Write(2);
 w.Write(0); }
 }

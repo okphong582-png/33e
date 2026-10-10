@@ -4,54 +4,61 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {inspect}=require('./inspect_patch.cjs');
 const p=inspect(fs.readFileSync(process.argv[2]||path.join(__dirname,'dist/Assembly-CSharp-patch.bytes')));
 const bindings=require('./bindings.json');
+const OP=require('./game-opcodes.json');
+// Regression values verified directly against the supplied IFix.Core enum.
+assert.deepEqual([OP.Newobj,OP.Brtrue,OP.Ldtype,OP.Pop,OP.Bne_Un],[105,114,124,160,166]);
+const enumPairs=[...fs.readFileSync(path.join(__dirname,'GameCode.cs'),'utf8').matchAll(/(\w+)\s*=\s*(\d+),/g)].map(m=>[m[1],Number(m[2])]);
+assert.deepEqual(Object.fromEntries(enumPairs),OP,'CSharp emitter and game opcode table agree');
+assert.ok(!/\.(?:Emit|Branch)\(\s*\d/.test(fs.readFileSync(path.join(__dirname,'Program.cs'),'utf8')),'Use named game opcodes');
 assert.deepEqual(p.types,bindings.types);assert.deepEqual(p.externMethods,bindings.externMethods);
 assert.deepEqual(p.fields,bindings.fields);assert.deepEqual(p.fixes,bindings.fixes);
-assert.equal(p.methods.length,4);assert.equal(p.strings[0],'__33e_menu_driver');
+assert.equal(p.methods.length,3);assert.equal(p.strings[0],'__33e_menu_driver');
 assert.equal(p.externMethods[bindings.originalExternIds.indexOf(54)].name,'get_localScale');
 assert.equal(p.externMethods[bindings.originalExternIds.indexOf(54)].owner.split(',')[0],'UnityEngine.Transform');
 const expectedAPIs={200:'COW.GamePlay.Player.IsInStealth',201:'COW.GameFacade.CurrentMatch',202:'COW.GamePlay.JMAGGLCNGIG.ILPNGCMEFFI',203:'UnityEngine.Camera.get_main',204:'System.Collections.IList.get_Item',205:'System.Collections.ICollection.get_Count',206:'COW.GamePlay.Player.IsLocalPlayer',207:'COW.GamePlay.Player.get_CurHP',208:'COW.GamePlay.Player.IsLocalTeammate',209:'UnityEngine.GameObject.get_activeInHierarchy',210:'COW.GamePlay.Player.get_RootTransform',211:'COW.GamePlay.Player.GetHeadTF',212:'UnityEngine.Transform.get_position',213:'UnityEngine.Camera.WorldToScreenPoint',214:'UnityEngine.Screen.get_height',215:'UnityEngine.Screen.get_width',216:'System.Single.IsNaN',217:'System.Single.IsInfinity',218:'UnityEngine.GameObject.GetComponent'};
 for(const [alias,expected] of Object.entries(expectedAPIs)){const m=p.externMethods[bindings.originalExternIds.indexOf(Number(alias))];assert.equal(m.owner.split(',')[0]+'.'+m.name,expected,'Runtime API binding '+alias);}
-for(const method of p.methods){for(const [index,i] of method.instructions.entries()){if([42,62,115,130,132,46,173,165].includes(i.code))assert.ok(index+i.operand>0&&index+i.operand<method.instructions.length,'Branch target in bounds');}}
-assert.ok(!p.externMethods.some(m=>/touchCount|GetTouch|SetAimRotation|LockedAiming|UnityWebRequest/.test(m.name)));
-const world=new Map();let original=true,stealth=true,baseCalls=0,stealthCalls=0,draw=[],rects=[],event=null,guiColor={r:0.3,g:0.4,b:0.5,a:1},guiMatrix={tag:'initial-matrix'};
+for(const method of p.methods){for(const [index,i] of method.instructions.entries()){if([OP.Br,OP.Brfalse,OP.Brtrue,OP.Blt,OP.Ble,OP.Bgt,OP.Bge,OP.Bne_Un].includes(i.code))assert.ok(index+i.operand>0&&index+i.operand<method.instructions.length,'Branch target in bounds');}}
+assert.ok(!p.fixes.some(f=>/Movable/.test(f.method.name)));
+assert.ok(!p.externMethods.some(m=>/Movable|touchCount|GetTouch|SetAimRotation|LockedAiming|UnityWebRequest/.test(m.name)));
+const world=new Map();let stealth=true,stealthCalls=0,draw=[],rects=[],event=null,guiColor={r:0.3,g:0.4,b:0.5,a:1},guiMatrix={tag:'initial-matrix'};
 let match={players:[]},camera={tag:'camera'};
 function object(name){return {name,transform:{localScale:{x:1,y:1,z:1}},component:null};}
 function run(id,self){
  const code=p.methods[id].instructions,locals=Array(code[0].operand>>>16).fill(null),stack=[];
  const pop=()=>{assert.ok(stack.length,'Stack underflow');return stack.pop();};
  const deref=v=>v&&v.ref!==undefined?locals[v.ref]:v;
- const returns={0:true,2:true,4:true,7:true,9:true,10:true,11:true,13:true,54:true,57:true,93:true,94:true,95:true,129:true,130:true,131:true,132:true,141:true,142:true,143:true,145:true,146:true,200:true};
+ const returns={0:true,2:true,4:true,7:true,9:true,10:true,11:true,13:true,54:true,93:true,94:true,95:true,129:true,130:true,131:true,132:true,141:true,142:true,143:true,145:true,146:true,200:true};
  for(let api=201;api<=218;api++)returns[api]=true;
  for(let pc=1,steps=0;pc<code.length;pc++){
   assert.ok(++steps<100000,'Loop did not terminate');const {code:op,operand:n}=code[pc];
   switch(op){
-   case 28:assert.equal(n,0);stack.push(self);break;
-   case 17:stack.push(null);break;
-   case 16:stack.push(p.strings[n]);break;
-   case 180:stack.push(n);break;
-   case 3:{const b=Buffer.alloc(4);b.writeInt32LE(n);stack.push(b.readFloatLE());break;}
-   case 20:{assert.ok(n<locals.length);const v=locals[n];stack.push(v&&typeof v==='object'&&('z' in v||'width' in v||'r' in v)?structuredClone(v):v);break;}
-   case 176:assert.ok(n<locals.length);locals[n]=pop();break;
-   case 95:assert.ok(n<locals.length);stack.push({ref:n});break;
-   case 38:stack.push(deref(pop())[p.fields[n].name]);break;
-   case 4:{const value=pop(),target=deref(pop());target[p.fields[n].name]=value;break;}
-   case 126:stack.push(p.types[n]);break;
-   case 89:break;
-   case 52:stack.push(Number(pop()));break;
-   case 67:{const b=pop(),a=pop();stack.push(a===b?1:0);break;}
-   case 40:{const b=pop(),a=pop();stack.push(a*b);break;}
-   case 96:{const b=pop(),a=pop();stack.push(a-b);break;}
-   case 174:{const b=pop(),a=pop();stack.push(a+b);break;}
-   case 130:case 132:case 46:case 173:{const b=pop(),a=pop();if(op===130?a<b:op===132?a<=b:op===46?a>b:a>=b)pc+=n-1;break;}
-   case 142:{const v=pop();stack.push(v&&v.isPlayer?v:null);break;}
-   case 151:assert.equal(n,3);run(3,undefined);break;
-   case 161:pop();break;
-   case 62:if(!pop())pc+=n-1;break;
-   case 115:if(pop())pc+=n-1;break;
-   case 165:{const b=pop(),a=pop();if(a!==b)pc+=n-1;break;}
-   case 42:pc+=n-1;break;
-   case 136:{assert.equal(stack.length,n);return n?pop():undefined;}
-   case 175:case 106:{
+   case OP.Ldarg:assert.equal(n,0);stack.push(self);break;
+   case OP.Ldnull:stack.push(null);break;
+   case OP.Ldstr:stack.push(p.strings[n]);break;
+   case OP.Ldc_I4:stack.push(n);break;
+   case OP.Ldc_R4:{const b=Buffer.alloc(4);b.writeInt32LE(n);stack.push(b.readFloatLE());break;}
+   case OP.Ldloc:{assert.ok(n<locals.length);const v=locals[n];stack.push(v&&typeof v==='object'&&('z' in v||'width' in v||'r' in v)?structuredClone(v):v);break;}
+   case OP.Stloc:assert.ok(n<locals.length);locals[n]=pop();break;
+   case OP.Ldloca:assert.ok(n<locals.length);stack.push({ref:n});break;
+   case OP.Ldfld:stack.push(deref(pop())[p.fields[n].name]);break;
+   case OP.Stfld:{const value=pop(),target=deref(pop());target[p.fields[n].name]=value;break;}
+   case OP.Ldtype:stack.push(p.types[n]);break;
+   case OP.Nop:break;
+   case OP.Conv_R4:stack.push(Number(pop()));break;
+   case OP.Ceq:{const b=pop(),a=pop();stack.push(a===b?1:0);break;}
+   case OP.Mul:{const b=pop(),a=pop();stack.push(a*b);break;}
+   case OP.Sub:{const b=pop(),a=pop();stack.push(a-b);break;}
+   case OP.Add:{const b=pop(),a=pop();stack.push(a+b);break;}
+   case OP.Blt:case OP.Ble:case OP.Bgt:case OP.Bge:{const b=pop(),a=pop();if(op===130?a<b:op===132?a<=b:op===46?a>b:a>=b)pc+=n-1;break;}
+   case OP.Isinst:{const v=pop();stack.push(v&&v.isPlayer?v:null);break;}
+   case OP.Call:assert.equal(n,2);run(2,undefined);break;
+   case OP.Pop:pop();break;
+   case OP.Brfalse:if(!pop())pc+=n-1;break;
+   case OP.Brtrue:if(pop())pc+=n-1;break;
+   case OP.Bne_Un:{const b=pop(),a=pop();if(a!==b)pc+=n-1;break;}
+   case OP.Br:pc+=n-1;break;
+   case OP.Ret:{assert.equal(stack.length,n);return n?pop():undefined;}
+   case OP.CallExtern:case OP.Newobj:{
     const count=n>>>16,index=n&65535,old=bindings.originalExternIds[index],m=p.externMethods[index];
     assert.ok(m,'Unknown extern');const args=stack.splice(stack.length-count,count).map(deref);assert.equal(args.length,count);
     let value;
@@ -66,7 +73,6 @@ function run(id,self){
      case 13:value={gameObject:args[0]};args[0].component=value;break;
      case 14:args[0].persistent=true;break;
      case 54:value=structuredClone(args[0].localScale);break;
-     case 57:baseCalls++;value=original;break;
      case 93:value=event;break;
      case 94:value=args[0].name;break;
      case 95:value=args[0]!==args[1];break;
@@ -113,12 +119,11 @@ function run(id,self){
  }
  assert.fail('Fell off end');
 }
-const player={};assert.equal(run(0,player),true);assert.equal(baseCalls,1);
+const player={};assert.equal(run(0,player),true);assert.equal(stealthCalls,1);
 const driver=world.get('__33e_menu_driver');assert.ok(driver.persistent);assert.ok(driver.component);
-original=false;assert.equal(run(0,player),false);assert.equal(world.size,1);assert.equal(baseCalls,2);
-world.clear();assert.equal(run(2,player),true);const stealthDriver=world.get('__33e_menu_driver');assert.ok(stealthDriver.component);assert.equal(stealthCalls,1);
-stealth=false;assert.equal(run(2,player),false);assert.equal(world.size,1);assert.equal(stealthCalls,2);
-stealthDriver.component=null;run(2,player);assert.ok(stealthDriver.component,'Restore missing driver component');
+stealth=false;assert.equal(run(0,player),false);assert.equal(world.size,1);assert.equal(stealthCalls,2);
+driver.component=null;run(0,player);assert.ok(driver.component,'Restore missing driver component');
+assert.equal(run(0,null),0,'Null player guarded');
 const originalColor=structuredClone(guiColor),originalMatrix=structuredClone(guiMatrix);
 function frame(type=7,x=0,y=0){event={type,mousePosition:{x,y}};draw=[];rects=[];run(1,driver.component);assert.deepEqual(guiColor,originalColor);assert.deepEqual(guiMatrix,originalMatrix);return draw;}
 function boxRects(){return rects.filter(r=>r.color.r<0.1&&r.color.g>0.9).map(r=>r.rect);}
@@ -136,4 +141,4 @@ match.players=Array.from({length:150},()=>enemy());frame();assert.equal(boxRects
 for(const missing of ['match','players','camera']){match={players:[enemy()]};camera={tag:'camera'};if(missing==='match')match=null;if(missing==='players')match.players=null;if(missing==='camera')camera=null;frame();assert.equal(boxRects().length,0);assert.ok(draw.includes('ESP BOX: ON'));}
 event=null;draw=[];run(1,driver.component);assert.equal(draw.length,0);
 event={type:7,mousePosition:{x:0,y:0}};run(1,null);run(1,{gameObject:object('other')});assert.equal(draw.length,0);
-console.log('PASS: typed bindings, both bootstrap paths, original getter results, persistent driver, always-visible menu, ESP toggle, exact four-edge geometry, enemy filtering, projection validation, missing-match handling, bounded traversal, no player writes, color/matrix restoration, stack bounds. Mock VM only; device unverified.');
+console.log('PASS: typed bindings, native stealth result preservation, no movement hook, persistent driver, always-visible menu, ESP toggle, exact four-edge geometry, enemy filtering, projection validation, missing-match handling, bounded traversal, no player writes, color/matrix restoration, stack bounds. Mock VM only; device unverified.');
