@@ -28,21 +28,31 @@ namespace COW.GamePlay
         }
         public static void MzRender()
         {
+            MzDrawingEsp=true;MzDrawBudget=640;
             try {
-                var cam=Camera.main;var match=COW.GameFacade.CurrentMatch();if(cam==null||match==null)return;if(MzSwitch[13]){MzTint(.4f,.9f,.77f,.65f);MzCircle(Screen.width*.5f,Screen.height*.5f,MzFov,1.5f);}
-                if(!MzSwitch[0])return;var players=match.ILPNGCMEFFI();if(players==null)return;
-                for(int i=0;i<players.Count&&i<128;i++){
-                    var p=players[i] as Player;if(!MzEnemy(p))continue;Vector3 root=p.RootTransform.position,head=p.GetHeadTF().position;float distance=Vector3.Distance(root,cam.transform.position);if(!MzFinite(distance)||distance>MzRange)continue;
-                    Vector2 feet,top;if(!MzProject(cam,root,out feet)||!MzProject(cam,head,out top))continue;float h=feet.y-top.y,w=h*.5f,x=(feet.x+top.x)*.5f-w*.5f,y=top.y;if(h<=4||h>Screen.height*2||x+w<0||x>Screen.width||y+h<0||y>Screen.height)continue;
-                    MzTint(.4f,.92f,.79f,1);if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
-                    if(MzSwitch[4]){string name=p.NickName;if(name!=null){if(name.Length>24)name=name.Substring(0,24);MzText(x-22,y-25,w+150,name);}}
-                    if(MzSwitch[6])MzText(x,y+h+4,w+80,((int)distance).ToString()+" m");
-                    if(MzSwitch[5]){float ratio=p.MaxHP>0?Mathf.Clamp((float)p.CurHP/p.MaxHP,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,2);MzTint(ratio<=.25f?1:ratio<=.5f?1:.3f,ratio<=.25f?.2f:ratio<=.5f?.8f:1,.2f,1);MzFill(x-7,y+h*(1-ratio),4,h*ratio,2);}
-                    MzTint(.4f,.92f,.79f,1);if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
-                    if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}
-                    if(MzSwitch[7]){MzTint(.8f,.97f,.92f,1);Transform neck=p.NeckBone;MzBone(cam,p.GetHeadTF(),neck);MzBone(cam,neck,p.RootTransform);MzBone(cam,neck,p.ArmBoneLeft);MzBone(cam,p.ArmBoneLeft,p.HandBoneLeft);MzBone(cam,neck,p.ArmBoneRight);MzBone(cam,p.ArmBoneRight,p.HandBoneRight);MzBone(cam,p.RootTransform,p.LegBoneLeft);MzBone(cam,p.LegBoneLeft,p.FootBoneLeft);MzBone(cam,p.RootTransform,p.LegBoneRight);MzBone(cam,p.LegBoneRight,p.FootBoneRight);}
+                var cam=Camera.main;var match=COW.GameFacade.CurrentMatch();if(cam==null||match==null)return;
+                var cameraTransform=cam.transform;if(cameraTransform==null)return;Vector3 cameraPosition=cameraTransform.position;if(!MzPoint(cameraPosition))return;
+                if(MzSwitch[13]){GUI.color=MzFovColor;MzCircle(Screen.width*.5f,Screen.height*.5f,MzFov,1.5f);}
+                if(!MzSwitch[0])return;var players=match.ILPNGCMEFFI();if(players==null)return;int count=players.Count;if(count>128)count=128;int shown=0;
+                for(int i=0;i<count&&shown<32&&MzDrawBudget>64;i++){
+                    // The native roster can shrink during a scene/round change. No transform is retained across frames.
+                    try {
+                        if(i>=players.Count)break;var p=players[i] as Player;if(p==null||p.IsLocalPlayer()||p.IsLocalTeammate(false)||p.IsLocalTeammate(true))continue;
+                        var obj=p.gameObject;if(obj==null||!obj.activeInHierarchy)continue;int hp=p.CurHP;if(hp<=0)continue;
+                        var rootTransform=p.RootTransform;var headTransform=p.GetHeadTF();if(rootTransform==null||headTransform==null)continue;
+                        Vector3 root=rootTransform.position,head=headTransform.position;if(!MzPoint(root)||!MzPoint(head))continue;float distance=Vector3.Distance(root,cameraPosition);if(!MzFinite(distance)||distance>MzRange)continue;
+                        Vector2 feet,top;if(!MzProject(cam,root,out feet)||!MzProject(cam,head,out top))continue;
+                        float h=feet.y-top.y,w=h*.5f,x=(feet.x+top.x)*.5f-w*.5f,y=top.y;if(!MzFinite(h)||h<=4||h>Screen.height*2||x+w<0||x>Screen.width||y+h<0||y>Screen.height)continue;shown++;
+                        GUI.color=MzEspColor;if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
+                        if(MzSwitch[4]){string name=p.NickName;if(name!=null){if(name.Length>24)name=name.Substring(0,24);MzText(x-22,y-25,w+150,name);}}
+                        if(MzSwitch[6])MzText(x,y+h+4,w+80,((int)distance).ToString()+" m");
+                        if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);GUI.color=MzHealthColor;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
+                        GUI.color=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
+                        if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}
+                        if(MzSwitch[7]){GUI.color=MzEspColor;Transform neck=p.NeckBone,armL=p.ArmBoneLeft,armR=p.ArmBoneRight,legL=p.LegBoneLeft,legR=p.LegBoneRight;MzBone(cam,headTransform,neck);MzBone(cam,neck,rootTransform);MzBone(cam,neck,armL);MzBone(cam,armL,p.HandBoneLeft);MzBone(cam,neck,armR);MzBone(cam,armR,p.HandBoneRight);MzBone(cam,rootTransform,legL);MzBone(cam,legL,p.FootBoneLeft);MzBone(cam,rootTransform,legR);MzBone(cam,legR,p.FootBoneRight);}
+                    }catch(Exception){/* A despawned enemy must not abort the rest of the frame. */}
                 }
-            }catch(Exception){}
+            }catch(Exception){}finally{MzDrawingEsp=false;}
         }
         public static Player MzPickTarget()
         {
@@ -52,7 +62,7 @@ namespace COW.GamePlay
         public static void MzRunAim()
         {
             try {
-                var local=COW.GameFacade.GetLocalPlayerOrObServer();if(!MzSwitch[12]||local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring())MzRestoreSilent();
+                if(!MzSwitch[11]&&!MzSwitch[12]){MzRestoreSilent();return;}var local=COW.GameFacade.GetLocalPlayerOrObServer();if(!MzSwitch[12]||local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring())MzRestoreSilent();
                 if(local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring()||(!MzSwitch[11]&&!MzSwitch[12]))return;var target=MzPickTarget();if(target==null)return;
                 if(MzSwitch[14]){Vector2 p;if(MzProject(Camera.main,target.GetHeadTF().position,out p)){MzTint(1,.76f,.3f,1);MzLine(Screen.width*.5f,Screen.height*.5f,p.x,p.y,1.5f);}}
                 if(MzSwitch[11]){Vector3 direction=target.GetHeadTF().position-local.AimStartPostion;if(MzPoint(direction)&&Vector3.Distance(new Vector3(),direction)>.01f)local.SetAimRotation(Quaternion.LookRotation(direction),true);}

@@ -6,7 +6,7 @@ Nguồn C# riêng biên dịch bằng Tencent InjectFix, không sao chép byteco
 
 1. Giữ bản ESP Box trước đó làm bản dự phòng. Thay file patch đang dùng trong thư mục Documents của đúng game bằng file trong artifact Mizze; tắt hẳn và mở lại game.
 2. Ban đầu chỉ có nút tròn **Mizze** nền đen, viền mint. Nhấn để mở/đóng, kéo nút để di chuyển. Kéo thanh tiêu đề để di chuyển cửa sổ. Nút, menu và chữ tự tăng theo màn hình.
-3. Mở KEY → Nhập key Mizze. Key hợp lệ mới cho phép ESP và aim hoạt động. Key dùng backend licensesV4 của repo 33e.
+3. Mở KHÓA → Nhập khóa Mizze. Key hợp lệ mới cho phép ESP và aim hoạt động. Key dùng backend licensesV4 của repo 33e.
 4. ESP có hai trang. AIM có công tắc aim đầu khi bắn, silent khi bắn, vòng FOV, line tới mục tiêu và hai thanh chỉnh kích cỡ FOV/tầm chọn.
 
 Hook UIModelRole dùng trong UI/sảnh được thêm để khởi tạo sớm, cùng fallback IsReallyInStealth đã được dùng ở bản ESP Box. Chưa xác nhận bằng iPhone rằng hook sảnh chạy ở mọi giai đoạn mở game. Không có thao tác bốn ngón.
@@ -16,7 +16,7 @@ Hook UIModelRole dùng trong UI/sảnh được thêm để khởi tạo sớm, 
 - ESP: khung 2D, khung góc, khung 3D, tên (`NickName`), thanh máu (`CurHP/MaxHP`), khoảng cách, xương bằng các transform của game, điểm đầu, trục XYZ và snapline. Trang ESP 2 cho đổi gốc line dưới/giữa/trên.
 - Aim đầu: khi local player đang bắn, chọn đầu đối thủ gần tâm màn hình nhất trong vòng FOV và tầm cho phép, gọi `Player.SetAimRotation(Quaternion.LookRotation(...), true)`.
 - Silent: hook getter `LastAimingInfoFromWeapon`, giữ nguyên object mà game trả về, đổi target/collider/điểm/đường ngắm trong `CGKJLKPMGDJ`. Không gọi SetAimRotation ở chế độ này. Khi ngừng bắn/tắt/khóa key, hoàn lại giá trị chỉ khi game vẫn giữ dữ liệu đã áp dụng.
-- Loại người chơi local, đồng đội, đã chết, inactive, thiếu transform; giới hạn 128 mục và bỏ tọa độ không hợp lệ.
+- Loại người chơi local, đồng đội, đã chết, inactive, thiếu transform; duyệt tối đa 128 mục, vẽ tối đa 32 người đang thấy và 640 nét/thanh mỗi khung hình, bỏ tọa độ không hợp lệ.
 - FOV 20–480 pixel; tầm 50–500 m. Hai chế độ aim loại trừ nhau, mặc định tắt. Khung góc và khung 3D cũng loại trừ nhau.
 - Nền đen bo tròn, chữ trắng/mint; nút tròn có nhịp nhẹ, toggle và mở/đóng có chuyển động; input của cửa sổ đóng không nhận thao tác trong lúc fade. GUIStyle riêng được cache, không sửa skin của game. Input được đổi về tọa độ menu trước khi vẽ scale.
 
@@ -28,6 +28,16 @@ Trong game, field JSON bị thiếu trả `JSONLazyCreator`: `Tag=None (7)` và 
 
 Regression test đã tái hiện bản cũ từ chối key hợp lệ khi mock phản ánh JSONLazyCreator, rồi xác nhận bản mới chấp nhận trường lock bị thiếu/null và từ chối lock sai kiểu. Bộ test cũng mô phỏng overload vẽ dùng explicit color để lỗi nền trắng không còn lọt qua kiểm thử.
 
+## Giảm tải ESP và giao diện màu
+
+Đã bỏ Find/GetComponent/DontDestroyOnLoad lặp lại trên mỗi lần đọc getter: driver được giữ lại và chỉ tạo lại khi Unity báo đã bị hủy. Aim tắt không còn lấy local player trên mỗi lần Repaint. ESP đọc camera position một lần, giữ root/head transform trong phạm vi một người của một khung hình, đọc HP một lần và xử lý lỗi từng người thay vì hủy cả lượt vẽ. Kiểm tra danh sách thu nhỏ; hạn chế 32 người đang thấy và 640 nét/thanh, vòng đánh dấu đầu 16 cạnh. Thanh máu dùng DrawTexture đơn giản, không gọi shader bo góc. Đây là giảm tải và phòng lỗi đã xác định trong code; chưa có crash log hoặc phép thử iPhone để kết luận đã loại bỏ nguyên nhân văng native.
+
+Tab **MÀU** có 18 mẫu và ba thanh RGB, chỉnh độc lập màu ESP (khung/tên/khoảng cách/xương/đầu/đường nối), FOV và thanh máu. Trục XYZ giữ màu nhận biết từng trục. Màu được lưu PlayerPrefs khi nhả thanh hoặc chạm mẫu. Toàn bộ nhãn/thông báo menu đã có dấu; compiler dùng UTF-8. Tiêu đề 25, nội dung 20, nhãn nhỏ 16, thông báo 18; chuyển tab có gạch chạy, toggle có hiệu ứng nảy, màu đang chọn và nút tròn có nhịp sáng.
+
+Font OS ưu tiên Avenir Next, Helvetica Neue, Arial, được tạo một lần. Nếu không tải được thì dùng font sẵn của game. Menu tạm đặt font khi vẽ và hoàn lại font của game trong finally. API [CreateDynamicFontFromOSFont](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Font.CreateDynamicFontFromOSFont.html) chọn font có trên máy và có ký tự cần vẽ; hình xem trước offline dùng Arial, chưa xác nhận font cụ thể trên iPhone. API GUIStyle.font đã bị strip trong dump này nên không gọi setter không tồn tại.
+
+Bản này qua **475 kiểm tra**, gồm 1.200 khung hình liên tiếp với 150 mục, toàn bộ ESP bật, GC cưỡng bức, đối tượng bị hủy, getter HP ném lỗi, bảng màu/RGB/lưu màu, font hoàn lại và UTF-8 trong bytecode. Các API vẫn là mock; 1.200 khung hình kiểm thử không tương đương thời lượng chơi thật trên iPhone.
+
 ## Key và tương thích thiết bị
 
 Giao thức protocol=4: enabled, expiresAt theo giờ server, lock.until/message, binding.deviceHash/version/claimedAt. Claim lần đầu dùng PUT với `if-match: null_etag`; phải đọc lại binding khớp thiết bị mới kích hoạt. Request bất đồng bộ, timeout 6 s, xác thực lại sau 10 s, lease tối đa 30 s. Đổi key hủy request cũ. Test không gửi request đến database thật.
@@ -36,7 +46,7 @@ Giao thức protocol=4: enabled, expiresAt theo giờ server, lock.until/message
 
 ## Kiểm chứng và giới hạn
 
-`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 162 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
+`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 172 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
 
 `test.cjs` chạy **file bytes cuối** trong interpreter Tencent pinned `5ba42eb8f63fe37134a3c78690f97d8425e13588`, với opcode của game. API Unity/game/network là test double offline. Kiểm tra bao gồm model sảnh, giữ return của game, vòng đời driver, kéo/toggle/animation, hình học ESP và lọc mục tiêu, aim khi bắn/FOV, silent và hoàn lại dữ liệu, khóa/hết hạn/binding/key đổi giữa request. Các SVG preview được ghi từ lệnh vẽ của chính bytecode trong harness, không phải ảnh chụp game.
 
