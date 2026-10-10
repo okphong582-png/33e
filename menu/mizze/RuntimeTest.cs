@@ -74,6 +74,7 @@ unsafe static class MizzeRuntimeTest
             b.Append("<g transform=\"translate("+Number(d.Matrix.Position.x)+" "+Number(d.Matrix.Position.y)+") rotate("+Number(d.Matrix.Angle)+") scale("+Number(sx)+" "+Number(sy)+")\" opacity=\""+Number(d.Color.a)+"\">");
             if(d.Text!=null){int font=d.FontSize>0?d.FontSize:12;float x=d.Align==TextAnchor.MiddleCenter?r.x+r.width*.5f:r.x,y=d.Align==TextAnchor.UpperLeft?r.y+font:r.y+r.height*.5f+font*.33f;string anchor=d.Align==TextAnchor.MiddleCenter?"middle":"start";var lines=new List<string>();if(d.Wrap){string line="";foreach(string word in d.Text.Split(' ')){if(line.Length>0&&(line.Length+word.Length+1)*font*.54f>r.width){lines.Add(line);line=word;}else line+=(line.Length>0?" ":"")+word;}lines.Add(line);}else lines.Add(d.Text);
                 for(int i=0;i<lines.Count&&i*font*1.2f<r.height;i++)b.Append("<text x=\""+Number(x)+"\" y=\""+Number(y+i*font*1.2f)+"\" text-anchor=\""+anchor+"\" font-family=\"Arial\" font-size=\""+font+"\" fill=\""+c+"\">"+System.Security.SecurityElement.Escape(lines[i])+"</text>");
+            }else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Png!=null){b.Append("<image x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" href=\"data:image/png;base64,"+Convert.ToBase64String(((Texture2D)d.Texture).Png)+"\"/>");
             }else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Width>0){var tex=(Texture2D)d.Texture;float radius=(tex.Width*.5f-2)*(r.width/tex.Width),stroke=(tex.Width==32?3:1.5f)*(r.width/tex.Width);b.Append("<circle cx=\""+Number(r.x+r.width*.5f)+"\" cy=\""+Number(r.y+r.height*.5f)+"\" r=\""+Number(radius-stroke*.5f)+"\" fill=\"none\" stroke=\""+c+"\" stroke-width=\""+Number(stroke)+"\"/>");}else b.Append("<rect x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" rx=\""+Number(d.Radius)+"\" fill=\""+c+"\"/>");b.Append("</g>");
         }b.Append("</svg>");File.WriteAllText(file,b.ToString());
     }
@@ -82,7 +83,7 @@ unsafe static class MizzeRuntimeTest
         var switches=Get<bool[]>("MzSwitch");Array.Clear(switches,0,switches.Length);switches[0]=true;switches[1]=true;switches[13]=true;
         Screen.Width=1280;Screen.Height=720;Set("MzFov",150f);Set("MzRange",150f);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",3);Set("MzColorTarget",0);
         COW.GameFacade.Match=new JMAGGLCNGIG();var bad=Enemy();bad.FailHP=true;var enemy=Enemy();COW.GameFacade.Match.Players.Add(bad);COW.GameFacade.Match.Players.Add(enemy);
-        GUI.Calls.Clear();Render();Check(GUI.Calls.Count==5,"despawn getter failure leaves next enemy and FOV rendering intact");Check(!Get<bool>("MzDrawingEsp"),"drawing flag restored after exception");
+        GUI.Calls.Clear();Render();Check(GUI.Calls.Count==1&&Get<bool>("MzSampleFaulted")&&Get<float>("MzNextEsp")>=Time.Now+.49f,"despawn failure discards sample, keeps FOV and backs off actor reads");Check(!Get<bool>("MzDrawingEsp"),"drawing flag restored after exception");
         bad.FailHP=false;bad.Destroyed=true;GUI.Calls.Clear();Render();Check(GUI.Calls.Count==5,"Unity destroyed player wrapper skipped");
         Click(210,222);Color esp=Get<Color>("MzEspColor");Check(esp.r==.3f&&esp.g==.65f,"palette changes actual ESP color");Check(PlayerPrefs.Saved.ContainsKey("Mizze.Color.ESP"),"palette persisted after tap");
         Click(270,143);Click(210,222);Color fov=Get<Color>("MzFovColor");Check(fov.r==.3f&&fov.b==1,"FOV palette independent");
@@ -116,7 +117,7 @@ unsafe static class MizzeRuntimeTest
         Time.Now=0;int startReads=Camera.ProjectionCalls;for(int frame=0;frame<1200;frame++){Time.Now=frame/60f;GUI.Calls.Clear();Run("MzRender");if(frame%120==0){Check(GUI.Calls.Count<=193&&!Get<bool>("MzBuilding"),"scheduled dense repaint frame "+frame);GC.Collect();}}Check(Camera.ProjectionCalls-startReads<1200*16*20,"scheduled dense scene does not resample every repaint");Check(Texture2D.Created==created&&Texture2D.Uploaded==uploads,"dense scene keeps two ring textures and fixed command buffers");
         COW.GameFacade.Match=null;GUI.Calls.Clear();Run("MzRender");Check(GUI.Calls.Count==0&&Get<int>("MzCommandCount")==0,"match teardown clears all cached overlay commands");
         COW.GameFacade.Match=new JMAGGLCNGIG();COW.GameFacade.Match.Players.Add(enemy);Array.Clear(switches,0,switches.Length);switches[0]=true;switches[1]=true;switches[4]=true;switches[5]=true;switches[13]=true;Set("MzNextEsp",0f);Set("MzOpen",false);Set("MzOpenAnim",0f);Frame(EventType.Repaint);Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"esp-continuous.svg"));
-        var bad=Enemy();bad.FailNick=true;COW.GameFacade.Match.Players.Clear();COW.GameFacade.Match.Players.Add(bad);COW.GameFacade.Match.Players.Add(enemy);GUI.Calls.Clear();Render();Check(GUI.Calls.Count==8,"late getter failure rolls back whole enemy instead of caching half a shape");
+        var bad=Enemy();bad.FailNick=true;COW.GameFacade.Match.Players.Clear();COW.GameFacade.Match.Players.Add(bad);COW.GameFacade.Match.Players.Add(enemy);GUI.Calls.Clear();Render();Check(GUI.Calls.Count==1&&Get<int>("MzCommandCount")==0,"late getter failure discards incomplete sample");bad.FailNick=false;
         ring.Destroyed=true;GUI.Calls.Clear();Render();Check(Get<Texture2D>("MzRing")!=ring&&Get<Texture2D>("MzRing")!=null,"destroyed native ring is rebuilt before overlay draw");Check(GUI.Calls.All(d=>!System.Object.ReferenceEquals(d.Texture,ring)),"no destroyed ring reaches GUI draw");
         Get<Texture2D>("MzRing").Destroyed=true;Texture2D.FailUpload=true;GUI.Calls.Clear();Render();Check(Texture2D.LastCreated.Destroyed&&GUI.Calls.Count==0,"failed native texture upload destroys partial allocation and skips unsafe draw");Texture2D.FailUpload=false;Render();Check(Get<Texture2D>("MzRing")!=null,"renderer recovers after texture upload failure");
         Time.Now=0;
@@ -137,6 +138,55 @@ unsafe static class MizzeRuntimeTest
         Time.Now=30;Set("MzNextEsp",0f);reads=Camera.ProjectionCalls;Render();Time.Now=30.02f;Run("MzRender");Check(Camera.ProjectionCalls==reads+11,"cached draw between thirty Hz sample updates");Time.Now=30.04f;Run("MzRender");Check(Camera.ProjectionCalls==reads+22,"ESP refreshes at thirty Hz instead of previous thirteen Hz");
         COW.GameFacade.Match=null;GUI.Calls.Clear();Run("MzRender");Check(Get<int>("MzCommandCount")==0&&GUI.Calls.Count==0,"scene exit drops safe renderer commands");Time.Now=0;
     }
+
+    static void CachedNodeChecks()
+    {
+        var switches=Get<bool[]>("MzSwitch");Array.Clear(switches,0,switches.Length);for(int i=0;i<11;i++)switches[i]=true;
+        Set("MzEspBlocked",false);Set("MzSampleFailures",0);Set("MzEspFailures",0);Set("MzErrorWritten",false);
+        Time.Now=1;var local=COW.GameFacade.Local;local.FailLegacyTransforms=true;
+        var enemy=Enemy();enemy.FailLegacyTransforms=true;COW.GameFacade.Match=new JMAGGLCNGIG();COW.GameFacade.Match.Players.Add(enemy);
+        int reads=enemy.HeadReads;GUI.Calls.Clear();Render();
+        Check(Get<int>("MzCommandCount")>30&&!Get<bool>("MzSampleFaulted")&&enemy.HeadReads==reads,"all ESP reads populated native caches without lazy/head getters");
+        var saved=enemy.GBKFHDFCPMD;enemy.GBKFHDFCPMD=null;GUI.Calls.Clear();Render();
+        Check(GUI.Calls.Count==0&&enemy.HeadReads==reads&&!Get<bool>("MzSampleFaulted"),"missing native head cache skips actor without initializing it");enemy.GBKFHDFCPMD=saved;
+        var node=(GCommon.TestTransformNode)enemy.DLAHJBJFMCF;node.Value.Destroyed=true;GUI.Calls.Clear();Render();
+        Check(Get<int>("MzCommandCount")>0&&!Get<bool>("MzSampleFaulted"),"destroyed cached bone omits its edges without dereferencing native position");node.Value.Destroyed=false;
+        node.Fail=true;GUI.Calls.Clear();Render();float retry=Get<float>("MzNextEsp");int projections=Camera.ProjectionCalls;Run("MzRender");
+        Check(Get<int>("MzSampleFailures")==1&&Get<int>("MzCommandCount")==0&&Camera.ProjectionCalls==projections,"cached-node failure clears incomplete commands and respects retry delay");
+        Time.Now=retry+.01f;Run("MzRender");Time.Now=Get<float>("MzNextEsp")+.01f;Run("MzRender");
+        Check(Get<bool>("MzEspBlocked")&&!switches[0]&&Get<int>("MzSampleFailures")==3,"three repeated actor sample failures pause ESP rather than loop forever");
+        node.Fail=false;enemy.FailLegacyTransforms=false;local.FailLegacyTransforms=false;Set("MzEspBlocked",false);Set("MzSampleFailures",0);Set("MzEspFailures",0);
+        switches[0]=true;GUI.Calls.Clear();Render();Check(Get<int>("MzCommandCount")>30,"valid cached bones render again after explicit recovery");
+        Array.Clear(switches,0,switches.Length);COW.GameFacade.Match=null;Time.Now=0;
+    }
+    static void BackgroundChecks(string[] args)
+    {
+        COW.GameFacade.Match=null;Set("MzKeyHash","");Set("MzRequest",null);Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",0);Set("MzPanelX",120f);Set("MzPanelY",16f);
+        int loads=ImageConversion.Loads;
+        for(int i=0;i<20;i++){Time.Now=1+i*.05f;int before=ImageConversion.Loads;Frame(EventType.Repaint);Check(ImageConversion.Loads-before<=1,"background uploads at most one frame per repaint");}
+        var frames=Get<Texture2D[]>("MzBackgroundFrames");
+        Check(Get<int>("MzBackgroundLoaded")==15&&Get<string[]>("MzBackgroundEncoded")==null,"all GIF frames cached and temporary encoded array released");
+        Check(frames.All(t=>t!=null&&t.Width==192&&t.Height==222&&t.Released),"background uses fifteen small non-readable textures without mipmaps");
+        Check(frames.Select(t=>Convert.ToBase64String(t.Png)).Distinct().Count()==15,"background contains fifteen distinct actual GIF frames");
+        int ready=ImageConversion.Loads;var seen=new HashSet<Texture>();
+        for(int i=0;i<160;i++){Time.Now=3+i/60f;if(Environment.GetEnvironmentVariable("MIZZE_CAPTURE_ANIMATION")=="1"){if(i==40)Set("MzTab",1);if(i==100)Set("MzTab",3);}Frame(EventType.Repaint);foreach(var d in GUI.Calls)if(d.Texture is Texture2D&&((Texture2D)d.Texture).Png!=null)seen.Add(d.Texture);if(Environment.GetEnvironmentVariable("MIZZE_CAPTURE_ANIMATION")=="1"&&i%4==0)Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"glass-frame-"+(i/4).ToString("D2")+".svg"));}
+        Check(seen.Count==15&&ImageConversion.Loads==ready,"full GIF loop draws all cached frames with no repeated decoding");
+        Set("MzOpen",false);Set("MzOpenAnim",0f);float clock=Get<float>("MzBackgroundClock");int created=Texture2D.Created;
+        for(int i=0;i<60;i++){Time.Now=7+i/60f;Frame(EventType.Repaint);}
+        Check(Get<float>("MzBackgroundClock")==clock&&ImageConversion.Loads==ready&&Texture2D.Created==created,"hidden menu pauses GIF clock and performs no texture work");
+        Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",0);Set("MzTabAnim",0f);Time.Now=9;Frame(EventType.Repaint);
+        Check(Get<float>("MzBackgroundClock")==clock,"reopening resumes GIF without fast-forwarding hidden time");
+        Check(GUI.Calls.Any(d=>d.Rect.width==69&&d.Rect.height==30&&d.Radius==15&&d.Color.r>.9f),"active tab is a white animated pill");
+        Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-esp.svg"));
+        Set("MzTab",1);for(int i=0;i<40;i++){Time.Now+=1/60f;Frame(EventType.Repaint);}Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-aim.svg"));
+        var encoded=Get<string[]>("MzBackgroundEncoded");float next=Get<float>("MzBackgroundNextLoad");
+        Set("MzBackgroundFrames",null);Set("MzBackgroundLoaded",0);Set("MzBackgroundEncoded",null);Set("MzBackgroundNextLoad",0f);ImageConversion.Fail=true;created=Texture2D.Created;Time.Now+=1;Frame(EventType.Repaint);
+        Check(Get<bool>("MzBackgroundFailed")&&Texture2D.LastCreated.Destroyed&&Texture2D.Created==created+1,"failed background decode destroys allocation and falls back to glass");
+        ready=ImageConversion.Loads;for(int i=0;i<20;i++){Time.Now+=.1f;Frame(EventType.Repaint);}Check(ImageConversion.Loads==ready,"failed background decode never retries every frame");
+        ImageConversion.Fail=false;Set("MzBackgroundFrames",frames);Set("MzBackgroundLoaded",15);Set("MzBackgroundEncoded",encoded);Set("MzBackgroundFailed",false);Set("MzBackgroundNextLoad",next);
+        Time.Now=0;Set("MzBackgroundLast",0f);
+    }
+
     static void UiPerformanceChecks()
     {
         COW.GameFacade.Match=null;Time.Now=0;Set("MzKeyHash","");Set("MzRequest",null);Set("MzKeyboard",null);Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",1);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzFov",150f);
@@ -151,7 +201,7 @@ unsafe static class MizzeRuntimeTest
         Set("MzTab",0);Set("MzEspPage",1);Frame(EventType.Repaint);Check(Get<string[]>("MzSliderText")[1].StartsWith("Tầm ESP"),"shared range label refreshes its title when switching tab");
         Set("MzOpen",false);for(int i=0;i<120;i++)Frame(EventType.Repaint);Check(Get<float>("MzOpenAnim")==0,"close animation settles exactly to zero");var animation=Get<float[]>("MzSwitchAnim");float before=animation[0];Get<bool[]>("MzSwitch")[0]=!Get<bool[]>("MzSwitch")[0];Frame(EventType.Repaint);Check(animation[0]==before,"fully closed panel skips hidden toggle animation updates");
         Check(Get<bool>("MzUiPaint")&&!Get<bool>("MzInGui"),"draw gating and reentrancy guard restored after pointer events");
-        Set("MzOpen",true);Set("MzOpenAnim",1f);Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Rect.width==382&&d.Rect.height==440&&Math.Abs(d.Color.a-.60f)<.001f),"glass panel supplies translucent dark fill");Check(GUI.Calls.Any(d=>d.Rect.width==74&&Math.Abs(d.Color.a-.58f)<.001f),"launcher has translucent glass interior");Check(GUI.Calls.Where(d=>d.Text!=null).All(d=>d.Color.a>.9f),"glass keeps text opacity readable");
+        Set("MzOpen",true);Set("MzOpenAnim",1f);Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Rect.width==382&&d.Rect.height==440&&Math.Abs(d.Color.a-.56f)<.001f),"glass panel supplies translucent dark fill");Check(GUI.Calls.Any(d=>d.Rect.width==74&&Math.Abs(d.Color.a-.72f)<.001f),"launcher has translucent glass interior");Check(GUI.Calls.Where(d=>d.Text!=null).All(d=>d.Color.a>.82f),"glass keeps text opacity readable");
         Set("MzInGui",true);textures=GUI.NativeTextures;Frame(EventType.Repaint);Check(GUI.Calls.Count==0&&GUI.NativeTextures==textures,"reentrant menu callback never duplicates rendering or gameplay operations");Set("MzInGui",false);
     }
     static void WeaponChecks(string[] args)
@@ -166,7 +216,7 @@ unsafe static class MizzeRuntimeTest
         attributes.FireIntervalScale=.8f;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(Math.Abs(attributes.FireIntervalScale-.8f/3)<.0001f&&Get<float>("MzOldFireScale")==.8f,"native buff change becomes new baseline while enabled");
         Click(154,192);Check(switches[16]&&attributes.IsAmmoFree&&attributes.ShootNoReload,"no-reload toggle sets both real client ammo flags");
         int freeWrites=attributes.FreeWrites;Time.Now=.4f;Run("MzWeaponPoll");Check(attributes.FreeWrites==freeWrites,"unchanged ammo flag is never written each poll");
-        for(int i=0;i<30;i++)Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="SÚNG")&&GUI.Calls.Any(d=>d.Text=="Không nạp đạn")&&GUI.Calls.Any(d=>d.Text!=null&&d.Text.Contains("Fakelag: chưa")),"weapon tab uses accented labels and marks unavailable lag honestly");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-weapons.svg"));
+        for(int i=0;i<30;i++)Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Súng")&&GUI.Calls.Any(d=>d.Text=="Không nạp đạn")&&GUI.Calls.Any(d=>d.Text!=null&&d.Text.Contains("Fakelag: chưa")),"weapon tab uses accented labels and marks unavailable lag honestly");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-weapons.svg"));
         Click(154,148);Check(!switches[15]&&attributes.FireIntervalScale==.8f&&attributes.IsAmmoFree,"fast off restores current native baseline independently of ammo feature");
         Click(154,192);Check(!switches[16]&&!attributes.IsAmmoFree&&!attributes.ShootNoReload&&Get<PlayerAttributes>("MzWeaponAttributes")==null,"both off restores original ammo state and releases native wrapper");
         attributes.Free=true;attributes.ShootNoReload=true;switches[16]=true;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Run("MzRestoreWeapon");Check(attributes.Free&&attributes.ShootNoReload,"preexisting native free-ammo flags survive restoration");attributes.Free=false;attributes.ShootNoReload=false;
@@ -208,7 +258,7 @@ unsafe static class MizzeRuntimeTest
         // Lobby getter preserves the lazy model and bootstraps with no match or player.
         var model=Run("get_UIModelRole");Check(Get<bool[]>("MzSwitch").Length==17&&(bool)legacyInit.GetValue(null)&&((bool[])legacySwitch.GetValue(null)).Length==1,"new patch ignores retained state from previous unscoped patch");Check(model!=null&&System.Object.ReferenceEquals(model,Run("get_UIModelRole")),"lobby cached model preserved");Check(GCommon.UIModelManager.instance.Calls==1,"model initialized once");
         var g=GameObject.Find("__mizze_driver");Check(g!=null&&g.Added!=null&&g.Persistent,"persistent driver created in lobby");Driver=g.Added;Check(Get<float>("MzPanelX")==120&&Get<float>("MzPanelY")==16,"new initial panel position");Check(!Get<bool[]>("MzSwitch")[0]&&!Get<bool[]>("MzSwitch")[13],"fresh boot keeps ESP and FOV inactive until explicitly enabled");Set("MzPanelX",98f);Set("MzPanelY",30f);
-        Frame(EventType.Repaint);Check(Labels()==1&&GUI.Calls.Any(d=>d.Text=="Mizze"),"only circular Mizze launcher initially");Check(Math.Abs(Get<float>("MzScale")-1.35f)<.0001f,"larger display scale at 720p");Check(GUI.Calls.Any(d=>d.Text==null&&d.Rect.width==74&&d.Color.r<.03f&&d.Color.g<.03f),"launcher uses explicit black shader color");Check(GUI.Calls.Single(d=>d.Text=="Mizze").FontSize==20&&GUI.Calls.Single(d=>d.Text=="Mizze").Matrix.Scale.x==1.35f,"larger launcher font and size");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"launcher.svg"));
+        Frame(EventType.Repaint);Check(Labels()==1&&GUI.Calls.Any(d=>d.Text=="Mizze"),"only circular Mizze launcher initially");Check(Math.Abs(Get<float>("MzScale")-1.35f)<.0001f,"larger display scale at 720p");Check(GUI.Calls.Any(d=>d.Text==null&&d.Rect.width==74&&d.Color.r<.03f&&d.Color.g<.04f),"launcher uses explicit black shader color");Check(GUI.Calls.Single(d=>d.Text=="Mizze").FontSize==20&&GUI.Calls.Single(d=>d.Text=="Mizze").Matrix.Scale.x==1.35f,"larger launcher font and size");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"launcher.svg"));
         var local=Enemy(0);local.Local=true;local.Stealth=true;local.Origin=new Vector3(0,0,1);COW.GameFacade.Local=local;
         Check((bool)local.IsReallyInStealth()&&local.StealthCalls==1&&local.Movable,"native stealth and movement preserved");local.Stealth=false;Check(!(bool)local.IsReallyInStealth(),"false stealth preserved");
         Click(56,128);Check(Get<bool>("MzOpen")&&Get<int>("MzTab")==2,"launcher opens key panel");Frame(EventType.MouseDown,56,128);Frame(EventType.MouseDrag,206,228);Frame(EventType.MouseUp,206,228);Check(Get<float>("MzBubbleX")==174&&Get<bool>("MzOpen"),"bubble drag does not toggle");
@@ -242,9 +292,11 @@ unsafe static class MizzeRuntimeTest
         Screen.Width=390;Screen.Height=844;Frame(EventType.Repaint);float scale=Get<float>("MzScale");Check((Get<float>("MzPanelX")+382)*scale<=Screen.width&&(Get<float>("MzPanelY")+440)*scale<=Screen.height,"portrait layout clamps within viewport");
         Screen.Width=1280;Screen.Height=720;Frame(EventType.Repaint);Check(Get<float>("MzScale")==1.35f,"landscape scale restored after resize");
         Set("MzDriver",null);GameObject.World.Clear();GameObject.FailAdd=true;int stealthAdds=GameObject.AddCalls;Check(!local.IsReallyInStealth()&&local.Movable&&GameObject.AddCalls==stealthAdds,"unpatched stealth never initializes menu");Run("MzEnsure");Check(!Get<bool>("MzBooting"),"bootstrap exception releases reentry guard");GameObject.FailAdd=false;Run("MzEnsure");Check(GameObject.Find("__mizze_driver").Added!=null,"bootstrap retries component creation");
+        BackgroundChecks(args);
         ExtendedChecks(args);
         StabilityChecks(args);
         SafeRendererChecks();
+        CachedNodeChecks();
         UiPerformanceChecks();
         WeaponChecks(args);
         FaultIsolationChecks();

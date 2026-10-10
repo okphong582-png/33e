@@ -29,7 +29,7 @@ namespace COW.GamePlay
         }
         public static void MzSampleEsp()
         {
-            MzDrawingEsp=true;MzDrawBudget=192;
+            MzDrawingEsp=true;MzDrawBudget=192;MzSampleFaulted=false;
             try {
                 var cam=MzEspCamera;var match=MzEspMatch;if(cam==null||match==null)return;
                 var cameraTransform=cam.transform;if(cameraTransform==null)return;Vector3 cameraPosition=cameraTransform.position;if(!MzPoint(cameraPosition))return;
@@ -41,7 +41,7 @@ namespace COW.GamePlay
                     try {
                         if(i>=players.Count)break;var p=players[i] as Player;if(p==null||p.IsLocalPlayer()||p.IsLocalTeammate(false)||p.IsLocalTeammate(true))continue;
                         var obj=p.gameObject;if(obj==null||!obj.activeInHierarchy)continue;int hp=p.CurHP;if(hp<=0)continue;
-                        var rootTransform=p.RootTransform;var headTransform=p.GetHeadTF();if(rootTransform==null||headTransform==null)continue;
+                        var rootTransform=MzCachedNode(p.IIPBIDIBJDK);var headTransform=MzCachedNode(p.GBKFHDFCPMD);if(rootTransform==null||headTransform==null)continue;
                         Vector3 root=rootTransform.position,head=headTransform.position;if(!MzPoint(root)||!MzPoint(head))continue;float distance=Vector3.Distance(root,cameraPosition);if(!MzFinite(distance)||distance>MzRange)continue;
                         Vector2 feet,top;if(!MzProject(cam,root,out feet)||!MzProject(cam,head,out top))continue;
                         float h=feet.y-top.y,w=h*.5f,x=(feet.x+top.x)*.5f-w*.5f,y=top.y;if(!MzFinite(h)||h<=4||h>Screen.height*2||x+w<0||x>Screen.width||y+h<0||y>Screen.height)continue;shown++;
@@ -52,9 +52,9 @@ namespace COW.GamePlay
                         GUI.color=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
                         if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}
                         if(MzSwitch[7]){GUI.color=MzEspColor;MzSampleSkeleton(cam,p,top,feet);}
-                    }catch(Exception e){MzTrimCommands(before);MzLogFault("esp-player",e);}
+                    }catch(Exception e){MzTrimCommands(before);MzSampleFaulted=true;MzLogFault("esp-player",e);break;}
                 }
-            }catch(Exception){}finally{MzDrawingEsp=false;}
+            }catch(Exception e){MzSampleFaulted=true;MzClearCommands();MzLogFault("esp-sample",e);}finally{MzDrawingEsp=false;}
         }
         public static Player MzPickTarget()
         {

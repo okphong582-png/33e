@@ -1,0 +1,35 @@
+{
+  "game": "Free Fire TH 1.132.1",
+  "implemented": false,
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "findings": [
+    {
+      "symbol": "COW.GameFacade.PacketLossRateForEditorTest",
+      "offset": "static 0x3B4",
+      "finding": "A debug probability field exists; existence alone does not prove normal-match packet transport consumes it."
+    },
+    {
+      "symbol": "COW.GamePlay.UGCRuntime.UGCTransformModule.get_PacketLossRateForEditor",
+      "rva": "0x6A53754",
+      "finding": "Native getter reads GameFacade static offset0x3B4; setter0x6A53800 writes it. This is a UGC debug property, not evidence of outgoing player-position delay."
+    },
+    {
+      "symbol": "GCommon.MUDPSession.Send",
+      "rva": [
+        "0x6BC53F4",
+        "0x6BC5668"
+      ],
+      "finding": "Native methods enqueue packets; inspected prologues lack the IFix dispatch used by supported game hooks. No corresponding GCommon-MUDPSession/UDPSession/NetworkSession/NetworkClient identifiers were found in IDMAP4 dump."
+    },
+    {
+      "symbol": "GCommon.UDPSession.Send",
+      "rva": "0x6BEE1E4",
+      "finding": "Transport has receive/keepalive/resend threads and shared packet queues; a correct delay needs an instrumented caller for position updates and bounded flush/teardown."
+    },
+    {
+      "symbol": "GCommon.MUDPSession.DebugDropAll / GCommon.UDPSession.DebugDropAll",
+      "finding": "Global debug booleans exist at static offset0x2. No bounded position-only delay or reliable foreground/background restoration was verified; they are not enabled."
+    }
+  ],
+  "requiredForImplementation": "Verify an IFix-instrumented outgoing movement-update hook and original behavior; preserve heartbeat/ACK/action traffic, bound buffering, flush on disable and scene change. No active socket experiment was performed."
+}

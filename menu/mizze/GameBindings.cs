@@ -5,6 +5,7 @@ using UnityEngine;
 [assembly: System.Reflection.AssemblyVersion("0.86.0.518")]
 namespace GCommon
 {
+    public interface ITransformNode {Transform transform {get;}}
     public class SingletonModule<T> where T:class {public static T instance {get {return null;}}}
     public class UIModelManager : SingletonModule<UIModelManager> {public T GetModel<T>() where T:class {return null;}}
 }
@@ -45,6 +46,8 @@ namespace COW.GamePlay
     }
     public class Player : Component
     {
+        // Existing native cache fields; ESP never populates them.
+        public GCommon.ITransformNode IIPBIDIBJDK,GBKFHDFCPMD,DLAHJBJFMCF,BKDOIIEJBFI,BOHFADPGJKH,FCFGLFMIBOO,BDJLHMNECMA,LFIGLLJCDOG,HOPHAMCLGOA,FKHGDFCPCFE,KMMMDCDJOLD;
         public PlayerAttributes get_Attributes(){return null;}
         public CGKJLKPMGDJ FDMIEDDNCEC;
         public bool IsInStealth(){return false;}

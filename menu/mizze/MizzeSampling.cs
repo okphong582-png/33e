@@ -4,6 +4,10 @@ namespace COW.GamePlay
 {
     public partial class SceneEditBoxSelectTool
     {
+        public static Transform MzCachedNode(GCommon.ITransformNode node)
+        {
+            if(System.Object.ReferenceEquals(node,null))return null;var transform=node.transform;return transform==null?null:transform;
+        }
         // Screen coordinates only. Never retain native bone wrappers across samples.
         public static Vector2[] MzBonePoints;
         public static bool[] MzBoneValid;
@@ -23,9 +27,9 @@ namespace COW.GamePlay
         {
             if(MzBonePoints==null){MzBonePoints=new Vector2[11];MzBoneValid=new bool[11];}
             MzBonePoints[0]=head;MzBonePoints[1]=root;MzBoneValid[0]=true;MzBoneValid[1]=true;
-            MzSampleBone(camera,2,player.NeckBone);MzSampleBone(camera,3,player.ArmBoneLeft);MzSampleBone(camera,4,player.HandBoneLeft);
-            MzSampleBone(camera,5,player.ArmBoneRight);MzSampleBone(camera,6,player.HandBoneRight);MzSampleBone(camera,7,player.LegBoneLeft);
-            MzSampleBone(camera,8,player.FootBoneLeft);MzSampleBone(camera,9,player.LegBoneRight);MzSampleBone(camera,10,player.FootBoneRight);
+            MzSampleBone(camera,2,MzCachedNode(player.DLAHJBJFMCF));MzSampleBone(camera,3,MzCachedNode(player.BKDOIIEJBFI));MzSampleBone(camera,4,MzCachedNode(player.FCFGLFMIBOO));
+            MzSampleBone(camera,5,MzCachedNode(player.BOHFADPGJKH));MzSampleBone(camera,6,MzCachedNode(player.BDJLHMNECMA));MzSampleBone(camera,7,MzCachedNode(player.LFIGLLJCDOG));
+            MzSampleBone(camera,8,MzCachedNode(player.FKHGDFCPCFE));MzSampleBone(camera,9,MzCachedNode(player.HOPHAMCLGOA));MzSampleBone(camera,10,MzCachedNode(player.KMMMDCDJOLD));
             MzBoneEdge(0,2);MzBoneEdge(2,1);MzBoneEdge(2,3);MzBoneEdge(3,4);MzBoneEdge(2,5);MzBoneEdge(5,6);
             MzBoneEdge(1,7);MzBoneEdge(7,8);MzBoneEdge(1,9);MzBoneEdge(9,10);
         }

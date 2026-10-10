@@ -1,0 +1,63 @@
+{
+  "game": "Free Fire TH 1.132.1",
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "source": "Local UnityFramework ARM64 disassembly and Assembly-CSharp dump",
+  "nodes": [
+    {
+      "getter": "RootTransform",
+      "field": "IIPBIDIBJDK",
+      "offset": "0x6C8"
+    },
+    {
+      "getter": "GetHeadTF",
+      "field": "GBKFHDFCPMD",
+      "offset": "0x6A0"
+    },
+    {
+      "getter": "NeckBone",
+      "field": "DLAHJBJFMCF",
+      "offset": "0x2178"
+    },
+    {
+      "getter": "ArmBoneLeft",
+      "field": "BKDOIIEJBFI",
+      "offset": "0x2148"
+    },
+    {
+      "getter": "ArmBoneRight",
+      "field": "BOHFADPGJKH",
+      "offset": "0x2150"
+    },
+    {
+      "getter": "HandBoneLeft",
+      "field": "FCFGLFMIBOO",
+      "offset": "0x2168"
+    },
+    {
+      "getter": "HandBoneRight",
+      "field": "BDJLHMNECMA",
+      "offset": "0x2170"
+    },
+    {
+      "getter": "LegBoneLeft",
+      "field": "LFIGLLJCDOG",
+      "offset": "0x2138"
+    },
+    {
+      "getter": "LegBoneRight",
+      "field": "HOPHAMCLGOA",
+      "offset": "0x2140"
+    },
+    {
+      "getter": "FootBoneLeft",
+      "field": "FKHGDFCPCFE",
+      "offset": "0x2158"
+    },
+    {
+      "getter": "FootBoneRight",
+      "field": "KMMMDCDJOLD",
+      "offset": "0x2160"
+    }
+  ],
+  "observation": "GetHeadTF increments GetCount (0x548). Root and skeleton getters lazily create missing nodes. ESP now reads the existing ITransformNode fields and skips missing nodes; this avoids those side effects. A device crash cause remains unconfirmed."
+}

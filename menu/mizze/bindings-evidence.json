@@ -1021,6 +1021,13 @@
     "declaration": "public static Player GetLocalPlayerOrObServer() { }"
   },
   {
+    "assembly": "Assembly-CSharp",
+    "owner": "GCommon.ITransformNode",
+    "method": "get_transform",
+    "parameters": [],
+    "declaration": "public abstract Transform get_transform() { }"
+  },
+  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Texture2D",
     "method": "get_whiteTexture",
@@ -1283,69 +1290,6 @@
     "declaration": "public static void DrawTexture(Rect position, Texture image, ScaleMode scaleMode, bool alphaBlend, float imageAspect, Color color, float borderWidth, float borderRadius) { }"
   },
   {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_NeckBone",
-    "parameters": [],
-    "declaration": "public Transform get_NeckBone() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_ArmBoneLeft",
-    "parameters": [],
-    "declaration": "public Transform get_ArmBoneLeft() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_HandBoneLeft",
-    "parameters": [],
-    "declaration": "public Transform get_HandBoneLeft() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_ArmBoneRight",
-    "parameters": [],
-    "declaration": "public Transform get_ArmBoneRight() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_HandBoneRight",
-    "parameters": [],
-    "declaration": "public Transform get_HandBoneRight() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_LegBoneLeft",
-    "parameters": [],
-    "declaration": "public Transform get_LegBoneLeft() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_FootBoneLeft",
-    "parameters": [],
-    "declaration": "public Transform get_FootBoneLeft() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_LegBoneRight",
-    "parameters": [],
-    "declaration": "public Transform get_LegBoneRight() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_FootBoneRight",
-    "parameters": [],
-    "declaration": "public Transform get_FootBoneRight() { }"
-  },
-  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Time",
     "method": "get_frameCount",
@@ -1377,6 +1321,35 @@
     "method": "get_Attributes",
     "parameters": [],
     "declaration": "public PlayerAttributes get_Attributes() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Convert",
+    "method": "FromBase64String",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static byte[] FromBase64String(string s) { }"
+  },
+  {
+    "assembly": "UnityEngine.ImageConversionModule",
+    "owner": "UnityEngine.ImageConversion",
+    "method": "LoadImage",
+    "parameters": [
+      "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool LoadImage(Texture2D tex, byte[] data, bool markNonReadable) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Exception",
+    "method": ".ctor",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(string message) { }"
   },
   {
     "assembly": "mscorlib",
@@ -1537,6 +1510,72 @@
     "owner": "COW.GamePlay.PlayerAttributes",
     "field": "ShootNoReload",
     "declaration": "public bool ShootNoReload; // 0x111"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "IIPBIDIBJDK",
+    "declaration": "protected ITransformNode IIPBIDIBJDK; // 0x6C8"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "GBKFHDFCPMD",
+    "declaration": "protected ITransformNode GBKFHDFCPMD; // 0x6A0"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "DLAHJBJFMCF",
+    "declaration": "protected ITransformNode DLAHJBJFMCF; // 0x2178"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "BKDOIIEJBFI",
+    "declaration": "protected ITransformNode BKDOIIEJBFI; // 0x2148"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "FCFGLFMIBOO",
+    "declaration": "protected ITransformNode FCFGLFMIBOO; // 0x2168"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "BOHFADPGJKH",
+    "declaration": "protected ITransformNode BOHFADPGJKH; // 0x2150"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "BDJLHMNECMA",
+    "declaration": "protected ITransformNode BDJLHMNECMA; // 0x2170"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "LFIGLLJCDOG",
+    "declaration": "protected ITransformNode LFIGLLJCDOG; // 0x2138"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "FKHGDFCPCFE",
+    "declaration": "protected ITransformNode FKHGDFCPCFE; // 0x2158"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "HOPHAMCLGOA",
+    "declaration": "protected ITransformNode HOPHAMCLGOA; // 0x2140"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "KMMMDCDJOLD",
+    "declaration": "protected ITransformNode KMMMDCDJOLD; // 0x2160"
   },
   {
     "assembly": "UnityEngine.CoreModule",

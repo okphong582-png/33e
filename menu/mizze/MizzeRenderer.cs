@@ -13,8 +13,8 @@ namespace COW.GamePlay
         public static Texture[] MzTextures;
         public static bool[] MzRotated;
         public static int MzCommandCount,MzEspWidth,MzEspHeight;
-        public static bool MzBuilding,MzInRender,MzEspBlocked;
-        public static int MzEspFailures;
+        public static bool MzBuilding,MzInRender,MzEspBlocked,MzSampleFaulted;
+        public static int MzEspFailures,MzSampleFailures;
         public static float MzNextEsp,MzEspSampleStarted;
         public static JMAGGLCNGIG MzEspMatch;
         public static Camera MzEspCamera;
@@ -71,13 +71,13 @@ namespace COW.GamePlay
                 var match=COW.GameFacade.CurrentMatch();var camera=Camera.main;
                 if(match==null||camera==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;return;}
                 var local=COW.GameFacade.GetLocalPlayerOrObServer();
-                if(local==null||!local.IsLocalPlayer()||local.CurHP<=0||local.gameObject==null||!local.gameObject.activeInHierarchy||local.RootTransform==null||local.GetHeadTF()==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;return;}
+                if(local==null||!local.IsLocalPlayer()||local.CurHP<=0||local.gameObject==null||!local.gameObject.activeInHierarchy||MzCachedNode(local.IIPBIDIBJDK)==null||MzCachedNode(local.GBKFHDFCPMD)==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;return;}
                 MzRendererInit();if(MzSwitch[13]&&MzRing==null)MzRing=MzCreateRing(256,1.5f);if(MzSwitch[0]&&MzSwitch[8]&&MzHeadRing==null)MzHeadRing=MzCreateRing(32,3);float now=Time.realtimeSinceStartup;
                 bool changed=!System.Object.ReferenceEquals(match,MzEspMatch)||camera!=MzEspCamera||MzEspWidth!=Screen.width||MzEspHeight!=Screen.height;
                 if(changed){MzClearCommands();MzNextEsp=0;MzEspMatch=match;MzEspCamera=camera;MzEspWidth=Screen.width;MzEspHeight=Screen.height;}
                 if(MzSwitch[0]){
                     if(now>=MzNextEsp){MzClearCommands();MzBuilding=true;MzEspSampleStarted=now;
-                        try{MzSampleEsp();}finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(cost>.008f?.066f:.033f);}
+                        try{MzSampleEsp();if(MzSampleFaulted){MzClearCommands();MzSampleFailures++;if(MzSampleFailures>=3){MzEspBlocked=true;MzSwitch[0]=false;}}else MzSampleFailures=0;}finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(MzSampleFaulted?.5f:cost>.008f?.066f:.033f);}
                     }
                     MzDrawCommands();
                 }else MzClearCommands();

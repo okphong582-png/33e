@@ -90,16 +90,16 @@ namespace COW.GamePlay
         public static bool MzTap(float x,float y,float w,float h){var e=Event.current;if(!MzOpen||e==null||e.type!=EventType.MouseUp||MzDragMode!=0)return false;if(!new Rect(x,y,w,h).Contains(MzPointer))return false;e.Use();return true;}
         public static void MzToggle(int id,float x,float y,string title)
         {
-            float a=MzSwitchAnim[id];MzTint(.14f,.18f,.22f,.30f*MzOpenAnim);MzFill(x,y,354,40,10);MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+12,y+6,276,title);
-            MzTint(.14f+.03f*a,.16f+.56f*a,.18f+.40f*a,MzOpenAnim);MzFill(x+294,y+8,46,24,12);MzTint(1,1,1,MzOpenAnim);float bounce=Mathf.Sin(a*3.14159265f)*1.5f;MzFill(x+297+22*a-bounce,y+11-bounce,18+2*bounce,18+2*bounce,9+bounce);
-            if(MzTap(x,y,354,40)){MzSwitch[id]=!MzSwitch[id];MzNextEsp=0;if(id==0){MzEspBlocked=false;MzEspFailures=0;MzErrorWritten=false;MzRuntimeError=null;}if(id==11&&MzSwitch[id])MzSwitch[12]=false;if(id==12&&MzSwitch[id])MzSwitch[11]=false;if(id==2&&MzSwitch[id])MzSwitch[3]=false;if(id==3&&MzSwitch[id])MzSwitch[2]=false;if(id==11||id==12)MzRestoreSilent();if(id==15||id==16){MzNextWeapon=0;MzWeaponPoll();}}
+            float a=MzSwitchAnim[id];MzTint(1,1,1,(.035f+.025f*a)*MzOpenAnim);MzFill(x,y,354,40,13);MzTint(1,1,1,.055f*MzOpenAnim);MzFill(x+13,y,328,1,0);MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+12,y+6,276,title);
+            MzTint(.32f+.42f*a,.34f+.45f*a,.38f+.45f*a,(.42f+.48f*a)*MzOpenAnim);MzFill(x+294,y+8,46,24,12);MzTint(1,1,1,MzOpenAnim);float bounce=Mathf.Sin(a*3.14159265f)*1.5f;MzFill(x+297+22*a-bounce,y+11-bounce,18+2*bounce,18+2*bounce,9+bounce);
+            if(MzTap(x,y,354,40)){MzSwitch[id]=!MzSwitch[id];MzNextEsp=0;if(id==0){MzEspBlocked=false;MzEspFailures=0;MzSampleFailures=0;MzErrorWritten=false;MzRuntimeError=null;}if(id==11&&MzSwitch[id])MzSwitch[12]=false;if(id==12&&MzSwitch[id])MzSwitch[11]=false;if(id==2&&MzSwitch[id])MzSwitch[3]=false;if(id==3&&MzSwitch[id])MzSwitch[2]=false;if(id==11||id==12)MzRestoreSilent();if(id==15||id==16){MzNextWeapon=0;MzWeaponPoll();}}
         }
         public static void MzSlider(float x,float y,string title,bool fov)
         {
             float min=fov?20:50,max=fov?MzFovMaximum():500,value=fov?MzEffectiveFov():MzRange;MzTint(.94f,.96f,.98f,MzOpenAnim);if(MzUiPaint){int slot=fov?0:1,rounded=(int)value;if(MzSliderText[slot]==null||MzSliderTitles[slot]!=title||MzSliderValues[slot]!=rounded){MzSliderTitles[slot]=title;MzSliderValues[slot]=rounded;MzSliderText[slot]=title+"  "+rounded.ToString()+(fov?" px":" m");}MzText(x,y,354,MzSliderText[slot]);}
             var e=Event.current;if(MzOpen&&e.type==EventType.MouseDown&&new Rect(x,y+26,354,32).Contains(MzPointer))MzDragMode=fov?3:4;
             if(MzDragMode==(fov?3:4)&&(e.type==EventType.MouseDown||e.type==EventType.MouseDrag||e.type==EventType.MouseUp)){value=min+Mathf.Clamp((MzPointer.x-x)/354,0,1)*(max-min);if(fov)MzFov=value;else {MzRange=value;MzNextEsp=0;}if(e.type==EventType.MouseUp)MzDragMode=0;e.Use();}
-            MzTint(.16f,.16f,.18f,MzOpenAnim);MzFill(x,y+37,354,6,3);MzTint(.25f,.88f,.66f,MzOpenAnim);MzFill(x,y+37,354*(value-min)/(max-min),6,3);MzFill(x+354*(value-min)/(max-min)-10,y+30,20,20,10);
+            MzTint(.16f,.16f,.18f,MzOpenAnim);MzFill(x,y+37,354,6,3);MzTint(.89f,.93f,1,MzOpenAnim);MzFill(x,y+37,354*(value-min)/(max-min),6,3);MzFill(x+354*(value-min)/(max-min)-10,y+30,20,20,10);
         }
         public static void MzDrag()
         {
@@ -109,13 +109,11 @@ namespace COW.GamePlay
         }
         public static void MzPanel()
         {
-            float x=MzPanelX,y=MzPanelY;MzTint(0,0,0,.18f*MzOpenAnim);MzFill(x+5,y+7,382,440,22);MzTint(.60f,.91f,.85f,.20f*MzOpenAnim);MzFill(x-1,y-1,384,442,21);MzTint(.025f,.025f,.03f,.60f*MzOpenAnim);MzFill(x,y,382,440,20);MzTint(.88f,1,1,.24f*MzOpenAnim);MzFill(x+22,y+1,338,1,0);MzTint(.13f,.20f,.24f,.36f*MzOpenAnim);MzFill(x+10,y+10,362,48,13);MzTint(.45f,.98f,.77f,MzOpenAnim);MzTitle(x+23,y+12,160,"Mizze");MzTint(.66f,.73f,.87f,MzOpenAnim);MzSmall(x+23,y+38,290,MzEspBlocked?"ESP đã dừng do lỗi. Bật lại để thử":"FREE FIRE TH  /  iOS");MzTint(.35f,.92f,.79f,.28f*MzOpenAnim);MzFill(x+200+MzMotion*42,y+25,80,3,1.5f);MzTint(.9f,.94f,.96f,MzOpenAnim);MzCenter(x+326,y+10,46,48,"x");if(MzTap(x+326,y+10,46,48)){MzOpen=false;MzDragMode=0;}
-            for(int i=0;i<5;i++){MzTint(MzTab==i?.09f:.065f,MzTab==i?.24f:.065f,MzTab==i?.19f:.075f,(MzTab==i?.70f:.32f)*MzOpenAnim);MzFill(x+14+i*71,y+70,69,32,9);MzTint(.94f,.98f,.96f,MzOpenAnim);MzCenter(x+14+i*71,y+70,69,32,i==0?"ESP":i==1?"AIM":i==2?"KHÓA":i==3?"MÀU":"SÚNG");if(MzTap(x+14+i*71,y+70,69,32))MzTab=MzAuthorized()?i:2;}
+            float x=MzPanelX,y=MzPanelY+12*(1-MzOpenAnim)*(1-MzOpenAnim);if(!MzAuthorized())MzTab=2;MzGlassPanel(x,y);
             if(!MzAuthorized())MzTab=2;float rowY=y+112;
-            if(MzTab==0){int first=MzEspPage==0?0:6,last=MzEspPage==0?6:11;for(int i=first;i<last;i++){string label=i==0?"Bật ESP":i==1?"Khung người chơi":i==2?"Khung góc":i==3?"Khung 3D":i==4?"Tên người chơi":i==5?"Thanh máu":i==6?"Khoảng cách":i==7?"Xương người chơi":i==8?"Đánh dấu đầu":i==9?"Trục XYZ":"Đường nối";MzToggle(i,x+14,rowY,label);rowY+=44;}if(MzEspPage==1)MzSlider(x+14,rowY,"Tầm ESP",false);float pageWidth=MzEspPage==0?354:169;MzTint(.08f,.20f,.17f,MzOpenAnim);MzFill(x+14,y+390,pageWidth,36,10);MzTint(.8f,1,.91f,MzOpenAnim);MzCenter(x+14,y+390,pageWidth,36,MzEspPage==0?"Trang 1 / 2   ›":"‹   Trang 2 / 2");if(MzTap(x+14,y+390,pageWidth,36))MzEspPage=1-MzEspPage;if(MzEspPage==1){MzTint(.11f,.11f,.13f,MzOpenAnim);MzFill(x+199,y+390,169,36,10);MzTint(.94f,.97f,.98f,MzOpenAnim);MzCenter(x+199,y+390,169,36,"Line: "+(MzLineOrigin==0?"DƯỚI":MzLineOrigin==1?"GIỮA":"TRÊN"));if(MzTap(x+199,y+390,169,36))MzLineOrigin=(MzLineOrigin+1)%3;}}
-            else if(MzTab==1){MzToggle(11,x+14,rowY,"Ngắm đầu khi bắn");MzToggle(12,x+14,rowY+44,"Silent khi bắn");MzToggle(13,x+14,rowY+88,"Vòng FOV");MzToggle(14,x+14,rowY+132,"Đường ngắm mục tiêu");MzSlider(x+14,rowY+184,"Kích cỡ FOV",true);MzSlider(x+14,rowY+246,"Tầm ngắm",false);}
+            if(MzTab==0){int first=MzEspPage==0?0:6,last=MzEspPage==0?6:11;for(int i=first;i<last;i++){string label=i==0?"Bật ESP":i==1?"Khung":i==2?"Khung góc":i==3?"Khung 3D":i==4?"Tên":i==5?"Thanh máu":i==6?"Khoảng cách":i==7?"Xương":i==8?"Vòng đầu":i==9?"Trục XYZ":"Đường nối";MzToggle(i,x+14,rowY,label);rowY+=44;}if(MzEspPage==1)MzSlider(x+14,rowY,"Tầm ESP",false);float pageWidth=MzEspPage==0?354:169;MzTint(.85f,.90f,1,.12f*MzOpenAnim);MzFill(x+14,y+390,pageWidth,36,14);MzTint(.94f,.96f,1,MzOpenAnim);MzCenter(x+14,y+390,pageWidth,36,MzEspPage==0?"1 / 2   ›":"‹   2 / 2");if(MzTap(x+14,y+390,pageWidth,36))MzEspPage=1-MzEspPage;if(MzEspPage==1){MzTint(.11f,.11f,.13f,MzOpenAnim);MzFill(x+199,y+390,169,36,10);MzTint(.94f,.97f,.98f,MzOpenAnim);MzCenter(x+199,y+390,169,36,"Nối: "+(MzLineOrigin==0?"DƯỚI":MzLineOrigin==1?"GIỮA":"TRÊN"));if(MzTap(x+199,y+390,169,36))MzLineOrigin=(MzLineOrigin+1)%3;}}
+            else if(MzTab==1){MzToggle(11,x+14,rowY,"Ngắm đầu · Khi bắn");MzToggle(12,x+14,rowY+44,"Silent · Khi bắn");MzToggle(13,x+14,rowY+88,"Vòng FOV");MzToggle(14,x+14,rowY+132,"Đường ngắm");MzSlider(x+14,rowY+184,"Bán kính FOV",true);MzSlider(x+14,rowY+246,"Tầm ngắm",false);}
             else if(MzTab==2)MzKeyPanel(x+14,rowY);else if(MzTab==3)MzColorPanel(x+14,rowY);else MzWeaponPanel(x+14,rowY);
-            MzTint(.4f,.95f,.8f,MzOpenAnim);MzFill(x+24+MzTabAnim*71,y+103,49,3,1.5f);
         }
         public void OnGUI()
         {
@@ -124,9 +122,9 @@ namespace COW.GamePlay
             try {
                 GUI.matrix=Matrix4x4.identity;MzLayout();MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
                 if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<17;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;MzRunAim();MzWeaponPoll();}}else {MzRestoreSilent();MzRestoreWeapon();}}
-                if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f)MzPanel();
+                if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f)MzPanel();else MzBackgroundLast=0;
                 if(!MzUiPaint)return;
-                float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.40f,.95f,.80f,.46f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.025f,.03f,.58f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.54f,1,.83f,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
+                float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.80f,.88f,1,.36f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.03f,.045f,.72f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.97f,.98f,1,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
             }catch(Exception e){MzLogFault("on-gui",e);}finally{GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;MzInGui=false;}
         }
     }

@@ -49,7 +49,7 @@ namespace COW.GamePlay
             MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x,y+104,354,"Tốc độ bắn");
             for(int i=0;i<3;i++){float rate=i==0?1.5f:i==1?2:3;bool active=MzFireMultiplier==rate;MzTint(.10f,active?.32f:.17f,active?.25f:.19f,.65f*MzOpenAnim);MzFill(x+i*120,y+139,114,38,11);MzTint(.9f,1,.96f,MzOpenAnim);MzCenter(x+i*120,y+139,114,38,i==0?"1,5×":i==1?"2×":"3×");if(MzTap(x+i*120,y+139,114,38)){MzFireMultiplier=rate;MzNextWeapon=0;MzWeaponPoll();}}
             MzTint(.79f,.85f,.91f,MzOpenAnim);MzMessage(x,y+194,354,68,MzWeaponMessage??"Chỉ áp dụng khi đang trong trận");
-            MzTint(.65f,.73f,.81f,MzOpenAnim);MzMessage(x,y+264,354,56,"Fakelag: chưa được hỗ trợ trên bản iOS này");
+            MzTint(.65f,.73f,.81f,MzOpenAnim);MzMessage(x,y+264,354,56,"Fakelag: chưa hỗ trợ");
         }
     }
 }
