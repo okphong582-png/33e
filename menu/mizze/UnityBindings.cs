@@ -1,7 +1,7 @@
 using System;
 namespace UnityEngine
 {
-    public class Object {public string name {get;set;}public static bool operator ==(Object a,Object b){return ReferenceEquals(a,b);}public static bool operator !=(Object a,Object b){return !ReferenceEquals(a,b);}public override bool Equals(object o){return ReferenceEquals(this,o);}public override int GetHashCode(){return base.GetHashCode();}public static void DontDestroyOnLoad(Object o){} }
+    public class Object {public string name {get;set;}public static bool operator ==(Object a,Object b){return ReferenceEquals(a,b);}public static bool operator !=(Object a,Object b){return !ReferenceEquals(a,b);}public override bool Equals(object o){return ReferenceEquals(this,o);}public override int GetHashCode(){return base.GetHashCode();}public static void DontDestroyOnLoad(Object o){}public static void Destroy(Object o){} }
     public class Component:Object {public GameObject gameObject {get;set;}public Transform transform {get{return gameObject.transform;}}}
     public class GameObject:Object {public GameObject(string n){name=n;}public Transform transform {get{return null;}}public bool activeInHierarchy {get{return true;}}public static GameObject Find(string n){return null;}public Component GetComponent(Type t){return null;}public Component AddComponent(Type t){return null;}}
     public class Transform:Component {public Vector3 position {get;set;}public Vector3 localScale {get;set;}}
@@ -19,6 +19,9 @@ namespace UnityEngine
     public static class SystemInfo {public static string deviceUniqueIdentifier {get{return "test-device";}}}
     public enum TouchScreenKeyboardType {Default=0,ASCIICapable=1}
     public class TouchScreenKeyboard {public enum Status {Visible=0,Done=1,Canceled=2,LostFocus=3}public static TouchScreenKeyboard Open(string text,TouchScreenKeyboardType t,bool autocorrect,bool multiline,bool secure,bool alert,string placeholder,int limit){return null;}public string text {get;set;}public Status status {get;set;}}
-    public class Texture:Object {}
-    public class Texture2D:Texture {public static Texture2D whiteTexture {get{return null;}}}
+    public class Texture:Object {public FilterMode filterMode {set{}}public TextureWrapMode wrapMode {set{}}}
+    public enum TextureFormat {RGBA32=4}
+    public enum FilterMode {Bilinear=1}
+    public enum TextureWrapMode {Clamp=1}
+    public class Texture2D:Texture {public Texture2D(int w,int h,TextureFormat f,bool mip){}public void SetPixels(Color[] p){}public void Apply(bool mip,bool release){}public static Texture2D whiteTexture {get{return null;}}}
 }

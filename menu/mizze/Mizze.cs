@@ -20,7 +20,7 @@ namespace COW.GamePlay
         public static void MzEnsure()
         {
             try {
-                if(!MzInitialized){MzSwitch=new bool[15];MzSwitchAnim=new float[15];MzSwitch[0]=true;MzSwitch[1]=true;MzSwitch[2]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzSwitch[13]=true;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";}}
+                if(!MzInitialized){MzSwitch=new bool[15];MzSwitchAnim=new float[15];MzSwitch[0]=true;MzSwitch[1]=true;MzSwitch[2]=false;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzSwitch[13]=true;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";}}
                 if(MzDriver!=null)return;var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;
             }catch(Exception){}
         }
@@ -30,7 +30,7 @@ namespace COW.GamePlay
         public static void MzFill(float x,float y,float w,float h,float radius)
         {
             if(!MzFinite(x)||!MzFinite(y)||!MzFinite(w)||!MzFinite(h)||w<=0||h<=0)return;
-            if(MzDrawingEsp){if(MzDrawBudget--<=0)return;GUI.DrawTexture(new Rect(x,y,w,h),Texture2D.whiteTexture);return;}
+            if(MzBuilding){MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,Texture2D.whiteTexture);return;}
             // Rounded DrawTexture uses its explicit color.
             var tint=GUI.color;try{GUI.color=new Color(1,1,1,1);GUI.DrawTexture(new Rect(x,y,w,h),Texture2D.whiteTexture,ScaleMode.StretchToFill,true,0,tint,0,radius);}finally{GUI.color=tint;}
         }
@@ -42,18 +42,29 @@ namespace COW.GamePlay
             var wrap=new GUIStyle();wrap.fontSize=18;wrap.wordWrap=true;wrap.alignment=TextAnchor.UpperLeft;wrap.normal.textColor=new Color(1,1,1,1);
             MzCenterStyle=center;MzWrapStyle=wrap;MzLabelStyle=label;
         }
-        public static void MzText(float x,float y,float w,string s){MzStyles();GUI.Label(new Rect(x,y,w,28),s,MzLabelStyle);}
+        public static void MzText(float x,float y,float w,string s){if(MzBuilding){MzCommand(new Rect(x,y,w,28),Matrix4x4.identity,false,s,null);return;}MzStyles();GUI.Label(new Rect(x,y,w,28),s,MzLabelStyle);}
         public static void MzCenter(float x,float y,float w,float h,string s){MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzCenterStyle);}
         public static void MzMessage(float x,float y,float w,float h,string s){MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzWrapStyle);}
         public static void MzLine(float ax,float ay,float bx,float by,float width)
         {
             if(!MzFinite(ax)||!MzFinite(ay)||!MzFinite(bx)||!MzFinite(by)||!MzFinite(width)||width<=0)return;
-            if(MzDrawingEsp&&MzDrawBudget--<=0)return;
             if((ax<0&&bx<0)||(ax>Screen.width&&bx>Screen.width)||(ay<0&&by<0)||(ay>Screen.height&&by>Screen.height))return;
-            float dx=bx-ax,dy=by-ay,length=Mathf.Sqrt(dx*dx+dy*dy);if(!MzFinite(length)||length<.5f||length>Screen.width*3)return;var old=GUI.matrix;
-            try{GUI.matrix=Matrix4x4.TRS(new Vector3(ax,ay,0),Quaternion.Euler(0,0,Mathf.Atan2(dy,dx)*57.29578f),new Vector3(1,1,1));GUI.DrawTexture(new Rect(0,-width*.5f,length,width),Texture2D.whiteTexture);}finally{GUI.matrix=old;}
+            float dx=bx-ax,dy=by-ay,length=Mathf.Sqrt(dx*dx+dy*dy);if(!MzFinite(length)||length<.5f||length>Screen.width*3)return;
+            Rect rect;Matrix4x4 lineMatrix=Matrix4x4.identity;bool rotated=false;
+            // Axis-aligned edges need no matrix calls. Extend both ends by half the
+            // stroke so every shared endpoint overlaps instead of leaving a seam.
+            if(dy==0)rect=new Rect((ax<bx?ax:bx)-width*.5f,ay-width*.5f,length+width,width);
+            else if(dx==0)rect=new Rect(ax-width*.5f,(ay<by?ay:by)-width*.5f,width,length+width);
+            else {rotated=true;lineMatrix=Matrix4x4.TRS(new Vector3(ax,ay,0),Quaternion.Euler(0,0,Mathf.Atan2(dy,dx)*57.29578f),new Vector3(1,1,1));rect=new Rect(-width*.5f,-width*.5f,length+width,width);}
+            if(MzBuilding){MzCommand(rect,lineMatrix,rotated,null,Texture2D.whiteTexture);return;}
+            var old=GUI.matrix;try{if(rotated)GUI.matrix=lineMatrix;GUI.DrawTexture(rect,Texture2D.whiteTexture);}finally{if(rotated)GUI.matrix=old;}
         }
-        public static void MzCircle(float cx,float cy,float radius,float width){if(!MzFinite(radius)||radius<=0)return;int segments=radius<=12?16:48;float lastX=cx+radius,lastY=cy;for(int i=1;i<=segments;i++){float a=i*(6.2831853f/segments),x=cx+Mathf.Cos(a)*radius,y=cy+Mathf.Sin(a)*radius;MzLine(lastX,lastY,x,y,width);lastX=x;lastY=y;}}
+        public static void MzCircle(float cx,float cy,float radius,float width)
+        {
+            if(!MzFinite(cx)||!MzFinite(cy)||!MzFinite(radius)||radius<=0||radius>Screen.width)return;
+            MzRendererInit();var texture=radius<=12?MzHeadRing:MzRing;float correction=radius<=12?16f/14f:128f/126f;float extent=radius*correction;var rect=new Rect(cx-extent,cy-extent,extent*2,extent*2);
+            if(MzBuilding){MzCommand(rect,Matrix4x4.identity,false,null,texture);return;}GUI.DrawTexture(rect,texture);
+        }
         public static void MzLayout()
         {
             MzScale=Mathf.Clamp(Screen.height/720f*1.35f,.75f,3);float fitH=Screen.height/456f,fitW=Screen.width/398f;if(MzScale>fitH)MzScale=fitH;if(MzScale>fitW)MzScale=fitW;
@@ -66,13 +77,13 @@ namespace COW.GamePlay
         {
             float a=MzSwitchAnim[id];MzTint(.09f,.09f,.10f,MzOpenAnim);MzFill(x,y,354,40,10);MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+12,y+6,276,title);
             MzTint(.14f+.03f*a,.16f+.56f*a,.18f+.40f*a,MzOpenAnim);MzFill(x+294,y+8,46,24,12);MzTint(1,1,1,MzOpenAnim);float bounce=Mathf.Sin(a*3.14159265f)*1.5f;MzFill(x+297+22*a-bounce,y+11-bounce,18+2*bounce,18+2*bounce,9+bounce);
-            if(MzTap(x,y,354,40)){MzSwitch[id]=!MzSwitch[id];if(id==11&&MzSwitch[id])MzSwitch[12]=false;if(id==12&&MzSwitch[id])MzSwitch[11]=false;if(id==2&&MzSwitch[id])MzSwitch[3]=false;if(id==3&&MzSwitch[id])MzSwitch[2]=false;if(id==11||id==12)MzRestoreSilent();}
+            if(MzTap(x,y,354,40)){MzSwitch[id]=!MzSwitch[id];MzNextEsp=0;if(id==11&&MzSwitch[id])MzSwitch[12]=false;if(id==12&&MzSwitch[id])MzSwitch[11]=false;if(id==2&&MzSwitch[id])MzSwitch[3]=false;if(id==3&&MzSwitch[id])MzSwitch[2]=false;if(id==11||id==12)MzRestoreSilent();}
         }
         public static void MzSlider(float x,float y,string title,bool fov)
         {
-            float min=fov?20:50,max=fov?480:500,value=fov?MzFov:MzRange;MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x,y,354,title+"  "+((int)value).ToString()+(fov?" px":" m"));
+            float min=fov?20:50,max=fov?MzFovMaximum():500,value=fov?MzEffectiveFov():MzRange;MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x,y,354,title+"  "+((int)value).ToString()+(fov?" px":" m"));
             var e=Event.current;if(MzOpen&&e.type==EventType.MouseDown&&new Rect(x,y+26,354,32).Contains(MzPointer))MzDragMode=fov?3:4;
-            if(MzDragMode==(fov?3:4)&&(e.type==EventType.MouseDown||e.type==EventType.MouseDrag||e.type==EventType.MouseUp)){value=min+Mathf.Clamp((MzPointer.x-x)/354,0,1)*(max-min);if(fov)MzFov=value;else MzRange=value;if(e.type==EventType.MouseUp)MzDragMode=0;e.Use();}
+            if(MzDragMode==(fov?3:4)&&(e.type==EventType.MouseDown||e.type==EventType.MouseDrag||e.type==EventType.MouseUp)){value=min+Mathf.Clamp((MzPointer.x-x)/354,0,1)*(max-min);if(fov)MzFov=value;else {MzRange=value;MzNextEsp=0;}if(e.type==EventType.MouseUp)MzDragMode=0;e.Use();}
             MzTint(.16f,.16f,.18f,MzOpenAnim);MzFill(x,y+37,354,6,3);MzTint(.25f,.88f,.66f,MzOpenAnim);MzFill(x,y+37,354*(value-min)/(max-min),6,3);MzFill(x+354*(value-min)/(max-min)-10,y+30,20,20,10);
         }
         public static void MzDrag()

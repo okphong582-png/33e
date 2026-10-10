@@ -28,7 +28,7 @@ namespace COW.GamePlay
         public static void MzSetColor(Color color,bool save)
         {
             color=new Color(Mathf.Clamp(color.r,0,1),Mathf.Clamp(color.g,0,1),Mathf.Clamp(color.b,0,1),1);
-            if(MzColorTarget==0)MzEspColor=color;else if(MzColorTarget==1)MzFovColor=color;else MzHealthColor=color;
+            MzNextEsp=0;if(MzColorTarget==0)MzEspColor=color;else if(MzColorTarget==1)MzFovColor=color;else MzHealthColor=color;
             if(save)PlayerPrefs.SetString("Mizze.Color."+(MzColorTarget==0?"ESP":MzColorTarget==1?"FOV":"HP"),MzColorHex(color));
         }
         public static void MzFontInit()

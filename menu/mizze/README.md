@@ -16,8 +16,8 @@ Hook UIModelRole dùng trong UI/sảnh được thêm để khởi tạo sớm, 
 - ESP: khung 2D, khung góc, khung 3D, tên (`NickName`), thanh máu (`CurHP/MaxHP`), khoảng cách, xương bằng các transform của game, điểm đầu, trục XYZ và snapline. Trang ESP 2 cho đổi gốc line dưới/giữa/trên.
 - Aim đầu: khi local player đang bắn, chọn đầu đối thủ gần tâm màn hình nhất trong vòng FOV và tầm cho phép, gọi `Player.SetAimRotation(Quaternion.LookRotation(...), true)`.
 - Silent: hook getter `LastAimingInfoFromWeapon`, giữ nguyên object mà game trả về, đổi target/collider/điểm/đường ngắm trong `CGKJLKPMGDJ`. Không gọi SetAimRotation ở chế độ này. Khi ngừng bắn/tắt/khóa key, hoàn lại giá trị chỉ khi game vẫn giữ dữ liệu đã áp dụng.
-- Loại người chơi local, đồng đội, đã chết, inactive, thiếu transform; duyệt tối đa 128 mục, vẽ tối đa 32 người đang thấy và 640 nét/thanh mỗi khung hình, bỏ tọa độ không hợp lệ.
-- FOV 20–480 pixel; tầm 50–500 m. Hai chế độ aim loại trừ nhau, mặc định tắt. Khung góc và khung 3D cũng loại trừ nhau.
+- Loại người chơi local, đồng đội, đã chết, inactive, thiếu transform; duyệt tối đa 128 mục, lưu hình học tối đa 16 người đang thấy trong bộ đệm 512 lệnh, bỏ tọa độ không hợp lệ.
+- FOV 20–480 pixel, giới hạn theo màn hình để vòng không bị cắt; tầm 50–500 m. Hai chế độ aim loại trừ nhau, mặc định tắt. Khung góc và khung 3D cũng loại trừ nhau.
 - Nền đen bo tròn, chữ trắng/mint; nút tròn có nhịp nhẹ, toggle và mở/đóng có chuyển động; input của cửa sổ đóng không nhận thao tác trong lúc fade. GUIStyle riêng được cache, không sửa skin của game. Input được đổi về tọa độ menu trước khi vẽ scale.
 
 ## Sửa lỗi nền trắng / chữ nhỏ / key báo lỗi
@@ -28,15 +28,27 @@ Trong game, field JSON bị thiếu trả `JSONLazyCreator`: `Tag=None (7)` và 
 
 Regression test đã tái hiện bản cũ từ chối key hợp lệ khi mock phản ánh JSONLazyCreator, rồi xác nhận bản mới chấp nhận trường lock bị thiếu/null và từ chối lock sai kiểu. Bộ test cũng mô phỏng overload vẽ dùng explicit color để lỗi nền trắng không còn lọt qua kiểm thử.
 
+## Sửa đường vẽ đông địch và lệch hướng ngắm
+
+Renderer mới dùng bộ đệm cố định 512 lệnh (Rect/Color/Matrix/string/Texture), không giữ Player/Transform trong bộ đệm. Vị trí được đọc khoảng 13 lần/giây, giảm xuống khoảng 8 lần/giây nếu lượt đọc tốn hơn 25 ms; các Repaint ở giữa chỉ vẽ dữ liệu đã chiếu. Giới hạn tối đa 16 người nhìn thấy và dừng lượt lấy mẫu sau khoảng 12 ms giữa các người; người vượt giới hạn sẽ không được vẽ trong lượt đó. Đổi match/camera/kích thước màn hình xóa bộ đệm; tắt ESP xóa lệnh ngay. Đây là đánh đổi độ cập nhật theo chuyển động (khoảng 75–120 ms cộng thời gian lấy mẫu) để giảm số lần gọi game/native.
+
+Bản cũ có thể hết hạn mức giữa các nét, khiến một hình bị cắt dở. Bản mới chừa đủ chỗ trước khi bắt đầu một người; nếu getter của người đó báo lỗi giữa chừng, toàn bộ lệnh vừa thêm được hoàn lại. Box 2D dùng bốn rectangle trực tiếp, không TRS/Quaternion/GUI.matrix cho từng cạnh. Đầu nét chồng nửa độ dày, giúp đường nối/3D/xương không lộ khe tại điểm chung. Khung liền là mặc định; tùy chọn khung góc vẫn cố ý chừa trống giữa cạnh.
+
+FOV và đánh dấu đầu dùng hai texture RGBA không mipmap, lọc bilinear, dựng một lần rồi Apply(false,true) để bỏ bộ đệm CPU trên thiết bị. FOV mỗi khung hình là một quad vuông không xoay, không còn 48 đoạn. Bán kính tối đa lấy min(480, chiều rộng/2−8, chiều cao/2−8); thanh chỉnh và vùng chọn aim dùng cùng giới hạn, tránh vòng vượt màn hình rồi nhìn như bị cắt. Kiểm tra 360 góc trên pixel texture xác nhận đường tròn kín. Texture bị Unity hủy được tạo lại; texture tạo dở bị Destroy nếu upload lỗi.
+
+Aim đầu khi bắn tính LookRotation(head − camera.position), thay cho head − AimStartPostion. Gốc AimStartPostion trong game phụ thuộc trạng thái nhân vật; dùng nó để điều khiển góc nhìn có thể gây parallax khi camera lệch vai. Regression test đặt camera và gốc bắn lệch hai bên để phân biệt hai đường. Silent vẫn dùng gốc bắn vì nó sửa bản ghi đường đạn, không điều khiển camera. Chưa đo độ lệch thực tế trên iPhone nên đây là sửa cách tính, chưa phải xác nhận ghim đầu trong game.
+
+Bộ kiểm tra có 2.400 lượt dense ESP với 150 mục (1.200 ép lấy mẫu và 1.200 Repaint theo lịch), kiểm tra không tạo/upload texture mỗi khung hình, số lần chiếu giảm, bộ đệm hữu hạn, lỗi getter muộn được rollback và texture bị hủy/upload lỗi. Mock chạy interpreter Tencent thật với bytecode cuối; **không chứng minh hết crash native/EXC_BAD_ACCESS hoặc OOM trên iPhone**. Người dùng báo bản 685e6f7 vẫn văng; chưa có crash stack để xác định nguyên nhân native.
+
 ## Giảm tải ESP và giao diện màu
 
-Đã bỏ Find/GetComponent/DontDestroyOnLoad lặp lại trên mỗi lần đọc getter: driver được giữ lại và chỉ tạo lại khi Unity báo đã bị hủy. Aim tắt không còn lấy local player trên mỗi lần Repaint. ESP đọc camera position một lần, giữ root/head transform trong phạm vi một người của một khung hình, đọc HP một lần và xử lý lỗi từng người thay vì hủy cả lượt vẽ. Kiểm tra danh sách thu nhỏ; hạn chế 32 người đang thấy và 640 nét/thanh, vòng đánh dấu đầu 16 cạnh. Thanh máu dùng DrawTexture đơn giản, không gọi shader bo góc. Đây là giảm tải và phòng lỗi đã xác định trong code; chưa có crash log hoặc phép thử iPhone để kết luận đã loại bỏ nguyên nhân văng native.
+Đã bỏ Find/GetComponent/DontDestroyOnLoad lặp lại trên mỗi lần đọc getter: driver được giữ lại và chỉ tạo lại khi Unity báo đã bị hủy. Aim tắt không còn lấy local player trên mỗi lần Repaint. ESP đọc camera position một lần, giữ root/head transform trong phạm vi một người của một khung hình, đọc HP một lần và xử lý lỗi từng người thay vì hủy cả lượt vẽ. Kiểm tra danh sách thu nhỏ; lưu hình học tối đa 16 người đang thấy trong bộ đệm 512 lệnh, vòng đánh dấu đầu dùng texture. Thanh máu dùng DrawTexture đơn giản, không gọi shader bo góc. Đây là giảm tải và phòng lỗi đã xác định trong code; chưa có crash log hoặc phép thử iPhone để kết luận đã loại bỏ nguyên nhân văng native.
 
 Tab **MÀU** có 18 mẫu và ba thanh RGB, chỉnh độc lập màu ESP (khung/tên/khoảng cách/xương/đầu/đường nối), FOV và thanh máu. Trục XYZ giữ màu nhận biết từng trục. Màu được lưu PlayerPrefs khi nhả thanh hoặc chạm mẫu. Toàn bộ nhãn/thông báo menu đã có dấu; compiler dùng UTF-8. Tiêu đề 25, nội dung 20, nhãn nhỏ 16, thông báo 18; chuyển tab có gạch chạy, toggle có hiệu ứng nảy, màu đang chọn và nút tròn có nhịp sáng.
 
 Font OS ưu tiên Avenir Next, Helvetica Neue, Arial, được tạo một lần. Nếu không tải được thì dùng font sẵn của game. Menu tạm đặt font khi vẽ và hoàn lại font của game trong finally. API [CreateDynamicFontFromOSFont](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Font.CreateDynamicFontFromOSFont.html) chọn font có trên máy và có ký tự cần vẽ; hình xem trước offline dùng Arial, chưa xác nhận font cụ thể trên iPhone. API GUIStyle.font đã bị strip trong dump này nên không gọi setter không tồn tại.
 
-Bản này qua **475 kiểm tra**, gồm 1.200 khung hình liên tiếp với 150 mục, toàn bộ ESP bật, GC cưỡng bức, đối tượng bị hủy, getter HP ném lỗi, bảng màu/RGB/lưu màu, font hoàn lại và UTF-8 trong bytecode. Các API vẫn là mock; 1.200 khung hình kiểm thử không tương đương thời lượng chơi thật trên iPhone.
+Bản này qua **887 kiểm tra**, gồm 1.200 khung hình liên tiếp với 150 mục, toàn bộ ESP bật, GC cưỡng bức, đối tượng bị hủy, getter HP ném lỗi, bảng màu/RGB/lưu màu, font hoàn lại và UTF-8 trong bytecode. Các API vẫn là mock; 1.200 khung hình kiểm thử không tương đương thời lượng chơi thật trên iPhone.
 
 ## Key và tương thích thiết bị
 
@@ -46,7 +58,7 @@ Giao thức protocol=4: enabled, expiresAt theo giờ server, lock.until/message
 
 ## Kiểm chứng và giới hạn
 
-`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 172 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
+`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 177 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
 
 `test.cjs` chạy **file bytes cuối** trong interpreter Tencent pinned `5ba42eb8f63fe37134a3c78690f97d8425e13588`, với opcode của game. API Unity/game/network là test double offline. Kiểm tra bao gồm model sảnh, giữ return của game, vòng đời driver, kéo/toggle/animation, hình học ESP và lọc mục tiêu, aim khi bắn/FOV, silent và hoàn lại dữ liệu, khóa/hết hạn/binding/key đổi giữa request. Các SVG preview được ghi từ lệnh vẽ của chính bytecode trong harness, không phải ảnh chụp game.
 

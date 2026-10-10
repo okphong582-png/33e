@@ -900,6 +900,15 @@
   },
   {
     "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "method": "Sin",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Sin(float f) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Time",
     "method": "get_unscaledDeltaTime",
     "parameters": [],
@@ -917,33 +926,6 @@
     "declaration": "public static float Lerp(float a, float b, float t) { }"
   },
   {
-    "assembly": "UnityEngine.IMGUIModule",
-    "owner": "UnityEngine.GUI",
-    "method": "set_color",
-    "parameters": [
-      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-    ],
-    "declaration": "public static void set_color(Color value) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Mathf",
-    "method": "Cos",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public static float Cos(float f) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Mathf",
-    "method": "Sin",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public static float Sin(float f) { }"
-  },
-  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Mathf",
     "method": "Sqrt",
@@ -951,6 +933,73 @@
       "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public static float Sqrt(float f) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "method": ".ctor",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "UnityEngine.TextureFormat, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(int width, int height, TextureFormat textureFormat, bool mipChain) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture",
+    "method": "set_filterMode",
+    "parameters": [
+      "UnityEngine.FilterMode, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_filterMode(FilterMode value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture",
+    "method": "set_wrapMode",
+    "parameters": [
+      "UnityEngine.TextureWrapMode, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_wrapMode(TextureWrapMode value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "method": "SetPixels",
+    "parameters": [
+      "UnityEngine.Color[], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void SetPixels(Color[] colors) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "method": "Apply",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void Apply(bool updateMipmaps, bool makeNoLongerReadable) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Object",
+    "method": "Destroy",
+    "parameters": [
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Destroy(object obj) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "method": "set_color",
+    "parameters": [
+      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void set_color(Color value) { }"
   },
   {
     "assembly": "UnityEngine.CoreModule",
