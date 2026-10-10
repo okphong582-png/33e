@@ -12,7 +12,6 @@ namespace COW.GamePlay
         public static string[] MzTexts;
         public static Texture[] MzTextures;
         public static bool[] MzRotated;
-        public static bool[] MzSolids;
         public static int MzCommandCount,MzEspWidth,MzEspHeight;
         public static bool MzBuilding;
         public static float MzNextEsp,MzEspSampleStarted;
@@ -40,30 +39,28 @@ namespace COW.GamePlay
         }
         public static void MzRendererInit()
         {
-            MzBatchInit();if(MzWhite==null)MzWhite=Texture2D.whiteTexture;if(MzRects==null){MzRects=new Rect[512];MzColors=new Color[512];MzMatrices=new Matrix4x4[512];MzTexts=new string[512];MzTextures=new Texture[512];MzRotated=new bool[512];MzSolids=new bool[512];}
+            if(MzWhite==null)MzWhite=Texture2D.whiteTexture;if(MzRects==null){MzRects=new Rect[192];MzColors=new Color[192];MzMatrices=new Matrix4x4[192];MzTexts=new string[192];MzTextures=new Texture[192];MzRotated=new bool[192];}
             if(MzRing==null){MzRing=MzCreateRing(256,1.5f);MzNextEsp=0;}if(MzHeadRing==null){MzHeadRing=MzCreateRing(32,3);MzNextEsp=0;}
         }
         public static void MzClearCommands()
         {
-            MzTrimCommands(0);MzQuadCount=0;MzBatchDirty=true;
+            MzTrimCommands(0);
         }
         public static void MzTrimCommands(int count)
         {
-            for(int i=count;i<MzCommandCount;i++){MzTexts[i]=null;MzTextures[i]=null;}MzCommandCount=count;if(MzQuadCounts!=null)MzQuadCount=MzQuadCounts[count];MzBatchDirty=true;
+            for(int i=count;i<MzCommandCount;i++){MzTexts[i]=null;MzTextures[i]=null;}MzCommandCount=count;
         }
         public static void MzCommand(Rect rect,Matrix4x4 matrix,bool rotated,string text,Texture texture)
         {
-            if(MzCommandCount>=512)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=GUI.color;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;MzSolids[i]=text==null&&System.Object.ReferenceEquals(texture,MzWhite);if(MzQuadCounts!=null)MzQuadCounts[MzCommandCount]=MzQuadCount;
+            if(MzCommandCount>=192)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=GUI.color;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;
         }
         public static void MzDrawCommands()
         {
             var matrix=GUI.matrix;var tint=GUI.color;bool previous=false;var identity=Matrix4x4.identity;
-            var rects=MzRects;var colors=MzColors;var matrices=MzMatrices;var turns=MzRotated;var texts=MzTexts;var textures=MzTextures;var solids=MzSolids;int count=MzCommandCount;bool batched=MzDrawBatch();int fallback=0;
-            if(!batched&&MzQuadCount>96){MzNextEsp=0;return;}
+            var rects=MzRects;var colors=MzColors;var matrices=MzMatrices;var turns=MzRotated;var texts=MzTexts;var textures=MzTextures;int count=MzCommandCount;
             try{MzStyles();var style=MzLabelStyle;for(int i=0;i<count;i++){
-                if(batched&&solids[i])continue;
                 bool rotated=turns[i];if(rotated||previous)GUI.matrix=rotated?matrices[i]:identity;previous=rotated;GUI.color=colors[i];
-                if(texts[i]!=null)GUI.Label(rects[i],texts[i],style);else {var texture=textures[i];if(solids[i]&&fallback++>=96)continue;if(texture!=null)GUI.DrawTexture(rects[i],texture);}
+                if(texts[i]!=null)GUI.Label(rects[i],texts[i],style);else {var texture=textures[i];if(texture!=null)GUI.DrawTexture(rects[i],texture);}
             }}finally{GUI.matrix=matrix;GUI.color=tint;}
         }
         public static void MzRender()
@@ -76,7 +73,7 @@ namespace COW.GamePlay
                 if(changed){MzClearCommands();MzNextEsp=0;MzEspMatch=match;MzEspCamera=camera;MzEspWidth=Screen.width;MzEspHeight=Screen.height;}
                 if(MzSwitch[0]){
                     if(now>=MzNextEsp){MzClearCommands();MzBuilding=true;MzEspSampleStarted=now;
-                        try{MzSampleEsp();}finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(cost>.025f?.12f:.075f);}
+                        try{MzSampleEsp();}finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(cost>.008f?.066f:.033f);}
                     }
                     MzDrawCommands();
                 }else MzClearCommands();

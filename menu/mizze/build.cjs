@@ -13,6 +13,6 @@ compile('UnityEngine.TextRenderingModule.dll',[path.join(dir,'TextBindings.cs')]
 compile('UnityEngine.IMGUIModule.dll',[path.join(dir,'GuiBindings.cs')],['UnityEngine.CoreModule.dll','UnityEngine.TextRenderingModule.dll']);
 compile('UnityEngine.PhysicsModule.dll',[path.join(dir,'PhysicsBindings.cs')],['UnityEngine.CoreModule.dll']);
 compile('UnityEngine.UnityWebRequestModule.dll',[path.join(dir,'NetworkBindings.cs')],['UnityEngine.CoreModule.dll']);
-compile('Assembly-CSharp.dll',['GameBindings.cs','JsonBindings.cs','Mizze.cs','MizzeGameplay.cs','MizzeLicense.cs','MizzeAppearance.cs','MizzeRenderer.cs','MizzeBatch.cs'].map(n=>path.join(dir,n)),['UnityEngine.CoreModule.dll','UnityEngine.IMGUIModule.dll','UnityEngine.TextRenderingModule.dll','UnityEngine.PhysicsModule.dll','UnityEngine.UnityWebRequestModule.dll']);
+compile('Assembly-CSharp.dll',['GameBindings.cs','JsonBindings.cs','Mizze.cs','MizzeGameplay.cs','MizzeLicense.cs','MizzeAppearance.cs','MizzeRenderer.cs','MizzeSampling.cs'].map(n=>path.join(dir,n)),['UnityEngine.CoreModule.dll','UnityEngine.IMGUIModule.dll','UnityEngine.TextRenderingModule.dll','UnityEngine.PhysicsModule.dll','UnityEngine.UnityWebRequestModule.dll']);
 run(path.join(out,'CompilerHost.exe'),[path.join(out,'Assembly-CSharp.dll'),path.join(out,'IFix.Core.dll'),path.join(out,'upstream.bytes')]);
 console.log('Translated CSharp source into upstream IFix bytes.');

@@ -59,10 +59,10 @@ namespace COW.GamePlay
         }
         public static void MzKeyPanel(float x,float y)
         {
-            MzTint(.075f,.075f,.085f,MzOpenAnim);MzFill(x,y,354,70,12);MzTint(.54f,1,.83f,MzOpenAnim);MzText(x+14,y+7,327,"KHÓA MIZZE");MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+14,y+35,327,MzAuthorized()?"Đã kích hoạt":"Chưa kích hoạt");
+            MzTint(.12f,.17f,.20f,.34f*MzOpenAnim);MzFill(x,y,354,70,12);MzTint(.54f,1,.83f,MzOpenAnim);MzText(x+14,y+7,327,"KHÓA MIZZE");MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+14,y+35,327,MzAuthorized()?"Đã kích hoạt":"Chưa kích hoạt");
             MzTint(.79f,.84f,.88f,MzOpenAnim);MzMessage(x+8,y+84,338,70,MzLicenseMessage??"Nhập khóa để bật ESP và ngắm");
             MzTint(.08f,.27f,.20f,MzOpenAnim);MzFill(x,y+166,354,46,12);MzTint(.83f,1,.91f,MzOpenAnim);MzCenter(x,y+166,354,46,MzRequest!=null?"Đang kiểm tra…":"Nhập khóa Mizze");if(MzRequest==null&&MzTap(x,y+166,354,46))MzKeyboard=TouchScreenKeyboard.Open("",TouchScreenKeyboardType.ASCIICapable,false,false,true,false,"Khóa Mizze",128);
-            MzTint(.10f,.10f,.12f,MzOpenAnim);MzFill(x,y+224,354,42,11);MzTint(.92f,.95f,.98f,MzOpenAnim);MzCenter(x,y+224,354,42,"Kiểm tra lại khóa");if(MzTap(x,y+224,354,42))MzBeginRead();
+            MzTint(.14f,.18f,.22f,.38f*MzOpenAnim);MzFill(x,y+224,354,42,11);MzTint(.92f,.95f,.98f,MzOpenAnim);MzCenter(x,y+224,354,42,"Kiểm tra lại khóa");if(MzTap(x,y+224,354,42))MzBeginRead();
             MzTint(.17f,.07f,.09f,MzOpenAnim);MzFill(x,y+278,354,38,10);MzTint(1,.73f,.79f,MzOpenAnim);MzCenter(x,y+278,354,38,"Đăng xuất");if(MzTap(x,y+278,354,38)){if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzKeyHash="";MzLeaseDeadline=0;PlayerPrefs.DeleteKey("Mizze.IFix.KeyHash");MzLicenseMessage="Đã đăng xuất";MzRestoreSilent();}
         }
     }

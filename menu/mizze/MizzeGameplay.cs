@@ -28,13 +28,13 @@ namespace COW.GamePlay
         }
         public static void MzSampleEsp()
         {
-            MzDrawingEsp=true;MzDrawBudget=512;
+            MzDrawingEsp=true;MzDrawBudget=192;
             try {
-                var cam=Camera.main;var match=COW.GameFacade.CurrentMatch();if(cam==null||match==null)return;
+                var cam=MzEspCamera;var match=MzEspMatch;if(cam==null||match==null)return;
                 var cameraTransform=cam.transform;if(cameraTransform==null)return;Vector3 cameraPosition=cameraTransform.position;if(!MzPoint(cameraPosition))return;
-                if(!MzSwitch[0])return;var players=match.ILPNGCMEFFI();if(players==null)return;int count=players.Count;if(count>128)count=128;int shown=0;
-                for(int i=0;i<count&&shown<(MzBatchReady?16:3)&&MzCommandCount+40<=512;i++){
-                    if(i>0&&Time.realtimeSinceStartup-MzEspSampleStarted>.012f)break;
+                if(!MzSwitch[0])return;var players=match.ILPNGCMEFFI();if(players==null)return;int count=players.Count;if(count>64)count=64;int shown=0,limit=MzVisibleLimit();
+                for(int i=0;i<count&&shown<limit&&MzCommandCount+32<=192;i++){
+                    if(i>0&&Time.realtimeSinceStartup-MzEspSampleStarted>.004f)break;
                     int before=MzCommandCount;
                     // The native roster can shrink during a scene/round change. No transform is retained across frames.
                     try {
@@ -50,7 +50,7 @@ namespace COW.GamePlay
                         if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);GUI.color=MzHealthColor;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
                         GUI.color=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
                         if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}
-                        if(MzSwitch[7]){GUI.color=MzEspColor;Transform neck=p.NeckBone,armL=p.ArmBoneLeft,armR=p.ArmBoneRight,legL=p.LegBoneLeft,legR=p.LegBoneRight;MzBone(cam,headTransform,neck);MzBone(cam,neck,rootTransform);MzBone(cam,neck,armL);MzBone(cam,armL,p.HandBoneLeft);MzBone(cam,neck,armR);MzBone(cam,armR,p.HandBoneRight);MzBone(cam,rootTransform,legL);MzBone(cam,legL,p.FootBoneLeft);MzBone(cam,rootTransform,legR);MzBone(cam,legR,p.FootBoneRight);}
+                        if(MzSwitch[7]){GUI.color=MzEspColor;MzSampleSkeleton(cam,p,top,feet);}
                     }catch(Exception){MzTrimCommands(before);}
                 }
             }catch(Exception){}finally{MzDrawingEsp=false;}

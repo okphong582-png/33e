@@ -5,5 +5,8 @@ const core=path.join(dir,'../runtime-test');
 run(csc,['/nologo','/codepage:65001','/unsafe','/optimize+','/nowarn:0169','/target:exe','/out:'+path.join(out,'MizzeRuntimeTest.exe'),'/reference:System.Web.Extensions.dll',...fs.readdirSync(core).filter(n=>n.endsWith('.cs')).map(n=>path.join(core,n)),path.join(dir,'RuntimeApis.cs'),path.join(dir,'RuntimeTest.cs')]);
 run(path.join(out,'MizzeRuntimeTest.exe'),[path.join(dir,'dist/Assembly-CSharp-patch.bytes'),path.join(dir,'dist/methods.tsv')]);
 const {inspect}=require('../inspect_patch.cjs');const p=inspect(fs.readFileSync(path.join(dir,'dist/Assembly-CSharp-patch.bytes')));const evidence=JSON.parse(fs.readFileSync(path.join(dir,'bindings-evidence.json')));
+const blocked=['UnityEngine.Mesh','UnityEngine.Material','UnityEngine.Shader','UnityEngine.GL','UnityEngine.Graphics','UnityEngine.Font'];
+for(const e of p.externMethods)if(blocked.includes(e.owner.split(',')[0])||(e.owner.split(',')[0]==='UnityEngine.GUIStyle'&&e.name==='SetDefaultFont'))throw Error('Unsafe shared renderer/font API in final patch: '+e.owner+'.'+e.name);
+console.log('PASS: final bytes contain no Mesh/Material/Shader/GL/Graphics/OS-font/default-font native calls.');
 for(const e of p.externMethods)if(!evidence.some(v=>v.method===e.name&&v.owner===e.owner.split(',')[0].replace(/\+/g,'.')&&JSON.stringify(v.parameters)===JSON.stringify(e.parameters)))throw Error('New unverified extern '+e.owner+'.'+e.name);
 console.log('PASS: all generated extern descriptors are covered by checked TH iOS declarations.');

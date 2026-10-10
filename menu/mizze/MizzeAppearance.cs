@@ -7,8 +7,6 @@ namespace COW.GamePlay
         public static Color MzEspColor,MzFovColor,MzHealthColor;
         public static Color[] MzPalette;
         public static int MzColorTarget;
-        public static Font MzFont;
-        public static bool MzFontTried;
         public static GUIStyle MzSmallStyle,MzTitleStyle;
         public static float MzMotion;
         public static void MzAppearanceInit()
@@ -30,13 +28,6 @@ namespace COW.GamePlay
             color=new Color(Mathf.Clamp(color.r,0,1),Mathf.Clamp(color.g,0,1),Mathf.Clamp(color.b,0,1),1);
             MzNextEsp=0;if(MzColorTarget==0)MzEspColor=color;else if(MzColorTarget==1)MzFovColor=color;else MzHealthColor=color;
             if(save)PlayerPrefs.SetString("Mizze.Color."+(MzColorTarget==0?"ESP":MzColorTarget==1?"FOV":"HP"),MzColorHex(color));
-        }
-        public static void MzFontInit()
-        {
-            if(MzFontTried)return;MzFontTried=true;
-            // Load once, keep the font alive, and restore the game's default after this OnGUI.
-            // OS font availability varies. Failure retains the game's working Unicode font.
-            try{MzFont=Font.CreateDynamicFontFromOSFont(new string[]{"Avenir Next","Helvetica Neue","Arial"},20);}catch(Exception){MzFont=null;}
         }
         public static void MzTitle(float x,float y,float w,string text)
         {
@@ -61,8 +52,8 @@ namespace COW.GamePlay
         }
         public static void MzColorPanel(float x,float y)
         {
-            for(int i=0;i<3;i++){MzTint(MzColorTarget==i?.13f:.07f,MzColorTarget==i?.22f:.075f,MzColorTarget==i?.24f:.09f,MzOpenAnim);MzFill(x+i*120,y,114,34,11);MzTint(.92f,.97f,1,MzOpenAnim);MzCenter(x+i*120,y,114,34,i==0?"Màu ESP":i==1?"Màu FOV":"Máu");if(MzTap(x+i*120,y,114,34))MzColorTarget=i;}
-            Color selected=MzSelectedColor();MzTint(.065f,.07f,.09f,MzOpenAnim);MzFill(x,y+44,354,40,12);GUI.color=new Color(selected.r,selected.g,selected.b,MzOpenAnim);MzFill(x+10,y+52,24,24,8);MzSmall(x+46,y+53,296,"#"+MzColorHex(selected)+"   •   Màu đã chọn");
+            for(int i=0;i<3;i++){MzTint(MzColorTarget==i?.13f:.07f,MzColorTarget==i?.22f:.075f,MzColorTarget==i?.24f:.09f,.52f*MzOpenAnim);MzFill(x+i*120,y,114,34,11);MzTint(.92f,.97f,1,MzOpenAnim);MzCenter(x+i*120,y,114,34,i==0?"Màu ESP":i==1?"Màu FOV":"Máu");if(MzTap(x+i*120,y,114,34))MzColorTarget=i;}
+            Color selected=MzSelectedColor();MzTint(.10f,.15f,.19f,.32f*MzOpenAnim);MzFill(x,y+44,354,40,12);GUI.color=new Color(selected.r,selected.g,selected.b,MzOpenAnim);MzFill(x+10,y+52,24,24,8);MzSmall(x+46,y+53,296,"#"+MzColorHex(selected)+"   •   Màu đã chọn");
             for(int i=0;i<18;i++){float px=x+(i%6)*60,py=y+94+(i/6)*39;Color c=MzPalette[i];bool active=Math.Abs(selected.r-c.r)<.006f&&Math.Abs(selected.g-c.g)<.006f&&Math.Abs(selected.b-c.b)<.006f;
                 if(active){MzTint(1,1,1,MzOpenAnim);MzFill(px-2-MzMotion,py-2-MzMotion,56+2*MzMotion,35+2*MzMotion,10);}GUI.color=new Color(c.r,c.g,c.b,MzOpenAnim);MzFill(px,py,52,31,8);if(MzTap(px,py,52,31))MzSetColor(c,true);
             }

@@ -8,7 +8,7 @@ namespace COW.GamePlay
         public static bool MzInitialized,MzOpen,MzDragged,MzDrawingEsp;
         public static GameObject MzDriver;
         public static int MzDrawBudget;
-        public static bool MzUiPaint;
+        public static bool MzUiPaint,MzInGui;
         public static Texture2D MzUiWhite;
         public static Matrix4x4 MzUiMatrix;
         public static float MzUiMatrixScale;
@@ -37,7 +37,7 @@ namespace COW.GamePlay
         public static void MzFill(float x,float y,float w,float h,float radius)
         {
             if(!MzFinite(x)||!MzFinite(y)||!MzFinite(w)||!MzFinite(h)||w<=0||h<=0)return;
-            if(MzBuilding){MzQuad(new Vector3(x,y,0),new Vector3(x+w,y,0),new Vector3(x+w,y+h,0),new Vector3(x,y+h,0));MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,MzWhite);return;}
+            if(MzBuilding){MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,MzWhite);return;}
             if(!MzUiPaint)return;
             if(MzUiWhite==null)MzUiWhite=Texture2D.whiteTexture;
             // Rounded DrawTexture uses its explicit color.
@@ -65,10 +65,7 @@ namespace COW.GamePlay
             if(dy==0)rect=new Rect((ax<bx?ax:bx)-width*.5f,ay-width*.5f,length+width,width);
             else if(dx==0)rect=new Rect(ax-width*.5f,(ay<by?ay:by)-width*.5f,width,length+width);
             else {rotated=true;lineMatrix=Matrix4x4.TRS(new Vector3(ax,ay,0),Quaternion.Euler(0,0,Mathf.Atan2(dy,dx)*57.29578f),new Vector3(1,1,1));rect=new Rect(-width*.5f,-width*.5f,length+width,width);}
-            if(MzBuilding){
-                if(rotated){float ux=dx/length,uy=dy/length,half=width*.5f,sx=ax-ux*half,sy=ay-uy*half,ex=bx+ux*half,ey=by+uy*half,nx=-uy*half,ny=ux*half;MzQuad(new Vector3(sx-nx,sy-ny,0),new Vector3(ex-nx,ey-ny,0),new Vector3(ex+nx,ey+ny,0),new Vector3(sx+nx,sy+ny,0));}
-                else MzQuad(new Vector3(rect.x,rect.y,0),new Vector3(rect.x+rect.width,rect.y,0),new Vector3(rect.x+rect.width,rect.y+rect.height,0),new Vector3(rect.x,rect.y+rect.height,0));
-                MzCommand(rect,lineMatrix,rotated,null,MzWhite);return;}
+            if(MzBuilding){MzCommand(rect,lineMatrix,rotated,null,MzWhite);return;}
             var old=GUI.matrix;try{if(rotated)GUI.matrix=lineMatrix;GUI.DrawTexture(rect,Texture2D.whiteTexture);}finally{if(rotated)GUI.matrix=old;}
         }
         public static void MzCircle(float cx,float cy,float radius,float width)
@@ -87,7 +84,7 @@ namespace COW.GamePlay
         public static bool MzTap(float x,float y,float w,float h){var e=Event.current;if(!MzOpen||e==null||e.type!=EventType.MouseUp||MzDragMode!=0)return false;if(!new Rect(x,y,w,h).Contains(MzPointer))return false;e.Use();return true;}
         public static void MzToggle(int id,float x,float y,string title)
         {
-            float a=MzSwitchAnim[id];MzTint(.09f,.09f,.10f,MzOpenAnim);MzFill(x,y,354,40,10);MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+12,y+6,276,title);
+            float a=MzSwitchAnim[id];MzTint(.14f,.18f,.22f,.30f*MzOpenAnim);MzFill(x,y,354,40,10);MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+12,y+6,276,title);
             MzTint(.14f+.03f*a,.16f+.56f*a,.18f+.40f*a,MzOpenAnim);MzFill(x+294,y+8,46,24,12);MzTint(1,1,1,MzOpenAnim);float bounce=Mathf.Sin(a*3.14159265f)*1.5f;MzFill(x+297+22*a-bounce,y+11-bounce,18+2*bounce,18+2*bounce,9+bounce);
             if(MzTap(x,y,354,40)){MzSwitch[id]=!MzSwitch[id];MzNextEsp=0;if(id==11&&MzSwitch[id])MzSwitch[12]=false;if(id==12&&MzSwitch[id])MzSwitch[11]=false;if(id==2&&MzSwitch[id])MzSwitch[3]=false;if(id==3&&MzSwitch[id])MzSwitch[2]=false;if(id==11||id==12)MzRestoreSilent();}
         }
@@ -106,8 +103,8 @@ namespace COW.GamePlay
         }
         public static void MzPanel()
         {
-            float x=MzPanelX,y=MzPanelY;MzTint(0,0,0,.5f*MzOpenAnim);MzFill(x+5,y+7,382,440,22);MzTint(.025f,.025f,.03f,MzOpenAnim);MzFill(x,y,382,440,20);MzTint(.10f,.11f,.16f,MzOpenAnim);MzFill(x+10,y+10,362,48,13);MzTint(.45f,.98f,.77f,MzOpenAnim);MzTitle(x+23,y+12,160,"Mizze");MzTint(.66f,.73f,.87f,MzOpenAnim);MzSmall(x+23,y+38,290,"FREE FIRE TH  /  iOS");MzTint(.35f,.92f,.79f,.28f*MzOpenAnim);MzFill(x+200+MzMotion*42,y+25,80,3,1.5f);MzTint(.9f,.94f,.96f,MzOpenAnim);MzCenter(x+326,y+10,46,48,"x");if(MzTap(x+326,y+10,46,48)){MzOpen=false;MzDragMode=0;}
-            for(int i=0;i<4;i++){MzTint(MzTab==i?.09f:.065f,MzTab==i?.24f:.065f,MzTab==i?.19f:.075f,MzOpenAnim);MzFill(x+14+i*89,y+70,87,32,9);MzTint(.94f,.98f,.96f,MzOpenAnim);MzCenter(x+14+i*89,y+70,87,32,i==0?"ESP":i==1?"AIM":i==2?"KHÓA":"MÀU");if(MzTap(x+14+i*89,y+70,87,32))MzTab=MzAuthorized()?i:2;}
+            float x=MzPanelX,y=MzPanelY;MzTint(0,0,0,.18f*MzOpenAnim);MzFill(x+5,y+7,382,440,22);MzTint(.60f,.91f,.85f,.20f*MzOpenAnim);MzFill(x-1,y-1,384,442,21);MzTint(.025f,.025f,.03f,.60f*MzOpenAnim);MzFill(x,y,382,440,20);MzTint(.88f,1,1,.24f*MzOpenAnim);MzFill(x+22,y+1,338,1,0);MzTint(.13f,.20f,.24f,.36f*MzOpenAnim);MzFill(x+10,y+10,362,48,13);MzTint(.45f,.98f,.77f,MzOpenAnim);MzTitle(x+23,y+12,160,"Mizze");MzTint(.66f,.73f,.87f,MzOpenAnim);MzSmall(x+23,y+38,290,"FREE FIRE TH  /  iOS");MzTint(.35f,.92f,.79f,.28f*MzOpenAnim);MzFill(x+200+MzMotion*42,y+25,80,3,1.5f);MzTint(.9f,.94f,.96f,MzOpenAnim);MzCenter(x+326,y+10,46,48,"x");if(MzTap(x+326,y+10,46,48)){MzOpen=false;MzDragMode=0;}
+            for(int i=0;i<4;i++){MzTint(MzTab==i?.09f:.065f,MzTab==i?.24f:.065f,MzTab==i?.19f:.075f,(MzTab==i?.70f:.32f)*MzOpenAnim);MzFill(x+14+i*89,y+70,87,32,9);MzTint(.94f,.98f,.96f,MzOpenAnim);MzCenter(x+14+i*89,y+70,87,32,i==0?"ESP":i==1?"AIM":i==2?"KHÓA":"MÀU");if(MzTap(x+14+i*89,y+70,87,32))MzTab=MzAuthorized()?i:2;}
             if(!MzAuthorized())MzTab=2;float rowY=y+112;
             if(MzTab==0){int first=MzEspPage==0?0:6,last=MzEspPage==0?6:11;for(int i=first;i<last;i++){string label=i==0?"Bật ESP":i==1?"Khung người chơi":i==2?"Khung góc":i==3?"Khung 3D":i==4?"Tên người chơi":i==5?"Thanh máu":i==6?"Khoảng cách":i==7?"Xương người chơi":i==8?"Đánh dấu đầu":i==9?"Trục XYZ":"Đường nối";MzToggle(i,x+14,rowY,label);rowY+=44;}if(MzEspPage==1)MzSlider(x+14,rowY,"Tầm ESP",false);float pageWidth=MzEspPage==0?354:169;MzTint(.08f,.20f,.17f,MzOpenAnim);MzFill(x+14,y+390,pageWidth,36,10);MzTint(.8f,1,.91f,MzOpenAnim);MzCenter(x+14,y+390,pageWidth,36,MzEspPage==0?"Trang 1 / 2   ›":"‹   Trang 2 / 2");if(MzTap(x+14,y+390,pageWidth,36))MzEspPage=1-MzEspPage;if(MzEspPage==1){MzTint(.11f,.11f,.13f,MzOpenAnim);MzFill(x+199,y+390,169,36,10);MzTint(.94f,.97f,.98f,MzOpenAnim);MzCenter(x+199,y+390,169,36,"Line: "+(MzLineOrigin==0?"DƯỚI":MzLineOrigin==1?"GIỮA":"TRÊN"));if(MzTap(x+199,y+390,169,36))MzLineOrigin=(MzLineOrigin+1)%3;}}
             else if(MzTab==1){MzToggle(11,x+14,rowY,"Ngắm đầu khi bắn");MzToggle(12,x+14,rowY+44,"Silent khi bắn");MzToggle(13,x+14,rowY+88,"Vòng FOV");MzToggle(14,x+14,rowY+132,"Đường ngắm mục tiêu");MzSlider(x+14,rowY+184,"Kích cỡ FOV",true);MzSlider(x+14,rowY+246,"Tầm ngắm",false);}
@@ -117,14 +114,14 @@ namespace COW.GamePlay
         public void OnGUI()
         {
             if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
-            if(gameObject==null||gameObject.name!="__mizze_driver")return;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;Font oldFont=null;bool fontChanged=false;
+            if(MzInGui||gameObject==null||gameObject.name!="__mizze_driver")return;MzInGui=true;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;
             try {
-                GUI.matrix=Matrix4x4.identity;MzLayout();MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();MzFontInit();if(MzFont!=null){oldFont=GUI.skin.font;GUIStyle.SetDefaultFont(MzFont);fontChanged=true;}}
+                GUI.matrix=Matrix4x4.identity;MzLayout();MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
                 if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<15;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();MzRunAim();}else MzRestoreSilent();}
                 if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f)MzPanel();
                 if(!MzUiPaint)return;
-                float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.6f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.22f,.84f,.64f,1);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.025f,.03f,1);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.54f,1,.83f,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
-            }catch(Exception){}finally{if(fontChanged)GUIStyle.SetDefaultFont(oldFont);GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;}
+                float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.40f,.95f,.80f,.46f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.025f,.03f,.58f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.54f,1,.83f,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
+            }catch(Exception){}finally{GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;MzInGui=false;}
         }
     }
 }
