@@ -1,0 +1,35 @@
+{
+  "target": "TH iOS 1.132.1",
+  "nativeVerified": true,
+  "deviceBehaviourVerified": false,
+  "playerAttributesGetter": {
+    "rva": "0x560e488",
+    "componentOffset": "0x768"
+  },
+  "fireInterval": {
+    "getter": "0x64877d8",
+    "setter": "0x6487830",
+    "offset": "0x258",
+    "consumers": [
+      "COW.GamePlay.HBIBDMMOOOK.LDKCJEMDAMC",
+      "COW.GamePlay.HBIBDMMOOOK.BDHMJJIADFG"
+    ],
+    "formula": "native consumer multiplies interval by FireIntervalScale"
+  },
+  "ammo": {
+    "getter": "0x6483c7c",
+    "setter": "0x6483c84",
+    "offset": "0x194"
+  },
+  "shootNoReload": {
+    "offset": "0x111",
+    "nativeReads": [
+      "0x5bf25d4",
+      "0x5c13468"
+    ]
+  },
+  "fakelag": {
+    "implemented": false,
+    "reason": "Only PacketLossRateForEditorTest found; effect in release iOS build unverified. No networking hook added."
+  }
+}

@@ -37,8 +37,15 @@ namespace COW.GamePlay
         public Vector3 HPCOJHGFEEG,DOJDNHCGFGK,HLDECMJFKJK,EKPLMDDKOGB,ONMKMEGMHOL;
         public bool DKPDBLLJEAA,EFMBNPNFGHM,CEOKOILBODN,CLOLKHNMNEK;
     }
+    public class PlayerAttributes : Component
+    {
+        public bool ShootNoReload;
+        public bool IsAmmoFree {get{return false;}set{}}
+        public float FireIntervalScale {get{return 1;}set{}}
+    }
     public class Player : Component
     {
+        public PlayerAttributes get_Attributes(){return null;}
         public CGKJLKPMGDJ FDMIEDDNCEC;
         public bool IsInStealth(){return false;}
         public bool IsReallyInStealth(){bool result=IsInStealth();SceneEditBoxSelectTool.MzEnsure();return result;}

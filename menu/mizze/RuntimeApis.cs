@@ -108,8 +108,15 @@ namespace COW.GamePlay
     public class SceneEditBoxSelectTool:UnityEngine.Component {public void OnGUI(){}}
     public class JMAGGLCNGIG {public IList Players=new ArrayList();public IList ILPNGCMEFFI(){return Players;}}
     public class CGKJLKPMGDJ {public UnityEngine.GameObject JHAINOBIFMA;public UnityEngine.Collider JINDNOFABKB;public UnityEngine.Vector3 HPCOJHGFEEG,DOJDNHCGFGK,HLDECMJFKJK,EKPLMDDKOGB,ONMKMEGMHOL;public bool DKPDBLLJEAA,EFMBNPNFGHM,CEOKOILBODN,CLOLKHNMNEK;}
+    public class PlayerAttributes:UnityEngine.Component
+    {
+        public bool ShootNoReload,Free,FailScale;public int ScaleWrites,FreeWrites;float Scale=1;
+        public bool IsAmmoFree {get{return Free;}set{FreeWrites++;Free=value;}}
+        public float FireIntervalScale {get{if(FailScale)throw new Exception("attribute lost");return Scale;}set{if(FailScale)throw new Exception("attribute lost");ScaleWrites++;Scale=value;}}
+    }
     public class Player:UnityEngine.Component
     {
+        public PlayerAttributes Attributes=new PlayerAttributes();public int AttributeReads;public PlayerAttributes get_Attributes(){AttributeReads++;return Attributes;}
         public bool IsReallyInStealth(){return IsInStealth();}public CGKJLKPMGDJ LastAimingInfoFromWeapon {get{return FDMIEDDNCEC;}}
         public CGKJLKPMGDJ FDMIEDDNCEC=new CGKJLKPMGDJ();public bool Local,Team,Stealth,Firing,Movable=true;public int HP=100,MaximumHP=200,StealthCalls,AimCalls;public string Nick="Enemy test";public UnityEngine.Vector3 Origin;public UnityEngine.Quaternion LastRotation;
         public bool IsInStealth(){StealthCalls++;return Stealth;}public bool IsLocalPlayer(){return Local;}public bool FailHP;public int CurHP {get{if(FailHP)throw new Exception("despawn getter");return HP;}}public int MaxHP {get{return MaximumHP;}}public bool FailNick;public string NickName {get{if(FailNick)throw new Exception("despawn after box");return Nick;}}public bool IsLocalTeammate(bool b){return Team;}

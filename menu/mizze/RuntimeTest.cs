@@ -154,6 +154,33 @@ unsafe static class MizzeRuntimeTest
         Set("MzOpen",true);Set("MzOpenAnim",1f);Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Rect.width==382&&d.Rect.height==440&&Math.Abs(d.Color.a-.60f)<.001f),"glass panel supplies translucent dark fill");Check(GUI.Calls.Any(d=>d.Rect.width==74&&Math.Abs(d.Color.a-.58f)<.001f),"launcher has translucent glass interior");Check(GUI.Calls.Where(d=>d.Text!=null).All(d=>d.Color.a>.9f),"glass keeps text opacity readable");
         Set("MzInGui",true);textures=GUI.NativeTextures;Frame(EventType.Repaint);Check(GUI.Calls.Count==0&&GUI.NativeTextures==textures,"reentrant menu callback never duplicates rendering or gameplay operations");Set("MzInGui",false);
     }
+    static void WeaponChecks(string[] args)
+    {
+        var switches=Get<bool[]>("MzSwitch");Array.Clear(switches,0,switches.Length);Time.Now=0;Set("MzLeaseDeadline",1000f);Set("MzKeyHash","");Set("MzNextWeapon",0f);Set("MzFireMultiplier",2f);
+        var local=Enemy(0);local.Local=true;var attributes=local.Attributes;COW.GameFacade.Local=local;COW.GameFacade.Match=new JMAGGLCNGIG();
+        Run("MzWeaponPoll");Check(local.AttributeReads==0&&attributes.ScaleWrites==0&&!attributes.IsAmmoFree,"weapon toggles default off and perform no native attribute work");
+        Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",4);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzBubbleX",24f);Set("MzBubbleY",96f);
+        Click(154,148);Check(switches[15]&&attributes.FireIntervalScale==.5f,"fast-fire toggle immediately halves native interval scale");
+        int writes=attributes.ScaleWrites;Time.Now=.2f;Run("MzWeaponPoll");Check(attributes.ScaleWrites==writes&&attributes.FireIntervalScale==.5f,"polling never compounds multiplier or rewrites unchanged rate");
+        Click(400,286);Check(Get<float>("MzFireMultiplier")==3&&Math.Abs(attributes.FireIntervalScale-1f/3)<.0001f,"3x selector updates from original interval baseline");
+        attributes.FireIntervalScale=.8f;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(Math.Abs(attributes.FireIntervalScale-.8f/3)<.0001f&&Get<float>("MzOldFireScale")==.8f,"native buff change becomes new baseline while enabled");
+        Click(154,192);Check(switches[16]&&attributes.IsAmmoFree&&attributes.ShootNoReload,"no-reload toggle sets both real client ammo flags");
+        int freeWrites=attributes.FreeWrites;Time.Now=.4f;Run("MzWeaponPoll");Check(attributes.FreeWrites==freeWrites,"unchanged ammo flag is never written each poll");
+        for(int i=0;i<30;i++)Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="SÚNG")&&GUI.Calls.Any(d=>d.Text=="Không nạp đạn")&&GUI.Calls.Any(d=>d.Text!=null&&d.Text.Contains("Fakelag: chưa")),"weapon tab uses accented labels and marks unavailable lag honestly");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-weapons.svg"));
+        Click(154,148);Check(!switches[15]&&attributes.FireIntervalScale==.8f&&attributes.IsAmmoFree,"fast off restores current native baseline independently of ammo feature");
+        Click(154,192);Check(!switches[16]&&!attributes.IsAmmoFree&&!attributes.ShootNoReload&&Get<PlayerAttributes>("MzWeaponAttributes")==null,"both off restores original ammo state and releases native wrapper");
+        attributes.Free=true;attributes.ShootNoReload=true;switches[16]=true;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Run("MzRestoreWeapon");Check(attributes.Free&&attributes.ShootNoReload,"preexisting native free-ammo flags survive restoration");attributes.Free=false;attributes.ShootNoReload=false;
+        switches[15]=true;switches[16]=true;Set("MzNextWeapon",0f);Run("MzWeaponPoll");var replacement=new PlayerAttributes();local.Attributes=replacement;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(attributes.FireIntervalScale==.8f&&!attributes.Free&&!attributes.ShootNoReload&&Math.Abs(replacement.FireIntervalScale-1f/3)<.0001f&&replacement.Free,"attribute component replacement restores old and applies to new");
+        local.HP=0;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(replacement.FireIntervalScale==1&&!replacement.Free&&!replacement.ShootNoReload,"player death restores weapon state");local.HP=100;
+        Set("MzNextWeapon",0f);Run("MzWeaponPoll");COW.GameFacade.Match=null;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(replacement.FireIntervalScale==1&&!replacement.Free,"match teardown restores weapon state");
+        COW.GameFacade.Match=new JMAGGLCNGIG();Set("MzNextWeapon",0f);Run("MzWeaponPoll");Set("MzLeaseDeadline",0f);Run("MzWeaponPoll");Check(replacement.FireIntervalScale==1&&!replacement.Free,"expired key restores weapon state immediately");Set("MzLeaseDeadline",1000f);
+        local.Local=false;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(replacement.ScaleWrites>0&&replacement.FireIntervalScale==1&&!replacement.Free,"observer never receives weapon modifications");local.Local=true;
+        replacement.FireIntervalScale=float.NaN;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(!Get<bool>("MzFastApplied")&&float.IsNaN(replacement.FireIntervalScale),"invalid fire scale never converted into native interval");replacement.FireIntervalScale=1;Run("MzRestoreWeapon");
+        Set("MzNextWeapon",0f);Run("MzWeaponPoll");replacement.Destroyed=true;Run("MzRestoreWeapon");Check(Get<PlayerAttributes>("MzWeaponAttributes")==null&&!Get<bool>("MzFastApplied"),"destroyed attribute wrapper released without restore dereference");replacement=new PlayerAttributes();local.Attributes=replacement;
+        Set("MzNextWeapon",0f);Run("MzWeaponPoll");replacement.FireIntervalScale=.9f;Run("MzRestoreWeapon");Check(replacement.FireIntervalScale==.9f,"restoration preserves a newer native rate update");
+        Set("MzNextWeapon",0f);Run("MzWeaponPoll");Run("MzReject","disabled");Check(replacement.FireIntervalScale==.9f&&!replacement.Free&&!replacement.ShootNoReload,"license rejection rolls back weapon attributes immediately");
+        Set("MzLeaseDeadline",1000f);switches[15]=false;switches[16]=false;Set("MzNextWeapon",0f);Run("MzWeaponPoll");COW.GameFacade.Match=null;Time.Now=0;
+    }
     static int Main(string[] args)
     {
         foreach(var line in File.ReadAllLines(args[1])){var a=line.Split('\t');Methods.Add(a[2],int.Parse(a[0]));}Vm=Load(args[0]);
@@ -198,6 +225,7 @@ unsafe static class MizzeRuntimeTest
         StabilityChecks(args);
         SafeRendererChecks();
         UiPerformanceChecks();
+        WeaponChecks(args);
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading and in-game aim remain unverified.");GC.KeepAlive(Vm);return 0;
     }
 }
