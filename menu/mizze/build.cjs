@@ -9,9 +9,10 @@ compile('IFix.Core.dll',fs.readdirSync(core).filter(n=>n.endsWith('.cs')).map(n=
 for(const name of ['Mono.Cecil.dll','Mono.Cecil.Mdb.dll','Mono.Cecil.Pdb.dll'])fs.copyFileSync(path.join(root,'Source/VSProj/ThirdParty',name),path.join(out,name));
 run(csc,['/nologo','/optimize+','/unsafe','/target:exe','/out:'+path.join(out,'CompilerHost.exe'),'/reference:'+path.join(out,'Mono.Cecil.dll'),'/reference:'+path.join(out,'Mono.Cecil.Mdb.dll'),'/reference:'+path.join(out,'Mono.Cecil.Pdb.dll'),path.join(dir,'CompilerHost.cs'),path.join(core,'Instruction.cs'),path.join(root,'Source/VSProj/Src/Version.cs'),...fs.readdirSync(path.join(root,'Source/VSProj/Src/Tools')).filter(n=>n.endsWith('.cs')&&n!=='CSFix.cs').map(n=>path.join(root,'Source/VSProj/Src/Tools',n))]);
 compile('UnityEngine.CoreModule.dll',[path.join(dir,'UnityBindings.cs')]);
-compile('UnityEngine.IMGUIModule.dll',[path.join(dir,'GuiBindings.cs')],['UnityEngine.CoreModule.dll']);
+compile('UnityEngine.TextRenderingModule.dll',[path.join(dir,'TextBindings.cs')]);
+compile('UnityEngine.IMGUIModule.dll',[path.join(dir,'GuiBindings.cs')],['UnityEngine.CoreModule.dll','UnityEngine.TextRenderingModule.dll']);
 compile('UnityEngine.PhysicsModule.dll',[path.join(dir,'PhysicsBindings.cs')],['UnityEngine.CoreModule.dll']);
 compile('UnityEngine.UnityWebRequestModule.dll',[path.join(dir,'NetworkBindings.cs')],['UnityEngine.CoreModule.dll']);
-compile('Assembly-CSharp.dll',['GameBindings.cs','JsonBindings.cs','Mizze.cs','MizzeGameplay.cs','MizzeLicense.cs'].map(n=>path.join(dir,n)),['UnityEngine.CoreModule.dll','UnityEngine.IMGUIModule.dll','UnityEngine.PhysicsModule.dll','UnityEngine.UnityWebRequestModule.dll']);
+compile('Assembly-CSharp.dll',['GameBindings.cs','JsonBindings.cs','Mizze.cs','MizzeGameplay.cs','MizzeLicense.cs'].map(n=>path.join(dir,n)),['UnityEngine.CoreModule.dll','UnityEngine.IMGUIModule.dll','UnityEngine.TextRenderingModule.dll','UnityEngine.PhysicsModule.dll','UnityEngine.UnityWebRequestModule.dll']);
 run(path.join(out,'CompilerHost.exe'),[path.join(out,'Assembly-CSharp.dll'),path.join(out,'IFix.Core.dll'),path.join(out,'upstream.bytes')]);
 console.log('Translated CSharp source into upstream IFix bytes.');

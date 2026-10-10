@@ -5,7 +5,7 @@ Nguồn C# riêng biên dịch bằng Tencent InjectFix, không sao chép byteco
 ## Sử dụng
 
 1. Giữ bản ESP Box trước đó làm bản dự phòng. Thay file patch đang dùng trong thư mục Documents của đúng game bằng file trong artifact Mizze; tắt hẳn và mở lại game.
-2. Ban đầu chỉ có nút tròn **Mizze**. Nhấn để mở/đóng, kéo nút để di chuyển. Kéo thanh tiêu đề để di chuyển cửa sổ.
+2. Ban đầu chỉ có nút tròn **Mizze** nền đen, viền mint. Nhấn để mở/đóng, kéo nút để di chuyển. Kéo thanh tiêu đề để di chuyển cửa sổ. Nút, menu và chữ tự tăng theo màn hình.
 3. Mở KEY → Nhập key Mizze. Key hợp lệ mới cho phép ESP và aim hoạt động. Key dùng backend licensesV4 của repo 33e.
 4. ESP có hai trang. AIM có công tắc aim đầu khi bắn, silent khi bắn, vòng FOV, line tới mục tiêu và hai thanh chỉnh kích cỡ FOV/tầm chọn.
 
@@ -18,7 +18,15 @@ Hook UIModelRole dùng trong UI/sảnh được thêm để khởi tạo sớm, 
 - Silent: hook getter `LastAimingInfoFromWeapon`, giữ nguyên object mà game trả về, đổi target/collider/điểm/đường ngắm trong `CGKJLKPMGDJ`. Không gọi SetAimRotation ở chế độ này. Khi ngừng bắn/tắt/khóa key, hoàn lại giá trị chỉ khi game vẫn giữ dữ liệu đã áp dụng.
 - Loại người chơi local, đồng đội, đã chết, inactive, thiếu transform; giới hạn 128 mục và bỏ tọa độ không hợp lệ.
 - FOV 20–480 pixel; tầm 50–500 m. Hai chế độ aim loại trừ nhau, mặc định tắt. Khung góc và khung 3D cũng loại trừ nhau.
-- Nền bo tròn, nút tròn có nhịp nhẹ, toggle và mở/đóng có chuyển động; input của cửa sổ đóng không nhận thao tác trong lúc fade.
+- Nền đen bo tròn, chữ trắng/mint; nút tròn có nhịp nhẹ, toggle và mở/đóng có chuyển động; input của cửa sổ đóng không nhận thao tác trong lúc fade. GUIStyle riêng được cache, không sửa skin của game. Input được đổi về tọa độ menu trước khi vẽ scale.
+
+## Sửa lỗi nền trắng / chữ nhỏ / key báo lỗi
+
+Bản trước truyền màu trắng vào overload bo góc `GUI.DrawTexture`, nên nền thực tế trắng dù đã đặt `GUI.color`. Bản sửa truyền tint trực tiếp, trung hòa GUI.color lúc vẽ nền, dùng font 20 và trả lại GUI.color/contentColor/matrix sau mỗi OnGUI. Kích thước thiết kế gọn còn 382×440 thay vì 382×488, nút 80 thay vì 64; toàn bộ UI phóng theo chiều cao màn hình và giữ trong viewport. Với ảnh 1883×870, scale 1.63125 → menu khoảng 623×718, nút khoảng 130×130, chữ khoảng 33 px. ESP/FOV giữ tọa độ pixel màn hình.
+
+Trong game, field JSON bị thiếu trả `JSONLazyCreator`: `Tag=None (7)` và `IsNull=false`. C# cũ đã coi `lock` bị thiếu là lock không hợp lệ, và tương tự với `binding`. Native của bản cung cấp xác nhận `JSONLazyCreator.get_Tag` tại 0x15c15ac trả 7; `JSONNode.get_IsNull` tại 0x15ba534 trả false. Bản sửa nhận cả null/JSONNull/None là thiếu, kiểm tra object trước khi đọc. Không bỏ kiểm tra key bị khóa, hết hạn hoặc thuộc máy khác. Dữ liệu lock sai thật vẫn bị từ chối với thông báo nêu field lỗi.
+
+Regression test đã tái hiện bản cũ từ chối key hợp lệ khi mock phản ánh JSONLazyCreator, rồi xác nhận bản mới chấp nhận trường lock bị thiếu/null và từ chối lock sai kiểu. Bộ test cũng mô phỏng overload vẽ dùng explicit color để lỗi nền trắng không còn lọt qua kiểm thử.
 
 ## Key và tương thích thiết bị
 
@@ -28,11 +36,11 @@ Giao thức protocol=4: enabled, expiresAt theo giờ server, lock.until/message
 
 ## Kiểm chứng và giới hạn
 
-`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 152 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
+`verify-declarations.cjs` đối chiếu extern/field với dump TH được cung cấp. `bindings-evidence.json` ghi lại 162 khai báo đó; CI kiểm tra mọi extern sinh ra đều được bao phủ. Đây là kiểm tra tên/chữ ký, không chứng minh mọi generic call có sẵn trong IL2CPP AOT.
 
 `test.cjs` chạy **file bytes cuối** trong interpreter Tencent pinned `5ba42eb8f63fe37134a3c78690f97d8425e13588`, với opcode của game. API Unity/game/network là test double offline. Kiểm tra bao gồm model sảnh, giữ return của game, vòng đời driver, kéo/toggle/animation, hình học ESP và lọc mục tiêu, aim khi bắn/FOV, silent và hoàn lại dữ liệu, khóa/hết hạn/binding/key đổi giữa request. Các SVG preview được ghi từ lệnh vẽ của chính bytecode trong harness, không phải ảnh chụp game.
 
-**Chưa kiểm thử bản Mizze mở rộng trên iPhone.** Aim đã nối API và có kiểm thử logic, nhưng chưa xác nhận hiệu quả bắn thực tế, việc server chấp nhận hướng bắn, hay tương thích các phiên bản khác. Việc biên dịch thành công không đồng nghĩa tất cả tính năng hoạt động trên thiết bị. Không hỗ trợ Android.
+Người dùng đã gửi ảnh xác nhận bản Mizze trước hiện trong game, đồng thời phát hiện lỗi nền trắng/chữ nhỏ/đọc lock. **Bản sửa mới chưa được chạy trực tiếp trên iPhone**, và chưa xác thực key cụ thể của người dùng với backend thật. Aim đã nối API và có kiểm thử logic, nhưng chưa xác nhận hiệu quả bắn thực tế, việc server chấp nhận hướng bắn, hay tương thích các phiên bản khác. Việc biên dịch thành công không đồng nghĩa tất cả tính năng hoạt động trên thiết bị. Không hỗ trợ Android.
 
 ## Build
 
@@ -45,4 +53,4 @@ node menu/mizze/package.cjs
 node menu/mizze/test.cjs
 ```
 
-`GameBindings.cs`, `UnityBindings.cs`, `GuiBindings.cs`, `PhysicsBindings.cs`, `NetworkBindings.cs`, `JsonBindings.cs` chỉ chứa khai báo để compiler hiểu API; các body giả này không được đưa vào patch. `RuntimeApis.cs` là API thử nghiệm và không tham gia compile patch. `CompilerHost.cs` chỉ chọn bốn fix và helper Mz*. `package.cjs` đổi container magic/flag của game, giữ nguyên bytecode do compiler sinh.
+`GameBindings.cs`, `UnityBindings.cs`, `GuiBindings.cs`, `TextBindings.cs`, `PhysicsBindings.cs`, `NetworkBindings.cs`, `JsonBindings.cs` chỉ chứa khai báo để compiler hiểu API; các body giả này không được đưa vào patch. `RuntimeApis.cs` là API thử nghiệm và không tham gia compile patch. `CompilerHost.cs` chỉ chọn bốn fix và helper Mz*. `package.cjs` đổi container magic/flag của game, giữ nguyên bytecode do compiler sinh.

@@ -26,11 +26,11 @@ namespace COW.GamePlay
         public static string MzKeyUrl(){return "https://appchatai-313e3-default-rtdb.firebaseio.com/licensesV4/"+MzKeyHash+".json";}
         public static void MzStartRequest(UnityWebRequest request,int stage){MzRequest=request;MzRequestStage=stage;MzRequestStarted=Time.realtimeSinceStartup;request.timeout=6;request.SetRequestHeader("Cache-Control","no-cache, no-store");request.SendWebRequest();}
         public static void MzBeginRead(){if(MzRequest!=null||!MzHex(MzKeyHash)||!MzHex(MzDeviceHash))return;MzLicenseMessage="Dang kiem tra key...";MzStartRequest(UnityWebRequest.Get(MzKeyUrl()),1);}
-        public static bool MzMissing(JSONNode n){return n==null||n.IsNull;}
+        public static bool MzMissing(JSONNode n){return System.Object.ReferenceEquals(n,null)||n.IsNull||n.Tag==JSONNodeType.None;}
         public static void MzReject(string message){MzLeaseDeadline=0;MzLicenseMessage=message;MzRestoreSilent();MzNextRefresh=Time.realtimeSinceStartup+5;}
         public static void MzCheckRecord(string json,string serverDate)
         {
-            var record=JSONNode.Parse(json);if(MzMissing(record)){MzReject("Key khong ton tai hoac da bi xoa");return;}
+            var record=JSONNode.Parse(json);if(MzMissing(record)){MzReject("Key khong ton tai hoac da bi xoa");return;}if(!record.IsObject){MzReject("Du lieu key sai dinh dang object");return;}
             var protocol=record["protocol"];var enabled=record["enabled"];var expires=record["expiresAt"];
             if(MzMissing(protocol)||!protocol.IsNumber||protocol.AsDouble!=4||MzMissing(enabled)||!enabled.IsBoolean||MzMissing(expires)||!expires.IsNumber){MzReject("Du lieu key khong hop le");return;}
             if(!enabled.AsBool){MzReject("Key da bi khoa");return;}if(String.IsNullOrEmpty(serverDate)){MzReject("Khong xac minh duoc gio may chu");return;}
@@ -38,7 +38,7 @@ namespace COW.GamePlay
             double now=(clock-new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalMilliseconds+1000+(Time.realtimeSinceStartup-MzRequestStarted)*1000;
             double expiry=expires.AsDouble;if(Double.IsNaN(expiry)||Double.IsInfinity(expiry)||expiry<=now){MzReject("Key da het han");return;}
             var locked=record["lock"];
-            if(!MzMissing(locked)){var until=locked["until"];var notice=locked["message"];if(MzMissing(until)||!until.IsNumber||Double.IsNaN(until.AsDouble)||Double.IsInfinity(until.AsDouble)||until.AsDouble<0||MzMissing(notice)||!notice.IsString||notice.Value.Length>500){MzReject("Du lieu khoa khong hop le");return;}if(until.AsDouble==0||until.AsDouble>now){MzReject(notice.Value.Length>0?notice.Value:"Tai khoan da bi khoa");return;}}
+            if(!MzMissing(locked)){if(!locked.IsObject){MzReject("Truong lock sai dinh dang. Admin can kiem tra key");return;}var until=locked["until"];var notice=locked["message"];if(MzMissing(until)||!until.IsNumber||Double.IsNaN(until.AsDouble)||Double.IsInfinity(until.AsDouble)||until.AsDouble<0||MzMissing(notice)||!notice.IsString||notice.Value.Length>500){MzReject("Truong lock thieu until/message hop le");return;}if(until.AsDouble==0||until.AsDouble>now){MzReject(notice.Value.Length>0?notice.Value:"Tai khoan da bi khoa");return;}}
             var binding=record["binding"];
             if(MzMissing(binding)){
                 MzLeaseDeadline=0;if(!MzCanClaim||MzClaimAttempted){MzReject("Key chua gan may. Nhap lai key de kich hoat");return;}MzClaimAttempted=true;
@@ -59,10 +59,11 @@ namespace COW.GamePlay
         }
         public static void MzKeyPanel(float x,float y)
         {
-            MzTint(.12f,.19f,.25f,1);MzFill(x,y,354,96,14);MzTint(.81f,.94f,.91f,1);MzText(x+14,y+17,327,"Mizze / Quan ly key");MzText(x+14,y+49,327,MzAuthorized()?"Trang thai: Da kich hoat":"Trang thai: Chua kich hoat");MzTint(.65f,.78f,.84f,1);MzText(x+4,y+117,350,MzLicenseMessage??"Nhap key de bat ESP va Aim");
-            MzTint(.17f,.43f,.36f,1);MzFill(x,y+169,354,46,13);MzTint(.9f,1,.97f,1);MzText(x+98,y+185,238,MzRequest!=null?"Dang kiem tra...":"Nhap key Mizze");if(MzRequest==null&&MzTap(x,y+169,354,46))MzKeyboard=TouchScreenKeyboard.Open("",TouchScreenKeyboardType.ASCIICapable,false,false,true,false,"Key Mizze",128);
-            MzTint(.14f,.23f,.3f,1);MzFill(x,y+229,354,43,12);MzTint(.8f,.9f,.94f,1);MzText(x+105,y+244,230,"Kiem tra lai key");if(MzTap(x,y+229,354,43))MzBeginRead();
-            MzTint(.23f,.14f,.18f,1);MzFill(x,y+286,354,43,12);MzTint(.98f,.76f,.8f,1);MzText(x+127,y+301,210,"Dang xuat");if(MzTap(x,y+286,354,43)){if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzKeyHash="";MzLeaseDeadline=0;PlayerPrefs.DeleteKey("Mizze.IFix.KeyHash");MzLicenseMessage="Da dang xuat";MzRestoreSilent();}
+            MzTint(.075f,.075f,.085f,MzOpenAnim);MzFill(x,y,354,70,12);MzTint(.54f,1,.83f,MzOpenAnim);MzText(x+14,y+7,327,"KEY MIZZE");MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+14,y+35,327,MzAuthorized()?"Da kich hoat":"Chua kich hoat");
+            MzTint(.79f,.84f,.88f,MzOpenAnim);MzMessage(x+8,y+84,338,70,MzLicenseMessage??"Nhap key de bat ESP va Aim");
+            MzTint(.08f,.27f,.20f,MzOpenAnim);MzFill(x,y+166,354,46,12);MzTint(.83f,1,.91f,MzOpenAnim);MzCenter(x,y+166,354,46,MzRequest!=null?"Dang kiem tra...":"Nhap key Mizze");if(MzRequest==null&&MzTap(x,y+166,354,46))MzKeyboard=TouchScreenKeyboard.Open("",TouchScreenKeyboardType.ASCIICapable,false,false,true,false,"Key Mizze",128);
+            MzTint(.10f,.10f,.12f,MzOpenAnim);MzFill(x,y+224,354,42,11);MzTint(.92f,.95f,.98f,MzOpenAnim);MzCenter(x,y+224,354,42,"Kiem tra lai key");if(MzTap(x,y+224,354,42))MzBeginRead();
+            MzTint(.17f,.07f,.09f,MzOpenAnim);MzFill(x,y+278,354,38,10);MzTint(1,.73f,.79f,MzOpenAnim);MzCenter(x,y+278,354,38,"Dang xuat");if(MzTap(x,y+278,354,38)){if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzKeyHash="";MzLeaseDeadline=0;PlayerPrefs.DeleteKey("Mizze.IFix.KeyHash");MzLicenseMessage="Da dang xuat";MzRestoreSilent();}
         }
     }
 }

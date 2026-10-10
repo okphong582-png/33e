@@ -3,7 +3,9 @@
 **Bản mở rộng mới:** [Mizze](mizze/README.md) có nút tròn kéo được, ESP nhiều kiểu,
 aim đầu/silent khi bắn, FOV và key. Tải artifact `Mizze-Assembly-CSharp-patch`.
 Phần bên dưới mô tả bản ESP Box dự phòng; bản này đã được người dùng xác nhận
-hiện menu trong trận. Bản Mizze mới chưa được thử trên iPhone.
+hiện menu trong trận. Người dùng cũng đã gửi ảnh Mizze hiện trong game.
+Bản sửa mới có nền đen, nút/menu/chữ lớn hơn và sửa đọc field key bị thiếu;
+bản sửa này chưa được thử trực tiếp trên iPhone.
 
 Mã C# trong thư mục này **sinh bytecode IFix thực**, không đổi tên DLL thành
 `.bytes`. Đầu ra: `dist/Assembly-CSharp-patch.bytes` và `SHA256SUMS.txt`.

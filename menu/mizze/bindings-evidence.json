@@ -249,6 +249,13 @@
     "declaration": "public bool IsInStealth() { }"
   },
   {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "method": "IsLocalPlayer",
+    "parameters": [],
+    "declaration": "public bool IsLocalPlayer() { }"
+  },
+  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Object",
     "method": "op_Inequality",
@@ -267,13 +274,6 @@
       "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public static bool ReferenceEquals(object objA, object objB) { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "IsLocalPlayer",
-    "parameters": [],
-    "declaration": "public bool IsLocalPlayer() { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -505,6 +505,13 @@
   {
     "assembly": "UnityEngine.IMGUIModule",
     "owner": "UnityEngine.GUI",
+    "method": "get_contentColor",
+    "parameters": [],
+    "declaration": "public static Color get_contentColor() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
     "method": "get_matrix",
     "parameters": [],
     "declaration": "public static Matrix4x4 get_matrix() { }"
@@ -524,6 +531,45 @@
       "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
     ],
     "declaration": "public static void set_matrix(Matrix4x4 value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Color",
+    "method": ".ctor",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(float r, float g, float b, float a) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "method": "set_contentColor",
+    "parameters": [
+      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void set_contentColor(Color value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "method": "Clamp",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Clamp(float value, float min, float max) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "method": "get_mousePosition",
+    "parameters": [],
+    "declaration": "public Vector2 get_mousePosition() { }"
   },
   {
     "assembly": "UnityEngine.CoreModule",
@@ -619,6 +665,20 @@
     "method": "get_IsNull",
     "parameters": [],
     "declaration": "public virtual bool get_IsNull() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "method": "get_Tag",
+    "parameters": [],
+    "declaration": "public abstract JSONNodeType get_Tag() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "method": "get_IsObject",
+    "parameters": [],
+    "declaration": "public virtual bool get_IsObject() { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -752,17 +812,6 @@
   },
   {
     "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Mathf",
-    "method": "Clamp",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public static float Clamp(float value, float min, float max) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.PlayerPrefs",
     "method": "SetString",
     "parameters": [
@@ -770,13 +819,6 @@
       "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public static void SetString(string key, string value) { }"
-  },
-  {
-    "assembly": "UnityEngine.IMGUIModule",
-    "owner": "UnityEngine.Event",
-    "method": "get_mousePosition",
-    "parameters": [],
-    "declaration": "public Vector2 get_mousePosition() { }"
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
@@ -830,18 +872,6 @@
       "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public static float Lerp(float a, float b, float t) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Color",
-    "method": ".ctor",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public void .ctor(float r, float g, float b, float a) { }"
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
@@ -968,13 +998,64 @@
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "method": ".ctor",
+    "parameters": [],
+    "declaration": "public void .ctor() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "method": "set_fontSize",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_fontSize(int value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "method": "set_wordWrap",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_wordWrap(bool value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "method": "set_alignment",
+    "parameters": [
+      "UnityEngine.TextAnchor, UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_alignment(TextAnchor value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "method": "get_normal",
+    "parameters": [],
+    "declaration": "public GUIStyleState get_normal() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyleState",
+    "method": "set_textColor",
+    "parameters": [
+      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_textColor(Color value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
     "owner": "UnityEngine.GUI",
     "method": "Label",
     "parameters": [
       "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "UnityEngine.GUIStyle, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
     ],
-    "declaration": "public static void Label(Rect position, string text) { }"
+    "declaration": "public static void Label(Rect position, string text, GUIStyle style) { }"
   },
   {
     "assembly": "mscorlib",
