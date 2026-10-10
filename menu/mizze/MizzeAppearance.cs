@@ -40,10 +40,12 @@ namespace COW.GamePlay
         }
         public static void MzTitle(float x,float y,float w,string text)
         {
+            if(!MzUiPaint)return;
             if(MzTitleStyle==null){var style=new GUIStyle();style.fontSize=25;style.wordWrap=false;style.alignment=TextAnchor.MiddleLeft;style.normal.textColor=new Color(1,1,1,1);MzTitleStyle=style;}GUI.Label(new Rect(x,y,w,32),text,MzTitleStyle);
         }
         public static void MzSmall(float x,float y,float w,string text)
         {
+            if(!MzUiPaint)return;
             if(MzSmallStyle==null){var style=new GUIStyle();style.fontSize=16;style.wordWrap=false;style.alignment=TextAnchor.MiddleLeft;style.normal.textColor=new Color(1,1,1,1);MzSmallStyle=style;}
             GUI.Label(new Rect(x,y,w,22),text,MzSmallStyle);
         }

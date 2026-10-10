@@ -512,6 +512,13 @@
     "declaration": "public static Event get_current() { }"
   },
   {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "method": "get_type",
+    "parameters": [],
+    "declaration": "public EventType get_type() { }"
+  },
+  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Object",
     "method": "get_name",
@@ -567,19 +574,47 @@
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "method": "get_mousePosition",
+    "parameters": [],
+    "declaration": "public Vector2 get_mousePosition() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Rect",
+    "method": ".ctor",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(float x, float y, float width, float height) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Rect",
+    "method": "Contains",
+    "parameters": [
+      "UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public bool Contains(Vector2 point) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "method": "Use",
+    "parameters": [],
+    "declaration": "public void Use() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
     "owner": "UnityEngine.GUI",
     "method": "set_contentColor",
     "parameters": [
       "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
     ],
     "declaration": "public static void set_contentColor(Color value) { }"
-  },
-  {
-    "assembly": "UnityEngine.IMGUIModule",
-    "owner": "UnityEngine.Event",
-    "method": "get_mousePosition",
-    "parameters": [],
-    "declaration": "public Vector2 get_mousePosition() { }"
   },
   {
     "assembly": "UnityEngine.CoreModule",
@@ -831,41 +866,6 @@
     "declaration": "public static void SetString(string key, string value) { }"
   },
   {
-    "assembly": "UnityEngine.IMGUIModule",
-    "owner": "UnityEngine.Event",
-    "method": "get_type",
-    "parameters": [],
-    "declaration": "public EventType get_type() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Rect",
-    "method": ".ctor",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public void .ctor(float x, float y, float width, float height) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Rect",
-    "method": "Contains",
-    "parameters": [
-      "UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-    ],
-    "declaration": "public bool Contains(Vector2 point) { }"
-  },
-  {
-    "assembly": "UnityEngine.IMGUIModule",
-    "owner": "UnityEngine.Event",
-    "method": "Use",
-    "parameters": [],
-    "declaration": "public void Use() { }"
-  },
-  {
     "assembly": "UnityEngine.TextRenderingModule",
     "owner": "UnityEngine.Font",
     "method": "CreateDynamicFontFromOSFont",
@@ -913,6 +913,15 @@
     "method": "get_unscaledDeltaTime",
     "parameters": [],
     "declaration": "public static float get_unscaledDeltaTime() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Math",
+    "method": "Abs",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Abs(float value) { }"
   },
   {
     "assembly": "UnityEngine.CoreModule",
@@ -1471,15 +1480,6 @@
       "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public string ToString(string format) { }"
-  },
-  {
-    "assembly": "mscorlib",
-    "owner": "System.Math",
-    "method": "Abs",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public static float Abs(float value) { }"
   },
   {
     "assembly": "Assembly-CSharp",

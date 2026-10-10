@@ -8,6 +8,12 @@ namespace COW.GamePlay
         public static bool MzInitialized,MzOpen,MzDragged,MzDrawingEsp;
         public static GameObject MzDriver;
         public static int MzDrawBudget;
+        public static bool MzUiPaint;
+        public static Texture2D MzUiWhite;
+        public static Matrix4x4 MzUiMatrix;
+        public static float MzUiMatrixScale;
+        public static string[] MzSliderTitles,MzSliderText;
+        public static int[] MzSliderValues;
         public static float MzTabAnim;
         public static float MzBubbleX,MzBubbleY,MzPanelX,MzPanelY,MzOpenAnim,MzDragDX,MzDragDY,MzDownX,MzDownY,MzFov,MzRange,MzScale;
         public static int MzDragMode,MzTab,MzEspPage,MzLineOrigin;
@@ -20,19 +26,22 @@ namespace COW.GamePlay
         public static void MzEnsure()
         {
             try {
-                if(!MzInitialized){MzSwitch=new bool[15];MzSwitchAnim=new float[15];MzSwitch[0]=true;MzSwitch[1]=true;MzSwitch[2]=false;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzSwitch[13]=true;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";}}
+                if(!MzInitialized){MzUiPaint=true;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[15];MzSwitchAnim=new float[15];MzSwitch[0]=true;MzSwitch[1]=true;MzSwitch[2]=false;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzSwitch[13]=true;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";}}
                 if(MzDriver!=null)return;var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;
             }catch(Exception){}
         }
         public static bool MzFinite(float f){return !Single.IsNaN(f)&&!Single.IsInfinity(f);}
         public static bool MzPoint(Vector3 p){return MzFinite(p.x)&&MzFinite(p.y)&&MzFinite(p.z);}
-        public static void MzTint(float r,float g,float b,float a){GUI.color=new Color(r,g,b,a);}
+        public static void MzTint(float r,float g,float b,float a){if(MzUiPaint||MzBuilding)GUI.color=new Color(r,g,b,a);}
+        public static float MzTween(float value,float target,float t){return Math.Abs(value-target)<.001f?target:Mathf.Lerp(value,target,t); }
         public static void MzFill(float x,float y,float w,float h,float radius)
         {
             if(!MzFinite(x)||!MzFinite(y)||!MzFinite(w)||!MzFinite(h)||w<=0||h<=0)return;
             if(MzBuilding){MzQuad(new Vector3(x,y,0),new Vector3(x+w,y,0),new Vector3(x+w,y+h,0),new Vector3(x,y+h,0));MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,MzWhite);return;}
+            if(!MzUiPaint)return;
+            if(MzUiWhite==null)MzUiWhite=Texture2D.whiteTexture;
             // Rounded DrawTexture uses its explicit color.
-            var tint=GUI.color;try{GUI.color=new Color(1,1,1,1);GUI.DrawTexture(new Rect(x,y,w,h),Texture2D.whiteTexture,ScaleMode.StretchToFill,true,0,tint,0,radius);}finally{GUI.color=tint;}
+            var tint=GUI.color;try{GUI.color=new Color(1,1,1,1);GUI.DrawTexture(new Rect(x,y,w,h),MzUiWhite,ScaleMode.StretchToFill,true,0,tint,0,radius);}finally{GUI.color=tint;}
         }
         public static void MzStyles()
         {
@@ -42,9 +51,9 @@ namespace COW.GamePlay
             var wrap=new GUIStyle();wrap.fontSize=18;wrap.wordWrap=true;wrap.alignment=TextAnchor.UpperLeft;wrap.normal.textColor=new Color(1,1,1,1);
             MzCenterStyle=center;MzWrapStyle=wrap;MzLabelStyle=label;
         }
-        public static void MzText(float x,float y,float w,string s){if(MzBuilding){MzCommand(new Rect(x,y,w,28),Matrix4x4.identity,false,s,null);return;}MzStyles();GUI.Label(new Rect(x,y,w,28),s,MzLabelStyle);}
-        public static void MzCenter(float x,float y,float w,float h,string s){MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzCenterStyle);}
-        public static void MzMessage(float x,float y,float w,float h,string s){MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzWrapStyle);}
+        public static void MzText(float x,float y,float w,string s){if(MzBuilding){MzCommand(new Rect(x,y,w,28),Matrix4x4.identity,false,s,null);return;}if(!MzUiPaint)return;MzStyles();GUI.Label(new Rect(x,y,w,28),s,MzLabelStyle);}
+        public static void MzCenter(float x,float y,float w,float h,string s){if(!MzUiPaint)return;MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzCenterStyle);}
+        public static void MzMessage(float x,float y,float w,float h,string s){if(!MzUiPaint)return;MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzWrapStyle);}
         public static void MzLine(float ax,float ay,float bx,float by,float width)
         {
             if(!MzFinite(ax)||!MzFinite(ay)||!MzFinite(bx)||!MzFinite(by)||!MzFinite(width)||width<=0)return;
@@ -84,7 +93,7 @@ namespace COW.GamePlay
         }
         public static void MzSlider(float x,float y,string title,bool fov)
         {
-            float min=fov?20:50,max=fov?MzFovMaximum():500,value=fov?MzEffectiveFov():MzRange;MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x,y,354,title+"  "+((int)value).ToString()+(fov?" px":" m"));
+            float min=fov?20:50,max=fov?MzFovMaximum():500,value=fov?MzEffectiveFov():MzRange;MzTint(.94f,.96f,.98f,MzOpenAnim);if(MzUiPaint){int slot=fov?0:1,rounded=(int)value;if(MzSliderText[slot]==null||MzSliderTitles[slot]!=title||MzSliderValues[slot]!=rounded){MzSliderTitles[slot]=title;MzSliderValues[slot]=rounded;MzSliderText[slot]=title+"  "+rounded.ToString()+(fov?" px":" m");}MzText(x,y,354,MzSliderText[slot]);}
             var e=Event.current;if(MzOpen&&e.type==EventType.MouseDown&&new Rect(x,y+26,354,32).Contains(MzPointer))MzDragMode=fov?3:4;
             if(MzDragMode==(fov?3:4)&&(e.type==EventType.MouseDown||e.type==EventType.MouseDrag||e.type==EventType.MouseUp)){value=min+Mathf.Clamp((MzPointer.x-x)/354,0,1)*(max-min);if(fov)MzFov=value;else {MzRange=value;MzNextEsp=0;}if(e.type==EventType.MouseUp)MzDragMode=0;e.Use();}
             MzTint(.16f,.16f,.18f,MzOpenAnim);MzFill(x,y+37,354,6,3);MzTint(.25f,.88f,.66f,MzOpenAnim);MzFill(x,y+37,354*(value-min)/(max-min),6,3);MzFill(x+354*(value-min)/(max-min)-10,y+30,20,20,10);
@@ -107,13 +116,15 @@ namespace COW.GamePlay
         }
         public void OnGUI()
         {
-            if(this==null||Event.current==null||gameObject==null||gameObject.name!="__mizze_driver")return;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;Font oldFont=null;bool fontChanged=false;
+            if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
+            if(gameObject==null||gameObject.name!="__mizze_driver")return;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;Font oldFont=null;bool fontChanged=false;
             try {
-                GUI.matrix=Matrix4x4.identity;GUI.contentColor=new Color(1,1,1,1);MzLayout();MzLicensePoll();MzDrag();MzFontInit();if(MzFont!=null){oldFont=GUI.skin.font;GUIStyle.SetDefaultFont(MzFont);fontChanged=true;}
-                if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=Mathf.Lerp(MzOpenAnim,MzOpen?1:0,t);MzTabAnim=Mathf.Lerp(MzTabAnim,MzTab,t);for(int i=0;i<15;i++)MzSwitchAnim[i]=Mathf.Lerp(MzSwitchAnim[i],MzSwitch[i]?1:0,t);if(MzAuthorized()){MzRender();MzRunAim();}else MzRestoreSilent();}
-                GUI.matrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));if(MzOpen||MzOpenAnim>.02f)MzPanel();
+                GUI.matrix=Matrix4x4.identity;MzLayout();MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();MzFontInit();if(MzFont!=null){oldFont=GUI.skin.font;GUIStyle.SetDefaultFont(MzFont);fontChanged=true;}}
+                if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<15;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();MzRunAim();}else MzRestoreSilent();}
+                if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f)MzPanel();
+                if(!MzUiPaint)return;
                 float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.6f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.22f,.84f,.64f,1);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.025f,.03f,1);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.54f,1,.83f,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
-            }catch(Exception){}finally{if(fontChanged)GUIStyle.SetDefaultFont(oldFont);GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;}
+            }catch(Exception){}finally{if(fontChanged)GUIStyle.SetDefaultFont(oldFont);GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;}
         }
     }
 }

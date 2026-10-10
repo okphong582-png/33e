@@ -134,6 +134,21 @@ unsafe static class MizzeRuntimeTest
         Material.FailPass=true;GUI.Calls.Clear();Run("MzRender");Check(!Get<bool>("MzBatchReady")&&GL.Depth==0,"unsupported material pass disables batch safely");Material.FailPass=false;Time.Now=12;Render();Check(Get<bool>("MzBatchReady"),"valid material pass recovers");
         var first=Get<Vector3[]>("MzVertices");var colors=Get<Color[]>("MzVertexColors");for(int frame=0;frame<1200;frame++){Time.Now=12+frame/60f;GUI.Calls.Clear();Run("MzRender");}Check(System.Object.ReferenceEquals(first,Get<Vector3[]>("MzVertices"))&&System.Object.ReferenceEquals(colors,Get<Color[]>("MzVertexColors")),"long dense scene reuses CPU vertex buffers");Check(GL.Depth==0,"dense batch leaves GL stack balanced");Time.Now=0;
     }
+    static void UiPerformanceChecks()
+    {
+        COW.GameFacade.Match=null;Time.Now=0;Set("MzKeyHash","");Set("MzRequest",null);Set("MzKeyboard",null);Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",1);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzFov",150f);
+        Frame(EventType.Repaint);int fonts=GUIStyle.FontWrites,white=Texture2D.WhiteReads,textures=GUI.NativeTextures,matrices=GUI.MatrixWrites;
+        Frame((EventType)8);Check(GUI.Calls.Count==0&&GUI.NativeTextures==textures&&GUIStyle.FontWrites==fonts&&GUI.MatrixWrites==matrices+1,"layout event skips all menu drawing, font and matrix work");
+        Frame(EventType.MouseDown,2,2);Check(GUI.Calls.Count==0&&GUI.NativeTextures==textures&&GUIStyle.FontWrites==fonts,"touch-down handles input without native UI drawing or font switching");
+        Frame(EventType.MouseUp,2,2);Check(GUI.Calls.Count==0&&GUI.NativeTextures==textures&&GUIStyle.FontWrites==fonts,"touch-up handles input without drawing or font switching");
+        var label=Get<string[]>("MzSliderText")[0];int transforms=Matrix4x4.TrsCalls;
+        for(int i=0;i<120;i++)Frame(EventType.Repaint);
+        Check(Texture2D.WhiteReads==white,"open menu reuses white texture without per-shape native getter");Check(Matrix4x4.TrsCalls==transforms,"stable scale reuses menu transform for 120 repaints");Check(Object.ReferenceEquals(label,Get<string[]>("MzSliderText")[0]),"unchanged slider reuses formatted text");
+        Set("MzFov",151f);Frame(EventType.Repaint);Check(Get<string[]>("MzSliderText")[0].Contains("151 px")&&!Object.ReferenceEquals(label,Get<string[]>("MzSliderText")[0]),"FOV text updates when rounded value changes");
+        Set("MzTab",0);Set("MzEspPage",1);Frame(EventType.Repaint);Check(Get<string[]>("MzSliderText")[1].StartsWith("Tầm ESP"),"shared range label refreshes its title when switching tab");
+        Set("MzOpen",false);for(int i=0;i<120;i++)Frame(EventType.Repaint);Check(Get<float>("MzOpenAnim")==0,"close animation settles exactly to zero");var animation=Get<float[]>("MzSwitchAnim");float before=animation[0];Get<bool[]>("MzSwitch")[0]=!Get<bool[]>("MzSwitch")[0];Frame(EventType.Repaint);Check(animation[0]==before,"fully closed panel skips hidden toggle animation updates");
+        Check(Get<bool>("MzUiPaint"),"draw gating restored after pointer events");
+    }
     static int Main(string[] args)
     {
         foreach(var line in File.ReadAllLines(args[1])){var a=line.Split('\t');Methods.Add(a[2],int.Parse(a[0]));}Vm=Load(args[0]);
@@ -177,6 +192,7 @@ unsafe static class MizzeRuntimeTest
         ExtendedChecks(args);
         StabilityChecks(args);
         BatchChecks();
+        UiPerformanceChecks();
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading and in-game aim remain unverified.");GC.KeepAlive(Vm);return 0;
     }
 }

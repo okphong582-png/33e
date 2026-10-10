@@ -34,7 +34,7 @@ namespace UnityEngine
     public struct Vector2 {public float x,y;public Vector2(float a,float b){x=a;y=b;}}
     public struct Color {public float r,g,b,a;public Color(float x,float y,float z,float w){r=x;g=y;b=z;a=w;}}
     public struct Quaternion {public Vector3 Direction;public float Angle;public static Quaternion Euler(float a,float b,float c){return new Quaternion {Angle=c};}public static Quaternion LookRotation(Vector3 d){return new Quaternion {Direction=Vector3.Normalize(d)};}}
-    public struct Matrix4x4 {public Vector3 Position,Scale;public float Angle;public int Tag;public static Matrix4x4 identity {get{return new Matrix4x4 {Tag=1,Scale=new Vector3(1,1,1)};}}public static Matrix4x4 TRS(Vector3 p,Quaternion q,Vector3 s){return new Matrix4x4 {Position=p,Scale=s,Angle=q.Angle,Tag=2};}}
+    public struct Matrix4x4 {public static int TrsCalls;public Vector3 Position,Scale;public float Angle;public int Tag;public static Matrix4x4 identity {get{return new Matrix4x4 {Tag=1,Scale=new Vector3(1,1,1)};}}public static Matrix4x4 TRS(Vector3 p,Quaternion q,Vector3 s){TrsCalls++;return new Matrix4x4 {Position=p,Scale=s,Angle=q.Angle,Tag=2};}}
     public struct Rect {public float x {get;set;}public float y {get;set;}public float width {get;set;}public float height {get;set;}public Rect(float a,float b,float c,float d){this=new Rect();x=a;y=b;width=c;height=d;}public bool Contains(Vector2 p){return p.x>=x&&p.x<x+width&&p.y>=y&&p.y<y+height;}}
     public class Camera:Component {public static Camera main {get;set;}public static int ProjectionCalls;public bool FailProjection;public Vector3 WorldToScreenPoint(Vector3 p){ProjectionCalls++;p=p-transform.position;if(FailProjection)throw new Exception("projection failure");return new Vector3(640+p.x*1000/p.z,360+p.y*1000/p.z,p.z);}}
     public static class Screen {public static int Width=1280,Height=720;public static int height {get{return Height;}}public static int width {get{return Width;}}}
@@ -57,7 +57,7 @@ namespace UnityEngine
     public class GUIStyleState {public Color textColor {get;set;}}
     public sealed class Font {public static int Loads;public string Name;public static Font CreateDynamicFontFromOSFont(string[] names,int size){Loads++;return new Font {Name=names[0]};}}
     public class GUISkin {public Font font {get;set;}}
-    public class GUIStyle {public static Font DefaultFont;public static void SetDefaultFont(Font f){DefaultFont=f;}public GUIStyle(){normal=new GUIStyleState();}public int fontSize {get;set;}public bool wordWrap {get;set;}public TextAnchor alignment {get;set;}public GUIStyleState normal {get;private set;}}
+    public class GUIStyle {public static Font DefaultFont;public static int FontWrites;public static void SetDefaultFont(Font f){FontWrites++;DefaultFont=f;}public GUIStyle(){normal=new GUIStyleState();}public int fontSize {get;set;}public bool wordWrap {get;set;}public TextAnchor alignment {get;set;}public GUIStyleState normal {get;private set;}}
     public class Draw {public bool MeshQuad;public Texture Texture;public Rect Rect;public Matrix4x4 Matrix;public Color Color;public float Radius;public string Text;public int FontSize;public TextAnchor Align;public bool Wrap;}
     public static class GUI
     {

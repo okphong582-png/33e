@@ -20,6 +20,15 @@ Hook UIModelRole dùng trong UI/sảnh được thêm để khởi tạo sớm, 
 - FOV 20–480 pixel, giới hạn theo màn hình để vòng không bị cắt; tầm 50–500 m. Hai chế độ aim loại trừ nhau, mặc định tắt. Khung góc và khung 3D cũng loại trừ nhau.
 - Nền đen bo tròn, chữ trắng/mint; nút tròn có nhịp nhẹ, toggle và mở/đóng có chuyển động; input của cửa sổ đóng không nhận thao tác trong lúc fade. GUIStyle riêng được cache, không sửa skin của game. Input được đổi về tọa độ menu trước khi vẽ scale.
 
+## Tối ưu phần giao diện menu
+
+- Chỉ vẽ ở sự kiện Repaint; lượt nhận chạm vẫn xử lý kéo, công tắc và thanh trượt, nhưng không gọi vẽ hoặc đổi font. Bỏ qua lượt Layout/MouseMove không cần thiết.
+- Giữ texture trắng dùng cho nền bo góc, ma trận scale và chuỗi giá trị thanh trượt để dùng lại; chỉ cập nhật scale hoặc chữ khi giá trị thay đổi.
+- Animation kết thúc chính xác ở đích. Khi menu đã đóng, ngừng cập nhật animation của các công tắc ẩn; nút Mizze vẫn giữ nhịp nhẹ.
+- Kiểm thử thực thi file bytecode cuối xác nhận lượt chạm không vẽ, 120 lượt vẽ cùng kích thước không tạo lại ma trận/chuỗi thanh trượt và không gọi lại getter texture trắng cho từng nền. Kiểm tra kéo, palette, nhập khóa và đổi hướng màn hình vẫn nằm trong bộ regression.
+
+Đây là giảm công việc của giao diện; chưa đo FPS hoặc độ trễ trên iPhone thực tế.
+
 ## Sửa lỗi nền trắng / chữ nhỏ / key báo lỗi
 
 Bản trước truyền màu trắng vào overload bo góc `GUI.DrawTexture`, nên nền thực tế trắng dù đã đặt `GUI.color`. Bản sửa truyền tint trực tiếp, trung hòa GUI.color lúc vẽ nền, dùng font 20 và trả lại GUI.color/contentColor/matrix sau mỗi OnGUI. Kích thước thiết kế gọn còn 382×440 thay vì 382×488, nút 80 thay vì 64; toàn bộ UI phóng theo chiều cao màn hình và giữ trong viewport. Với ảnh 1883×870, scale 1.63125 → menu khoảng 623×718, nút khoảng 130×130, chữ khoảng 33 px. ESP/FOV giữ tọa độ pixel màn hình.
