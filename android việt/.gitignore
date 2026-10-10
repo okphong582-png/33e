@@ -1,0 +1,15 @@
+.gradle/
+.idea/
+local.properties
+**/build/
+*.jks
+*.keystore
+*.apk
+artifacts/
+*.xapk
+analysis/
+
+.build-native/
+.build-native-tests/
+app/src/root/jniLibs/
+native-loader-review/

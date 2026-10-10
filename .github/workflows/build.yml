@@ -3,7 +3,14 @@ name: build
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'android việt/**'
+      - '.github/workflows/android-viet.yml'
   pull_request:
+    paths-ignore:
+      - 'android việt/**'
+      - '.github/workflows/android-viet.yml'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 permissions:

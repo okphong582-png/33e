@@ -1,0 +1,150 @@
+{
+  "package": "com.dts.freefireth",
+  "versionName": "1.132.1",
+  "versionCode": 2019121229,
+  "abi": "arm64-v8a",
+  "unity": "2018.4.12f1",
+  "metadataVersion": 31,
+  "metadataMethodStride": 40,
+  "status": "Nickname confirmed by user; external player-frame/ESP/Aim and attribute backends implemented, gameplay effects not yet confirmed on device",
+  "sha256": {
+    "libil2cpp": "bf70daa86a1c0224b6e0191918a7912829615858f31eb2c4fd644d020effbdff",
+    "metadata": "b5c17097aff9a98563d16a6ad6fe81f09879264b1bc5c4643f40f8d7d129422f",
+    "libunity": "544056bdbc69584e7db6f512d98a0ddd9deab30a30719fa48fb051791b7534d6"
+  },
+  "runtimeSignature": [
+    {
+      "rva": "0x71BCD10",
+      "u32": "0xF81E0FFE"
+    },
+    {
+      "rva": "0x6F2797C",
+      "u32": "0xF9424A60"
+    },
+    {
+      "rva": "0xA5C7FB0",
+      "u64": 43627
+    },
+    {
+      "rva": "0xA5C7F90",
+      "u64": 103553
+    }
+  ],
+  "chain": {
+    "gameFacadeClassCache": "0xAC1E768",
+    "matchGameClassCache": "0xAC232A0",
+    "classStaticFields": "0xB8",
+    "currentGame": "0x0",
+    "match": "0x90",
+    "localPlayer": "0xD8",
+    "nickname": "0x490",
+    "stringLength": "0x10",
+    "stringChars": "0x14"
+  },
+  "evidence": {
+    "CurrentLocalPlayer": "0x71BD10C calls 0x731571C then 0x7202038 using CurrentGame static +0",
+    "MatchGameMatch": "0x7315754 ldr x0, [x19, #0x90]",
+    "MatchLocalPlayer": "0x7202070 ldr x0, [x19, #0xd8]",
+    "Nickname": "0x6F2797C ldr x0, [x19, #0x490]",
+    "UnityView": "Camera icall 0x41CB48 -> 0xB797E8 returns nativeCamera+0x80 at 0xB79844",
+    "UnityProjection": "Camera icall 0x41CD5C -> 0xB79858 returns nativeCamera+0xC0 at 0xB79904",
+    "UnityPosition": "Transform icall 0x45EA4C -> 0x691584; 0x69304C supplies TransformData and index for TRS parent traversal",
+    "TransformNodeGetter": "All three getters: F9400800 (ldr x0,[x0,#0x10]) then D65F03C0 (ret); each checked for the selected runtime class"
+  },
+  "limitations": [
+    "Silent/AimKill/Ghost/FakeLag/Fly/Spin have no Android backend. ESP/Aim require matching live camera, dictionary, transform and PRI data.",
+    "IFix hot patches may change getter behavior without replacing this ELF.",
+    "Runtime checks validate selected instructions/counts/classes, not the whole file SHA256.",
+    "su uid 0 does not guarantee SELinux allows /proc/PID/mem.",
+    "No Root flavor never reads other process memory."
+  ],
+  "features": {
+    "attributes": "Player +0x768; class PlayerAttributes/COW.GamePlay; owner +0x20 must equal local player",
+    "noReload": {
+      "offset": "0x111",
+      "evidence": "0x744FC7C calls Player.get_Attributes; 0x744FC84 ldrb w8,[x0,#0x111]"
+    },
+    "fastFire": {
+      "offset": "0x258",
+      "evidence": "0x7C25C10 loads float; 0x7C25C68 stores float"
+    },
+    "speed": {
+      "offset": "0x3C8",
+      "evidence": "0x7C21838 loads ForceSetRunAndDashSpeed for run/dash"
+    }
+  },
+  "featureSignatures": [
+    {
+      "rva": "0x6F089C8",
+      "u32": "0xF943B674"
+    },
+    {
+      "rva": "0x7C25C10",
+      "u32": "0xBD425A60"
+    },
+    {
+      "rva": "0x7C25C68",
+      "u32": "0xBD025A68"
+    },
+    {
+      "rva": "0x7C21838",
+      "u32": "0xBD43CA80"
+    },
+    {
+      "rva": "0x744FC84",
+      "u32": "0x39444408"
+    }
+  ],
+  "frame": {
+    "dictionary": "Match +0x148; Dictionary<byte,Player>, entries +0x18, count +0x20, freeCount +0x28, version +0x2C; active Entry stride 24/value +16; requires local membership and count consistency",
+    "camera": "MatchGame +0xD8 -> CameraControllerManager +0x20 -> UnityEngine.Camera +0x10 native; view +0x80, projection +0xC0",
+    "transform": "ITransformNode/TransformNode +0x10 -> UnityEngine.Transform +0x10 native; native +0x38 data, +0x40 index; data +0x18 TRS(48 bytes), +0x20 int parent indices",
+    "bones": {
+      "head": "Player +0x6A0: getter 0x6FAE488",
+      "hip": "Player +0x6A8: getter 0x6FAE614",
+      "leftAnkle": "Player +0x6D8: getter 0x6FAE96C",
+      "rightAnkle": "Player +0x6E0: getter 0x6FAEA54",
+      "arms": "TransformNode fields verified in Android metadata at +6C0/+6C8/+720/+718/+730/+728; semantic arm assignments follow matching iOS rig and need device confirmation"
+    },
+    "pri": "Player +0x70; safe PRIDataPool +0x10 array +0x20[index*8] -> entry +0x18 ushort. Unsafe variant entry +0x18 -> pointer -> ushort. HP 0/max 1, firing 21 (2 active), scope 12, team 34 (UInt8; native getter 0x7056BF4)",
+    "aim": "Normal mode Player +0x614 Quaternion; 0x6F2C8B0..BC stores four floats. Globals class cache 0xAC1E810 static +0xE4 must be 0. Neck target uses iOS AimPoint estimate at most 10cm below actual head.",
+    "transformNodes": [
+      {
+        "name": "TransformNode",
+        "namespace": "",
+        "getter": "0x3793898",
+        "offset": "0x10"
+      },
+      {
+        "name": "BFOONIGAIFK",
+        "namespace": "",
+        "getter": "0x70D847C",
+        "offset": "0x10"
+      },
+      {
+        "name": "TransformNode",
+        "namespace": "GCommon",
+        "getter": "0x8251764",
+        "offset": "0x10"
+      }
+    ]
+  },
+  "unitySignatures": [
+    {
+      "rva": "0x693054",
+      "u32": "0xF9401C14"
+    },
+    {
+      "rva": "0xB79844",
+      "u32": "0x91020260"
+    },
+    {
+      "rva": "0xB79904",
+      "u32": "0x91030260"
+    },
+    {
+      "rva": "0x691590",
+      "u32": "0xA941A408"
+    }
+  ]
+}
