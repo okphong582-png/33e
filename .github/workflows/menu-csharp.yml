@@ -19,7 +19,7 @@ jobs:
         shell: pwsh
         run: |
           $compilerPath = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-          & $compilerPath /nologo /warnaserror+ /optimize+ /out:menu/MenuBuilder.exe menu/Program.cs menu/Bindings.cs
+          & $compilerPath /nologo /warnaserror+ /optimize+ /out:menu\MenuBuilder.exe .\menu\Program.cs .\menu\Bindings.cs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Emit IFix bytes
         shell: pwsh
