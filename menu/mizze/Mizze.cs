@@ -29,16 +29,16 @@ namespace COW.GamePlay
         // no reload, floating fakelag visibility; its active state is separate.
         public static void MzEnsure()
         {
+            if(MzBooting)return;if(MzInitialized&&MzDriver!=null)return;
+            if(MzGuiEntered&&!MzOnThread())return;
+            if(MzNextBootstrap>0&&Time.realtimeSinceStartup<MzNextBootstrap)return;
             int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;
-            if(MzBooting||(MzThreadId!=0&&MzThreadId!=thread))return;
-            if(MzInitialized&&MzDriver!=null)return;
-            float now=Time.realtimeSinceStartup;if(!MzFinite(now)||now<MzNextBootstrap)return;MzNextBootstrap=now+1;
             MzBooting=true;
             try {
                 MzThreadId=thread;
                 if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}
                 if(MzDriver==null){var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;}MzStartupLog("driver-ready");
-            }catch(Exception e){if(!MzGuiEntered)MzThreadId=0;MzLogFault("bootstrap",e);}finally{MzBooting=false;}
+            }catch(Exception e){MzNextBootstrap=Time.realtimeSinceStartup+1;if(!MzGuiEntered)MzThreadId=0;MzLogFault("bootstrap",e);}finally{MzBooting=false;}
         }
         public static void MzRecoverMenu(Player player)
         {
@@ -53,12 +53,12 @@ namespace COW.GamePlay
         }
         public static bool MzFinite(float f){return !Single.IsNaN(f)&&!Single.IsInfinity(f);}
         public static bool MzPoint(Vector3 p){return MzFinite(p.x)&&MzFinite(p.y)&&MzFinite(p.z);}
-        public static void MzTint(float r,float g,float b,float a){if(MzUiPaint||MzBuilding)GUI.color=new Color(r,g,b,a);}
+        public static void MzTint(float r,float g,float b,float a){if(MzBuilding){MzBuildColor=new Color(r,g,b,a);MzBuildColorKey=++MzBuildTintKey+2;return;}if(MzUiPaint)GUI.color=new Color(r,g,b,a);}
         public static float MzTween(float value,float target,float t){return Math.Abs(value-target)<.001f?target:Mathf.Lerp(value,target,t); }
         public static void MzFill(float x,float y,float w,float h,float radius)
         {
             if(!MzFinite(x)||!MzFinite(y)||!MzFinite(w)||!MzFinite(h)||w<=0||h<=0)return;
-            if(MzBuilding){MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,MzWhite);return;}
+            if(MzBuilding){MzAxisCommand(new Rect(x,y,w,h),null,MzWhite);return;}
             if(!MzUiPaint)return;
             if(MzUiWhite==null)MzUiWhite=Texture2D.whiteTexture;
             // Rounded DrawTexture uses its explicit color.
@@ -72,7 +72,7 @@ namespace COW.GamePlay
             var wrap=new GUIStyle();wrap.fontSize=18;wrap.wordWrap=true;wrap.alignment=TextAnchor.UpperLeft;wrap.normal.textColor=new Color(1,1,1,1);
             MzCenterStyle=center;MzWrapStyle=wrap;MzLabelStyle=label;
         }
-        public static void MzText(float x,float y,float w,string s){if(MzBuilding){MzCommand(new Rect(x,y,w,28),Matrix4x4.identity,false,s,null);return;}if(!MzUiPaint)return;MzStyles();GUI.Label(new Rect(x,y,w,28),s,MzLabelStyle);}
+        public static void MzText(float x,float y,float w,string s){if(MzBuilding){MzAxisCommand(new Rect(x,y,w,28),s,null);return;}if(!MzUiPaint)return;MzStyles();GUI.Label(new Rect(x,y,w,28),s,MzLabelStyle);}
         public static void MzCenter(float x,float y,float w,float h,string s){if(!MzUiPaint)return;MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzCenterStyle);}
         public static void MzMessage(float x,float y,float w,float h,string s){if(!MzUiPaint)return;MzStyles();GUI.Label(new Rect(x,y,w,h),s,MzWrapStyle);}
         public static void MzLine(float ax,float ay,float bx,float by,float width)
@@ -80,20 +80,21 @@ namespace COW.GamePlay
             if(!MzFinite(ax)||!MzFinite(ay)||!MzFinite(bx)||!MzFinite(by)||!MzFinite(width)||width<=0)return;
             if((ax<0&&bx<0)||(ax>Screen.width&&bx>Screen.width)||(ay<0&&by<0)||(ay>Screen.height&&by>Screen.height))return;
             float dx=bx-ax,dy=by-ay,length=Mathf.Sqrt(dx*dx+dy*dy);if(!MzFinite(length)||length<.5f||length>Screen.width*3)return;
-            Rect rect;Matrix4x4 lineMatrix=Matrix4x4.identity;bool rotated=false;
-            // Axis-aligned edges need no matrix calls. Extend both ends by half the
-            // stroke so every shared endpoint overlaps instead of leaving a seam.
-            if(dy==0)rect=new Rect((ax<bx?ax:bx)-width*.5f,ay-width*.5f,length+width,width);
-            else if(dx==0)rect=new Rect(ax-width*.5f,(ay<by?ay:by)-width*.5f,width,length+width);
-            else {rotated=true;lineMatrix=Matrix4x4.TRS(new Vector3(ax,ay,0),Quaternion.Euler(0,0,Mathf.Atan2(dy,dx)*57.29578f),new Vector3(1,1,1));rect=new Rect(-width*.5f,-width*.5f,length+width,width);}
-            if(MzBuilding){MzCommand(rect,lineMatrix,rotated,null,MzWhite);return;}
-            var old=GUI.matrix;try{if(rotated)GUI.matrix=lineMatrix;GUI.DrawTexture(rect,Texture2D.whiteTexture);}finally{if(rotated)GUI.matrix=old;}
+            // Axis-aligned commands need neither a matrix value nor native matrix access.
+            if(dy==0||dx==0){
+                Rect rect=dy==0?new Rect((ax<bx?ax:bx)-width*.5f,ay-width*.5f,length+width,width):new Rect(ax-width*.5f,(ay<by?ay:by)-width*.5f,width,length+width);
+                if(MzBuilding){MzAxisCommand(rect,null,MzWhite);return;}GUI.DrawTexture(rect,Texture2D.whiteTexture);return;
+            }
+            var lineMatrix=Matrix4x4.TRS(new Vector3(ax,ay,0),Quaternion.Euler(0,0,Mathf.Atan2(dy,dx)*57.29578f),new Vector3(1,1,1));var lineRect=new Rect(-width*.5f,-width*.5f,length+width,width);
+            if(MzBuilding){MzCommand(lineRect,lineMatrix,true,null,MzWhite);return;}
+            var old=GUI.matrix;try{GUI.matrix=lineMatrix;GUI.DrawTexture(lineRect,Texture2D.whiteTexture);}finally{GUI.matrix=old;}
+
         }
         public static void MzCircle(float cx,float cy,float radius,float width)
         {
             if(!MzFinite(cx)||!MzFinite(cy)||!MzFinite(radius)||radius<=0||radius>Screen.width)return;
             MzRendererInit();if(radius<=12){if(MzHeadRing==null)MzHeadRing=MzCreateRing(32,3);}else if(MzRing==null)MzRing=MzCreateRing(256,1.5f);var texture=radius<=12?MzHeadRing:MzRing;float correction=radius<=12?16f/14f:128f/126f;float extent=radius*correction;var rect=new Rect(cx-extent,cy-extent,extent*2,extent*2);
-            if(MzBuilding){MzCommand(rect,Matrix4x4.identity,false,null,texture);return;}GUI.DrawTexture(rect,texture);
+            if(MzBuilding){MzAxisCommand(rect,null,texture);return;}GUI.DrawTexture(rect,texture);
         }
         public static void MzLayout()
         {
@@ -151,9 +152,9 @@ namespace COW.GamePlay
             // Unity owns OnGUI: the first real GUI callback establishes its thread.
             // A lobby getter may have initialized on a different thread earlier.
             if(!MzInitialized)MzEnsure();if(!MzInitialized)return;
-            if(!MzGuiEntered)MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;
-            if(!MzOnThread())return;MzInGui=true;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;if(MzUiPaint&&!MzGuiEntered){MzGuiEntered=true;MzStartupLog("gui-entered");}
+            MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;Color color;Color contentColor;Matrix4x4 matrix;try{color=GUI.color;contentColor=GUI.contentColor;matrix=GUI.matrix;}catch(Exception e){MzLogFault("gui-snapshot",e);return;}MzInGui=true;bool previousPaint=MzUiPaint;
             try {
+                MzUiPaint=type==EventType.Repaint;if(MzUiPaint&&!MzGuiEntered){MzGuiEntered=true;MzStartupLog("gui-entered");}
                 GUI.matrix=Matrix4x4.identity;MzLayout();if(type==EventType.MouseDown)MzOwnPointer=MzMenuHit(MzPointer);MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
                 if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;try{MzRunAim();}catch(Exception e){MzSwitch[11]=false;MzSwitch[12]=false;MzLogFault("aim-loop",e);}
                     try{MzWeaponPoll();}catch(Exception e){MzSwitch[15]=false;MzSwitch[16]=false;MzLogFault("weapon-loop",e);}
@@ -161,7 +162,7 @@ namespace COW.GamePlay
                 if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f){try{MzPanel();}catch(Exception e){MzLogFault("menu-panel",e);}}else MzBackgroundLast=0;
                 if(!MzUiPaint)return;
                 float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.80f,.88f,1,.36f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.03f,.045f,.72f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.97f,.98f,1,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");if(!MzLauncherPainted){MzLauncherPainted=true;MzStartupLog("launcher-painted");}MzLagButtonDraw();
-            }catch(Exception e){MzLogFault("on-gui",e);}finally{if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;MzInGui=false;}
+            }catch(Exception e){MzLogFault("on-gui",e);}finally{MzUiPaint=previousPaint;MzInGui=false;try{if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){if(Event.current!=null)Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;}catch(Exception e){MzLogFault("gui-cleanup",e);}}
         }
     }
 }

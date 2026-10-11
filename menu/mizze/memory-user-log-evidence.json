@@ -46,7 +46,21 @@
   ],
   "backgrounds": 15,
   "drawFailed": 0,
-  "conclusion": "Abnormal process-wide managed-memory growth; neither a native crash stack nor proof of a retained-object leak. Auto-GC disabled is a supported native-game path, not yet confirmed active on this user device.",
+  "conclusion": "Process-wide managed heap growth. Offline R6 VM reproduces high temporary allocation with stable post-GC retained memory; native game has an auto-GC-disabled path. Actual GC mode and crash cause on user device remain unconfirmed.",
   "rateBytesPerSecond": 7506272.293333333,
-  "patchVersionInScreenshot": "No build marker or lagTail/lagWrites; session may come from an older run."
+  "patchVersionInScreenshot": "No build marker or lagTail/lagWrites; session may come from an older run.",
+  "additionalUserSamples": [
+    {
+      "t": 92,
+      "managed": 1142366208
+    },
+    {
+      "t": 122,
+      "managed": 1362927616
+    },
+    {
+      "t": 234,
+      "managed": 1452036096
+    }
+  ]
 }

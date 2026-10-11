@@ -67,7 +67,7 @@ namespace UnityEngine
     public static class GUI
     {
         static GUISkin Skin=new GUISkin {font=new Font {Name="game-original"}};public static GUISkin skin {get{return Skin;}set{Skin=value;}}
-        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static bool FailTexture,FailRoundedOnce;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
+        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static bool FailColorReadOnce,FailRestoreOnce;public static bool FailTexture,FailRoundedOnce;public static Matrix4x4 matrix {get{return Matrix;}set{if(FailRestoreOnce&&value.Tag==99){FailRestoreOnce=false;throw new Exception("matrix restore failed");}Matrix=value;MatrixWrites++;}}static Color Color;public static Color color {get{if(FailColorReadOnce){FailColorReadOnce=false;throw new Exception("GUI snapshot failed");}return Color;}set{Color=value;}}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
         public static void Label(Rect r,string s){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Text=s});}
         public static void Label(Rect r,string s,GUIStyle style){Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
         public static void DrawTexture(Rect r,Texture t){if(FailTexture)throw new Exception("GUI texture failure");NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
@@ -109,6 +109,7 @@ namespace GCommon
 }
 namespace COW
 {
+    public static class GcUtil {public static int Calls;public static bool AutoGcDisabled=true,Fail;public static Action OnCollect;public static void Collect(ManualGCReason reason){if(Fail)throw new Exception("collector failure");Calls++;bool was=AutoGcDisabled;try{AutoGcDisabled=false;if(OnCollect!=null)OnCollect();GC.Collect();}finally{AutoGcDisabled=was;}}}
     public static class GameSettingData {public static bool Smooth;public static bool CachedSmoothHighFrame(){return Smooth;}}
     public class UIModelRole {}
     public static class GameFacade {public static UIModelRole m_modelRole;public static UIModelRole UIModelRole {get{return m_modelRole;}}public static GamePlay.JMAGGLCNGIG Match;public static GamePlay.Player Local;public static GamePlay.JMAGGLCNGIG CurrentMatch(){return Match;}public static int LocalCalls;public static GamePlay.Player GetLocalPlayerOrObServer(){LocalCalls++;return Local;}}
@@ -165,3 +166,5 @@ public class UIPanel:UIRect {public int depth {get;set;}}
 public class UICamera:UnityEngine.Component {public static UnityEngine.Camera Main;public static UnityEngine.Camera mainCamera {get{return Main;}}}
 
 namespace UnityEngine {public struct Vector4 {public float x,y,z,w;public Vector4(float a,float b,float c,float d){x=a;y=b;z=c;w=d;}}}
+
+public enum ManualGCReason {MemoryUtilCollect=13}

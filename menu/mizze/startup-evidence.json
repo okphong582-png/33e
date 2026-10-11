@@ -1,17 +1,22 @@
 {
-  "revision": "R6 actual old-source recovery",
+  "revision": "R7 memory and old-source startup",
   "target": "Free Fire TH iOS 1.132.1",
+  "userReports": "R6 no menu and no startup log",
   "causeOnUserDeviceConfirmed": false,
   "reference": "old-source-review.json",
   "changes": [
-    "State initialized before AddComponent, as in old source.",
-    "First real driver OnGUI binds the GUI thread instead of rejecting the callback using the bootstrap thread.",
-    "Restore match IsReallyInStealth entry point, retaining native dictionary and interface flag evaluation instead of old IsInStealth approximation.",
-    "Keep later rendering safety limits; do not restore old Mesh or shared-font writes."
+    "State initialized before AddComponent as in actual old source.",
+    "No thread/clock prerequisite before cold driver creation; valid driver OnGUI binds thread without rejecting bootstrap identity.",
+    "Original match and lobby entry points retained; real-stealth uses non-generic interfaces to avoid new AOT Enumerator/KeyValuePair externs.",
+    "Later renderer limits retained, repeated boxing/color/matrix work reduced; native pressure collector runs outside GUI only after first GUI callback."
   ],
   "nativeHook": "Player.IsReallyInStealth; slot24093",
-  "firstGuiThreadRecovery": true,
-  "checks": 2386,
+  "coldStartWithoutClock": true,
+  "noEarlyGuiThreadRejection": true,
+  "noNewStartupHooks": true,
+  "collectorBeforeGui": false,
+  "genericEnumerationExterns": false,
   "deviceVerified": false,
-  "nativeCrashCauseConfirmed": false
+  "nativeCrashCauseConfirmed": false,
+  "guiFaultRecovery": "Pinned VM checks snapshot getter failure and GUI restore setter failure; MzInGui is released and next frame paints Mizze."
 }

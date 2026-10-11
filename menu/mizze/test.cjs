@@ -20,11 +20,15 @@ console.log('PASS: all generated extern descriptors are covered by checked TH iO
 
 const hooks=JSON.parse(fs.readFileSync(path.join(dir,'hooks-evidence.json'),'utf8')).hooks;
 if(hooks.length!==p.fixes.length||p.fixes.some(f=>!hooks.some(h=>h.owner===f.method.owner.split(',')[0]&&h.method===f.method.name&&h.vmMethod===f.id&&Number.isInteger(h.id))))throw Error('Patch target lacks matching native IDMAP evidence');
-if(p.types.some(t=>/^(COW\.GcUtil|ManualGCReason|COW\.COWGameEntry|GCommon\.GameEngine|UnityEngine\.Behaviour|UnityEngine\.MonoBehaviour),/.test(t))||p.externMethods.some(e=>e.owner.startsWith('UnityEngine.GUI,')&&/^(get|set)_enabled$/.test(e.name)))throw Error('R2-R4 runtime dependency reintroduced');
-console.log('PASS: old-source recovery has seven verified hooks and no R2-R4 runtime additions.');
+if(p.types.some(t=>/^(COW\.COWGameEntry|GCommon\.GameEngine|UnityEngine\.Behaviour|UnityEngine\.MonoBehaviour),/.test(t))||p.externMethods.some(e=>e.owner.startsWith('UnityEngine.GUI,')&&/^(get|set)_enabled$/.test(e.name)))throw Error('R2-R4 runtime dependency reintroduced');
+console.log('PASS: old-source recovery retains seven verified hooks; no Behaviour/entry/GUI.enabled dependencies.');
 
 run(process.execPath,[path.join(dir,'verify-compatibility.cjs')]);
 
 const sourceReview=JSON.parse(fs.readFileSync(path.join(dir,'old-source-review.json'),'utf8'));
 for(const hook of sourceReview.oldHooks){const [owner,name]=hook.split('.');if(!p.fixes.some(f=>f.method.owner.split(',')[0].endsWith('.'+owner)&&f.method.name===name))throw Error('Old source hook missing: '+hook);}
 console.log('PASS: all four entry points recorded from actual source cũ are restored.');
+
+if(p.externMethods.some(e=>/^System\.Collections\.Generic\.(Dictionary|KeyValuePair)/.test(e.owner)))throw Error('New AOT generic enumeration extern introduced');
+const collectors=p.externMethods.filter(e=>e.owner.startsWith('COW.GcUtil,'));if(collectors.length!==1||collectors[0].name!=='Collect'||collectors[0].parameters[0].split(',')[0]!=='ManualGCReason')throw Error('Unexpected collector dependency');
+console.log('PASS: only existing native game collector is used; no generic Dictionary/Enumerator/KeyValuePair externs.');

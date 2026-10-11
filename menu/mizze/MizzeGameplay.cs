@@ -29,7 +29,7 @@ namespace COW.GamePlay
         }
         public static void MzSampleEsp()
         {
-            MzDrawingEsp=true;MzDrawBudget=192;MzSampleFaulted=false;
+            MzDrawingEsp=true;MzDrawBudget=192;MzSampleFaulted=false;MzBuildTintKey=0;
             try {
                 var cam=MzEspCamera;var match=MzEspMatch;if(cam==null||match==null)return;
                 var cameraTransform=cam.transform;if(cameraTransform==null)return;Vector3 cameraPosition=cameraTransform.position;if(!MzPoint(cameraPosition))return;
@@ -45,13 +45,13 @@ namespace COW.GamePlay
                         Vector3 root=rootTransform.position,head=headTransform.position;if(!MzPoint(root)||!MzPoint(head))continue;float distance=Vector3.Distance(root,cameraPosition);if(!MzFinite(distance)||distance>MzRange)continue;
                         Vector2 feet,top;if(!MzProject(cam,root,out feet)||!MzProject(cam,head,out top))continue;
                         float h=feet.y-top.y,w=h*.5f,x=(feet.x+top.x)*.5f-w*.5f,y=top.y;if(!MzFinite(h)||h<=4||h>Screen.height*2||x+w<0||x>Screen.width||y+h<0||y>Screen.height)continue;shown++;
-                        GUI.color=MzEspColor;if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
+                        MzBuildColor=MzEspColor;MzBuildColorKey=0;if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
                         if(MzSwitch[4]){string name=MzCachedName(p,id);if(name!=null){MzText(x-22,y-25,w+150,name);}}
                         if(MzSwitch[6])MzText(x,y+h+4,w+80,MzCachedDistance(id,distance));
-                        if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);GUI.color=MzHealthColor;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
-                        GUI.color=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
+                        if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);MzBuildColor=MzHealthColor;MzBuildColorKey=1;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
+                        MzBuildColor=MzEspColor;MzBuildColorKey=0;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
                         if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}
-                        if(MzSwitch[7]){GUI.color=MzEspColor;MzSampleSkeleton(cam,p,top,feet);}
+                        if(MzSwitch[7]){MzBuildColor=MzEspColor;MzBuildColorKey=0;MzSampleSkeleton(cam,p,top,feet);}
                     }catch(Exception e){MzTrimCommands(before);MzSampleFaulted=true;MzLogFault("esp-player",e);break;}
                 }
             }catch(Exception e){MzSampleFaulted=true;MzClearCommands();MzLogFault("esp-sample",e);}finally{MzDrawingEsp=false;}
@@ -63,7 +63,7 @@ namespace COW.GamePlay
         }
         public static void MzRunAim()
         {
-            if(!MzOnThread())return;
+            if(!MzOnThread())return;if(MzMemoryPaused){MzRestoreSilent();return;}
             try {
                 if(!MzSwitch[11]&&!MzSwitch[12]){MzRestoreSilent();return;}if(COW.GameFacade.CurrentMatch()==null){MzRestoreSilent();return;}var local=COW.GameFacade.GetLocalPlayerOrObServer();if(!MzSwitch[12]||local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring())MzRestoreSilent();
                 if(local==null||!local.IsLocalPlayer()||local.CurHP<=0||!local.IsFiring()||(!MzSwitch[11]&&!MzSwitch[12]))return;var target=MzPickTarget();if(target==null)return;
@@ -83,7 +83,7 @@ namespace COW.GamePlay
         }
         public static void MzSilent(Player local,CGKJLKPMGDJ result)
         {
-            if(!MzOnThread()||MzInSilent||!MzSwitch[12])return;MzInSilent=true;
+            if(!MzOnThread()||MzMemoryPaused||MzInSilent||!MzSwitch[12])return;MzInSilent=true;
             try {
                 if(local==null||!local.IsLocalPlayer())return;MzRestoreSilent();if(!MzInitialized||!MzAuthorized()||!MzSwitch[12]||result==null||local.CurHP<=0||!local.IsFiring())return;var target=MzPickTarget();if(target==null||target.HeadCollider==null)return;
                 Vector3 point=target.GetHeadTF().position,origin=local.AimStartPostion,delta=point-origin;if(!MzPoint(point)||!MzPoint(origin)||Vector3.Distance(new Vector3(),delta)<=.01f)return;Vector3 direction=Vector3.Normalize(delta);if(!MzPoint(direction))return;

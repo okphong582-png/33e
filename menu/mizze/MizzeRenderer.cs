@@ -7,7 +7,8 @@ namespace COW.GamePlay
         public static Texture2D MzRing,MzHeadRing;
         public static Texture2D MzWhite;
         public static Rect[] MzRects;
-        public static Color[] MzColors;
+        public static Color[] MzColors;public static int[] MzColorKeys;
+        public static Color MzBuildColor;public static int MzBuildColorKey,MzBuildTintKey;
         public static Matrix4x4[] MzMatrices;
         public static string[] MzTexts;
         public static Texture[] MzTextures;
@@ -40,7 +41,7 @@ namespace COW.GamePlay
         }
         public static void MzRendererInit()
         {
-            if(MzWhite==null)MzWhite=Texture2D.whiteTexture;if(MzRects==null){MzRects=new Rect[192];MzColors=new Color[192];MzMatrices=new Matrix4x4[192];MzTexts=new string[192];MzTextures=new Texture[192];MzRotated=new bool[192];}
+            if(MzWhite==null)MzWhite=Texture2D.whiteTexture;if(MzRects==null){MzRects=new Rect[192];MzColors=new Color[192];MzColorKeys=new int[192];MzMatrices=new Matrix4x4[192];MzTexts=new string[192];MzTextures=new Texture[192];MzRotated=new bool[192];}
         }
         public static void MzClearCommands()
         {
@@ -52,20 +53,24 @@ namespace COW.GamePlay
         }
         public static void MzCommand(Rect rect,Matrix4x4 matrix,bool rotated,string text,Texture texture)
         {
-            if(MzCommandCount>=192)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=GUI.color;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;
+            if(MzCommandCount>=192)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=MzBuildColor;MzColorKeys[i]=MzBuildColorKey;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;
+        }
+        public static void MzAxisCommand(Rect rect,string text,Texture texture)
+        {
+            if(MzCommandCount>=192)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=MzBuildColor;MzColorKeys[i]=MzBuildColorKey;MzRotated[i]=false;MzTexts[i]=text;MzTextures[i]=texture;
         }
         public static void MzDrawCommands()
         {
             var matrix=GUI.matrix;var tint=GUI.color;bool previous=false;var identity=Matrix4x4.identity;
-            var rects=MzRects;var colors=MzColors;var matrices=MzMatrices;var turns=MzRotated;var texts=MzTexts;var textures=MzTextures;int count=MzCommandCount;
+            var rects=MzRects;var colors=MzColors;var keys=MzColorKeys;int previousKey=-1;var matrices=MzMatrices;var turns=MzRotated;var texts=MzTexts;var textures=MzTextures;int count=MzCommandCount;
             try{MzStyles();var style=MzLabelStyle;for(int i=0;i<count;i++){
-                bool rotated=turns[i];if(rotated||previous)GUI.matrix=rotated?matrices[i]:identity;previous=rotated;GUI.color=colors[i];
+                bool rotated=turns[i];if(rotated||previous)GUI.matrix=rotated?matrices[i]:identity;previous=rotated;int key=keys[i];if(key!=previousKey){GUI.color=colors[i];previousKey=key;}
                 if(texts[i]!=null)GUI.Label(rects[i],texts[i],style);else {var texture=textures[i];if(texture!=null)GUI.DrawTexture(rects[i],texture);}
             }}finally{GUI.matrix=matrix;GUI.color=tint;}
         }
         public static void MzRender()
         {
-            if(!MzOnThread()||MzInRender||MzEspBlocked)return;MzInRender=true;
+            if(!MzOnThread()||MzInRender||MzEspBlocked)return;if(MzMemoryPaused){if(MzRects!=null)MzClearCommands();return;}MzInRender=true;
             try{
                 if(!MzSwitch[0]&&!MzSwitch[13]){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzClearLabels();return;}
                 var match=COW.GameFacade.CurrentMatch();var camera=Camera.main;

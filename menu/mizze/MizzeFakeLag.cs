@@ -53,7 +53,7 @@ namespace COW.GamePlay
         }
         public static bool MzLagContext()
         {
-            return MzLagMatch!=null&&MzLagLocal!=null&&MzLagLocal.UniqueID==MzLagLocalId&&
+            return !MzMemoryPaused&&MzLagMatch!=null&&MzLagLocal!=null&&MzLagLocal.UniqueID==MzLagLocalId&&
                 System.Object.ReferenceEquals(COW.GameFacade.CurrentMatch(),MzLagMatch)&&
                 System.Object.ReferenceEquals(COW.GameFacade.GetLocalPlayerOrObServer(),MzLagLocal);
         }
@@ -100,6 +100,7 @@ namespace COW.GamePlay
         }
         public static void MzLagPulse()
         {
+            if(MzMemoryPaused){MzLagStop();return;}
             if(!MzOnThread()||MzLagBusy)return;
             if(!MzSwitch[17]||!MzAuthorized())MzLagEnabled=false;
             if(!MzSwitch[17]||!MzLagEnabled||MzLagBlocked||!MzAuthorized()){

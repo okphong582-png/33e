@@ -18,7 +18,7 @@ namespace COW.GamePlay
         }
         public static void MzWeaponPoll()
         {
-            if(!MzOnThread())return;
+            if(!MzOnThread())return;if(MzMemoryPaused){MzRestoreWeapon();MzWeaponMessage="Giảm tải bộ nhớ";return;}
             if(!MzSwitch[15]&&!MzSwitch[16]){if(MzWeaponAttributes!=null||MzFastApplied||MzAmmoApplied)MzRestoreWeapon();MzWeaponMessage="Bật chức năng khi đang trong trận";return;}
             if(!MzAuthorized()){MzRestoreWeapon();MzWeaponMessage="Cần khóa hợp lệ";return;}
             float now=Time.realtimeSinceStartup;if(now<MzNextWeapon)return;MzNextWeapon=now+.1f;

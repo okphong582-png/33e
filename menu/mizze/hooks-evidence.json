@@ -14,7 +14,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "get_IsBeingCarried",
-      "vmMethod": 13,
+      "vmMethod": 30,
       "map": "IDMAP0",
       "id": 943,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-get_IsBeingCarried0 = 943;",
@@ -23,7 +23,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "UpdateKnockdownIsInCamera",
-      "vmMethod": 25,
+      "vmMethod": 34,
       "map": "IDMAP0",
       "id": 19731,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-UpdateKnockdownIsInCamera0 = 19731;",
@@ -32,7 +32,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "NeedRunHighFrame",
-      "vmMethod": 28,
+      "vmMethod": 37,
       "map": "IDMAP0",
       "id": 9738,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-NeedRunHighFrame0 = 9738;",
@@ -41,7 +41,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "IsReallyInStealth",
-      "vmMethod": 30,
+      "vmMethod": 39,
       "map": "IDMAP0",
       "id": 24093,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-IsReallyInStealth0 = 24093;",
@@ -50,7 +50,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "get_LastAimingInfoFromWeapon",
-      "vmMethod": 31,
+      "vmMethod": 40,
       "map": "IDMAP0",
       "id": 19026,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-get_LastAimingInfoFromWeapon0 = 19026;",
@@ -59,7 +59,7 @@
     {
       "owner": "COW.GamePlay.SceneEditBoxSelectTool",
       "method": "OnGUI",
-      "vmMethod": 39,
+      "vmMethod": 47,
       "map": "IDMAP4",
       "id": 156465,
       "declaration": "public const IDMAP4 COW-GamePlay-SceneEditBoxSelectTool-OnGUI0 = 156465;",

@@ -14,6 +14,7 @@ namespace GCommon
 }
 namespace COW
 {
+    public static class GcUtil {public static void Collect(ManualGCReason reason){}}
     public static class GameSettingData {public static bool CachedSmoothHighFrame(){return false;}}
     public class UIModelRole {}
     public static partial class GameFacade
@@ -26,6 +27,7 @@ namespace COW
             get
             {
                 GamePlay.SceneEditBoxSelectTool.MzEnsure();
+                GamePlay.SceneEditBoxSelectTool.MzMemoryPulse();
                 if(m_modelRole==null)m_modelRole=GCommon.UIModelManager.instance.GetModel<UIModelRole>();
                 return m_modelRole;
             }
@@ -69,7 +71,7 @@ namespace COW.GamePlay
             FFOPCLFLIMO=target.LastInFrustum();
         }
 
-        public bool NeedRunHighFrame(){SceneEditBoxSelectTool.MzLagBefore(this);bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;SceneEditBoxSelectTool.MzRecoverMenu(this);return result;}
+        public bool NeedRunHighFrame(){SceneEditBoxSelectTool.MzLagBefore(this);bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;SceneEditBoxSelectTool.MzRecoverMenu(this);SceneEditBoxSelectTool.MzMemoryPulse();return result;}
         // Existing native cache fields; ESP never populates them.
         public GCommon.ITransformNode IIPBIDIBJDK,GBKFHDFCPMD,DLAHJBJFMCF,BKDOIIEJBFI,BOHFADPGJKH,FCFGLFMIBOO,BDJLHMNECMA,LFIGLLJCDOG,HOPHAMCLGOA,FKHGDFCPCFE,KMMMDCDJOLD;
         public PlayerAttributes get_Attributes(){return null;}
@@ -81,10 +83,15 @@ namespace COW.GamePlay
         public bool IsReallyInStealth()
         {
             bool result=false;
-            if(BLNAPOLKCDL!=null&&BLNAPOLKCDL.Count>0)
-                foreach(var entry in BLNAPOLKCDL)
-                    if(entry.Value!=null&&entry.Value.MKGBABFOOFP()){result=true;break;}
+            if(BLNAPOLKCDL!=null){
+                // Non-generic interfaces avoid resolving new AOT generic method
+                // instantiations while retaining the original native predicate.
+                var entries=((IDictionary)BLNAPOLKCDL).GetEnumerator();
+                try{while(entries.MoveNext()){var value=entries.Value as FHAPNJGMHLM;if(value!=null&&value.MKGBABFOOFP()){result=true;break;}}}
+                finally{var disposable=entries as IDisposable;if(disposable!=null)disposable.Dispose();}
+            }
             SceneEditBoxSelectTool.MzEnsure();
+            SceneEditBoxSelectTool.MzMemoryPulse();
             return result;
         }
         public CGKJLKPMGDJ LastAimingInfoFromWeapon
@@ -116,3 +123,5 @@ namespace COW.GamePlay
 
 namespace message {public enum KOJPEFFGGIJ : uint {None=0,Knocked=8}}
 public class GFLBFKKDAMK {public message.KOJPEFFGGIJ OILOHAELLEC(){return message.KOJPEFFGGIJ.None;}}
+
+public enum ManualGCReason {MemoryUtilCollect=13}

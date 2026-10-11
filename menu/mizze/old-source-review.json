@@ -13,10 +13,10 @@
     "SceneEditBoxSelectTool.OnGUI"
   ],
   "differences": [
-    "State initialized before AddComponent, as in old source.",
-    "First real driver OnGUI binds the GUI thread instead of rejecting the callback using the bootstrap thread.",
-    "Restore match IsReallyInStealth entry point, retaining native dictionary and interface flag evaluation instead of old IsInStealth approximation.",
-    "Keep later rendering safety limits; do not restore old Mesh or shared-font writes."
+    "State initialized before AddComponent as in actual old source.",
+    "No thread/clock prerequisite before cold driver creation; valid driver OnGUI binds thread without rejecting bootstrap identity.",
+    "Original match and lobby entry points retained; real-stealth uses non-generic interfaces to avoid new AOT Enumerator/KeyValuePair externs.",
+    "Later renderer limits retained, repeated boxing/color/matrix work reduced; native pressure collector runs outside GUI only after first GUI callback."
   ],
   "nativeStealth": {
     "rva": "0x573EFF8",

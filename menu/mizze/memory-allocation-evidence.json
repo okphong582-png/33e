@@ -1,0 +1,45 @@
+{
+  "revision": "R7",
+  "frames": 300,
+  "environment": "offline .NET IFix VM; includes test doubles, not iOS measurements",
+  "baselineCommit": "4ad95b9194e14468f9932b9fa48a641182a80841",
+  "modes": [
+    {
+      "name": "launcher",
+      "beforeAllocatedBytes": 5996600,
+      "afterAllocatedBytes": 5997896,
+      "reductionPercent": -0.022,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    },
+    {
+      "name": "box12",
+      "beforeAllocatedBytes": 47277120,
+      "afterAllocatedBytes": 43483888,
+      "reductionPercent": 8.023,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    },
+    {
+      "name": "allEsp6",
+      "beforeAllocatedBytes": 129378712,
+      "afterAllocatedBytes": 121169952,
+      "reductionPercent": 6.345,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    },
+    {
+      "name": "allEsp6-menuOpen",
+      "beforeAllocatedBytes": 164850864,
+      "afterAllocatedBytes": 156633856,
+      "reductionPercent": 4.985,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    }
+  ],
+  "interpretation": "ESP temporary allocation churn is reduced, not eliminated. This fixture shows no growing retained collection after full GC. It does not prove an on-device native crash cause or a device memory ceiling.",
+  "collector": "Existing COW.GcUtil.Collect(ManualGCReason.MemoryUtilCollect), only outside GUI with measured pressure and cooldown.",
+  "guiRecovery": "Snapshot errors return before latching MzInGui; cleanup resets guard before native GUI restore; both failure paths and following launcher frame executed by pinned VM.",
+  "checks": 2444,
+  "deviceVerified": false
+}

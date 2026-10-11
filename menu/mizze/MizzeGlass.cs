@@ -49,7 +49,7 @@ namespace COW.GamePlay
             MzTint(1,1,1,.21f*MzOpenAnim);MzFill(x+25,y+1,332,1,0);
             MzTint(.88f,.94f,1,(.13f+.05f*MzMotion)*MzOpenAnim);MzFill(x+41+MzMotion*70,y+3,146,1,0);
             MzTint(.97f,.98f,1,MzOpenAnim);MzTitle(x+23,y+11,180,"Mizze");
-            MzTint(.75f,.78f,.83f,.88f*MzOpenAnim);MzSmall(x+24,y+39,290,MzEspBlocked?"ESP tạm dừng · Bật lại để thử":"GLASS  /  iOS");
+            MzTint(.75f,.78f,.83f,.88f*MzOpenAnim);MzSmall(x+24,y+39,290,MzMemoryPaused?"Giảm tải · Bộ nhớ cao":MzEspBlocked?"ESP tạm dừng · Bật lại để thử":"GLASS  /  iOS");
             MzTint(1,1,1,.06f*MzOpenAnim);MzFill(x+330,y+18,30,30,15);
             MzTint(.9f,.92f,.95f,MzOpenAnim);MzCenter(x+326,y+10,46,48,"×");
             if(MzTap(x+326,y+10,46,48)){MzOpen=false;MzDragMode=0;MzBackgroundLast=0;}

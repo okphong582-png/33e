@@ -2,21 +2,29 @@
 
 Nguồn C# riêng biên dịch bằng Tencent InjectFix, mục tiêu TH iOS **1.132.1**, Assembly-CSharp 0.86.0.518. File xuất: Assembly-CSharp-patch.bytes, artifact Mizze-Assembly-CSharp-patch trong workflow Build CSharp IFix Menu.
 
-## R6 — đối chiếu đúng thư mục source cũ
+## R7 — áp lực RAM và đường hiện menu cũ
 
-R5 dùng commit471de8a làm baseline và vẫn không hiện trên thiết bị người dùng. R6 đọc trực tiếp thư mục **source cũ** do người dùng chỉ ra; old-source-review.json lưu SHA256 của bốn tệp đã đối chiếu.
+R6 vẫn không hiện menu và người dùng không có startup log. R7 giữ các entry point đã đối chiếu từ thư mục **source cũ**, bỏ chốt thread/clock trước khởi tạo đầu tiên; OnGUI hợp lệ của driver xác định thread vẽ. State/mảng được tạo trước AddComponent. Lỗi đọc hoặc hoàn trạng thái GUI không giữ chốt MzInGui ở true; kiểm thử gây lỗi xác nhận nút hiện lại ở frame tiếp theo. Không thêm entry hook, không dùng Behaviour.enabled, COWGameEntry hoặc GUI.enabled. Callback sau khởi tạo vẫn có guard khi truy cập game từ luồng phụ.
 
-- Khôi phục hook **Player.IsReallyInStealth** dùng để gọi MzEnsure trong source cũ; đường sảnh UIModelRole vẫn giữ. Hook này không cần bật ESP, FL, ngắm hoặc khóa hợp lệ để tạo nút Mizze.
-- Không sao chép phép trả về IsInStealth của source cũ. Đối chiếu ARM64 tại0x573EFF8/IDMAP24093: kiểm tra dictionary BLNAPOLKCDL tại0x21D0, bỏ value null, gọi FHAPNJGMHLM.MKGBABFOOFP và trả true ở value đầu tiên đúng; foreach có dispose. Test xác nhận IsInStealth có thể true trong khi real-stealth vẫn false.
-- Khởi tạo mảng/trạng thái **trước AddComponent**, như source cũ. Bỏ điều kiện trả về null của AddComponent làm hủy bootstrap; giữ guard chống khởi tạo lồng và backoff khi ngoại lệ.
-- Callback OnGUI hợp lệ đầu tiên của __mizze_driver xác định lại thread vẽ. Trước đây thread ghi từ getter khởi tạo có thể khiến OnGUI trả về trước cả log gui-entered. Đây là khác biệt trong mã đã sửa, chưa được xác nhận là nguyên nhân duy nhất trên iPhone.
-- Giữ renderer có giới hạn và vùng nhận chạm hiện tại. Không phục hồi Mesh/GL/font toàn cục của source cũ. verify-compatibility kiểm tra baseline cộng đúng các phụ thuộc cần cho native stealth, ghi trong old-source-api-additions.json.
-- Documents/Mizze-startup.log có dấu **R6 old-source startup**, driver-ready/gui-entered/launcher-painted. Mốc này chỉ xác nhận đường code chạy; chưa phải ảnh chụp hay kiểm chứng thiết bị.
-- Gói Documents gồm đúng Assembly-CSharp-patch.bytes và localConfig.json (testCodePatch=true). Vuốt tắt game hoàn toàn, thay cả hai file rồi mở lại. Mục tiêu TH iOS1.132.1; chưa xác nhận hết văng hoặc bộ nhớ ngừng tăng trên thiết bị.
+Bỏ các extern generic Dictionary.Enumerator/KeyValuePair mới đưa vào R6: đọc real-stealth qua IDictionary/IEnumerator hiện có, giữ null/value/MKGBABFOOFP/dispose như native. Đây là giảm phụ thuộc AOT mới; chưa xác nhận là nguyên nhân mất menu trên máy người dùng. runtime-api-delta.json giới hạn đúng API thay đổi; old-source-review.json lưu hash của bốn source gốc.
+
+### Bộ nhớ
+
+Phép đo 300 Repaint trên Tencent VM/.NET: nhiều ESP cấp phát khoảng129 MB ở R6, nhưng chênh bộ nhớ giữ lại sau full GC bằng0 trong fixture. Không có bằng chứng từ phép đo này rằng một collection của patch giữ lại ngày càng nhiều object. IFix reflection/boxing tạo nhiều rác tạm; native game có đường tắt auto-GC trong trận. Chưa xác nhận chế độ này đang bật trên máy người dùng.
+
+- Giảm Matrix4x4/GUI.color/native call trong lúc dựng command; gom lần đổi màu liên tiếp, giữ array192 cố định. allocation-baseline-r6.json và memory-allocation-evidence.json ghi phép đo trước/sau, không phải RAM iPhone.
+- MzMemoryPulse đo mỗi giây từ callback cũ, sau khi menu đã vào OnGUI. **Không gọi GC trong OnGUI, render, silent, lag hoặc khởi tạo component**. ESP vẫn lấy mẫu33/66ms;30s chỉ là lịch ghi session log.
+- Heap managed từ256 MiB và tăng48 MiB so với mốc sau GC thì gọi **COW.GcUtil.Collect(MemoryUtilCollect=13)** đã có trong game. Lần đo đầu ở heap cao cũng được xử lý. Native collector bật GC tạm thời nếu cần rồi trả lại chế độ game; memory-native-flow-evidence.json ghi RVA/calls. Không gọi trực tiếp GC.Collect hay ép auto-GC bật vĩnh viễn.
+- Cooldown ít nhất4s sau khi thu hồi được rác. Nếu thu hồi dưới16 MiB, chờ30s, tránh full GC liên tục trên bộ nhớ còn sống. Chỉ đây là khoảng nghỉ GC, không phải lịch ESP. Chưa đo thời gian khựng GC trên iPhone.
+- Nếu sau GC vẫn từ768 MiB và thu hồi dưới16 MiB: hoàn trạng thái aim/vũ khí/FL còn thuộc patch, xóa lệnh/nhãn, hủy texture nền/vòng của patch rồi tạm dừng các tác vụ nặng. **Nút Mizze và menu vẫn vẽ**, trạng thái báo Giảm tải · Bộ nhớ cao. Dưới512 MiB tự tiếp tục và cho nền động tải lại; không xóa công tắc người dùng. Đây là cơ chế giảm rủi ro, không đảm bảo chống jetsam do phần khác của game.
+- Session log R7 thêm gcCount/gcPeak/gcBefore/gcAfter/gcFreed/gcFaults/memPaused. Các giá trị là heap managed toàn tiến trình, không gồm đầy đủ GPU/native RSS.
+- Phát lại900 bước1s với tốc độ tăng7.506.272 byte/s từ log: fixture mô phỏng thu hồi rác giữ đỉnh dưới280 MiB. **Không phải chơi thật15 phút và không phải giới hạn RAM cam kết trên iPhone.**
+
+Gói Documents gồm Assembly-CSharp-patch.bytes và localConfig.json testCodePatch=true. Tắt hẳn game trước khi thay cả hai. Mục tiêu TH iOS1.132.1; chưa xác nhận hiện menu/hết văng trên thiết bị.
 
 ## Giảm đọc ESP và chặn chạm xuyên menu
 
-Bản này đã qua **2.386 kiểm tra offline** trên bytecode cuối và đối chiếu **243 khai báo** với dump TH iOS. Bài chạy dài đi qua 1.800 bước lấy mẫu trên timeline mô phỏng15phút; đây không phải chơi thật15phút trên iPhone.
+Bản này đã qua **2.444 kiểm tra offline** trên bytecode cuối và đối chiếu **242 khai báo** với dump TH iOS. Bài chạy dài đi qua 1.800 bước lấy mẫu trên timeline mô phỏng15phút; đây không phải chơi thật15phút trên iPhone.
 
 - ESP chỉ kiểm tra local actor/xương khi đến lịch lấy mẫu33/66ms, thay vì lặp mỗi Repaint. Local chưa sẵn sàng chờ100ms; hình cũ quá250ms bị xóa. Camera/match/kích thước đổi thì bỏ sample và cache cũ.
 - Cache tên/khoảng cách có64 ô, chỉ giữ ID/chuỗi/số. Tên đọc lại tối đa mỗi5s khi cache không va chạm; khoảng cách chỉ tạo chuỗi khi đổi mét nguyên. Xóa cache khi tắt ESP/FOV hoặc rời trận. Kiểm tra IsDead và ID trước HP/xương của đối thủ.
@@ -31,7 +39,7 @@ Các bản trước vẫn văng trên thiết bị người dùng. Chưa có cra
 - **Đổi đường đọc ESP**: không gọi GetHeadTF/RootTransform hoặc getter xương có lazy initialization. Native GetHeadTF tăng GetCount; các getter root/xương có thể tìm node rồi ghi cache. ESP nay đọc 11 trường ITransformNode đã có, kiểm tra Transform còn sống và bỏ qua node chưa được game tạo. esp-cache-evidence.json ghi offset đã đối chiếu ARM64. Không tự tạo hoặc ghi cache xương của game. Chưa xác nhận đây là nguyên nhân văng trên thiết bị.
 - **Lỗi lấy mẫu được xử lý riêng**: hủy toàn bộ sample dang dở, chờ500ms trước khi đọc lại; ba sample liên tiếp lỗi thì tạm dừng ESP đến khi người dùng bật lại. Bộ đếm này tách với lỗi vẽ. Lỗi vòng ngoài không còn bị nuốt im lặng.
 - InjectFix NewFieldInfo giữ giá trị static trong dictionary theo tên trường. package.cjs nay thêm namespace từ SHA256 của nguồn C# vào tên trường mới. Một bản mới không lấy MzInitialized/array/native wrapper của bản trước khi nạp lại trong cùng tiến trình. Regression đặt trạng thái cũ có array sai kích thước trước khi nạp bytecode mới và xác nhận trạng thái được tách. Nạp lại cùng mã nguồn giữ cùng namespace.
-- **R6 khôi phục Player.IsReallyInStealth theo source cũ, giữ biểu thức gốc đã đối chiếu native**. Tạo driver qua UIModelRole ở sảnh, có đường khôi phục qua NeedRunHighFrame của local player khi patch nạp muộn hoặc driver bị hủy lúc đổi cảnh. Callback khôi phục giữ return gốc, không đọc roster/transform và không đổi trạng thái di chuyển; tối đa một lần thử tạo driver mỗi giây. Driver còn sống thì không Find/AddComponent hoặc đọc thêm player. Chặn MzEnsure lồng nhau; callback OnGUI đầu tiên xác định thread vẽ, các đường render/aim/silent/vũ khí chỉ chạy trên thread đã xác nhận. Đây là giảm đường tác động lên vòng cập nhật game, không chứng minh game đã gọi các hook từ luồng khác.
+- **R7 giữ Player.IsReallyInStealth theo source cũ, giữ biểu thức gốc đã đối chiếu native**. Tạo driver qua UIModelRole ở sảnh, có đường khôi phục qua NeedRunHighFrame của local player khi patch nạp muộn hoặc driver bị hủy lúc đổi cảnh. Callback khôi phục giữ return gốc, không đọc roster/transform và không đổi trạng thái di chuyển; tối đa một lần thử tạo driver mỗi giây. Driver còn sống thì không Find/AddComponent hoặc đọc thêm player. Chặn MzEnsure lồng nhau; callback OnGUI hợp lệ xác định thread vẽ, các đường render/aim/silent/vũ khí chỉ chạy trên thread đã xác nhận. Đây là giảm đường tác động lên vòng cập nhật game, không chứng minh game đã gọi các hook từ luồng khác.
 - Getter aiming khi silent tắt chỉ trả record gốc, không gọi các native getter bổ sung. Silent và renderer có guard riêng để callback native không lồng vào chính thao tác đang chạy. OnGUI vẫn có guard và trả lại GUI.color/contentColor/matrix trong finally. Aim/vũ khí chạy tối đa một lần mỗi Time.frameCount dù có nhiều lượt Repaint.
 - ESP kiểm tra local player còn sống, local, active và đủ root/head trước khi đọc đối thủ. Chuyển sang observer, chết hoặc thiếu actor thì xóa hình cũ, không đọc skeleton đối thủ.
 - **ESP và FOV mặc định tắt khi mở app**; bật trong menu sau khi vào trận. Khi cả hai tắt, renderer trả ngay mà không lấy match/camera/player. Texture vòng chỉ được dựng nếu chức năng tương ứng bật, chuẩn bị trước lúc phát lệnh vẽ.
