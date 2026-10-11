@@ -10,7 +10,7 @@ sealed class MizzeConfigure : GenerateConfigure
     {
         flag=0;return tag=="IFix.IFixAttribute" &&
             ((m.DeclaringType.FullName=="COW.GamePlay.SceneEditBoxSelectTool" && m.Name=="OnGUI") ||
-             (m.DeclaringType.FullName=="COW.GamePlay.Player" && (m.Name=="get_LastAimingInfoFromWeapon")) ||
+             (m.DeclaringType.FullName=="COW.GamePlay.Player" && (m.Name=="get_LastAimingInfoFromWeapon" || m.Name=="NeedRunHighFrame" || m.Name=="get_IsBeingCarried" || m.Name=="UpdateKnockdownIsInCamera")) ||
              (m.DeclaringType.FullName=="COW.GameFacade" && m.Name=="get_UIModelRole"));
     }
     public override bool IsNewMethod(MethodReference m) {return m.DeclaringType.FullName=="COW.GamePlay.SceneEditBoxSelectTool" && m.Name.StartsWith("Mz");}

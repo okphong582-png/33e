@@ -23,7 +23,7 @@ namespace UnityEngine
         public Component GetComponent(Type t){return Added!=null&&t.IsInstanceOfType(Added)?Added:null;}
         public Component AddComponent(Type t){AddCalls++;if(OnAdd!=null)OnAdd();if(FailAdd)throw new Exception("creation failure");Added=(Component)Activator.CreateInstance(t);Added.gameObject=this;return Added;}
     }
-    public class Transform:Component {public Vector3 position {get;set;}public Vector3 localScale {get;set;}}
+    public class Transform:Component {Vector3 Position;public int PositionWrites;public Action OnPositionWrite;public bool FailWrite,FailRead;public Vector3 position {get{if(FailRead)throw new Exception("transform read failed");return Position;}set{if(FailWrite)throw new Exception("transform write failed");PositionWrites++;Position=value;if(OnPositionWrite!=null)OnPositionWrite();}}public Vector3 localScale {get;set;}}
     public class Collider:Component {}
     public struct Vector3
     {
@@ -97,6 +97,7 @@ namespace SimpleJSON
 }
 namespace GCommon
 {
+    public class Entity:UnityEngine.Component {static uint Serial;public uint Id=++Serial;public uint UniqueID {get{return Id;}}public UnityEngine.Transform m_CachedTransform;}
     public interface ITransformNode {UnityEngine.Transform transform {get;}}
     public class TestTransformNode:ITransformNode {public UnityEngine.Transform Value;public bool Fail;public UnityEngine.Transform transform {get{if(Fail)throw new Exception("cached transform lost");return Value;}}}
 
@@ -105,13 +106,16 @@ namespace GCommon
 }
 namespace COW
 {
+    public static class GameSettingData {public static bool Smooth;public static bool CachedSmoothHighFrame(){return Smooth;}}
     public class UIModelRole {}
     public static class GameFacade {public static UIModelRole m_modelRole;public static UIModelRole UIModelRole {get{return m_modelRole;}}public static GamePlay.JMAGGLCNGIG Match;public static GamePlay.Player Local;public static GamePlay.JMAGGLCNGIG CurrentMatch(){return Match;}public static int LocalCalls;public static GamePlay.Player GetLocalPlayerOrObServer(){LocalCalls++;return Local;}}
 }
 namespace COW.GamePlay
 {
     public class SceneEditBoxSelectTool:UnityEngine.Component {public void OnGUI(){}}
-    public class JMAGGLCNGIG {public IList Players=new ArrayList();public IList ILPNGCMEFFI(){return Players;}}
+    public class JMAGGLCNGIG {public IList Players=new ArrayList();public Player Lookup;public int LookupCalls;public bool LookupOption;public IList ILPNGCMEFFI(){return Players;}public Player HFMDJGBOJKF(BEADLMGGGGL id,bool b){LookupCalls++;LookupOption=b;return Lookup;}}
+    public struct BEADLMGGGGL {public uint Id;public static BEADLMGGGGL DEIPJDIGKIP(uint id){return new BEADLMGGGGL {Id=id};}public static bool GHAMDLFNMMA(BEADLMGGGGL a,BEADLMGGGGL b){return a.Id==b.Id;}}
+    public class AttackableEntity:GCommon.Entity {public bool Dead;public bool IsDead {get{return Dead;}}}
     public class CGKJLKPMGDJ {public UnityEngine.GameObject JHAINOBIFMA;public UnityEngine.Collider JINDNOFABKB;public UnityEngine.Vector3 HPCOJHGFEEG,DOJDNHCGFGK,HLDECMJFKJK,EKPLMDDKOGB,ONMKMEGMHOL;public bool DKPDBLLJEAA,EFMBNPNFGHM,CEOKOILBODN,CLOLKHNMNEK;}
     public class PlayerAttributes:UnityEngine.Component
     {
@@ -119,13 +123,14 @@ namespace COW.GamePlay
         public bool IsAmmoFree {get{return Free;}set{FreeWrites++;Free=value;}}
         public float FireIntervalScale {get{if(FailScale)throw new Exception("attribute lost");return Scale;}set{if(FailScale)throw new Exception("attribute lost");ScaleWrites++;Scale=value;}}
     }
-    public class Player:UnityEngine.Component
+    public class Player:AttackableEntity
     {
+        public Player LNHFOHKEAMP;public bool JKACHEMNCEI,FFOPCLFLIMO,IsKnockedDownBleed,Dying,Frustum;public BEADLMGGGGL GIEBNLMODIB;public GFLBFKKDAMK GBJCJJNPPEC=new GFLBFKKDAMK();public bool IsBeingCarried {get{return LNHFOHKEAMP!=null;}}public bool NeedRunHighFrame(){return COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;}public bool get_IsDieing(){return Dying;}public bool LastInFrustum(){return Frustum;}public void UpdateKnockdownIsInCamera(){}
         public PlayerAttributes Attributes=new PlayerAttributes();public int AttributeReads;public PlayerAttributes get_Attributes(){AttributeReads++;return Attributes;}
         public bool IsReallyInStealth(){return IsInStealth();}public CGKJLKPMGDJ LastAimingInfoFromWeapon {get{return FDMIEDDNCEC;}}
         public CGKJLKPMGDJ FDMIEDDNCEC=new CGKJLKPMGDJ();public bool Local,Team,Stealth,Firing,Movable=true;public int HP=100,MaximumHP=200,StealthCalls,AimCalls;public string Nick="Enemy test";public UnityEngine.Vector3 Origin;public UnityEngine.Quaternion LastRotation;
         public bool FailLegacyTransforms;public int LocalReads,HeadReads;public Action OnHead;public bool IsInStealth(){StealthCalls++;return Stealth;}public bool IsLocalPlayer(){LocalReads++;return Local;}public bool FailHP;public int CurHP {get{if(FailHP)throw new Exception("despawn getter");return HP;}}public int MaxHP {get{return MaximumHP;}}public bool FailNick;public string NickName {get{if(FailNick)throw new Exception("despawn after box");return Nick;}}public bool IsLocalTeammate(bool b){return Team;}
-        public GCommon.ITransformNode IIPBIDIBJDK;public UnityEngine.Transform Root {get{return IIPBIDIBJDK==null?null:IIPBIDIBJDK.transform;}set{IIPBIDIBJDK=value==null?null:new GCommon.TestTransformNode {Value=value};}}
+        public GCommon.ITransformNode IIPBIDIBJDK;public UnityEngine.Transform Root {get{return IIPBIDIBJDK==null?null:IIPBIDIBJDK.transform;}set{IIPBIDIBJDK=value==null?null:new GCommon.TestTransformNode {Value=value};m_CachedTransform=value;}}
         public GCommon.ITransformNode GBKFHDFCPMD;public UnityEngine.Transform Head {get{return GBKFHDFCPMD==null?null:GBKFHDFCPMD.transform;}set{GBKFHDFCPMD=value==null?null:new GCommon.TestTransformNode {Value=value};}}
         public GCommon.ITransformNode DLAHJBJFMCF;public UnityEngine.Transform Neck {get{return DLAHJBJFMCF==null?null:DLAHJBJFMCF.transform;}set{DLAHJBJFMCF=value==null?null:new GCommon.TestTransformNode {Value=value};}}
         public GCommon.ITransformNode BKDOIIEJBFI;public UnityEngine.Transform ArmL {get{return BKDOIIEJBFI==null?null:BKDOIIEJBFI.transform;}set{BKDOIIEJBFI=value==null?null:new GCommon.TestTransformNode {Value=value};}}
@@ -141,3 +146,6 @@ namespace COW.GamePlay
         public UnityEngine.Collider HeadCollider {get{return Collider;}}public UnityEngine.Vector3 AimStartPostion {get{return Origin;}}public bool IsFiring(){return Firing;}public void SetAimRotation(UnityEngine.Quaternion q,bool b){LastRotation=q;AimCalls++;}
     }
 }
+
+namespace message {public enum KOJPEFFGGIJ : uint {None=0,Knocked=8}}
+public class GFLBFKKDAMK {public message.KOJPEFFGGIJ State;public message.KOJPEFFGGIJ OILOHAELLEC(){return State;}}

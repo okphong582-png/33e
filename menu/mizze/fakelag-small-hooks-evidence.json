@@ -1,0 +1,520 @@
+{
+  "game": "Free Fire TH iOS 1.132.1",
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "hooks": [
+    {
+      "symbol": "COW.GamePlay.Player.NeedRunHighFrame",
+      "rva": "0x568b700",
+      "size": 268,
+      "sha256": "6a6775d54aafa15d790da20fb2680d2d58068b688597c1dbabc0e237c9bbee66",
+      "idmap": 9738
+    },
+    {
+      "symbol": "COW.GamePlay.Player.get_IsBeingCarried",
+      "rva": "0x5657304",
+      "size": 180,
+      "sha256": "7829325aeefcc55c497def1eef5c403c604fa8f1aebed4d9ce6e8448ec94a9c7",
+      "idmap": 943
+    },
+    {
+      "symbol": "COW.GamePlay.Player.UpdateKnockdownIsInCamera",
+      "rva": "0x56a0194",
+      "size": 596,
+      "sha256": "67ea4a7a672bda30c41eafa9274423813947605f52d3000d2dd30d166162f0b7",
+      "idmap": 19731
+    }
+  ],
+  "callSites": [
+    {
+      "callRva": "0x2055858",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudLobbySocialPrivilegeController.RefreshCarryStateVisibility",
+      "callerRva": "0x2055700"
+    },
+    {
+      "callRva": "0x205eb40",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudLobbySocialPrivilegeController.CanEnterPrivilegeReleaseState",
+      "callerRva": "0x205ea00"
+    },
+    {
+      "callRva": "0x2061eb8",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudLobbySocialPrivilegeSubBtnController.OnBtnClick",
+      "callerRva": "0x2061d70"
+    },
+    {
+      "callRva": "0x3188ee8",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudCamouflageController.OnCarryStateChanged",
+      "callerRva": "0x3188e14"
+    },
+    {
+      "callRva": "0x31e4200",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudCreepController.OnCarryStateChanged",
+      "callerRva": "0x31e412c"
+    },
+    {
+      "callRva": "0x31ee1a0",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudCrouchController.OnCarryStateChanged",
+      "callerRva": "0x31ee0cc"
+    },
+    {
+      "callRva": "0x322e160",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudEmotionEntryController.OnCarryStateChanged",
+      "callerRva": "0x322e08c"
+    },
+    {
+      "callRva": "0x3246d88",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudFireController.RefreshCarryBattleAttackBtnEffect",
+      "callerRva": "0x3246c70"
+    },
+    {
+      "callRva": "0x324d73c",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudFireController.TryRecordCarryBattleFireBtnAndSwitchEffect",
+      "callerRva": "0x324d604"
+    },
+    {
+      "callRva": "0x328c6ac",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudGrenadeBtnController.RefreshCarryStateVisibility",
+      "callerRva": "0x328c54c"
+    },
+    {
+      "callRva": "0x338480c",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudJumpController.OnCarryStateChanged",
+      "callerRva": "0x3384738"
+    },
+    {
+      "callRva": "0x33abf34",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudLobbySocialAreaNameController.IsBindPlayerInCarryState",
+      "callerRva": "0x33abe6c"
+    },
+    {
+      "callRva": "0x3422f34",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudMovingJoystickController.Update",
+      "callerRva": "0x3422d18"
+    },
+    {
+      "callRva": "0x35faab8",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudSpeedupAreaController.IsFollowEmotePassengerTargetBlocked",
+      "callerRva": "0x35fa9dc"
+    },
+    {
+      "callRva": "0x35fb5c8",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UIHudSpeedupAreaController.OnCarryStateChanged",
+      "callerRva": "0x35fb4f4"
+    },
+    {
+      "callRva": "0x4ab38c0",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UILobbySocialAreaScene.OnLobbySocialAreaPreSelectedChanged",
+      "callerRva": "0x4ab34c4"
+    },
+    {
+      "callRva": "0x4ab38e0",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UILobbySocialAreaScene.OnLobbySocialAreaPreSelectedChanged",
+      "callerRva": "0x4ab34c4"
+    },
+    {
+      "callRva": "0x4ab3c84",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UILobbySocialAreaScene.OnCarryStateChanged",
+      "callerRva": "0x4ab3aa0"
+    },
+    {
+      "callRva": "0x4ab3cc4",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UILobbySocialAreaScene.OnCarryStateChanged",
+      "callerRva": "0x4ab3aa0"
+    },
+    {
+      "callRva": "0x4abb55c",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.UILobbySocialAreaScene.EvaluateSEBtnActionType",
+      "callerRva": "0x4abb448"
+    },
+    {
+      "callRva": "0x4b7c674",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": ".HangManager.LateUpdate",
+      "callerRva": "0x4b7c5a4"
+    },
+    {
+      "callRva": "0x5626f60",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.PAJGCLAPGNF",
+      "callerRva": "0x5626d0c"
+    },
+    {
+      "callRva": "0x5627124",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.PAJGCLAPGNF",
+      "callerRva": "0x5626d0c"
+    },
+    {
+      "callRva": "0x5627520",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.PAJGCLAPGNF",
+      "callerRva": "0x5626d0c"
+    },
+    {
+      "callRva": "0x5657194",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.ShowFistWeapon",
+      "callerRva": "0x5657120"
+    },
+    {
+      "callRva": "0x5661010",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.FGKGMCGKJDL",
+      "callerRva": "0x5660f44"
+    },
+    {
+      "callRva": "0x5661088",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.FGKGMCGKJDL",
+      "callerRva": "0x5660f44"
+    },
+    {
+      "callRva": "0x568ae2c",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.UpdateKinematics",
+      "callerRva": "0x568a2f8"
+    },
+    {
+      "callRva": "0x568b2d4",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.UpdateLocalFishTail",
+      "callerRva": "0x568b24c"
+    },
+    {
+      "callRva": "0x568cc14",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.HADKJKALGOL",
+      "callerRva": "0x568bbac"
+    },
+    {
+      "callRva": "0x568d418",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.HADKJKALGOL",
+      "callerRva": "0x568bbac"
+    },
+    {
+      "callRva": "0x569a044",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.IBOIJOGGNFM",
+      "callerRva": "0x5699710"
+    },
+    {
+      "callRva": "0x569c328",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.PostUpdate",
+      "callerRva": "0x569c1e4"
+    },
+    {
+      "callRva": "0x569c334",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.PostUpdate",
+      "callerRva": "0x569c1e4"
+    },
+    {
+      "callRva": "0x569c658",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.PostUpdate",
+      "callerRva": "0x569c1e4"
+    },
+    {
+      "callRva": "0x569c66c",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.PostUpdate",
+      "callerRva": "0x569c1e4"
+    },
+    {
+      "callRva": "0x569d634",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.PostUpdate",
+      "callerRva": "0x569c1e4"
+    },
+    {
+      "callRva": "0x569ec60",
+      "callee": "COW.GamePlay.Player.UpdateKnockdownIsInCamera",
+      "caller": "COW.GamePlay.Player.PostUpdate",
+      "callerRva": "0x569c1e4"
+    },
+    {
+      "callRva": "0x56a0980",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.UpdateClimbCamera",
+      "callerRva": "0x56a08d0"
+    },
+    {
+      "callRva": "0x56a1c60",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.IIPHPPIPEIL",
+      "callerRva": "0x56a17e0"
+    },
+    {
+      "callRva": "0x56a1c8c",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.IIPHPPIPEIL",
+      "callerRva": "0x56a17e0"
+    },
+    {
+      "callRva": "0x56a2390",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.IIPHPPIPEIL",
+      "callerRva": "0x56a17e0"
+    },
+    {
+      "callRva": "0x56a23f0",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.IIPHPPIPEIL",
+      "callerRva": "0x56a17e0"
+    },
+    {
+      "callRva": "0x56a245c",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.IIPHPPIPEIL",
+      "callerRva": "0x56a17e0"
+    },
+    {
+      "callRva": "0x56a24bc",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.IIPHPPIPEIL",
+      "callerRva": "0x56a17e0"
+    },
+    {
+      "callRva": "0x56d7294",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.RequestEndClimb",
+      "callerRva": "0x56d7100"
+    },
+    {
+      "callRva": "0x56f86a8",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.SkipHighFrameWhileForceSync",
+      "callerRva": "0x56f8624"
+    },
+    {
+      "callRva": "0x57383a0",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.ApplyBeCarriedOutfitForBuild",
+      "callerRva": "0x5738304"
+    },
+    {
+      "callRva": "0x5739288",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.CanCarryPlayer",
+      "callerRva": "0x57390ec"
+    },
+    {
+      "callRva": "0x57392c8",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.CanCarryPlayer",
+      "callerRva": "0x57390ec"
+    },
+    {
+      "callRva": "0x573cb84",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.SkipHighFrameRotate",
+      "callerRva": "0x573cb3c"
+    },
+    {
+      "callRva": "0x57504ac",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.CheckCanRequestFastRun",
+      "callerRva": "0x5750304"
+    },
+    {
+      "callRva": "0x57584e0",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.IsFollowEmoteButtonBlocked",
+      "callerRva": "0x5758380"
+    },
+    {
+      "callRva": "0x576c248",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.IsHighFrameUpdatePosition",
+      "callerRva": "0x576c1f8"
+    },
+    {
+      "callRva": "0x576d424",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.AJHBPNIOJDF",
+      "callerRva": "0x576d340"
+    },
+    {
+      "callRva": "0x576d440",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.AJHBPNIOJDF",
+      "callerRva": "0x576d340"
+    },
+    {
+      "callRva": "0x57848ec",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.JLPJMAFLADI",
+      "callerRva": "0x5784154"
+    },
+    {
+      "callRva": "0x5785dcc",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.JLPJMAFLADI",
+      "callerRva": "0x5784154"
+    },
+    {
+      "callRva": "0x5785e10",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.JLPJMAFLADI",
+      "callerRva": "0x5784154"
+    },
+    {
+      "callRva": "0x5786800",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.Player.JLPJMAFLADI",
+      "callerRva": "0x5784154"
+    },
+    {
+      "callRva": "0x57d12ec",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.Player.SwitchPhysXState",
+      "callerRva": "0x57d11ac"
+    },
+    {
+      "callRva": "0x5855f10",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.NewPlayerAnimationSystemComponent.BEJGAGKGKID",
+      "callerRva": "0x5855e0c"
+    },
+    {
+      "callRva": "0x5a083b8",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.BTFishTail.Tick",
+      "callerRva": "0x5a08220"
+    },
+    {
+      "callRva": "0x5a0fef0",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.BTFishTail.LocalPlayerTickAndFixedUpdate",
+      "callerRva": "0x5a0fb30"
+    },
+    {
+      "callRva": "0x5a1e810",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.JSGPVengefulSoulTail.Tick",
+      "callerRva": "0x5a1e6f0"
+    },
+    {
+      "callRva": "0x5a1f79c",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.JSGPVengefulSoulTail.PMBKAHHFAFA",
+      "callerRva": "0x5a1f64c"
+    },
+    {
+      "callRva": "0x5a4c358",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.PlayerNetwork.OnUpdate",
+      "callerRva": "0x5a4bec0"
+    },
+    {
+      "callRva": "0x5c1ca80",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.HBIBDMMOOOK.BAEOOLLDGOP",
+      "callerRva": "0x5c1c970"
+    },
+    {
+      "callRva": "0x5c250e4",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.HBIBDMMOOOK.LHNJLFOINDO",
+      "callerRva": "0x5c23b54"
+    },
+    {
+      "callRva": "0x5c5da8c",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.NIPIBLMPCNN.IDNPGEKADHO",
+      "callerRva": "0x5c5d7b4"
+    },
+    {
+      "callRva": "0x5c5eadc",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.NIPIBLMPCNN.OAFGGFKLJGK",
+      "callerRva": "0x5c5ea00"
+    },
+    {
+      "callRva": "0x5c5ee34",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.NIPIBLMPCNN.KPFJIDEPKLP",
+      "callerRva": "0x5c5ecc8"
+    },
+    {
+      "callRva": "0x5c5f400",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.NIPIBLMPCNN.BHKLIBCMCLB",
+      "callerRva": "0x5c5f0f8"
+    },
+    {
+      "callRva": "0x5d90de4",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.LevelDWShield.OnFixedUpdate",
+      "callerRva": "0x5d90c58"
+    },
+    {
+      "callRva": "0x5e01508",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.LevelLuckyDrawBox.BMKKDHJOKLM",
+      "callerRva": "0x5e01318"
+    },
+    {
+      "callRva": "0x622ef08",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.OOBGJIBDMNN.ONLPAAELFLP",
+      "callerRva": "0x622e778"
+    },
+    {
+      "callRva": "0x63261cc",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.LBGMLLGCHPD.HBLFPMMPBKD",
+      "callerRva": "0x63260c0"
+    },
+    {
+      "callRva": "0x63261dc",
+      "callee": "COW.GamePlay.Player.NeedRunHighFrame",
+      "caller": "COW.GamePlay.LBGMLLGCHPD.HBLFPMMPBKD",
+      "callerRva": "0x63260c0"
+    },
+    {
+      "callRva": "0x632feb8",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.LBGMLLGCHPD.CCHIBEKMEIA",
+      "callerRva": "0x632fd70"
+    },
+    {
+      "callRva": "0x63310e4",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.LBGMLLGCHPD.COCLIIHBNME",
+      "callerRva": "0x6330fc0"
+    },
+    {
+      "callRva": "0x63ef950",
+      "callee": "COW.GamePlay.Player.get_IsBeingCarried",
+      "caller": "COW.GamePlay.OADFMKCJCCE.PNPKCCDPLIN",
+      "callerRva": "0x63ef858"
+    }
+  ],
+  "notes": [
+    "Direct BL call sites are static evidence, not an instrumented device trace.",
+    "NeedRunHighFrame and IsBeingCarried have other callers, including HangManager.LateUpdate. The payload retains shown pose within Time.frameCount and restores on the next frame or explicit release.",
+    "The original small hook bodies preserve native short-circuit expressions and local camera behavior; main OnUpdate/PostUpdate functions are not replaced."
+  ]
+}

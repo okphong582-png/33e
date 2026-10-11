@@ -27,7 +27,7 @@ namespace COW.GamePlay
         public static void MzStartRequest(UnityWebRequest request,int stage){MzRequest=request;MzRequestStage=stage;MzRequestStarted=Time.realtimeSinceStartup;request.timeout=6;request.SetRequestHeader("Cache-Control","no-cache, no-store");request.SendWebRequest();}
         public static void MzBeginRead(){if(MzRequest!=null||!MzHex(MzKeyHash)||!MzHex(MzDeviceHash))return;MzLicenseMessage="Đang kiểm tra khóa…";MzStartRequest(UnityWebRequest.Get(MzKeyUrl()),1);}
         public static bool MzMissing(JSONNode n){return System.Object.ReferenceEquals(n,null)||n.IsNull||n.Tag==JSONNodeType.None;}
-        public static void MzReject(string message){MzLeaseDeadline=0;MzLicenseMessage=message;MzRestoreSilent();MzRestoreWeapon();MzNextRefresh=Time.realtimeSinceStartup+5;}
+        public static void MzReject(string message){MzLeaseDeadline=0;MzLicenseMessage=message;MzRestoreSilent();MzRestoreWeapon();MzLagStop();MzNextRefresh=Time.realtimeSinceStartup+5;}
         public static void MzCheckRecord(string json,string serverDate)
         {
             var record=JSONNode.Parse(json);if(MzMissing(record)){MzReject("Khóa không tồn tại hoặc đã bị xóa");return;}if(!record.IsObject){MzReject("Dữ liệu khóa sai định dạng object");return;}
@@ -52,7 +52,7 @@ namespace COW.GamePlay
         public static void MzLicensePoll()
         {
             try {
-                if(MzKeyboard!=null){var status=MzKeyboard.status;if(status==TouchScreenKeyboard.Status.Done){string key=MzKeyboard.text;MzKeyboard=null;if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzKeyHash="";MzLeaseDeadline=0;MzRestoreSilent();MzRestoreWeapon();if(key==null||key.Trim().Length<8||key.Trim().Length>128)MzReject("Khóa phải có 8–128 ký tự");else{MzKeyHash=MzHash(key.Trim().ToUpperInvariant());MzClaimAttempted=false;MzCanClaim=true;MzBeginRead();}}else if(status==TouchScreenKeyboard.Status.Canceled||status==TouchScreenKeyboard.Status.LostFocus)MzKeyboard=null;}
+                if(MzKeyboard!=null){var status=MzKeyboard.status;if(status==TouchScreenKeyboard.Status.Done){string key=MzKeyboard.text;MzKeyboard=null;if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzKeyHash="";MzLeaseDeadline=0;MzRestoreSilent();MzRestoreWeapon();MzLagStop();if(key==null||key.Trim().Length<8||key.Trim().Length>128)MzReject("Khóa phải có 8–128 ký tự");else{MzKeyHash=MzHash(key.Trim().ToUpperInvariant());MzClaimAttempted=false;MzCanClaim=true;MzBeginRead();}}else if(status==TouchScreenKeyboard.Status.Canceled||status==TouchScreenKeyboard.Status.LostFocus)MzKeyboard=null;}
                 var request=MzRequest;if(request!=null&&request.isDone){int stage=MzRequestStage;long code=request.responseCode;string error=request.error;string data=request.downloadHandler==null?null:request.downloadHandler.text;string date=request.GetResponseHeader("Date");MzRequest=null;request.Dispose();if(stage==2){MzBeginRead();return;}if(code!=200||error!=null||data==null||data.Length>32768){MzReject(code==401||code==403?"Máy chủ từ chối khóa. Kiểm tra Rules":"Không kết nối được máy chủ khóa");return;}MzCheckRecord(data,date);}
                 if(MzKeyboard==null&&MzRequest==null&&MzHex(MzKeyHash)&&Time.realtimeSinceStartup>=MzNextRefresh)MzBeginRead();
             }catch(Exception){if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzReject("Lỗi xác thực khóa. Thử lại");}
@@ -63,7 +63,7 @@ namespace COW.GamePlay
             MzTint(.79f,.84f,.88f,MzOpenAnim);MzMessage(x+8,y+84,338,70,MzLicenseMessage??"Nhập khóa để bật ESP và ngắm");
             MzTint(.08f,.27f,.20f,MzOpenAnim);MzFill(x,y+166,354,46,12);MzTint(.83f,1,.91f,MzOpenAnim);MzCenter(x,y+166,354,46,MzRequest!=null?"Đang kiểm tra…":"Nhập khóa Mizze");if(MzRequest==null&&MzTap(x,y+166,354,46))MzKeyboard=TouchScreenKeyboard.Open("",TouchScreenKeyboardType.ASCIICapable,false,false,true,false,"Khóa Mizze",128);
             MzTint(.14f,.18f,.22f,.38f*MzOpenAnim);MzFill(x,y+224,354,42,11);MzTint(.92f,.95f,.98f,MzOpenAnim);MzCenter(x,y+224,354,42,"Kiểm tra lại khóa");if(MzTap(x,y+224,354,42))MzBeginRead();
-            MzTint(.17f,.07f,.09f,MzOpenAnim);MzFill(x,y+278,354,38,10);MzTint(1,.73f,.79f,MzOpenAnim);MzCenter(x,y+278,354,38,"Đăng xuất");if(MzTap(x,y+278,354,38)){if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzKeyHash="";MzLeaseDeadline=0;PlayerPrefs.DeleteKey("Mizze.IFix.KeyHash");MzLicenseMessage="Đã đăng xuất";MzRestoreSilent();MzRestoreWeapon();}
+            MzTint(.17f,.07f,.09f,MzOpenAnim);MzFill(x,y+278,354,38,10);MzTint(1,.73f,.79f,MzOpenAnim);MzCenter(x,y+278,354,38,"Đăng xuất");if(MzTap(x,y+278,354,38)){if(MzRequest!=null){MzRequest.Dispose();MzRequest=null;}MzKeyHash="";MzLeaseDeadline=0;PlayerPrefs.DeleteKey("Mizze.IFix.KeyHash");MzLicenseMessage="Đã đăng xuất";MzRestoreSilent();MzRestoreWeapon();MzLagStop();}
         }
     }
 }

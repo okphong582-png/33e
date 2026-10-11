@@ -2,7 +2,7 @@
 
 Nguồn C# riêng biên dịch bằng Tencent InjectFix, mục tiêu TH iOS **1.132.1**, Assembly-CSharp 0.86.0.518. File xuất: Assembly-CSharp-patch.bytes, artifact Mizze-Assembly-CSharp-patch trong workflow Build CSharp IFix Menu.
 
-## Bản kính động và ESP đọc cache native
+## Fakelag hiển thị thử nghiệm, kính động và ESP đọc cache native
 
 Các bản trước vẫn văng trên thiết bị người dùng. Chưa có crash stack nên chưa xác định được nguyên nhân native; những thay đổi dưới đây sửa các đường xung đột có thể chứng minh trong mã và bổ sung khả năng ghi lỗi, không phải xác nhận hết văng trên iPhone.
 
@@ -32,7 +32,7 @@ GIF **video-ezgif.com-video-to-gif-converter.gif** do người dùng cung cấp 
 
 UI chỉ vẽ ở Repaint, lượt chạm vẫn xử lý công tắc/slider/kéo nhưng không vẽ. Cache texture nền, GUIStyle, ma trận scale và chuỗi giá trị slider; chỉ đổi khi cần. Animation dừng ở đích và ngừng cập nhật toggle ẩn khi cửa sổ đã đóng. Tiêu đề25, nội dung20, nhãn nhỏ16, thông báo18; chữ UTF-8 có dấu. Bản trước có nền trắng vì overload bo góc cần explicit color; bản hiện tại truyền tint trực tiếp.
 
-Ba hook: GameFacade.get_UIModelRole, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI. Giữ return gốc, không hook movement hoặc stealth. Driver được tạo từ UIModelRole, cache và DontDestroyOnLoad. Chưa xác nhận hook sảnh chạy ở mọi giai đoạn trên iPhone.
+Sáu hook: GameFacade.get_UIModelRole, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI và ba hàm nhỏ NeedRunHighFrame/get_IsBeingCarried/UpdateKnockdownIsInCamera. Ba hàm nhỏ được dựng lại từ native TH với biểu thức/điều kiện gốc; không thay thân OnUpdate/PostUpdate, không hook stealth. Driver được tạo từ UIModelRole, cache và DontDestroyOnLoad. Chưa xác nhận hook sảnh chạy ở mọi giai đoạn trên iPhone.
 
 ## ESP và aim
 
@@ -48,7 +48,13 @@ Aim đầu khi bắn chọn đầu gần tâm trong FOV/tầm, gọi SetAimRotat
 - **Không nạp đạn**: bật PlayerAttributes.IsAmmoFree và ShootNoReload. Hai cờ thuộc hệ thống vũ khí thật; native có đọc ShootNoReload sau get_Attributes. Không gọi FullWeaponAmmo hoặc tự gửi packet.
 - Hai chức năng mặc định tắt, chỉ áp dụng cho local player còn sống trong trận với khóa hợp lệ. Khi bật, kiểm tra tối đa10 lần/giây, chỉ ghi khi giá trị thay đổi. Buff native thay đổi tốc độ trở thành mốc mới, không chia lặp giá trị patch đã đặt.
 - Tắt từng chức năng, chết, rời trận, đổi component hoặc khóa hết hiệu lực sẽ hoàn lại giá trị đã lưu nếu game vẫn giữ giá trị patch đặt; không ghi đè giá trị mới khác mà native đã thay. Bộ kiểm tra có các tình huống này.
-- **Fakelag chưa triển khai**: đã đọc transport UDP và native UGC getter/setter. PacketLossRateForEditor chỉ đọc/ghi field debug; chưa chứng minh nó trì hoãn vị trí ở trận thường. Các Send transport được khảo sát không có IFix dispatch/IDMAP phù hợp. DebugDropAll là cờ toàn cục, chưa xác minh được trì hoãn vị trí có giới hạn và hoàn lại đúng khi nền/rời trận. fakelag-evidence.json ghi phạm vi kiểm tra. Menu ghi rõ chưa hỗ trợ; không có toggle giả hoặc thay đổi mạng. Đã đối chiếu thêm bản native33e (PlayerModes): FakeLag của bản đó giữ hiển thị địch, không phải chứng cứ trì hoãn packet. Nó hoàn vị trí trước OnUpdate/PostUpdate gốc rồi giữ vị trí hiển thị; kiểm tra entity/match/epoch/lease trước khi ghi. Payload hiện có3 hook UI/aim và chưa có callback tương đương với xử lý gốc đầy đủ. Không thay bằng ghi Transform trong OnGUI vì thứ tự đó khác. Bổ sung kiểu native cần xác minh các hook trước/sau và hoàn vị trí đúng; fakelag mạng cần xác định đường gửi vị trí riêng.
+- **Fakelag · Giữ hiển thị — thử nghiệm, mặc định tắt**: thêm chức năng giữ vị trí hiển thị của địch theo chu kỳ150/300/500ms, tương tự mục đích giữ địch trong PlayerModes native33e. Đây là hiệu ứng client, chưa xác nhận tạo lag mạng hoặc thay đổi trạng thái máy chủ.
+- Hook NeedRunHighFrame được gọi ở đầu FGKGMCGKJDL trong Player.OnUpdate; get_IsBeingCarried ở đầu PostUpdate; UpdateKnockdownIsInCamera ở cuối PostUpdate. Native ba hàm nhỏ đã được đọc ARM64 và dựng lại đầy đủ điều kiện/return gốc, gồm phần camera của local player. Các IDMAP0 tương ứng9738/943/19731 có trong dump. fakelag-small-hooks-evidence.json ghi SHA256, RVA và các BL trực tiếp.
+- Trả vị trí thật của frame trước khi vào frame mới, giữ anchor ở cuối nhịp PostUpdate; getter gọi lại từ avatar LateUpdate trong cùng Time.frameCount giữ pose hiển thị. Nếu callback cuối được gọi lại, không mất giá trị thật đã lưu. Đây là cách dùng hook nhỏ, **chưa xác nhận tương đương mọi thứ tự Update/LateUpdate hoặc nhiều vòng mô phỏng trong cùng frame trên iPhone**.
+- Lấy roster tối đa128 mục mỗi200ms, cache tối đa64 ID địch; giữ tối đa32 Player/Transform trong mảng riêng của fakelag. Chỉ dùng m_CachedTransform đã có, UniqueID còn khớp, actor còn sống/active và thuộc trận hiện tại; bỏ local/đồng đội/knocked/được cõng. Không dùng cache ESP để giữ actor. Bộ đệm hình học ESP vẫn chỉ chứa lệnh vẽ.
+- Anchor đổi sau thời gian chọn hoặc dịch chuyển trên100m. Chỉ hoàn vị trí nếu pose hiện tại vẫn đúng giá trị patch đã đặt; không đè correction mới, entity tái sử dụng hoặc transform thay thế. Tắt/key bị từ chối thì hoàn pose còn sở hữu; đổi trận/local bỏ tham chiếu cũ, không ghi actor cảnh cũ. Lease1s khi GUI không còn pulse; native callback tiếp theo hoàn pose và dừng. Guard chống ghi lồng; lỗi managed dừng riêng fakelag, tắt toggle và ghi lỗi.
+- Không chạm wrapperArray/IFix dispatch chung, không Sleep, chặn luồng hoặc DebugDropAll. Các đường UDP/editor packet-loss vẫn chưa triển khai; fakelag-evidence.json phân biệt khảo sát mạng với bản giữ hiển thị.
+- Cách dùng: tab **Súng → Fakelag · Giữ hiển thị**, chọn150/300/500ms. Nhãn trạng thái cho biết số actor đã nhận hook, không xác nhận server hoặc việc địch đã đứng yên trong trận thật. Giữ bản trước dự phòng; kết quả hiện tại là kiểm tra offline.
 
 weapons-evidence.json ghi API/offset và điểm đọc native đã đối chiếu. Đây là xác nhận đường client, **chưa xác nhận bắn nhanh/không nạp được máy chủ chấp nhận hoặc hoạt động trong trận thật trên iPhone**. Không kết luận chỉ thay client sẽ vượt kiểm tra server.
 
@@ -62,7 +68,7 @@ SimpleJSON thiếu field trả JSONLazyCreator Tag=None/IsNull=false: bản hi�
 
 verify-declarations.cjs đối chiếu extern/field với dump TH cung cấp; bindings-evidence.json ghi khai báo. test.cjs chạy **bytecode cuối** bằng Tencent VM pinned5ba42eb8f63fe37134a3c78690f97d8425e13588 với opcode game. Unity/game/network là doubles offline, không thay thế crash log/thử iPhone.
 
-Regression gồm GIF15 frame khác nhau/timing/pause/cache/decode fail, ESP cấm getter lazy/read-only node/missing và destroyed bone/sample backoff/circuit breaker, lobby/drag/animation/toggle/palette, trạng thái GUI, lọc và hình học ESP, danh sách150 mục với toàn bộ ESP bật, hủy đối tượng/getter lỗi, resource texture, cập nhật theo lịch, từng xương chỉ chiếu một lần, không dùng Mesh/GL/font-global, bộ đệm cố định, aim/silent, key binding/expiry/races, legacy state isolation, gọi lồng và luồng phụ, local actor chưa sẵn sàng, surrogate tên, circuit breaker và log lỗi. SVG xuất từ lệnh vẽ bytecode; không phải ảnh chụp game.
+Regression fakelag gồm return-table gốc, camera local, UI toggle/duration, giữ/hoàn pose, LateUpdate cùng frame, callback lồng, correction, entity ID/transform/scene/local thay đổi, key/lease expiry, lỗi ghi, đội/chết/knocked/carried/inactive và150 actor qua90 frame cùng toàn bộ ESP/FOV. Regression khác gồm GIF15 frame khác nhau/timing/pause/cache/decode fail, ESP cấm getter lazy/read-only node/missing và destroyed bone/sample backoff/circuit breaker, lobby/drag/animation/toggle/palette, trạng thái GUI, lọc và hình học ESP, danh sách150 mục với toàn bộ ESP bật, hủy đối tượng/getter lỗi, resource texture, cập nhật theo lịch, từng xương chỉ chiếu một lần, không dùng Mesh/GL/font-global, bộ đệm cố định, aim/silent, key binding/expiry/races, legacy state isolation, gọi lồng và luồng phụ, local actor chưa sẵn sàng, surrogate tên, circuit breaker và log lỗi. SVG xuất từ lệnh vẽ bytecode; không phải ảnh chụp game.
 
 ## Build
 

@@ -1,6 +1,6 @@
 {
   "game": "Free Fire TH 1.132.1",
-  "implemented": false,
+  "implemented": true,
   "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
   "findings": [
     {
@@ -43,8 +43,21 @@
         "PlayerNetworkOnUpdate": "0x5A4BEC0",
         "PlayerPostUpdate": "0x569C1E4"
       },
-      "integration": "Existing .bytes patches only UIModelRole, LastAimingInfoFromWeapon and SceneEditBoxSelectTool.OnGUI. Equivalent native before/original/after callbacks and preserved original frame behavior have not been implemented or verified in the IFix payload. A Transform write from OnGUI is not equivalent and is not added."
+      "integration": "Implemented using three smaller existing IFix hooks with reconstructed native original bodies: NeedRunHighFrame, get_IsBeingCarried, UpdateKnockdownIsInCamera. Preserve the end pose within a Unity frame; restore at the next frame. No OnUpdate/PostUpdate body replacement or shared wrapperArray mutation."
     }
   ],
-  "requiredForImplementation": "For native-reference presentation holds: verify before/original/after update and post-update hooks, unchanged-value restoration, entity lifetime, epoch/lease handling and full original behavior in the IFix payload. For actual outgoing movement delay: verify an instrumented movement sender and bounded flush/teardown while preserving heartbeat/ACK/action traffic. Neither was device-tested."
+  "requiredForImplementation": "Outgoing packet lag remains unimplemented. Device validation still needed for the frame schedule, repeated simulation phases, late avatar queries, visual effect, interaction with aim/ESP and native crash behavior.",
+  "status": "experimental; offline bytecode verified; device unverified",
+  "mode": "bounded client presentation hold, not outgoing packet lag",
+  "deviceVerified": false,
+  "holdMilliseconds": [
+    150,
+    300,
+    500
+  ],
+  "maximumHeldActors": 32,
+  "maximumRoster": 64,
+  "rosterPollMilliseconds": 200,
+  "callbackLeaseMilliseconds": 1000,
+  "newHookEvidence": "fakelag-small-hooks-evidence.json"
 }
