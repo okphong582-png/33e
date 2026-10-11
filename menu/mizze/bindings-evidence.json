@@ -740,6 +740,22 @@
     "declaration": "public static Matrix4x4 get_matrix() { }"
   },
   {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "method": "get_enabled",
+    "parameters": [],
+    "declaration": "public static bool get_enabled() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "method": "set_enabled",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static void set_enabled(bool value) { }"
+  },
+  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Matrix4x4",
     "method": "get_identity",
@@ -1088,6 +1104,24 @@
     "declaration": "public static void SetString(string key, string value) { }"
   },
   {
+    "assembly": "mscorlib",
+    "owner": "System.GC",
+    "method": "GetTotalMemory",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static long GetTotalMemory(bool forceFullCollection) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GcUtil",
+    "method": "Collect",
+    "parameters": [
+      "ManualGCReason, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Collect(ManualGCReason reason) { }"
+  },
+  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Mathf",
     "method": "Sin",
@@ -1413,16 +1447,14 @@
   },
   {
     "assembly": "mscorlib",
-    "owner": "System.GC",
-    "method": "GetTotalMemory",
-    "parameters": [
-      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public static long GetTotalMemory(bool forceFullCollection) { }"
+    "owner": "System.Int64",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public override string ToString() { }"
   },
   {
     "assembly": "mscorlib",
-    "owner": "System.Int64",
+    "owner": "System.Boolean",
     "method": "ToString",
     "parameters": [],
     "declaration": "public override string ToString() { }"
@@ -1869,6 +1901,18 @@
     "owner": "COW.GamePlay.Player",
     "field": "KMMMDCDJOLD",
     "declaration": "protected ITransformNode KMMMDCDJOLD; // 0x2160"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GcUtil",
+    "field": "AutoGcDisabled",
+    "declaration": "public static bool AutoGcDisabled; // 0x19"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GcUtil",
+    "field": "GcCount",
+    "declaration": "public static int GcCount; // 0x10"
   },
   {
     "assembly": "UnityEngine.CoreModule",

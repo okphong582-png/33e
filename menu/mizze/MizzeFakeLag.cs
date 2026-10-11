@@ -6,7 +6,7 @@ namespace COW.GamePlay
     {
         // Presentation hold only. No socket, packet loss or shared IFix table writes.
         public static bool MzLagActive,MzLagBlocked,MzLagBusy,MzLagEnabled;
-        public static float MzLagX,MzLagY;public static int MzLagTailCalls;
+        public static float MzLagX,MzLagY;public static int MzLagTailCalls,MzLagUiPaints;
         public static float MzLagSeconds,MzLagDeadline,MzLagNextPulse;
         public static string MzLagMessage;
         public static JMAGGLCNGIG MzLagMatch;
@@ -24,6 +24,14 @@ namespace COW.GamePlay
         public static int MzLagCount,MzLagWrites,MzLagRestores;
 
 
+        public static void MzLagButtonPlace()
+        {
+            float width=Screen.width/MzScale,height=Screen.height/MzScale;
+            float x=MzBubbleX,y=MzBubbleY+92;
+            if(y+84>height)y=MzBubbleY-92;
+            if(y<4){y=MzBubbleY;x=MzBubbleX+92;if(x+84>width)x=MzBubbleX-92;}
+            MzLagX=Mathf.Clamp(x,4,width-84);MzLagY=Mathf.Clamp(y,4,height-84);
+        }
         public static bool MzLagButtonVisible(){return MzSwitch!=null&&MzSwitch.Length>17&&MzSwitch[17]&&MzAuthorized();}
         public static bool MzLagButtonHit(Vector2 p){float dx=p.x-MzLagX-40,dy=p.y-MzLagY-40;return MzLagButtonVisible()&&dx*dx+dy*dy<=1600;}
         public static void MzLagButtonToggle()
@@ -37,7 +45,7 @@ namespace COW.GamePlay
             MzTint(0,0,0,.22f);MzFill(MzLagX+3,MzLagY+5,80,80,40);
             MzTint(MzLagEnabled?.44f:.65f,MzLagEnabled?.93f:.71f,MzLagEnabled?.72f:.79f,.66f);MzFill(MzLagX,MzLagY,80,80,40);
             MzTint(.025f,.035f,.045f,.86f);MzFill(MzLagX+3,MzLagY+3,74,74,37);
-            MzTint(.96f,.99f,1,1);MzCenter(MzLagX,MzLagY,80,80,MzLagEnabled?"FL BẬT":"FL TẮT");
+            MzTint(.96f,.99f,1,1);MzCenter(MzLagX,MzLagY,80,80,MzLagEnabled?"FL BẬT":"FL TẮT");MzLagUiPaints++;
         }
         public static void MzLagDrop(int i)
         {
@@ -87,7 +95,7 @@ namespace COW.GamePlay
         }
         public static void MzLagFault(Exception e)
         {
-            MzLagBlocked=true;MzLagEnabled=false;MzSwitch[17]=false;MzLagStop();
+            MzLagBlocked=true;MzLagEnabled=false;MzLagStop();
             MzLagMessage="Fakelag đã dừng do dữ liệu lỗi";MzLogFault("fakelag",e);
         }
         public static void MzLagPulse()

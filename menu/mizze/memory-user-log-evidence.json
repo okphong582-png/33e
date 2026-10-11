@@ -1,0 +1,52 @@
+{
+  "source": "User-provided screenshot of Mizze-session.log received 2026-10-11",
+  "samples": [
+    {
+      "t": 74,
+      "managed": 103030784,
+      "commands": 6,
+      "samplesFailed": 0
+    },
+    {
+      "t": 104,
+      "managed": 98898324,
+      "commands": 0,
+      "samplesFailed": 1
+    },
+    {
+      "t": 134,
+      "managed": 239738880,
+      "commands": 12,
+      "samplesFailed": 0
+    },
+    {
+      "t": 164,
+      "managed": 498335744,
+      "commands": 9,
+      "samplesFailed": 0
+    },
+    {
+      "t": 194,
+      "managed": 751353856,
+      "commands": 0,
+      "samplesFailed": 0
+    },
+    {
+      "t": 224,
+      "managed": 950857728,
+      "commands": 12,
+      "samplesFailed": 0
+    },
+    {
+      "t": 254,
+      "managed": 1224839168,
+      "commands": 9,
+      "samplesFailed": 0
+    }
+  ],
+  "backgrounds": 15,
+  "drawFailed": 0,
+  "conclusion": "Abnormal process-wide managed-memory growth; neither a native crash stack nor proof of a retained-object leak. Auto-GC disabled is a supported native-game path, not yet confirmed active on this user device.",
+  "rateBytesPerSecond": 7506272.293333333,
+  "patchVersionInScreenshot": "No build marker or lagTail/lagWrites; session may come from an older run."
+}

@@ -10,7 +10,7 @@
   ],
   "raycastOutRva": "0x1545C2C",
   "implementation": "Existing UICamera.mainCamera; one owned UIPanel, three geometry-free UIWidget instances and BoxCollider/two SphereCollider instances. No global input disable.",
-  "uiState": "Panel enabled only when open/animating; Mizze bubble always available; FL bubble enabled only when feature visible and authorized; drag/resize update regions, turning feature off frees its old game input region.",
+  "uiState": "Panel enabled only when open/animating; Mizze bubble always available; FL bubble enabled only when feature visible and authorized; drag/resize update regions, turning feature off frees its old game input region.; feature-on resets FL adjacent to Mizze, native hold fault leaves inactive recovery button visible",
   "declarationEvidence": "bindings-evidence.json; includes Assembly-CSharp-firstpass types",
   "offlineTests": [
     "hit region follows panel/bubble drag and resize",
@@ -19,7 +19,8 @@
     "1000 syncs reuse the same objects",
     "camera replacement releases owned hierarchy",
     "projection error releases hierarchy and keeps launcher draw",
-    "FL remains usable when menu closed; drag does not activate; feature off and lease expiry hide/disable FL collider"
+    "FL remains usable when menu closed; drag does not activate; feature off and lease expiry hide/disable FL collider",
+    "FL placement at all corners across four resolutions/orientations; inherited GUI.enabled=false restored; FL independent of launcher/panel managed paint failures"
   ],
   "deviceVerified": false,
   "multiTouchOnDeviceVerified": false

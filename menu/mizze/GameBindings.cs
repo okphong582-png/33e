@@ -11,8 +11,10 @@ namespace GCommon
     public class SingletonModule<T> where T:class {public static T instance {get {return null;}}}
     public class UIModelManager : SingletonModule<UIModelManager> {public T GetModel<T>() where T:class {return null;}}
 }
+public enum ManualGCReason {MemoryUtilCollect=13}
 namespace COW
 {
+    public static class GcUtil {public static bool AutoGcDisabled;public static int GcCount,ManualGcCount;public static void Collect(ManualGCReason reason){}}
     public static class GameSettingData {public static bool CachedSmoothHighFrame(){return false;}}
     public class UIModelRole {}
     public static partial class GameFacade
@@ -54,12 +56,12 @@ namespace COW.GamePlay
     {
         // Preserve the native boolean expression; recovery only creates the UI driver.
         public bool JKACHEMNCEI,IsKnockedDownBleed;public Player LNHFOHKEAMP;
-        public bool IsBeingCarried {get{SceneEditBoxSelectTool.MzLagBefore(this);return LNHFOHKEAMP!=null;}}
+        public bool IsBeingCarried {get{if(SceneEditBoxSelectTool.MzLagMatch!=null)SceneEditBoxSelectTool.MzLagBefore(this);return LNHFOHKEAMP!=null;}}
         public bool FFOPCLFLIMO;public BEADLMGGGGL GIEBNLMODIB;public GFLBFKKDAMK GBJCJJNPPEC;
         public bool get_IsDieing(){return false;}public bool LastInFrustum(){return false;}
         public void UpdateKnockdownIsInCamera()
         {
-            if(!IsLocalPlayer()){SceneEditBoxSelectTool.MzLagAfter(this);return;}
+            if(!IsLocalPlayer()){if(SceneEditBoxSelectTool.MzLagActive)SceneEditBoxSelectTool.MzLagAfter(this);return;}
             if((int)GBJCJJNPPEC.OILOHAELLEC()!=8||FFOPCLFLIMO)return;
             if(BEADLMGGGGL.GHAMDLFNMMA(GIEBNLMODIB,BEADLMGGGGL.DEIPJDIGKIP(0u)))return;
             var target=COW.GameFacade.CurrentMatch().HFMDJGBOJKF(GIEBNLMODIB,false);
@@ -67,7 +69,7 @@ namespace COW.GamePlay
             FFOPCLFLIMO=target.LastInFrustum();
         }
 
-        public bool NeedRunHighFrame(){SceneEditBoxSelectTool.MzLagBefore(this);bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;SceneEditBoxSelectTool.MzRecoverMenu(this);return result;}
+        public bool NeedRunHighFrame(){if(SceneEditBoxSelectTool.MzLagMatch!=null)SceneEditBoxSelectTool.MzLagBefore(this);bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;if(!SceneEditBoxSelectTool.MzInitialized||SceneEditBoxSelectTool.MzDriver==null)SceneEditBoxSelectTool.MzRecoverMenu(this);return result;}
         // Existing native cache fields; ESP never populates them.
         public GCommon.ITransformNode IIPBIDIBJDK,GBKFHDFCPMD,DLAHJBJFMCF,BKDOIIEJBFI,BOHFADPGJKH,FCFGLFMIBOO,BDJLHMNECMA,LFIGLLJCDOG,HOPHAMCLGOA,FKHGDFCPCFE,KMMMDCDJOLD;
         public PlayerAttributes get_Attributes(){return null;}

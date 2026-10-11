@@ -45,12 +45,12 @@ unsafe static class MizzeRuntimeTest
     static void Set(string name,object value){Fields[name].SetValue(null,value);}static T Get<T>(string name){return (T)Fields[name].GetValue(null);}
     static object Run(string name,params object[] args)
     {
-        var c=Call.Begin();foreach(var a in args){if(a is float)c.PushSingle((float)a);else if(a is int)c.PushInt32((int)a);else if(a is bool)c.PushBoolean((bool)a);else if(a!=null&&a.GetType().IsValueType)c.PushValueType(a);else c.PushObject(a);}Vm.Execute(Methods[name],ref c,args.Length);object result=null;
+        var c=Call.Begin();foreach(var a in args){if(a is float)c.PushSingle((float)a);else if(a is int)c.PushInt32((int)a);else if(a is long)c.PushInt64((long)a);else if(a is bool)c.PushBoolean((bool)a);else if(a!=null&&a.GetType().IsValueType)c.PushValueType(a);else c.PushObject(a);}Vm.Execute(Methods[name],ref c,args.Length);object result=null;
         if(name=="get_UIModelRole"||name=="get_LastAimingInfoFromWeapon"||name=="MzPickTarget"||name=="MzHash"||name=="MzSafeName")result=c.GetObject();else if(name=="IsReallyInStealth"||name=="MzAuthorized"||name=="MzEnemy"||name=="MzOnThread"||name=="NeedRunHighFrame"||name=="get_IsBeingCarried"||name=="MzLagContext"||name=="MzLagButtonVisible"||name=="MzLagButtonHit")result=c.GetBoolean();Call.End(ref c);return result;
     }
     static void Frame(EventType type,float x=0,float y=0)
     {
-        if(type==EventType.Repaint)Time.Frame++;Event.current=new Event {type=type,mousePosition=new Vector2(x*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f),y*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f))};GUI.Calls.Clear();GUI.color=new Color(.3f,.4f,.5f,1);GUI.contentColor=new Color(.4f,.5f,.6f,.7f);GUI.matrix=new Matrix4x4 {Tag=99};Run("OnGUI",Driver);Check(GUI.color.r==.3f&&GUI.contentColor.r==.4f&&GUI.contentColor.a==.7f&&GUI.matrix.Tag==99,"GUI color/content/matrix restored");
+        if(type==EventType.Repaint)Time.Frame++;Event.current=new Event {type=type,mousePosition=new Vector2(x*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f),y*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f))};GUI.Calls.Clear();GUI.enabled=false;GUI.color=new Color(.3f,.4f,.5f,1);GUI.contentColor=new Color(.4f,.5f,.6f,.7f);GUI.matrix=new Matrix4x4 {Tag=99};Run("OnGUI",Driver);Check(GUI.color.r==.3f&&GUI.contentColor.r==.4f&&GUI.contentColor.a==.7f&&GUI.matrix.Tag==99&&!GUI.enabled,"GUI color/content/matrix/enabled restored");
     }
     static void Click(float x,float y){Frame(EventType.MouseDown,x,y);Frame(EventType.MouseUp,x,y);}
     static Transform Bone(float x,float y,float z){return new Transform {position=new Vector3(x,y,z)};}
@@ -310,7 +310,7 @@ unsafe static class MizzeRuntimeTest
         }
         long retained=GC.GetTotalMemory(true)-baseline;Check(retained<8*1024*1024,"15-minute simulated soak has bounded retained managed memory");
         Check(Object.ReferenceEquals(rects,Get<Rect[]>("MzRects"))&&Object.ReferenceEquals(names,Get<string[]>("MzNameCache"))&&Texture2D.Created==created&&Texture2D.Uploaded==uploads,"15-minute soak reuses draw buffers, text caches and textures");
-        var lines=Get<string[]>("MzSessionLines");string log=File.ReadAllText(Path.Combine(Application.TestFolder,"Mizze-session.log"));Check(lines.Length==12&&Get<int>("MzSessionCount")==12&&log.Length<4096&&log.Contains("t=900"),"session diagnostics retain only twelve bounded records through simulated minute fifteen");
+        var lines=Get<string[]>("MzSessionLines");string log=File.ReadAllText(Path.Combine(Application.TestFolder,"Mizze-session.log"));Check(lines.Length==12&&Get<int>("MzSessionCount")==12&&log.Length<8192&&log.Contains("t=900"),"session diagnostics retain only twelve bounded records through simulated minute fifteen");
         enemy.Dead=true;GUI.Calls.Clear();Render();Check(Get<int>("MzCommandCount")==0,"despawn/death guard rejects actor before reading pooled HP and bones");enemy.Dead=false;
         COW.GameFacade.Match=null;Run("MzRender");Check(Get<string[]>("MzNameCache").All(n=>n==null)&&Get<string[]>("MzDistanceCache").All(n=>n==null)&&Get<JMAGGLCNGIG>("MzEspMatch")==null,"match teardown releases label values and cached context");
         Array.Clear(switches,0,switches.Length);Time.Now=0;
@@ -382,7 +382,7 @@ unsafe static class MizzeRuntimeTest
         }
         enemy.HP=100;enemy.IsKnockedDownBleed=false;enemy.LNHFOHKEAMP=null;enemy.gameObject.activeInHierarchy=true;
         Run("MzLagStop");Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(51,0,10);enemy.Root.FailWrite=true;Run("UpdateKnockdownIsInCamera",enemy);
-        Check(Get<bool>("MzLagBlocked")&&!switches[17]&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers").All(p=>p==null),"write failure stops only lag, disables its toggle and releases rows");enemy.Root.FailWrite=false;Set("MzLagBlocked",false);
+        Check(Get<bool>("MzLagBlocked")&&switches[17]&&!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers").All(p=>p==null),"write failure stops effect, keeps the recovery button visible and releases rows");enemy.Root.FailWrite=false;Set("MzLagBlocked",false);
         // Dense scene: fixed actor arrays and 16 holds across repeated update/post phases.
         match.Players.Clear();for(int i=0;i<150;i++)match.Players.Add(Enemy(i*.01f));switches[17]=true;Set("MzLagEnabled",true);Set("MzLagNextPulse",0f);Run("MzLagPulse");var rows=Get<Player[]>("MzLagPlayers");var roster=Get<Player[]>("MzLagRoster");
         Check(Get<int>("MzLagRosterCount")==32,"dense roster sampling is capped at 32 eligible enemies");
@@ -405,19 +405,40 @@ unsafe static class MizzeRuntimeTest
         var local=Enemy(0);local.Local=true;var enemy=Enemy(1);var match=new JMAGGLCNGIG();match.Players.Add(enemy);COW.GameFacade.Local=local;COW.GameFacade.Match=match;UICamera.Main=new Camera {gameObject=new GameObject("floating-lag-ui")};Frame(EventType.Repaint);
         Check(!GUI.Calls.Any(d=>d.Text=="FL TẮT"||d.Text=="FL BẬT")&&!Get<SphereCollider>("MzTouchLag").enabled,"floating button and its input collider start hidden");
         Click(154,236);Frame(EventType.Repaint);float x=Get<float>("MzLagX")+40,y=Get<float>("MzLagY")+40,scale=Get<float>("MzScale");
-        Check(sw[17]&&!Get<bool>("MzLagEnabled")&&GUI.Calls.Any(d=>d.Text=="FL TẮT")&&UiHit(x*scale,y*scale),"menu switch shows an inactive floating toggle and its exact hit region");for(int i=0;i<30;i++)Frame(EventType.Repaint);Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"fakelag-floating.svg"));
+        Check(sw[17]&&!Get<bool>("MzLagEnabled")&&GUI.Calls.Any(d=>d.Text=="FL TẮT")&&UiHit(x*scale,y*scale)&&Math.Abs(Get<float>("MzLagX")-Get<float>("MzBubbleX"))<.01f&&Math.Abs(Get<float>("MzLagY")-Get<float>("MzBubbleY")-92)<.01f,"menu switch places the button beside Mizze and shows an inactive floating toggle and its exact hit region");for(int i=0;i<30;i++)Frame(EventType.Repaint);Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"fakelag-floating.svg"));
+        Check(GUI.Calls.Single(d=>d.Text=="FL TẮT").Enabled,"FL ignores inherited disabled GUI state without changing the game state");GUI.FailMizzeLabelOnce=true;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="FL TẮT")&&!Get<bool>("MzInGui"),"FL still draws when the Mizze launcher throws");
+        GUI.FailRoundedOnce=true;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="FL TẮT"),"FL still draws after panel paint failure");
         Set("MzOpen",false);Set("MzOpenAnim",0f);Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="FL TẮT")&&!Get<BoxCollider>("MzTouchPanel").enabled,"floating control stays usable after menu closes");
         Click(x,y);Check(Get<bool>("MzLagEnabled")&&Get<bool>("MzLagActive")&&Event.current.type==EventType.Used,"floating tap enables actual hold and consumes game input");
         var anchor=enemy.Root.position;Run("get_IsBeingCarried",enemy);Run("UpdateKnockdownIsInCamera",enemy);Time.Frame++;Time.Now=.05f;Run("get_IsBeingCarried",enemy);enemy.Root.position=anchor+new Vector3(1,0,0);Run("UpdateKnockdownIsInCamera",enemy);
         Check(enemy.Root.position.x==anchor.x&&Get<int>("MzLagTailCalls")>0,"native remote path skips local shadow logic yet shared tail actually holds changed position");
         Click(x,y);Check(!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&enemy.Root.position.x==anchor.x+1&&sw[17],"floating off immediately restores real pose while leaving button visible");
-        Frame(EventType.MouseDown,x,y);Frame(EventType.MouseDrag,x-100,y+90);Frame(EventType.MouseUp,x-100,y+90);Frame(EventType.Repaint);
-        float nx=Get<float>("MzLagX")+40,ny=Get<float>("MzLagY")+40;Check(Math.Abs(nx-(x-100))<.01f&&Math.Abs(ny-(y+90))<.01f&&!Get<bool>("MzLagEnabled")&&UiHit(nx*scale,ny*scale)&&!UiHit(x*scale,y*scale),"drag moves only floating control and collider without activating it");
+        Frame(EventType.MouseDown,x,y);Frame(EventType.MouseDrag,x+600,y+90);Frame(EventType.MouseUp,x+600,y+90);Frame(EventType.Repaint);
+        float nx=Get<float>("MzLagX")+40,ny=Get<float>("MzLagY")+40;Check(Math.Abs(nx-(x+600))<.01f&&Math.Abs(ny-(y+90))<.01f&&!Get<bool>("MzLagEnabled")&&UiHit(nx*scale,ny*scale)&&!UiHit(x*scale,y*scale),"drag moves only floating control and collider without activating it");
         Frame(EventType.MouseDown,900,600);Frame(EventType.MouseUp,nx,ny);Check(!Get<bool>("MzLagEnabled"),"gesture begun outside cannot activate the floating toggle");
         Click(nx,ny);Check(Get<bool>("MzLagEnabled"),"floating control can re-enable after drag");Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",4);Click(154,236);Frame(EventType.Repaint);
         Check(!sw[17]&&!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&!Get<SphereCollider>("MzTouchLag").enabled&&!GUI.Calls.Any(d=>d.Text=="FL TẮT"||d.Text=="FL BẬT")&&!UiHit(nx*scale,ny*scale),"menu off hides button and collider, restores/releases holds and frees underlying game input");
-        Click(154,236);Click(nx,ny);Set("MzLeaseDeadline",-.1f);Frame(EventType.Repaint);Check(!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&!Get<SphereCollider>("MzTouchLag").enabled,"expired key removes floating hit region and stops hold");
+        Click(154,236);nx=Get<float>("MzLagX")+40;ny=Get<float>("MzLagY")+40;Click(nx,ny);Set("MzLeaseDeadline",-.1f);Frame(EventType.Repaint);Check(!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&!Get<SphereCollider>("MzTouchLag").enabled,"expired key removes floating hit region and stops hold");
+        Set("MzLeaseDeadline",10000f);sw[17]=true;Set("MzOpen",false);Set("MzOpenAnim",0f);
+        int[] widths={1280,1792,844,390},heights={720,828,390,844};for(int i=0;i<widths.Length;i++)for(int corner=0;corner<4;corner++){
+            Screen.Width=widths[i];Screen.Height=heights[i];Set("MzBubbleX",corner%2==0?4f:10000f);Set("MzBubbleY",corner<2?4f:10000f);Frame(EventType.Repaint);Run("MzLagButtonPlace");Frame(EventType.Repaint);
+            float lx=Get<float>("MzLagX"),ly=Get<float>("MzLagY"),sc=Get<float>("MzScale"),dx=lx-Get<float>("MzBubbleX"),dy=ly-Get<float>("MzBubbleY");
+            Check(lx>=4&&ly>=4&&(lx+80)*sc<=Screen.width&&(ly+80)*sc<=Screen.height&&dx*dx+dy*dy>=80*80&&GUI.Calls.Any(d=>d.Text=="FL TẮT"),"floating button stays on-screen and separate from Mizze at every corner/orientation");
+        }
+        Screen.Width=1280;Screen.Height=720;Set("MzBubbleX",24f);Set("MzBubbleY",96f);Frame(EventType.Repaint);
         Array.Clear(sw,0,sw.Length);Set("MzLeaseDeadline",10000f);Time.Now=0;UICamera.Main=null;COW.GameFacade.Match=null;Run("MzTouchRelease");
+    }
+    static void MemoryPressureChecks()
+    {
+        Set("MzMemoryBaseline",0L);Set("MzMemoryPeak",0L);Set("MzMemoryNextCollect",0f);Set("MzMemoryCollections",0);Set("MzMemoryFaults",0);Set("MzMemoryBusy",false);COW.GcUtil.ManualGcCount=0;COW.GcUtil.FailCollect=false;COW.GcUtil.AutoGcDisabled=true;
+        Run("MzMemoryStep",100L*1024*1024,0f);Run("MzMemoryStep",255L*1024*1024,2f);Check(COW.GcUtil.ManualGcCount==0,"low managed usage never forces collection");
+        Run("MzMemoryStep",300L*1024*1024,4f);Check(COW.GcUtil.ManualGcCount==1&&COW.GcUtil.LastReason==ManualGCReason.MemoryUtilCollect&&Get<long>("MzMemoryBefore")==300L*1024*1024&&Get<long>("MzMemoryAfter")>0&&COW.GcUtil.AutoGcDisabled,"pressure collection uses the native reason and records before/after without changing GC policy");
+        Run("MzMemoryStep",600L*1024*1024,5f);Check(COW.GcUtil.ManualGcCount==1,"full collections are throttled even above hard threshold");Run("MzMemoryStep",600L*1024*1024,19f);Check(COW.GcUtil.ManualGcCount==2,"pressure can collect again after cooldown");
+        Set("MzMemoryBaseline",400L*1024*1024);Run("MzMemoryStep",420L*1024*1024,40f);Check(COW.GcUtil.ManualGcCount==2,"high stable live set needs additional growth before collection");
+        COW.GcUtil.FailCollect=true;Run("MzMemoryStep",700L*1024*1024,42f);Check(Get<int>("MzMemoryFaults")==1&&!Get<bool>("MzMemoryBusy"),"collection exception releases reentry guard and records fault");Run("MzMemoryStep",800L*1024*1024,60f);Check(Get<int>("MzMemoryFaults")==1,"failed collection has a longer retry cooldown");COW.GcUtil.FailCollect=false;
+        int thread=Get<int>("MzThreadId");Set("MzThreadId",thread+99);Run("MzMemoryStep",900L*1024*1024,100f);Check(COW.GcUtil.ManualGcCount==2,"background thread cannot request collection");Set("MzThreadId",thread);Set("MzMemoryBusy",true);Run("MzMemoryStep",900L*1024*1024,100f);Check(COW.GcUtil.ManualGcCount==2,"reentry cannot start overlapping collection");Set("MzMemoryBusy",false);
+        Run("MzMemoryStep",-1L,100f);Run("MzMemoryStep",900L*1024*1024,Single.NaN);Check(COW.GcUtil.ManualGcCount==2,"invalid metric or time never triggers collection");Run("MzMemoryStep",80L*1024*1024,100f);Check(Get<long>("MzMemoryBaseline")==80L*1024*1024,"native collection reducing memory resets pressure baseline");
+        Set("MzMemoryBaseline",0L);Set("MzMemoryNextCollect",0f);COW.GcUtil.AutoGcDisabled=false;
     }
     static int Main(string[] args)
     {
@@ -475,6 +496,7 @@ unsafe static class MizzeRuntimeTest
         TouchAndSoakChecks();
         FakeLagChecks();
         FloatingLagChecks(args);
+        MemoryPressureChecks();
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading, in-game aim and native crash behavior remain unverified; presentation fakelag remains experimental and device-unverified.");GC.KeepAlive(Vm);return 0;
     }
 }
