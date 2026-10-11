@@ -1,20 +1,17 @@
 {
-  "revision": "R5 compatibility rollback",
+  "revision": "R6 actual old-source recovery",
   "target": "Free Fire TH iOS 1.132.1",
-  "baseline": "471de8a42cc360c6891db8546565adfe53c2365d",
-  "reported": "User says Mizze stopped appearing after FL visibility fix; previously menu showed Nút nổi Fakelag but FL button absent.",
   "causeOnUserDeviceConfirmed": false,
-  "rollback": [
-    "CompilerHost and GameBindings match pre-R2 baseline exactly; six baseline hooks.",
-    "Original MzEnsure and OnGUI bootstrap/draw/restore restored; no GUI.enabled access, no floating draw inside finally.",
-    "Removed native GC collector and COW.GcUtil/ManualGCReason runtime dependencies introduced alongside FL fix.",
-    "Removed R3 Behaviour.enabled/component watchdog and R4 COWGameEntry/GameEngine hook dependencies."
+  "reference": "old-source-review.json",
+  "changes": [
+    "State initialized before AddComponent, as in old source.",
+    "First real driver OnGUI binds the GUI thread instead of rejecting the callback using the bootstrap thread.",
+    "Restore match IsReallyInStealth entry point, retaining native dictionary and interface flag evaluation instead of old IsInStealth approximation.",
+    "Keep later rendering safety limits; do not restore old Mesh or shared-font writes."
   ],
-  "retainedChanges": [
-    "FL placement adjacent to Mizze, clamped in viewport; no global draw/bootstrap changes.",
-    "Bounded R5 startup log through existing file/date/path APIs: driver-ready, gui-entered, launcher-painted.",
-    "R5 startup/session log markers; required localConfig.json bundled."
-  ],
-  "memoryRisk": "No proactive native GC collection in compatibility build. Earlier device logs showed managed-memory growth. This rollback is for missing-menu regression, not confirmation that crashes or memory growth are fixed.",
-  "deviceVerified": false
+  "nativeHook": "Player.IsReallyInStealth; slot24093",
+  "firstGuiThreadRecovery": true,
+  "checks": 2386,
+  "deviceVerified": false,
+  "nativeCrashCauseConfirmed": false
 }

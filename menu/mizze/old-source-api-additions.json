@@ -1,0 +1,31 @@
+{
+  "types": [
+    "COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "System.Collections.Generic.Dictionary`2+Enumerator[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "System.Collections.Generic.Dictionary`2[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "System.Collections.Generic.KeyValuePair`2[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "System.IDisposable, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+  ],
+  "externSignatures": [
+    "COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null::MKGBABFOOFP()<>",
+    "System.Collections.Generic.Dictionary`2+Enumerator[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::MoveNext()<>",
+    "System.Collections.Generic.Dictionary`2+Enumerator[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::get_Current()<>",
+    "System.Collections.Generic.Dictionary`2[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::GetEnumerator()<>",
+    "System.Collections.Generic.Dictionary`2[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::get_Count()<>",
+    "System.Collections.Generic.KeyValuePair`2[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::get_Value()<>",
+    "System.Collections.Generic.KeyValuePair`2[[System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::get_Value()<>",
+    "System.IDisposable, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::Dispose()<>"
+  ],
+  "nativeFields": [
+    "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null::BLNAPOLKCDL"
+  ],
+  "fixes": [
+    "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null::IsReallyInStealth()<>"
+  ],
+  "removedTypes": [
+    "System.InvalidOperationException, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+  ],
+  "removedExternSignatures": [
+    "System.InvalidOperationException, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089::.ctor(System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)<>"
+  ]
+}

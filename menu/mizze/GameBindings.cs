@@ -2,6 +2,7 @@
 // remaining declaration bodies are excluded from the generated payload.
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 [assembly: System.Reflection.AssemblyVersion("0.86.0.518")]
 namespace GCommon
@@ -50,6 +51,7 @@ namespace COW.GamePlay
         public bool IsAmmoFree {get{return false;}set{}}
         public float FireIntervalScale {get{return 1;}set{}}
     }
+    public interface FHAPNJGMHLM {bool MKGBABFOOFP();}
     public class Player : AttackableEntity
     {
         // Preserve the native boolean expression; recovery only creates the UI driver.
@@ -73,7 +75,18 @@ namespace COW.GamePlay
         public PlayerAttributes get_Attributes(){return null;}
         public CGKJLKPMGDJ FDMIEDDNCEC;
         public bool IsInStealth(){return false;}
-        public bool IsReallyInStealth(){return IsInStealth();}
+        // Restore the old source's match entry point while retaining the native
+        // 1.132.1 dictionary/flag test (RVA 0x573EFF8), not IsInStealth().
+        public Dictionary<uint,FHAPNJGMHLM> BLNAPOLKCDL;
+        public bool IsReallyInStealth()
+        {
+            bool result=false;
+            if(BLNAPOLKCDL!=null&&BLNAPOLKCDL.Count>0)
+                foreach(var entry in BLNAPOLKCDL)
+                    if(entry.Value!=null&&entry.Value.MKGBABFOOFP()){result=true;break;}
+            SceneEditBoxSelectTool.MzEnsure();
+            return result;
+        }
         public CGKJLKPMGDJ LastAimingInfoFromWeapon
         {
             get {var result=FDMIEDDNCEC;if(SceneEditBoxSelectTool.MzInitialized&&SceneEditBoxSelectTool.MzSwitch[12])SceneEditBoxSelectTool.MzSilent(this,result);return result;}

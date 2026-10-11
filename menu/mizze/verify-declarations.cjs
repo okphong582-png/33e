@@ -8,13 +8,19 @@ const files=new Map(),evidence=[],errors=[];
 for(const e of p.externMethods){
  const asm=e.owner.match(/, ([^,]+), Version=/)[1];if(!files.has(asm))files.set(asm,fs.readFileSync(path.join(root,asm+'.dll.cs'),'utf8'));
  const text=files.get(asm),owner=bare(e.owner).replace(/`1.*$/,'<T>'),ns=owner.includes('.')?owner.slice(0,owner.lastIndexOf('.')):'',name=owner.slice(owner.lastIndexOf('.')+1);
- const chunks=text.split('// Namespace: ');const chunk=chunks.find(c=>c.startsWith(ns+'\n')&&new RegExp('(?:class|struct|interface|enum) '+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?: :| //|\\s*\\n)').test(c));
- // Nested types do not appear as extern owners in this patch.
+ const chunks=text.split('// Namespace: ');let chunk=chunks.find(c=>c.startsWith(ns+'\n')&&new RegExp('(?:class|struct|interface|enum) '+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?: :| //|\\s*\\n)').test(c));
+ // The restored native stealth body uses these exact existing AOT generic types.
+ const stealthGeneric=/^System\.Collections\.Generic\.(Dictionary`2(?:\+Enumerator)?|KeyValuePair`2)\[\[System\.UInt32, mscorlib, [^\]]+\],\[COW\.GamePlay\.FHAPNJGMHLM, Assembly-CSharp, [^\]]+\]\], mscorlib, /.exec(e.owner);
+ if(stealthGeneric){
+  const kind=stealthGeneric[1];
+  if(kind==='Dictionary`2+Enumerator')chunk=chunks.find(c=>c.startsWith('\npublic struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>')&&c.includes('private Dictionary<TKey, TValue> _dictionary;'));
+  else chunk=chunks.find(c=>c.startsWith('System.Collections.Generic\n')&&c.includes((kind==='Dictionary`2'?'public class Dictionary':'public struct KeyValuePair')+'<T1, T2>'));
+ }
  if(!chunk){errors.push('Missing owner '+e.owner);continue;}
  const candidates=chunk.split('\n').map(l=>l.trim()).filter(l=>l.includes(' '+e.name+'(')&&l.includes('('));
  const hit=candidates.find(l=>{const ps=l.slice(l.indexOf('(')+1,l.lastIndexOf(')')).trim();const a=ps?ps.split(',').map(q=>q.trim().replace(/\s+\w+(?:\s*=.*)?$/,'').replace(/^(?:ref|out) /,'').replace(/\?$/,'')):[];return a.length===e.parameters.length&&a.every((q,i)=>q===short(e.parameters[i]).replace(/&$/,'')||(q==='object'&&bare(e.parameters[i])==='UnityEngine.Object'));});
  if(!hit){errors.push('Missing signature '+bare(e.owner)+'.'+e.name+'('+e.parameters.map(short).join(',')+') candidates '+candidates.join('; '));continue;}
- evidence.push({assembly:asm,owner:bare(e.owner),method:e.name,parameters:e.parameters,declaration:hit});
+ evidence.push({assembly:asm,owner:bare(e.owner),runtimeOwner:e.owner,method:e.name,parameters:e.parameters,declaration:hit});
 }
 for(const f of p.fields.filter(f=>!f.isNew)){
  const asm=f.owner.match(/, ([^,]+), Version=/)[1];if(!files.has(asm))files.set(asm,fs.readFileSync(path.join(root,asm+'.dll.cs'),'utf8'));const text=files.get(asm),owner=bare(f.owner),ns=owner.includes('.')?owner.slice(0,owner.lastIndexOf('.')):'',name=owner.slice(owner.lastIndexOf('.')+1);

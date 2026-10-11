@@ -35,10 +35,10 @@ namespace COW.GamePlay
             float now=Time.realtimeSinceStartup;if(!MzFinite(now)||now<MzNextBootstrap)return;MzNextBootstrap=now+1;
             MzBooting=true;
             try {
-                if(MzDriver==null){var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null&&g.AddComponent(typeof(SceneEditBoxSelectTool))==null)throw new InvalidOperationException("Menu component was not created");UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;}
                 MzThreadId=thread;
-                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzAppearanceInit();MzInitialized=true;try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}MzStartupLog("driver-ready");
-            }catch(Exception e){MzLogFault("bootstrap",e);}finally{MzBooting=false;}
+                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}
+                if(MzDriver==null){var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;}MzStartupLog("driver-ready");
+            }catch(Exception e){if(!MzGuiEntered)MzThreadId=0;MzLogFault("bootstrap",e);}finally{MzBooting=false;}
         }
         public static void MzRecoverMenu(Player player)
         {
@@ -147,7 +147,12 @@ namespace COW.GamePlay
         public void OnGUI()
         {
             if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
-            if(!MzOnThread()||MzInGui||gameObject==null||gameObject.name!="__mizze_driver")return;MzInGui=true;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;if(MzUiPaint&&!MzGuiEntered){MzGuiEntered=true;MzStartupLog("gui-entered");}
+            if(MzInGui||gameObject==null||gameObject.name!="__mizze_driver")return;
+            // Unity owns OnGUI: the first real GUI callback establishes its thread.
+            // A lobby getter may have initialized on a different thread earlier.
+            if(!MzInitialized)MzEnsure();if(!MzInitialized)return;
+            if(!MzGuiEntered)MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;
+            if(!MzOnThread())return;MzInGui=true;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;if(MzUiPaint&&!MzGuiEntered){MzGuiEntered=true;MzStartupLog("gui-entered");}
             try {
                 GUI.matrix=Matrix4x4.identity;MzLayout();if(type==EventType.MouseDown)MzOwnPointer=MzMenuHit(MzPointer);MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
                 if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;try{MzRunAim();}catch(Exception e){MzSwitch[11]=false;MzSwitch[12]=false;MzLogFault("aim-loop",e);}

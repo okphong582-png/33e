@@ -8,19 +8,23 @@ run(path.join(out,'MizzeRuntimeTest.exe'),[path.join(dir,'dist/Assembly-CSharp-p
 const {inspect}=require('../inspect_patch.cjs');const p=inspect(fs.readFileSync(path.join(dir,'dist/Assembly-CSharp-patch.bytes')));const evidence=JSON.parse(fs.readFileSync(path.join(dir,'bindings-evidence.json')));
 const manifest=JSON.parse(fs.readFileSync(path.join(dir,'dist/manifest.json')));
 if(!/^Mizze_[0-9a-f]{16}_$/.test(manifest.stateNamespace)||p.fields.some(f=>f.isNew&&!f.name.startsWith(manifest.stateNamespace)))throw Error('Unscoped or mixed new fields');
-const expectedFixes=['get_UIModelRole','get_LastAimingInfoFromWeapon','OnGUI','NeedRunHighFrame','get_IsBeingCarried','UpdateKnockdownIsInCamera'].sort();
-if(JSON.stringify(p.fixes.map(f=>f.method.name).sort())!==JSON.stringify(expectedFixes))throw Error('Unexpected frame/stealth hook');
+const expectedFixes=['get_UIModelRole','get_LastAimingInfoFromWeapon','OnGUI','IsReallyInStealth','NeedRunHighFrame','get_IsBeingCarried','UpdateKnockdownIsInCamera'].sort();
+if(JSON.stringify(p.fixes.map(f=>f.method.name).sort())!==JSON.stringify(expectedFixes))throw Error('Unexpected patch hook');
 if(p.fields.some(f=>!f.isNew&&f.name==='wrapperArray')||p.externMethods.some(e=>/MUDPSession|UDPSession|WrappersManagerImpl/.test(e.owner)))throw Error('Lag must not mutate transport or shared IFix dispatch');
-console.log('PASS: every VM-owned field is isolated by source revision; no stealth hook.');
+console.log('PASS: every VM-owned field is isolated by source revision; restored native stealth hook is explicitly checked.');
 const blocked=['UnityEngine.Mesh','UnityEngine.Material','UnityEngine.Shader','UnityEngine.GL','UnityEngine.Graphics','UnityEngine.Font'];
 for(const e of p.externMethods)if(blocked.includes(e.owner.split(',')[0])||(e.owner.split(',')[0]==='UnityEngine.GUIStyle'&&e.name==='SetDefaultFont'))throw Error('Unsafe shared renderer/font API in final patch: '+e.owner+'.'+e.name);
 console.log('PASS: final bytes contain no Mesh/Material/Shader/GL/Graphics/OS-font/default-font native calls.');
-for(const e of p.externMethods)if(!evidence.some(v=>v.method===e.name&&v.owner===e.owner.split(',')[0].replace(/\+/g,'.')&&JSON.stringify(v.parameters)===JSON.stringify(e.parameters)))throw Error('New unverified extern '+e.owner+'.'+e.name);
+for(const e of p.externMethods)if(!evidence.some(v=>v.method===e.name&&v.runtimeOwner===e.owner&&JSON.stringify(v.parameters)===JSON.stringify(e.parameters)))throw Error('New unverified extern '+e.owner+'.'+e.name);
 console.log('PASS: all generated extern descriptors are covered by checked TH iOS declarations.');
 
 const hooks=JSON.parse(fs.readFileSync(path.join(dir,'hooks-evidence.json'),'utf8')).hooks;
 if(hooks.length!==p.fixes.length||p.fixes.some(f=>!hooks.some(h=>h.owner===f.method.owner.split(',')[0]&&h.method===f.method.name&&h.vmMethod===f.id&&Number.isInteger(h.id))))throw Error('Patch target lacks matching native IDMAP evidence');
 if(p.types.some(t=>/^(COW\.GcUtil|ManualGCReason|COW\.COWGameEntry|GCommon\.GameEngine|UnityEngine\.Behaviour|UnityEngine\.MonoBehaviour),/.test(t))||p.externMethods.some(e=>e.owner.startsWith('UnityEngine.GUI,')&&/^(get|set)_enabled$/.test(e.name)))throw Error('R2-R4 runtime dependency reintroduced');
-console.log('PASS: compatibility rollback has six baseline hooks and no R2-R4 runtime additions.');
+console.log('PASS: old-source recovery has seven verified hooks and no R2-R4 runtime additions.');
 
 run(process.execPath,[path.join(dir,'verify-compatibility.cjs')]);
+
+const sourceReview=JSON.parse(fs.readFileSync(path.join(dir,'old-source-review.json'),'utf8'));
+for(const hook of sourceReview.oldHooks){const [owner,name]=hook.split('.');if(!p.fixes.some(f=>f.method.owner.split(',')[0].endsWith('.'+owner)&&f.method.name===name))throw Error('Old source hook missing: '+hook);}
+console.log('PASS: all four entry points recorded from actual source cũ are restored.');

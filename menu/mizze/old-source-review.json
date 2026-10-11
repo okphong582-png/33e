@@ -1,0 +1,32 @@
+{
+  "sourceFolder": "source cũ",
+  "files": {
+    "Mizze.cs": "cc8df38c295e39169fb2f09db3523f54ce2df928787325511246789fee6e7dd1",
+    "GameBindings.cs": "fbe2d386bc7d8630c0da221b1201157f827fb132ccb416a32c59ff5ddc10d4cf",
+    "CompilerHost.cs": "59fb0bdbad559fdb8b60d25c6ae2de7d71115db4307d36563f450efccc44a890",
+    "package.cjs": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967"
+  },
+  "oldHooks": [
+    "GameFacade.get_UIModelRole",
+    "Player.IsReallyInStealth",
+    "Player.get_LastAimingInfoFromWeapon",
+    "SceneEditBoxSelectTool.OnGUI"
+  ],
+  "differences": [
+    "State initialized before AddComponent, as in old source.",
+    "First real driver OnGUI binds the GUI thread instead of rejecting the callback using the bootstrap thread.",
+    "Restore match IsReallyInStealth entry point, retaining native dictionary and interface flag evaluation instead of old IsInStealth approximation.",
+    "Keep later rendering safety limits; do not restore old Mesh or shared-font writes."
+  ],
+  "nativeStealth": {
+    "rva": "0x573EFF8",
+    "ifIxSlot": 24093,
+    "field": "Player.BLNAPOLKCDL",
+    "fieldOffset": "0x21D0",
+    "interface": "FHAPNJGMHLM",
+    "interfaceSlot": 3,
+    "method": "MKGBABFOOFP",
+    "checks": "null/empty false; enumerate dictionary values; skip null; short-circuit true; dispose enumerator"
+  },
+  "deviceVerified": false
+}

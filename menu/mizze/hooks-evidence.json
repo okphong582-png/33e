@@ -40,8 +40,17 @@
     },
     {
       "owner": "COW.GamePlay.Player",
-      "method": "get_LastAimingInfoFromWeapon",
+      "method": "IsReallyInStealth",
       "vmMethod": 30,
+      "map": "IDMAP0",
+      "id": 24093,
+      "declaration": "public const IDMAP0 COW-GamePlay-Player-IsReallyInStealth0 = 24093;",
+      "native": "// RVA: 0x573EFF8 Offset: 0x573EFF8 VA: 0x573EFF8\n\tpublic bool IsReallyInStealth() { }"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "method": "get_LastAimingInfoFromWeapon",
+      "vmMethod": 31,
       "map": "IDMAP0",
       "id": 19026,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-get_LastAimingInfoFromWeapon0 = 19026;",
@@ -50,7 +59,7 @@
     {
       "owner": "COW.GamePlay.SceneEditBoxSelectTool",
       "method": "OnGUI",
-      "vmMethod": 38,
+      "vmMethod": 39,
       "map": "IDMAP4",
       "id": 156465,
       "declaration": "public const IDMAP4 COW-GamePlay-SceneEditBoxSelectTool-OnGUI0 = 156465;",

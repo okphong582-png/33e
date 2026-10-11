@@ -2,20 +2,21 @@
 
 Nguồn C# riêng biên dịch bằng Tencent InjectFix, mục tiêu TH iOS **1.132.1**, Assembly-CSharp 0.86.0.518. File xuất: Assembly-CSharp-patch.bytes, artifact Mizze-Assembly-CSharp-patch trong workflow Build CSharp IFix Menu.
 
-## R5 — quay về đường menu trước sửa FL
+## R6 — đối chiếu đúng thư mục source cũ
 
-Bản này phục hồi nguồn khởi tạo/vẽ theo commit471de8a, trước đợt sửa FL/R2. R3/R4 chưa giúp menu hiện trên thiết bị người dùng; nguyên nhân trên máy chưa được xác nhận vì chưa có startup/error log mới.
+R5 dùng commit471de8a làm baseline và vẫn không hiện trên thiết bị người dùng. R6 đọc trực tiếp thư mục **source cũ** do người dùng chỉ ra; old-source-review.json lưu SHA256 của bốn tệp đã đối chiếu.
 
-- GameBindings.cs và CompilerHost.cs khớp hoàn toàn baseline. Sáu hook,194 extern methods và235 khai báo được giữ nguyên. verify-compatibility.cjs kiểm tra tập type, method, native field và hook bằng với baseline; không thêm phụ thuộc runtime.
-- Bỏ COW.GcUtil/ManualGCReason, GUI.enabled, Behaviour.enabled và hook COWGameEntry/GameEngine đã thêm ở R2–R4. Trả đường vẽ Mizze về body OnGUI cũ; không vẽ nút trong finally.
-- Chỉ giữ sửa vị trí FL: khi bật Nút nổi Fakelag, FL TẮT nằm cạnh Mizze, tự chọn dưới/trên/bên cạnh và giới hạn trong màn hình. Kéo nút không kích hoạt; tắt trong menu ẩn nút. Không thay giao thức mạng.
-- Giữ log khởi động giới hạn8 mốc, dùng các API đã có trong baseline: Documents/Mizze-startup.log có dấu R5 compatibility startup, driver-ready, gui-entered và launcher-painted. Mốc vẽ chỉ chứng minh lời gọi vẽ hoàn thành, không xác nhận hình ảnh trên iPhone.
-- Không còn thu gom GC native chủ động từ R2. Log thiết bị trước đây đã cho thấy bộ nhớ managed tăng; R5 phục hồi tương thích menu, chưa xác nhận sửa hết văng hay hết tăng bộ nhớ. Không dùng số kiểm tra offline để kết luận trên máy thật.
-- Gói Documents gồm đúng Assembly-CSharp-patch.bytes và localConfig.json (testCodePatch=true). Vuốt tắt game hoàn toàn, thay cả hai file rồi mở lại. Mục tiêu TH iOS1.132.1; thiết bị chưa được kiểm chứng.
+- Khôi phục hook **Player.IsReallyInStealth** dùng để gọi MzEnsure trong source cũ; đường sảnh UIModelRole vẫn giữ. Hook này không cần bật ESP, FL, ngắm hoặc khóa hợp lệ để tạo nút Mizze.
+- Không sao chép phép trả về IsInStealth của source cũ. Đối chiếu ARM64 tại0x573EFF8/IDMAP24093: kiểm tra dictionary BLNAPOLKCDL tại0x21D0, bỏ value null, gọi FHAPNJGMHLM.MKGBABFOOFP và trả true ở value đầu tiên đúng; foreach có dispose. Test xác nhận IsInStealth có thể true trong khi real-stealth vẫn false.
+- Khởi tạo mảng/trạng thái **trước AddComponent**, như source cũ. Bỏ điều kiện trả về null của AddComponent làm hủy bootstrap; giữ guard chống khởi tạo lồng và backoff khi ngoại lệ.
+- Callback OnGUI hợp lệ đầu tiên của __mizze_driver xác định lại thread vẽ. Trước đây thread ghi từ getter khởi tạo có thể khiến OnGUI trả về trước cả log gui-entered. Đây là khác biệt trong mã đã sửa, chưa được xác nhận là nguyên nhân duy nhất trên iPhone.
+- Giữ renderer có giới hạn và vùng nhận chạm hiện tại. Không phục hồi Mesh/GL/font toàn cục của source cũ. verify-compatibility kiểm tra baseline cộng đúng các phụ thuộc cần cho native stealth, ghi trong old-source-api-additions.json.
+- Documents/Mizze-startup.log có dấu **R6 old-source startup**, driver-ready/gui-entered/launcher-painted. Mốc này chỉ xác nhận đường code chạy; chưa phải ảnh chụp hay kiểm chứng thiết bị.
+- Gói Documents gồm đúng Assembly-CSharp-patch.bytes và localConfig.json (testCodePatch=true). Vuốt tắt game hoàn toàn, thay cả hai file rồi mở lại. Mục tiêu TH iOS1.132.1; chưa xác nhận hết văng hoặc bộ nhớ ngừng tăng trên thiết bị.
 
 ## Giảm đọc ESP và chặn chạm xuyên menu
 
-Bản này đã qua **2.372 kiểm tra offline** trên bytecode cuối và đối chiếu **235 khai báo** với dump TH iOS. Bài chạy dài đi qua 1.800 bước lấy mẫu trên timeline mô phỏng15phút; đây không phải chơi thật15phút trên iPhone.
+Bản này đã qua **2.386 kiểm tra offline** trên bytecode cuối và đối chiếu **243 khai báo** với dump TH iOS. Bài chạy dài đi qua 1.800 bước lấy mẫu trên timeline mô phỏng15phút; đây không phải chơi thật15phút trên iPhone.
 
 - ESP chỉ kiểm tra local actor/xương khi đến lịch lấy mẫu33/66ms, thay vì lặp mỗi Repaint. Local chưa sẵn sàng chờ100ms; hình cũ quá250ms bị xóa. Camera/match/kích thước đổi thì bỏ sample và cache cũ.
 - Cache tên/khoảng cách có64 ô, chỉ giữ ID/chuỗi/số. Tên đọc lại tối đa mỗi5s khi cache không va chạm; khoảng cách chỉ tạo chuỗi khi đổi mét nguyên. Xóa cache khi tắt ESP/FOV hoặc rời trận. Kiểm tra IsDead và ID trước HP/xương của đối thủ.
@@ -30,7 +31,7 @@ Các bản trước vẫn văng trên thiết bị người dùng. Chưa có cra
 - **Đổi đường đọc ESP**: không gọi GetHeadTF/RootTransform hoặc getter xương có lazy initialization. Native GetHeadTF tăng GetCount; các getter root/xương có thể tìm node rồi ghi cache. ESP nay đọc 11 trường ITransformNode đã có, kiểm tra Transform còn sống và bỏ qua node chưa được game tạo. esp-cache-evidence.json ghi offset đã đối chiếu ARM64. Không tự tạo hoặc ghi cache xương của game. Chưa xác nhận đây là nguyên nhân văng trên thiết bị.
 - **Lỗi lấy mẫu được xử lý riêng**: hủy toàn bộ sample dang dở, chờ500ms trước khi đọc lại; ba sample liên tiếp lỗi thì tạm dừng ESP đến khi người dùng bật lại. Bộ đếm này tách với lỗi vẽ. Lỗi vòng ngoài không còn bị nuốt im lặng.
 - InjectFix NewFieldInfo giữ giá trị static trong dictionary theo tên trường. package.cjs nay thêm namespace từ SHA256 của nguồn C# vào tên trường mới. Một bản mới không lấy MzInitialized/array/native wrapper của bản trước khi nạp lại trong cùng tiến trình. Regression đặt trạng thái cũ có array sai kích thước trước khi nạp bytecode mới và xác nhận trạng thái được tách. Nạp lại cùng mã nguồn giữ cùng namespace.
-- **Bỏ hook Player.IsReallyInStealth**. Tạo driver qua UIModelRole ở sảnh, có đường khôi phục qua NeedRunHighFrame của local player khi patch nạp muộn hoặc driver bị hủy lúc đổi cảnh. Callback khôi phục giữ return gốc, không đọc roster/transform và không đổi trạng thái di chuyển; tối đa một lần thử tạo driver mỗi giây. Driver còn sống thì không Find/AddComponent hoặc đọc thêm player. Chặn MzEnsure lồng nhau và ghi nhận luồng tạo driver; các đường render/aim/silent/vũ khí chỉ chạy trên luồng này. Đây là giảm đường tác động lên vòng cập nhật game, không chứng minh game đã gọi các hook từ luồng khác.
+- **R6 khôi phục Player.IsReallyInStealth theo source cũ, giữ biểu thức gốc đã đối chiếu native**. Tạo driver qua UIModelRole ở sảnh, có đường khôi phục qua NeedRunHighFrame của local player khi patch nạp muộn hoặc driver bị hủy lúc đổi cảnh. Callback khôi phục giữ return gốc, không đọc roster/transform và không đổi trạng thái di chuyển; tối đa một lần thử tạo driver mỗi giây. Driver còn sống thì không Find/AddComponent hoặc đọc thêm player. Chặn MzEnsure lồng nhau; callback OnGUI đầu tiên xác định thread vẽ, các đường render/aim/silent/vũ khí chỉ chạy trên thread đã xác nhận. Đây là giảm đường tác động lên vòng cập nhật game, không chứng minh game đã gọi các hook từ luồng khác.
 - Getter aiming khi silent tắt chỉ trả record gốc, không gọi các native getter bổ sung. Silent và renderer có guard riêng để callback native không lồng vào chính thao tác đang chạy. OnGUI vẫn có guard và trả lại GUI.color/contentColor/matrix trong finally. Aim/vũ khí chạy tối đa một lần mỗi Time.frameCount dù có nhiều lượt Repaint.
 - ESP kiểm tra local player còn sống, local, active và đủ root/head trước khi đọc đối thủ. Chuyển sang observer, chết hoặc thiếu actor thì xóa hình cũ, không đọc skeleton đối thủ.
 - **ESP và FOV mặc định tắt khi mở app**; bật trong menu sau khi vào trận. Khi cả hai tắt, renderer trả ngay mà không lấy match/camera/player. Texture vòng chỉ được dựng nếu chức năng tương ứng bật, chuẩn bị trước lúc phát lệnh vẽ.
@@ -53,7 +54,7 @@ GIF **video-ezgif.com-video-to-gif-converter.gif** do người dùng cung cấp 
 
 UI chỉ vẽ ở Repaint, lượt chạm vẫn xử lý công tắc/slider/kéo nhưng không vẽ. Cache texture nền, GUIStyle, ma trận scale và chuỗi giá trị slider; chỉ đổi khi cần. Animation dừng ở đích và ngừng cập nhật toggle ẩn khi cửa sổ đã đóng. Tiêu đề25, nội dung20, nhãn nhỏ16, thông báo18; chữ UTF-8 có dấu. Bản trước có nền trắng vì overload bo góc cần explicit color; bản hiện tại truyền tint trực tiếp.
 
-Sáu hook: GameFacade.get_UIModelRole, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI, NeedRunHighFrame, get_IsBeingCarried và UpdateKnockdownIsInCamera. GFHCADCHHEO để game xử lý gốc. NeedRunHighFrame giữ nguyên biểu thức boolean native rồi thử khôi phục driver chỉ với local player. Không thay thân OnUpdate/PostUpdate hoặc hook stealth. Driver dùng DontDestroyOnLoad; khi bị hủy thì tạo lại mà giữ công tắc/màu/vị trí menu. Lỗi managed khi vẽ panel được cách ly để nút Mizze vẫn có lượt vẽ riêng. Chưa xác nhận hết lỗi trên thiết bị.
+Bảy hook: Player.IsReallyInStealth, GameFacade.get_UIModelRole, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI, NeedRunHighFrame, get_IsBeingCarried và UpdateKnockdownIsInCamera. GFHCADCHHEO để game xử lý gốc. NeedRunHighFrame giữ nguyên biểu thức boolean native rồi thử khôi phục driver chỉ với local player. Không thay thân OnUpdate/PostUpdate ; hook stealth giữ kiểm tra dictionary native. Driver dùng DontDestroyOnLoad; khi bị hủy thì tạo lại mà giữ công tắc/màu/vị trí menu. Lỗi managed khi vẽ panel được cách ly để nút Mizze vẫn có lượt vẽ riêng. Chưa xác nhận hết lỗi trên thiết bị.
 
 ## ESP và aim
 
@@ -103,4 +104,4 @@ node menu/mizze/verify-declarations.cjs <TH dump Assembly directory>
 node menu/mizze/test.cjs
 ~~~
 
-Bindings chỉ là khai báo compile, body giả không được đưa vào patch; RuntimeApis.cs chỉ dùng test. CompilerHost.cs chọn sáu fix và helperMz*; package.cjs đổi magic/flag phù hợp game và giữ bytecode do compiler sinh.
+Bindings chỉ là khai báo compile, body giả không được đưa vào patch; RuntimeApis.cs chỉ dùng test. CompilerHost.cs chọn bảy fix và helperMz*; package.cjs đổi magic/flag phù hợp game và giữ bytecode do compiler sinh.

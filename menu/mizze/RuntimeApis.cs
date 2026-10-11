@@ -130,11 +130,13 @@ namespace COW.GamePlay
     }
     public enum PMCNKMEKFGA {None=0,DummyShadow=1,RTShadow=2}
     public class SceneGraphicsQuality:UnityEngine.Component {public static PMCNKMEKFGA shadowType;}
+    public interface FHAPNJGMHLM {bool MKGBABFOOFP();}
+    public class TestStealth:FHAPNJGMHLM {public bool Value;public int Calls;public bool MKGBABFOOFP(){Calls++;return Value;}}
     public class Player:AttackableEntity
     {
         public Player LNHFOHKEAMP;public bool JKACHEMNCEI,FFOPCLFLIMO,IsKnockedDownBleed,Dying,Frustum;public BEADLMGGGGL GIEBNLMODIB;public GFLBFKKDAMK GBJCJJNPPEC=new GFLBFKKDAMK();public bool IsBeingCarried {get{return LNHFOHKEAMP!=null;}}public bool NeedRunHighFrame(){return COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;}public bool get_IsDieing(){return Dying;}public bool LastInFrustum(){return Frustum;}public void UpdateKnockdownIsInCamera(){}public void GFHCADCHHEO(){}
         public PlayerAttributes Attributes=new PlayerAttributes();public int AttributeReads;public PlayerAttributes get_Attributes(){AttributeReads++;return Attributes;}
-        public bool IsReallyInStealth(){return IsInStealth();}public CGKJLKPMGDJ LastAimingInfoFromWeapon {get{return FDMIEDDNCEC;}}
+        public Dictionary<uint,FHAPNJGMHLM> BLNAPOLKCDL;public bool IsReallyInStealth(){if(BLNAPOLKCDL!=null)foreach(var pair in BLNAPOLKCDL)if(pair.Value!=null&&pair.Value.MKGBABFOOFP())return true;return false;}public CGKJLKPMGDJ LastAimingInfoFromWeapon {get{return FDMIEDDNCEC;}}
         public CGKJLKPMGDJ FDMIEDDNCEC=new CGKJLKPMGDJ();public bool Local,Team,Stealth,Firing,Movable=true;public int HP=100,MaximumHP=200,StealthCalls,AimCalls;public string Nick="Enemy test";public UnityEngine.Vector3 Origin;public UnityEngine.Quaternion LastRotation;
         public bool FailLegacyTransforms;public int LocalReads,HeadReads;public Action OnHead;public bool IsInStealth(){StealthCalls++;return Stealth;}public bool IsLocalPlayer(){LocalReads++;return Local;}public bool FailHP;public int CurHP {get{if(FailHP)throw new Exception("despawn getter");return HP;}}public int MaxHP {get{return MaximumHP;}}public bool FailNick;public string NickName {get{if(FailNick)throw new Exception("despawn after box");return Nick;}}public bool IsLocalTeammate(bool b){return Team;}
         public GCommon.ITransformNode IIPBIDIBJDK;public UnityEngine.Transform Root {get{return IIPBIDIBJDK==null?null:IIPBIDIBJDK.transform;}set{IIPBIDIBJDK=value==null?null:new GCommon.TestTransformNode {Value=value};m_CachedTransform=value;}}
