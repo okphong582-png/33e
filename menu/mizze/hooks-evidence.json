@@ -3,18 +3,9 @@
   "deviceVerified": false,
   "hooks": [
     {
-      "owner": "COW.COWGameEntry",
-      "method": "LateUpdate",
-      "vmMethod": 0,
-      "map": "IDMAP0",
-      "id": 13470,
-      "declaration": "public const IDMAP0 COW-COWGameEntry-LateUpdate0 = 13470;",
-      "native": "// RVA: 0x504DD78 Offset: 0x504DD78 VA: 0x504DD78\n\tprivate void LateUpdate() { }"
-    },
-    {
       "owner": "COW.GameFacade",
       "method": "get_UIModelRole",
-      "vmMethod": 18,
+      "vmMethod": 0,
       "map": "IDMAP0",
       "id": 7680,
       "declaration": "public const IDMAP0 COW-GameFacade-get_UIModelRole0 = 7680;",
@@ -23,7 +14,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "get_IsBeingCarried",
-      "vmMethod": 19,
+      "vmMethod": 13,
       "map": "IDMAP0",
       "id": 943,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-get_IsBeingCarried0 = 943;",
@@ -32,7 +23,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "UpdateKnockdownIsInCamera",
-      "vmMethod": 30,
+      "vmMethod": 25,
       "map": "IDMAP0",
       "id": 19731,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-UpdateKnockdownIsInCamera0 = 19731;",
@@ -41,7 +32,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "NeedRunHighFrame",
-      "vmMethod": 33,
+      "vmMethod": 28,
       "map": "IDMAP0",
       "id": 9738,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-NeedRunHighFrame0 = 9738;",
@@ -50,7 +41,7 @@
     {
       "owner": "COW.GamePlay.Player",
       "method": "get_LastAimingInfoFromWeapon",
-      "vmMethod": 35,
+      "vmMethod": 30,
       "map": "IDMAP0",
       "id": 19026,
       "declaration": "public const IDMAP0 COW-GamePlay-Player-get_LastAimingInfoFromWeapon0 = 19026;",
@@ -59,7 +50,7 @@
     {
       "owner": "COW.GamePlay.SceneEditBoxSelectTool",
       "method": "OnGUI",
-      "vmMethod": 43,
+      "vmMethod": 38,
       "map": "IDMAP4",
       "id": 156465,
       "declaration": "public const IDMAP4 COW-GamePlay-SceneEditBoxSelectTool-OnGUI0 = 156465;",

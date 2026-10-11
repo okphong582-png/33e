@@ -6,11 +6,12 @@ namespace COW.GamePlay
 {
     public partial class SceneEditBoxSelectTool
     {
+        public static bool MzGuiEntered,MzLauncherPainted;
         public static string MzStartupTrace;public static int MzStartupCount;
         public static void MzStartupLog(string stage)
         {
             if(MzStartupCount>=8)return;MzStartupCount++;
-            try{MzStartupTrace=(MzStartupTrace??"Mizze R4 startup\n")+DateTime.UtcNow.ToString("o")+" "+stage+" gui="+MzGuiPaints.ToString()+"\n";string folder=Application.persistentDataPath;if(!String.IsNullOrEmpty(folder))File.WriteAllText(Path.Combine(folder,"Mizze-startup.log"),MzStartupTrace);}catch(Exception){}
+            try{MzStartupTrace=(MzStartupTrace??"Mizze R5 compatibility startup\n")+DateTime.UtcNow.ToString("o")+" "+stage+"\n";string folder=Application.persistentDataPath;if(!String.IsNullOrEmpty(folder))File.WriteAllText(Path.Combine(folder,"Mizze-startup.log"),MzStartupTrace);}catch(Exception){}
         }
         public static string MzRuntimeError;
         public static bool MzErrorWritten;

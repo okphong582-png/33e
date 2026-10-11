@@ -6,7 +6,7 @@ namespace COW.GamePlay
     {
         // Presentation hold only. No socket, packet loss or shared IFix table writes.
         public static bool MzLagActive,MzLagBlocked,MzLagBusy,MzLagEnabled;
-        public static float MzLagX,MzLagY;public static int MzLagTailCalls,MzLagUiPaints;
+        public static float MzLagX,MzLagY;public static int MzLagTailCalls;
         public static float MzLagSeconds,MzLagDeadline,MzLagNextPulse;
         public static string MzLagMessage;
         public static JMAGGLCNGIG MzLagMatch;
@@ -45,7 +45,7 @@ namespace COW.GamePlay
             MzTint(0,0,0,.22f);MzFill(MzLagX+3,MzLagY+5,80,80,40);
             MzTint(MzLagEnabled?.44f:.65f,MzLagEnabled?.93f:.71f,MzLagEnabled?.72f:.79f,.66f);MzFill(MzLagX,MzLagY,80,80,40);
             MzTint(.025f,.035f,.045f,.86f);MzFill(MzLagX+3,MzLagY+3,74,74,37);
-            MzTint(.96f,.99f,1,1);MzCenter(MzLagX,MzLagY,80,80,MzLagEnabled?"FL BẬT":"FL TẮT");MzLagUiPaints++;
+            MzTint(.96f,.99f,1,1);MzCenter(MzLagX,MzLagY,80,80,MzLagEnabled?"FL BẬT":"FL TẮT");
         }
         public static void MzLagDrop(int i)
         {
@@ -95,7 +95,7 @@ namespace COW.GamePlay
         }
         public static void MzLagFault(Exception e)
         {
-            MzLagBlocked=true;MzLagEnabled=false;MzLagStop();
+            MzLagBlocked=true;MzLagEnabled=false;MzSwitch[17]=false;MzLagStop();
             MzLagMessage="Fakelag đã dừng do dữ liệu lỗi";MzLogFault("fakelag",e);
         }
         public static void MzLagPulse()

@@ -1,26 +1,20 @@
 {
-  "revision": "R4",
+  "revision": "R5 compatibility rollback",
   "target": "Free Fire TH iOS 1.132.1",
-  "reported": "R3 menu absent in lobby and match. No new R3 startup/error log supplied yet.",
+  "baseline": "471de8a42cc360c6891db8546565adfe53c2365d",
+  "reported": "User says Mizze stopped appearing after FL visibility fix; previously menu showed Nút nổi Fakelag but FL button absent.",
   "causeOnUserDeviceConfirmed": false,
-  "newHook": {
-    "owner": "COW.COWGameEntry",
-    "method": "LateUpdate",
-    "rva": "0x504DD78",
-    "nativeMap": 13470,
-    "originalBody": "m_GameEngine.LateRunOneFrame();",
-    "originalFieldOffset": "0x20",
-    "nativeTailCall": "0x504DDD0 -> 0x6B32B50",
-    "nativePatchGate": "0x504DD88 mov w0,#0x349e; 0x504DD90 bl IsPatched",
-    "ordering": "Original engine tick first, menu heartbeat after success. Engine exceptions remain visible; managed menu errors caught separately."
-  },
-  "changes": [
-    "Global main-thread entry heartbeat creates and repairs persistent driver without a player, match, lobby getter, or high-frame mode.",
-    "All seven patch targets checked against native IFix IDMAP slots.",
-    "R4 startup records entry-tick, driver-ready, awaiting-gui after five seconds, launcher-painted; bounded eight records.",
-    "Retains R3 component/active/enabled recovery and delayed memory collection outside OnGUI."
+  "rollback": [
+    "CompilerHost and GameBindings match pre-R2 baseline exactly; six baseline hooks.",
+    "Original MzEnsure and OnGUI bootstrap/draw/restore restored; no GUI.enabled access, no floating draw inside finally.",
+    "Removed native GC collector and COW.GcUtil/ManualGCReason runtime dependencies introduced alongside FL fix.",
+    "Removed R3 Behaviour.enabled/component watchdog and R4 COWGameEntry/GameEngine hook dependencies."
   ],
-  "thread": "Unity LateUpdate offers a main-thread bootstrap; first owned OnGUI still authoritative. After GUI binding, mismatched threads rejected before Unity calls.",
-  "evidence": "hooks-evidence.json and bindings-evidence.json",
+  "retainedChanges": [
+    "FL placement adjacent to Mizze, clamped in viewport; no global draw/bootstrap changes.",
+    "Bounded R5 startup log through existing file/date/path APIs: driver-ready, gui-entered, launcher-painted.",
+    "R5 visible marker; required localConfig.json bundled."
+  ],
+  "memoryRisk": "No proactive native GC collection in compatibility build. Earlier device logs showed managed-memory growth. This rollback is for missing-menu regression, not confirmation that crashes or memory growth are fixed.",
   "deviceVerified": false
 }
