@@ -13,7 +13,7 @@
   "retainedChanges": [
     "FL placement adjacent to Mizze, clamped in viewport; no global draw/bootstrap changes.",
     "Bounded R5 startup log through existing file/date/path APIs: driver-ready, gui-entered, launcher-painted.",
-    "R5 visible marker; required localConfig.json bundled."
+    "R5 startup/session log markers; required localConfig.json bundled."
   ],
   "memoryRisk": "No proactive native GC collection in compatibility build. Earlier device logs showed managed-memory growth. This rollback is for missing-menu regression, not confirmation that crashes or memory growth are fixed.",
   "deviceVerified": false
