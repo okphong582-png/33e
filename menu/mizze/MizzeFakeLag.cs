@@ -5,7 +5,8 @@ namespace COW.GamePlay
     public partial class SceneEditBoxSelectTool
     {
         // Presentation hold only. No socket, packet loss or shared IFix table writes.
-        public static bool MzLagActive,MzLagBlocked,MzLagBusy;
+        public static bool MzLagActive,MzLagBlocked,MzLagBusy,MzLagEnabled;
+        public static float MzLagX,MzLagY;public static int MzLagTailCalls;
         public static float MzLagSeconds,MzLagDeadline,MzLagNextPulse;
         public static string MzLagMessage;
         public static JMAGGLCNGIG MzLagMatch;
@@ -22,6 +23,22 @@ namespace COW.GamePlay
         public static float[] MzLagUntil;
         public static int MzLagCount,MzLagWrites,MzLagRestores;
 
+
+        public static bool MzLagButtonVisible(){return MzSwitch!=null&&MzSwitch.Length>17&&MzSwitch[17]&&MzAuthorized();}
+        public static bool MzLagButtonHit(Vector2 p){float dx=p.x-MzLagX-40,dy=p.y-MzLagY-40;return MzLagButtonVisible()&&dx*dx+dy*dy<=1600;}
+        public static void MzLagButtonToggle()
+        {
+            if(!MzOnThread()||!MzLagButtonVisible())return;
+            MzLagEnabled=!MzLagEnabled;MzLagBlocked=false;MzLagNextPulse=0;MzLagPulse();
+        }
+        public static void MzLagButtonDraw()
+        {
+            if(!MzUiPaint||!MzLagButtonVisible())return;
+            MzTint(0,0,0,.22f);MzFill(MzLagX+3,MzLagY+5,80,80,40);
+            MzTint(MzLagEnabled?.44f:.65f,MzLagEnabled?.93f:.71f,MzLagEnabled?.72f:.79f,.66f);MzFill(MzLagX,MzLagY,80,80,40);
+            MzTint(.025f,.035f,.045f,.86f);MzFill(MzLagX+3,MzLagY+3,74,74,37);
+            MzTint(.96f,.99f,1,1);MzCenter(MzLagX,MzLagY,80,80,MzLagEnabled?"FL BẬT":"FL TẮT");
+        }
         public static void MzLagDrop(int i)
         {
             MzLagPlayers[i]=null;MzLagTransforms[i]=null;MzLagIds[i]=0;MzLagUntil[i]=0;MzLagApplied[i]=false;MzLagFrames[i]=0;
@@ -70,15 +87,16 @@ namespace COW.GamePlay
         }
         public static void MzLagFault(Exception e)
         {
-            MzLagBlocked=true;MzSwitch[17]=false;MzLagStop();
+            MzLagBlocked=true;MzLagEnabled=false;MzSwitch[17]=false;MzLagStop();
             MzLagMessage="Fakelag đã dừng do dữ liệu lỗi";MzLogFault("fakelag",e);
         }
         public static void MzLagPulse()
         {
             if(!MzOnThread()||MzLagBusy)return;
-            if(!MzSwitch[17]||MzLagBlocked||!MzAuthorized()){
+            if(!MzSwitch[17]||!MzAuthorized())MzLagEnabled=false;
+            if(!MzSwitch[17]||!MzLagEnabled||MzLagBlocked||!MzAuthorized()){
                 if(MzLagMatch!=null||MzLagActive)MzLagStop();
-                if(!MzLagBlocked)MzLagMessage="Fakelag hiển thị · Thử nghiệm";return;
+                if(!MzLagBlocked)MzLagMessage="Fakelag · TẮT";return;
             }
             float now=Time.realtimeSinceStartup;if(!MzFinite(now)){MzLagStop();return;}if(now<MzLagNextPulse)return;MzLagNextPulse=now+.2f;
             MzLagBusy=true;try{
@@ -108,7 +126,7 @@ namespace COW.GamePlay
                 for(int i=0;i<16;i++)if(!System.Object.ReferenceEquals(MzLagPlayers[i],null)){
                     if(!MzLagRow(i,MzLagPlayers[i]))MzLagDrop(i);else if(!MzLagMember(MzLagPlayers[i])||MzLagPlayers[i].IsLocalPlayer()||MzLagPlayers[i].IsLocalTeammate(false)||MzLagPlayers[i].IsLocalTeammate(true)||MzLagPlayers[i].LNHFOHKEAMP!=null){MzLagRestoreRow(i);MzLagDrop(i);}else held++;
                 }
-                MzLagCount=held;MzLagMessage="Fakelag · "+held.ToString()+" / 16 địch";
+                MzLagCount=held;MzLagMessage="Fakelag · "+held.ToString()+" / 16 · "+MzLagWrites.ToString()+" lần giữ";
             }catch(Exception e){MzLagFault(e);}finally{MzLagBusy=false;}
         }
         public static void MzLagBefore(Player p)
@@ -120,9 +138,9 @@ namespace COW.GamePlay
                     float now=Time.realtimeSinceStartup;
                     // These getters also run in avatar LateUpdate. Keep the final pose for this
                     // Unity frame; restore on the next frame, or immediately on release/expiry.
-                    if(MzLagApplied[i]&&MzLagActive&&MzSwitch[17]&&MzAuthorized()&&MzFinite(now)&&now<=MzLagDeadline&&MzLagFrames[i]==Time.frameCount&&MzLagRow(i,p))return;
+                    if(MzLagApplied[i]&&MzLagActive&&MzSwitch[17]&&MzLagEnabled&&MzAuthorized()&&MzFinite(now)&&now<=MzLagDeadline&&MzLagFrames[i]==Time.frameCount&&MzLagRow(i,p))return;
                     MzLagRestoreRow(i);
-                    if(!MzLagActive||!MzSwitch[17]||!MzAuthorized()||!MzFinite(now)||now>MzLagDeadline||!MzLagRow(i,p))MzLagDrop(i);
+                    if(!MzLagActive||!MzSwitch[17]||!MzLagEnabled||!MzAuthorized()||!MzFinite(now)||now>MzLagDeadline||!MzLagRow(i,p))MzLagDrop(i);
                     return;
                 }
             }catch(Exception e){MzLagFault(e);}finally{MzLagBusy=false;}
@@ -131,8 +149,8 @@ namespace COW.GamePlay
         {
             if(!MzOnThread()||MzLagBusy||!MzLagActive)return;
             MzLagBusy=true;try{
-                if(!MzLagMember(p))return;float now=Time.realtimeSinceStartup;
-                if(!MzSwitch[17]||!MzAuthorized()||!MzFinite(now)||now>MzLagDeadline||!MzLagContext()){
+                if(!MzLagMember(p))return;MzLagTailCalls++;float now=Time.realtimeSinceStartup;
+                if(!MzSwitch[17]||!MzLagEnabled||!MzAuthorized()||!MzFinite(now)||now>MzLagDeadline||!MzLagContext()){
                     MzLagStop();return;
                 }
                 if(p.IsLocalPlayer()||p.IsLocalTeammate(false)||p.IsLocalTeammate(true)||p.IsDead||p.CurHP<=0||p.IsKnockedDownBleed||p.LNHFOHKEAMP!=null)return;

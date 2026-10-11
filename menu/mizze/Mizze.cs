@@ -26,7 +26,7 @@ namespace COW.GamePlay
         public static float[] MzSwitchAnim;
         // ESP, box, corners, 3D, name, health, distance, skeleton, head, XYZ, line,
         // aim head on fire, silent on fire, FOV circle, aim target line, fast fire,
-        // no reload; slot 17 is reserved and unavailable in this stability build.
+        // no reload, floating fakelag visibility; its active state is separate.
         public static void MzEnsure()
         {
             int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;
@@ -37,7 +37,7 @@ namespace COW.GamePlay
             try {
                 if(MzDriver==null){var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null&&g.AddComponent(typeof(SceneEditBoxSelectTool))==null)throw new InvalidOperationException("Menu component was not created");UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;}
                 MzThreadId=thread;
-                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzAppearanceInit();MzInitialized=true;try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}
+                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzAppearanceInit();MzInitialized=true;try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}
             }catch(Exception e){MzLogFault("bootstrap",e);}finally{MzBooting=false;}
         }
         public static void MzRecoverMenu(Player player)
@@ -100,14 +100,14 @@ namespace COW.GamePlay
             MzScale=Mathf.Clamp(Screen.height/720f*1.35f,.75f,3);float fitH=Screen.height/456f,fitW=Screen.width/398f;if(MzScale>fitH)MzScale=fitH;if(MzScale>fitW)MzScale=fitW;
             // Capture raw input before the draw matrix; convert exactly once.
             var p=Event.current.mousePosition;MzPointer=new Vector2(p.x/MzScale,p.y/MzScale);
-            float width=Screen.width/MzScale,height=Screen.height/MzScale;MzPanelX=Mathf.Clamp(MzPanelX,4,width-386);MzPanelY=Mathf.Clamp(MzPanelY,4,height-444);MzBubbleX=Mathf.Clamp(MzBubbleX,4,width-84);MzBubbleY=Mathf.Clamp(MzBubbleY,4,height-84);
+            float width=Screen.width/MzScale,height=Screen.height/MzScale;MzPanelX=Mathf.Clamp(MzPanelX,4,width-386);MzPanelY=Mathf.Clamp(MzPanelY,4,height-444);MzBubbleX=Mathf.Clamp(MzBubbleX,4,width-84);MzBubbleY=Mathf.Clamp(MzBubbleY,4,height-84);if(MzLagX<0)MzLagX=width-100;MzLagX=Mathf.Clamp(MzLagX,4,width-84);MzLagY=Mathf.Clamp(MzLagY,4,height-84);
         }
         public static bool MzTap(float x,float y,float w,float h){var e=Event.current;if(!MzOpen||e==null||e.type!=EventType.MouseUp||!MzOwnPointer||MzDragMode!=0)return false;if(!new Rect(x,y,w,h).Contains(MzPointer))return false;e.Use();return true;}
         public static void MzToggle(int id,float x,float y,string title)
         {
             float a=MzSwitchAnim[id];MzTint(1,1,1,(.035f+.025f*a)*MzOpenAnim);MzFill(x,y,354,40,13);MzTint(1,1,1,.055f*MzOpenAnim);MzFill(x+13,y,328,1,0);MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+12,y+6,276,title);
             MzTint(.32f+.42f*a,.34f+.45f*a,.38f+.45f*a,(.42f+.48f*a)*MzOpenAnim);MzFill(x+294,y+8,46,24,12);MzTint(1,1,1,MzOpenAnim);float bounce=Mathf.Sin(a*3.14159265f)*1.5f;MzFill(x+297+22*a-bounce,y+11-bounce,18+2*bounce,18+2*bounce,9+bounce);
-            if(MzTap(x,y,354,40)){MzSwitch[id]=!MzSwitch[id];MzNextEsp=0;if(id==0){MzEspBlocked=false;MzEspFailures=0;MzSampleFailures=0;MzErrorWritten=false;MzRuntimeError=null;}if(id==11&&MzSwitch[id])MzSwitch[12]=false;if(id==12&&MzSwitch[id])MzSwitch[11]=false;if(id==2&&MzSwitch[id])MzSwitch[3]=false;if(id==3&&MzSwitch[id])MzSwitch[2]=false;if(id==11||id==12)MzRestoreSilent();if(id==15||id==16){MzNextWeapon=0;MzWeaponPoll();}if(id==17){if(MzSwitch[id]){MzLagBlocked=false;MzLagNextPulse=0;}MzLagPulse();}}
+            if(MzTap(x,y,354,40)){MzSwitch[id]=!MzSwitch[id];MzNextEsp=0;if(id==0){MzEspBlocked=false;MzEspFailures=0;MzSampleFailures=0;MzErrorWritten=false;MzRuntimeError=null;}if(id==11&&MzSwitch[id])MzSwitch[12]=false;if(id==12&&MzSwitch[id])MzSwitch[11]=false;if(id==2&&MzSwitch[id])MzSwitch[3]=false;if(id==3&&MzSwitch[id])MzSwitch[2]=false;if(id==11||id==12)MzRestoreSilent();if(id==15||id==16){MzNextWeapon=0;MzWeaponPoll();}if(id==17){MzLagEnabled=false;MzLagBlocked=false;MzLagNextPulse=0;if(MzDragMode==8)MzDragMode=0;MzLagPulse();}}
         }
         public static void MzSlider(float x,float y,string title,bool fov)
         {
@@ -119,8 +119,22 @@ namespace COW.GamePlay
         public static void MzDrag()
         {
             var e=Event.current;Vector2 p=MzPointer;
-            if(e.type==EventType.MouseDown&&MzDragMode==0){float dx=p.x-MzBubbleX-40,dy=p.y-MzBubbleY-40;if(dx*dx+dy*dy<=1600){MzDragMode=1;MzDragDX=p.x-MzBubbleX;MzDragDY=p.y-MzBubbleY;}else if(MzOpen&&new Rect(MzPanelX,MzPanelY,320,60).Contains(p)){MzDragMode=2;MzDragDX=p.x-MzPanelX;MzDragDY=p.y-MzPanelY;}if(MzDragMode>0){MzDownX=p.x;MzDownY=p.y;MzDragged=false;e.Use();}}
-            if((MzDragMode==1||MzDragMode==2)&&(e.type==EventType.MouseDrag||e.type==EventType.MouseUp)){float dx=p.x-MzDownX,dy=p.y-MzDownY;if(dx*dx+dy*dy>36)MzDragged=true;if(MzDragged){if(MzDragMode==1){MzBubbleX=Mathf.Clamp(p.x-MzDragDX,4,Screen.width/MzScale-84);MzBubbleY=Mathf.Clamp(p.y-MzDragDY,4,Screen.height/MzScale-84);}else{MzPanelX=Mathf.Clamp(p.x-MzDragDX,4,Screen.width/MzScale-386);MzPanelY=Mathf.Clamp(p.y-MzDragDY,4,Screen.height/MzScale-444);}}if(e.type==EventType.MouseUp){if(MzDragMode==1&&!MzDragged){MzOpen=!MzOpen;if(!MzAuthorized())MzTab=2;}MzDragMode=0;}e.Use();}
+            if(e.type==EventType.MouseDown&&MzDragMode==0){
+                float dx=p.x-MzBubbleX-40,dy=p.y-MzBubbleY-40;
+                if(MzLagButtonHit(p)){MzDragMode=8;MzDragDX=p.x-MzLagX;MzDragDY=p.y-MzLagY;}
+                else if(dx*dx+dy*dy<=1600){MzDragMode=1;MzDragDX=p.x-MzBubbleX;MzDragDY=p.y-MzBubbleY;}
+                else if(MzOpen&&new Rect(MzPanelX,MzPanelY,320,60).Contains(p)){MzDragMode=2;MzDragDX=p.x-MzPanelX;MzDragDY=p.y-MzPanelY;}
+                if(MzDragMode>0){MzDownX=p.x;MzDownY=p.y;MzDragged=false;e.Use();}
+            }
+            if((MzDragMode==1||MzDragMode==2||MzDragMode==8)&&(e.type==EventType.MouseDrag||e.type==EventType.MouseUp)){
+                float dx=p.x-MzDownX,dy=p.y-MzDownY;if(dx*dx+dy*dy>36)MzDragged=true;
+                if(MzDragged){
+                    if(MzDragMode==1){MzBubbleX=Mathf.Clamp(p.x-MzDragDX,4,Screen.width/MzScale-84);MzBubbleY=Mathf.Clamp(p.y-MzDragDY,4,Screen.height/MzScale-84);}
+                    else if(MzDragMode==8){MzLagX=Mathf.Clamp(p.x-MzDragDX,4,Screen.width/MzScale-84);MzLagY=Mathf.Clamp(p.y-MzDragDY,4,Screen.height/MzScale-84);}
+                    else{MzPanelX=Mathf.Clamp(p.x-MzDragDX,4,Screen.width/MzScale-386);MzPanelY=Mathf.Clamp(p.y-MzDragDY,4,Screen.height/MzScale-444);}
+                }
+                if(e.type==EventType.MouseUp){if(!MzDragged){if(MzDragMode==1){MzOpen=!MzOpen;if(!MzAuthorized())MzTab=2;}else if(MzDragMode==8)MzLagButtonToggle();}MzDragMode=0;}e.Use();
+            }
         }
         public static void MzPanel()
         {
@@ -138,10 +152,10 @@ namespace COW.GamePlay
                 GUI.matrix=Matrix4x4.identity;MzLayout();if(type==EventType.MouseDown)MzOwnPointer=MzMenuHit(MzPointer);MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
                 if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;try{MzRunAim();}catch(Exception e){MzSwitch[11]=false;MzSwitch[12]=false;MzLogFault("aim-loop",e);}
                     try{MzWeaponPoll();}catch(Exception e){MzSwitch[15]=false;MzSwitch[16]=false;MzLogFault("weapon-loop",e);}
-                    MzLagPulse();MzSessionPulse();}}else {MzRestoreSilent();MzRestoreWeapon();MzLagStop();}}
+                    MzLagPulse();MzSessionPulse();}}else {MzRestoreSilent();MzRestoreWeapon();MzLagEnabled=false;MzLagStop();}}
                 if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f){try{MzPanel();}catch(Exception e){MzLogFault("menu-panel",e);}}else MzBackgroundLast=0;
                 if(!MzUiPaint)return;
-                float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.80f,.88f,1,.36f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.03f,.045f,.72f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.97f,.98f,1,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
+                float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.80f,.88f,1,.36f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.03f,.045f,.72f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.97f,.98f,1,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");MzLagButtonDraw();
             }catch(Exception e){MzLogFault("on-gui",e);}finally{if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;MzInGui=false;}
         }
     }

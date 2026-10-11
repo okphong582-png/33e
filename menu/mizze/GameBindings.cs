@@ -34,7 +34,8 @@ namespace COW
 namespace COW.GamePlay
 {
     public class JMAGGLCNGIG {public IList ILPNGCMEFFI(){return null;}public Player HFMDJGBOJKF(BEADLMGGGGL id,bool b){return null;}}
-    public struct BEADLMGGGGL {public static BEADLMGGGGL DEIPJDIGKIP(uint id){return new BEADLMGGGGL();}public static bool GHAMDLFNMMA(BEADLMGGGGL a,BEADLMGGGGL b){return false;}}
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential,Size=24)]
+    public struct BEADLMGGGGL {public uint EOKFPKOEDDJ,DDJGLLGPBJD;public byte JLIDCJLKLBD,JHHPHPJMFNG;public ulong IKNFINCJNLH;public static BEADLMGGGGL DEIPJDIGKIP(uint id){return new BEADLMGGGGL();}public static bool GHAMDLFNMMA(BEADLMGGGGL a,BEADLMGGGGL b){return false;}}
     public class AttackableEntity : GCommon.Entity {public bool IsDead {get{return false;}}}
     public class CGKJLKPMGDJ
     {
@@ -49,14 +50,23 @@ namespace COW.GamePlay
         public bool IsAmmoFree {get{return false;}set{}}
         public float FireIntervalScale {get{return 1;}set{}}
     }
-    public enum PMCNKMEKFGA {None=0,DummyShadow=1,RTShadow=2}
-    public class SceneGraphicsQuality:Component {public static PMCNKMEKFGA shadowType;}
     public class Player : AttackableEntity
     {
         // Preserve the native boolean expression; recovery only creates the UI driver.
         public bool JKACHEMNCEI,IsKnockedDownBleed;public Player LNHFOHKEAMP;
         public bool IsBeingCarried {get{SceneEditBoxSelectTool.MzLagBefore(this);return LNHFOHKEAMP!=null;}}
-        public void GFHCADCHHEO(){if((int)SceneGraphicsQuality.shadowType==1){var p=Position;Shader.SetGlobalVector("_LocalPlayerPos",new Vector4(p.x,p.y,p.z,0));}SceneEditBoxSelectTool.MzLagAfter(this);}
+        public bool FFOPCLFLIMO;public BEADLMGGGGL GIEBNLMODIB;public GFLBFKKDAMK GBJCJJNPPEC;
+        public bool get_IsDieing(){return false;}public bool LastInFrustum(){return false;}
+        public void UpdateKnockdownIsInCamera()
+        {
+            if(!IsLocalPlayer()){SceneEditBoxSelectTool.MzLagAfter(this);return;}
+            if((int)GBJCJJNPPEC.OILOHAELLEC()!=8||FFOPCLFLIMO)return;
+            if(BEADLMGGGGL.GHAMDLFNMMA(GIEBNLMODIB,BEADLMGGGGL.DEIPJDIGKIP(0u)))return;
+            var target=COW.GameFacade.CurrentMatch().HFMDJGBOJKF(GIEBNLMODIB,false);
+            if(target==null||target.IsDead||target.get_IsDieing()||target.IsLocalPlayer())return;
+            FFOPCLFLIMO=target.LastInFrustum();
+        }
+
         public bool NeedRunHighFrame(){SceneEditBoxSelectTool.MzLagBefore(this);bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;SceneEditBoxSelectTool.MzRecoverMenu(this);return result;}
         // Existing native cache fields; ESP never populates them.
         public GCommon.ITransformNode IIPBIDIBJDK,GBKFHDFCPMD,DLAHJBJFMCF,BKDOIIEJBFI,BOHFADPGJKH,FCFGLFMIBOO,BDJLHMNECMA,LFIGLLJCDOG,HOPHAMCLGOA,FKHGDFCPCFE,KMMMDCDJOLD;

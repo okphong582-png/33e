@@ -471,35 +471,6 @@
   },
   {
     "assembly": "Assembly-CSharp",
-    "owner": "GCommon.Entity",
-    "method": "get_Position",
-    "parameters": [],
-    "declaration": "public Vector3 get_Position() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Vector4",
-    "method": ".ctor",
-    "parameters": [
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public void .ctor(float x, float y, float z, float w) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Shader",
-    "method": "SetGlobalVector",
-    "parameters": [
-      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-      "UnityEngine.Vector4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-    ],
-    "declaration": "public static void SetGlobalVector(string name, Vector4 value) { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
     "owner": "COW.GamePlay.Player",
     "method": "IsLocalPlayer",
     "parameters": [],
@@ -534,6 +505,56 @@
       "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public static float Clamp(float value, float min, float max) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "GFLBFKKDAMK",
+    "method": "OILOHAELLEC",
+    "parameters": [],
+    "declaration": "public KOJPEFFGGIJ OILOHAELLEC() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.BEADLMGGGGL",
+    "method": "DEIPJDIGKIP",
+    "parameters": [
+      "System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static BEADLMGGGGL DEIPJDIGKIP(uint BOKHFCBMCAB) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.BEADLMGGGGL",
+    "method": "GHAMDLFNMMA",
+    "parameters": [
+      "COW.GamePlay.BEADLMGGGGL, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "COW.GamePlay.BEADLMGGGGL, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static bool GHAMDLFNMMA(BEADLMGGGGL KDFBHPBEPNC, BEADLMGGGGL DNIGJHMHBCL) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.JMAGGLCNGIG",
+    "method": "HFMDJGBOJKF",
+    "parameters": [
+      "COW.GamePlay.BEADLMGGGGL, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public Player HFMDJGBOJKF(BEADLMGGGGL IAJIPBONEDG, bool GPJGMBHGNND) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "method": "get_IsDieing",
+    "parameters": [],
+    "declaration": "public bool get_IsDieing() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "method": "LastInFrustum",
+    "parameters": [],
+    "declaration": "public bool LastInFrustum() { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -768,6 +789,13 @@
     "method": "Use",
     "parameters": [],
     "declaration": "public void Use() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Int32",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public override string ToString() { }"
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
@@ -1335,13 +1363,6 @@
     "declaration": "public static void Label(Rect position, string text, GUIStyle style) { }"
   },
   {
-    "assembly": "mscorlib",
-    "owner": "System.Int32",
-    "method": "ToString",
-    "parameters": [],
-    "declaration": "public override string ToString() { }"
-  },
-  {
     "assembly": "Assembly-CSharp",
     "owner": "COW.GamePlay.Player",
     "method": "get_MaxHP",
@@ -1671,9 +1692,21 @@
   },
   {
     "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.SceneGraphicsQuality",
-    "field": "shadowType",
-    "declaration": "public static PMCNKMEKFGA shadowType; // 0x2C"
+    "owner": "COW.GamePlay.Player",
+    "field": "GBJCJJNPPEC",
+    "declaration": "protected GFLBFKKDAMK GBJCJJNPPEC; // 0x1D48"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "FFOPCLFLIMO",
+    "declaration": "protected bool FFOPCLFLIMO; // 0xE30"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "GIEBNLMODIB",
+    "declaration": "protected BEADLMGGGGL GIEBNLMODIB; // 0xE18"
   },
   {
     "assembly": "Assembly-CSharp",

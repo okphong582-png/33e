@@ -5,13 +5,13 @@
   "deviceVerified": false,
   "hooks": [
     {
-      "symbol": "Player.GFHCADCHHEO",
-      "rva": "0x5685ABC",
-      "ifixId": 19682,
-      "bytes": 232,
-      "callSite": "Player.PostUpdate +0x2A24 at0x569EC08",
-      "nativeBody": "If SceneGraphicsQuality.shadowType==1, Shader.SetGlobalVector(\"_LocalPlayerPos\", new Vector4(Entity.Position.x,y,z,0)); otherwise return.",
-      "preservation": "Preserve the shadow branch before bounded MzLagAfter; does not replace the frame body or knockdown logic."
+      "symbol": "Player.UpdateKnockdownIsInCamera",
+      "rva": "0x56A0194",
+      "ifixId": 19731,
+      "bytes": 596,
+      "callSite": "Player.PostUpdate at0x569EC60, shared local/remote tail",
+      "nativeBody": "Remote returns immediately; local reads knocked state, full24-byte target ID, target validity and frustum.",
+      "preservation": "Preserve original local branch; bounded MzLagAfter only on the remote branch."
     },
     {
       "symbol": "Player.get_IsBeingCarried",
@@ -53,8 +53,10 @@
   "notPatched": [
     "Player.OnUpdate",
     "Player.PostUpdate",
-    "Player.UpdateKnockdownIsInCamera",
-    "Player.IsLocalObservered"
+    "Player.IsLocalObservered",
+    "Player.GFHCADCHHEO"
   ],
-  "notImplemented": "No packet transport or server-side lag controls."
+  "notImplemented": "No packet transport or server-side lag controls.",
+  "rootCauseEvidence": "fakelag-native-flow-evidence.json",
+  "ui": "Menu switch17 controls floating button visibility; MzLagEnabled controls effect. Feature on starts inactive; floating tap toggles, drag only moves; feature off restores/clears/hides hit region."
 }

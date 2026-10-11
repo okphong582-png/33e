@@ -1,0 +1,47 @@
+{
+  "game": "Free Fire TH iOS1.132.1",
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "previousBuild": "7b03d5a",
+  "rootCause": "w21 holds IsLocalPlayer. At0x569CEA4, remote players jump directly to0x569EC20 and skip GFHCADCHHEO at0x569EC08. A direct call test of GFHCADCHHEO did not model this native branch.",
+  "flow": [
+    {
+      "rva": "0x569cea4",
+      "bytes": "f5eb0034",
+      "instruction": "569cea4: cbz w21, #0x569ec20"
+    },
+    {
+      "rva": "0x569ec08",
+      "bytes": "ad9bff97",
+      "instruction": "569ec08: bl #0x5685abc // COW.GamePlay.Player.GFHCADCHHEO"
+    },
+    {
+      "rva": "0x569ec20",
+      "bytes": "c8924039",
+      "instruction": "569ec20: ldrb w8, [x22, #0x24]"
+    },
+    {
+      "rva": "0x569ec38",
+      "bytes": "b5000036",
+      "instruction": "569ec38: tbz w21, #0, #0x569ec4c"
+    },
+    {
+      "rva": "0x569ec4c",
+      "bytes": "e0d8fd97",
+      "instruction": "569ec4c: bl #0x5614fcc // COW.GamePlay.Player.IsLocalObservered"
+    },
+    {
+      "rva": "0x569ec5c",
+      "bytes": "e00313aa",
+      "instruction": "569ec5c: mov x0, x19"
+    },
+    {
+      "rva": "0x569ec60",
+      "bytes": "4d050094",
+      "instruction": "569ec60: bl #0x56a0194 // COW.GamePlay.Player.UpdateKnockdownIsInCamera"
+    }
+  ],
+  "newHook": "UpdateKnockdownIsInCamera at0x56A0194 is called at shared tail0x569EC60. Preserve original local knocked camera behavior; add bounded hold only before existing remote early-return.",
+  "originalStruct": "BEADLMGGGGL:24 bytes, uint offsets0/4, byte offsets8/9, ulong offset16. Stub and fixture now include complete layout; VM roundtrip tested with nonzero high64bits.",
+  "deviceVerified": false,
+  "remainingLimit": "Offline tests and native control-flow inspection do not validate iPhone render scheduling or crash behavior."
+}

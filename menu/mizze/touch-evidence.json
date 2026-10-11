@@ -9,8 +9,8 @@
     "0x6B54194"
   ],
   "raycastOutRva": "0x1545C2C",
-  "implementation": "Existing UICamera.mainCamera; one owned UIPanel, two geometry-free UIWidget instances and BoxCollider/SphereCollider. No new UICamera, global event delegate mutation or game-input disable.",
-  "uiState": "Panel enabled only while open/animating; bubble always available; bounded objects; positions and dimensions updated only when changed.",
+  "implementation": "Existing UICamera.mainCamera; one owned UIPanel, three geometry-free UIWidget instances and BoxCollider/two SphereCollider instances. No global input disable.",
+  "uiState": "Panel enabled only when open/animating; Mizze bubble always available; FL bubble enabled only when feature visible and authorized; drag/resize update regions, turning feature off frees its old game input region.",
   "declarationEvidence": "bindings-evidence.json; includes Assembly-CSharp-firstpass types",
   "offlineTests": [
     "hit region follows panel/bubble drag and resize",
@@ -18,7 +18,8 @@
     "closed panel does not block its former rectangle",
     "1000 syncs reuse the same objects",
     "camera replacement releases owned hierarchy",
-    "projection error releases hierarchy and keeps launcher draw"
+    "projection error releases hierarchy and keeps launcher draw",
+    "FL remains usable when menu closed; drag does not activate; feature off and lease expiry hide/disable FL collider"
   ],
   "deviceVerified": false,
   "multiTouchOnDeviceVerified": false

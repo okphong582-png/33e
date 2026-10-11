@@ -116,8 +116,10 @@ namespace COW
 namespace COW.GamePlay
 {
     public class SceneEditBoxSelectTool:UnityEngine.Component {public void OnGUI(){}}
-    public class JMAGGLCNGIG {public IList Players=new ArrayList();public Player Lookup;public int LookupCalls;public bool LookupOption;public IList ILPNGCMEFFI(){return Players;}public Player HFMDJGBOJKF(BEADLMGGGGL id,bool b){LookupCalls++;LookupOption=b;return Lookup;}}
-    public struct BEADLMGGGGL {public uint Id;public static BEADLMGGGGL DEIPJDIGKIP(uint id){return new BEADLMGGGGL {Id=id};}public static bool GHAMDLFNMMA(BEADLMGGGGL a,BEADLMGGGGL b){return a.Id==b.Id;}}
+    public class JMAGGLCNGIG {public IList Players=new ArrayList();public Player Lookup;public int LookupCalls;public bool LookupOption;public BEADLMGGGGL LastLookupId;public IList ILPNGCMEFFI(){return Players;}public Player HFMDJGBOJKF(BEADLMGGGGL id,bool b){LookupCalls++;LookupOption=b;LastLookupId=id;return Lookup;}}
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential,Size=24)]
+    public struct BEADLMGGGGL {public uint EOKFPKOEDDJ,DDJGLLGPBJD;public byte JLIDCJLKLBD,JHHPHPJMFNG;public ulong IKNFINCJNLH;public uint Id {get{return EOKFPKOEDDJ;}set{EOKFPKOEDDJ=value;}}public static BEADLMGGGGL DEIPJDIGKIP(uint id){return new BEADLMGGGGL {Id=id};}public static bool GHAMDLFNMMA(BEADLMGGGGL a,BEADLMGGGGL b){return a.EOKFPKOEDDJ==b.EOKFPKOEDDJ&&a.DDJGLLGPBJD==b.DDJGLLGPBJD&&a.JLIDCJLKLBD==b.JLIDCJLKLBD&&a.JHHPHPJMFNG==b.JHHPHPJMFNG&&a.IKNFINCJNLH==b.IKNFINCJNLH;}}
+
     public class AttackableEntity:GCommon.Entity {public bool Dead;public bool IsDead {get{return Dead;}}}
     public class CGKJLKPMGDJ {public UnityEngine.GameObject JHAINOBIFMA;public UnityEngine.Collider JINDNOFABKB;public UnityEngine.Vector3 HPCOJHGFEEG,DOJDNHCGFGK,HLDECMJFKJK,EKPLMDDKOGB,ONMKMEGMHOL;public bool DKPDBLLJEAA,EFMBNPNFGHM,CEOKOILBODN,CLOLKHNMNEK;}
     public class PlayerAttributes:UnityEngine.Component

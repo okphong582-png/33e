@@ -43,15 +43,15 @@
         "PlayerNetworkOnUpdate": "0x5A4BEC0",
         "PlayerPostUpdate": "0x569C1E4"
       },
-      "integration": "New experiment uses carrier/NeedRunHighFrame before helpers and small GFHCADCHHEO presentation tail hook; UpdateKnockdownIsInCamera stays native. See fakelag-presentation-evidence.json."
+      "integration": "7b03d5a GFHCADCHHEO hook was skipped by remote branch. Current build uses the shared UpdateKnockdownIsInCamera tail with original local logic/full24-byte ID; carrier/NeedRunHighFrame remain before helpers. See fakelag-native-flow-evidence.json."
     }
   ],
   "requiredForImplementation": "Packet lag needs a verified position transport hook and flush lifecycle. Real-device phase ordering and crash behavior of presentation hold remain unverified.",
-  "status": "experimental bounded presentation hold; default off; user explicitly requested re-enable",
+  "status": "experimental presentation hold; shared remote tail and independent floating toggle",
   "mode": "client presentation hold only; outgoing packet lag unimplemented",
   "deviceVerified": false,
   "maximumHeldActors": 16,
   "maximumRoster": 32,
   "newHookEvidence": "fakelag-presentation-evidence.json",
-  "review": "IsLocalObservered candidate rejected: called in aim, weapon effects and death in addition to PostUpdate; see fakelag-observer-evidence.json. No verified outgoing-position packet-delay hook available in this patch."
+  "review": "IsLocalObservered still rejected as a global hold hook; GFHCADCHHEO no longer patched. Native branch inspection established why former effect did not execute for enemies."
 }

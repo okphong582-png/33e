@@ -1,7 +1,6 @@
 using System;
 namespace UnityEngine
 {
-    public struct Vector4 {public float x,y,z,w;public Vector4(float a,float b,float c,float d){x=a;y=b;z=c;w=d;}}
     public class Object {public string name {get;set;}public static bool operator ==(Object a,Object b){return ReferenceEquals(a,b);}public static bool operator !=(Object a,Object b){return !ReferenceEquals(a,b);}public override bool Equals(object o){return ReferenceEquals(this,o);}public override int GetHashCode(){return base.GetHashCode();}public static void DontDestroyOnLoad(Object o){}public static void Destroy(Object o){} }
     public class Component:Object {public GameObject gameObject {get;set;}public Transform transform {get{return gameObject.transform;}}}
     public class GameObject:Object {public int layer {get;set;}public void SetActive(bool value){}public GameObject(string n){name=n;}public Transform transform {get{return null;}}public bool activeInHierarchy {get{return true;}}public static GameObject Find(string n){return null;}public Component GetComponent(Type t){return null;}public Component AddComponent(Type t){return null;}}
@@ -21,7 +20,7 @@ namespace UnityEngine
     public static class SystemInfo {public static string deviceUniqueIdentifier {get{return "test-device";}}}
     public enum TouchScreenKeyboardType {Default=0,ASCIICapable=1}
     public class TouchScreenKeyboard {public enum Status {Visible=0,Done=1,Canceled=2,LostFocus=3}public static TouchScreenKeyboard Open(string text,TouchScreenKeyboardType t,bool autocorrect,bool multiline,bool secure,bool alert,string placeholder,int limit){return null;}public string text {get;set;}public Status status {get;set;}}
-    public class Shader:Object {public static Shader Find(string name){return null;}public static void SetGlobalVector(string name,Vector4 value){}}
+    public class Shader:Object {public static Shader Find(string name){return null;}}
     public class Material:Object {public Material(Shader shader){}public void SetInt(string name,int value){}public bool SetPass(int pass){return true;}}
     public class Mesh:Object {public Mesh(){}public void MarkDynamic(){}public void Clear(){}public void SetVertices(Vector3[] a,int start,int length){}public void SetColors(Color[] a,int start,int length){}public void SetTriangles(int[] a,int start,int length,int submesh,bool bounds,int baseVertex){}}
     public static class GL {public static void PushMatrix(){}public static void PopMatrix(){}public static void LoadPixelMatrix(float left,float right,float bottom,float top){}}

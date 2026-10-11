@@ -46,7 +46,7 @@ unsafe static class MizzeRuntimeTest
     static object Run(string name,params object[] args)
     {
         var c=Call.Begin();foreach(var a in args){if(a is float)c.PushSingle((float)a);else if(a is int)c.PushInt32((int)a);else if(a is bool)c.PushBoolean((bool)a);else if(a!=null&&a.GetType().IsValueType)c.PushValueType(a);else c.PushObject(a);}Vm.Execute(Methods[name],ref c,args.Length);object result=null;
-        if(name=="get_UIModelRole"||name=="get_LastAimingInfoFromWeapon"||name=="MzPickTarget"||name=="MzHash"||name=="MzSafeName")result=c.GetObject();else if(name=="IsReallyInStealth"||name=="MzAuthorized"||name=="MzEnemy"||name=="MzOnThread"||name=="NeedRunHighFrame"||name=="get_IsBeingCarried"||name=="MzLagContext")result=c.GetBoolean();Call.End(ref c);return result;
+        if(name=="get_UIModelRole"||name=="get_LastAimingInfoFromWeapon"||name=="MzPickTarget"||name=="MzHash"||name=="MzSafeName")result=c.GetObject();else if(name=="IsReallyInStealth"||name=="MzAuthorized"||name=="MzEnemy"||name=="MzOnThread"||name=="NeedRunHighFrame"||name=="get_IsBeingCarried"||name=="MzLagContext"||name=="MzLagButtonVisible"||name=="MzLagButtonHit")result=c.GetBoolean();Call.End(ref c);return result;
     }
     static void Frame(EventType type,float x=0,float y=0)
     {
@@ -216,7 +216,7 @@ unsafe static class MizzeRuntimeTest
         attributes.FireIntervalScale=.8f;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(Math.Abs(attributes.FireIntervalScale-.8f/3)<.0001f&&Get<float>("MzOldFireScale")==.8f,"native buff change becomes new baseline while enabled");
         Click(154,192);Check(switches[16]&&attributes.IsAmmoFree&&attributes.ShootNoReload,"no-reload toggle sets both real client ammo flags");
         int freeWrites=attributes.FreeWrites;Time.Now=.4f;Run("MzWeaponPoll");Check(attributes.FreeWrites==freeWrites,"unchanged ammo flag is never written each poll");
-        for(int i=0;i<30;i++)Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Súng")&&GUI.Calls.Any(d=>d.Text=="Không nạp đạn")&&GUI.Calls.Any(d=>d.Text!=null&&d.Text.Contains("Fakelag · Giữ hiển thị")),"weapon tab labels experimental presentation-only fakelag");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-weapons.svg"));
+        for(int i=0;i<30;i++)Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Súng")&&GUI.Calls.Any(d=>d.Text=="Không nạp đạn")&&GUI.Calls.Any(d=>d.Text!=null&&d.Text.Contains("Nút nổi Fakelag")),"weapon tab labels experimental presentation-only fakelag");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-weapons.svg"));
         Click(154,148);Check(!switches[15]&&attributes.FireIntervalScale==.8f&&attributes.IsAmmoFree,"fast off restores current native baseline independently of ammo feature");
         Click(154,192);Check(!switches[16]&&!attributes.IsAmmoFree&&!attributes.ShootNoReload&&Get<PlayerAttributes>("MzWeaponAttributes")==null,"both off restores original ammo state and releases native wrapper");
         attributes.Free=true;attributes.ShootNoReload=true;switches[16]=true;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Run("MzRestoreWeapon");Check(attributes.Free&&attributes.ShootNoReload,"preexisting native free-ammo flags survive restoration");attributes.Free=false;attributes.ShootNoReload=false;
@@ -284,6 +284,7 @@ unsafe static class MizzeRuntimeTest
     {
         var box=Get<BoxCollider>("MzTouchPanel");var bubble=Get<SphereCollider>("MzTouchBubble");
         if(box!=null&&box.enabled){var p=box.transform.localPosition;var size=box.size;if(Math.Abs(x-Screen.width*.5f-p.x)<=size.x*.5f&&Math.Abs(y-Screen.height*.5f+p.y)<=size.y*.5f)return true;}
+        var lag=Get<SphereCollider>("MzTouchLag");if(lag!=null&&lag.enabled){var p=lag.transform.localPosition;float dx=x-Screen.width*.5f-p.x,dy=y-Screen.height*.5f+p.y;if(dx*dx+dy*dy<=lag.radius*lag.radius)return true;}
         if(bubble!=null&&bubble.enabled){var p=bubble.transform.localPosition;float dx=x-Screen.width*.5f-p.x,dy=y-Screen.height*.5f+p.y;if(dx*dx+dy*dy<=bubble.radius*bubble.radius)return true;}return false;
     }
     static void TouchAndSoakChecks()
@@ -321,7 +322,7 @@ unsafe static class MizzeRuntimeTest
         Time.Now=0;Set("MzLeaseDeadline",1000f);Set("MzKeyHash","");Set("MzThreadId",System.Threading.Thread.CurrentThread.ManagedThreadId);
         var local=Enemy(0);local.Local=true;var enemy=Enemy(1);var match=new JMAGGLCNGIG();match.Players.Add(enemy);
         COW.GameFacade.Local=local;COW.GameFacade.Match=match;int calls=COW.GameFacade.LocalCalls,writes=enemy.Root.PositionWrites;
-        Run("MzLagPulse");LagBegin(enemy);Run("get_IsBeingCarried",enemy);Run("GFHCADCHHEO",enemy);
+        Run("MzLagPulse");LagBegin(enemy);Run("get_IsBeingCarried",enemy);Run("UpdateKnockdownIsInCamera",enemy);
         Check(!switches[17]&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers")==null&&enemy.Root.PositionWrites==writes&&COW.GameFacade.LocalCalls==calls,"disabled lag allocates no actor arrays and performs no native position or local queries");
         // Original small-hook semantics must hold independently of the new feature.
         for(int smooth=0;smooth<2;smooth++)for(int isLocal=0;isLocal<2;isLocal++)for(int skip=0;skip<2;skip++){
@@ -332,60 +333,91 @@ unsafe static class MizzeRuntimeTest
         Check(!(bool)Run("get_IsBeingCarried",enemy),"carried getter preserves absent carrier");enemy.LNHFOHKEAMP=local;
         Check((bool)Run("get_IsBeingCarried",enemy),"carried getter preserves living carrier");local.Destroyed=true;
         Check(!(bool)Run("get_IsBeingCarried",enemy),"carried getter preserves Unity destroyed-object semantics");local.Destroyed=false;enemy.LNHFOHKEAMP=null;
-        int shadeWrites=Shader.VectorWrites;SceneGraphicsQuality.shadowType=PMCNKMEKFGA.None;Run("GFHCADCHHEO",enemy);Check(Shader.VectorWrites==shadeWrites,"native no-shadow branch does not touch shader globals");
-        SceneGraphicsQuality.shadowType=PMCNKMEKFGA.DummyShadow;Run("GFHCADCHHEO",enemy);Check(Shader.VectorWrites==shadeWrites+1&&Shader.VectorName=="_LocalPlayerPos"&&Shader.LastVector.x==enemy.Root.position.x&&Shader.LastVector.w==0,"presentation hook preserves native shadow vector and only its original property");SceneGraphicsQuality.shadowType=PMCNKMEKFGA.None;
+        local.GBJCJJNPPEC.State=message.KOJPEFFGGIJ.Knocked;local.GIEBNLMODIB=BEADLMGGGGL.DEIPJDIGKIP(7u);match.Lookup=enemy;enemy.Frustum=true;
+        Run("UpdateKnockdownIsInCamera",local);Check(local.FFOPCLFLIMO&&match.LookupCalls==1&&!match.LookupOption,"local knocked camera hook preserves target lookup and frustum assignment");
+        Run("UpdateKnockdownIsInCamera",local);Check(match.LookupCalls==1,"local frustum flag still suppresses repeat lookup");
+        local.FFOPCLFLIMO=false;local.GIEBNLMODIB=BEADLMGGGGL.DEIPJDIGKIP(0u);Run("UpdateKnockdownIsInCamera",local);Check(match.LookupCalls==1,"zero target ID still skips native match lookup");
+        local.GIEBNLMODIB=BEADLMGGGGL.DEIPJDIGKIP(7u);
+        foreach(int mode in new[]{0,1,2,3,4}){
+            match.Lookup=mode==0?null:enemy;enemy.Destroyed=mode==1;enemy.Dead=mode==2;enemy.Dying=mode==3;enemy.Local=mode==4;
+            Run("UpdateKnockdownIsInCamera",local);Check(!local.FFOPCLFLIMO,"native local camera rejects missing/destroyed/dead/dying/local target");
+        }
+        enemy.Destroyed=false;enemy.Dead=false;enemy.Dying=false;enemy.Local=false;local.GBJCJJNPPEC.State=message.KOJPEFFGGIJ.None;
+        Check(System.Runtime.InteropServices.Marshal.SizeOf(typeof(BEADLMGGGGL))==24&&System.Runtime.InteropServices.Marshal.OffsetOf(typeof(BEADLMGGGGL),"IKNFINCJNLH").ToInt32()==16,"native entity ID fixture retains full24-byte layout");
+        var stamp=new BEADLMGGGGL {EOKFPKOEDDJ=7,DDJGLLGPBJD=0x10203040,JLIDCJLKLBD=0x81,JHHPHPJMFNG=0x72,IKNFINCJNLH=0xFEDCBA9876543210UL};local.GBJCJJNPPEC.State=message.KOJPEFFGGIJ.Knocked;local.GIEBNLMODIB=stamp;local.FFOPCLFLIMO=false;match.Lookup=enemy;Run("UpdateKnockdownIsInCamera",local);Check(BEADLMGGGGL.GHAMDLFNMMA(stamp,match.LastLookupId),"VM native lookup forwards every ID byte including high64bits");local.GBJCJJNPPEC.State=message.KOJPEFFGGIJ.None;
+        Check(!Methods.ContainsKey("GFHCADCHHEO"),"local-only shadow path is not used as remote presentation hook");
         // Drive the actual entry and presentation hooks around simulated native movement.
-        Set("MzOpen",true);Set("MzTab",4);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzLagNextPulse",0f);Set("MzLagSeconds",.15f);Click(154,236);Check(switches[17],"fakelag UI toggle activates the real presentation hook");Click(400,390);Check(Get<float>("MzLagSeconds")==.25f&&Get<bool>("MzLagActive"),"250 ms UI selector reconnects the actual hold duration");Click(280,390);Check(Get<float>("MzLagSeconds")==.15f,"150 ms UI selector changes actual hold duration");Check(Get<bool>("MzLagActive")&&Get<int>("MzLagRosterCount")==1,"lag activation selects only current-match enemies");
-        Vector3 anchor=enemy.Root.position;Run("GFHCADCHHEO",enemy);Time.Now=.05f;
-        LagBegin(enemy);enemy.Root.position=anchor+new Vector3(1,0,0);Run("get_IsBeingCarried",enemy);enemy.Root.position=anchor+new Vector3(2,0,0);Run("GFHCADCHHEO",enemy);
+        Set("MzOpen",true);Set("MzTab",4);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzLagNextPulse",0f);Set("MzLagSeconds",.15f);Click(154,236);Check(switches[17]&&!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive"),"menu toggle reveals floating control without activating hold");Click(Get<float>("MzLagX")+40,Get<float>("MzLagY")+40);Check(Get<bool>("MzLagEnabled"),"floating tap activates presentation hold");Click(400,390);Check(Get<float>("MzLagSeconds")==.25f&&Get<bool>("MzLagActive"),"250 ms UI selector reconnects the actual hold duration");Click(280,390);Check(Get<float>("MzLagSeconds")==.15f,"150 ms UI selector changes actual hold duration");Check(Get<bool>("MzLagActive")&&Get<int>("MzLagRosterCount")==1,"lag activation selects only current-match enemies");
+        Vector3 anchor=enemy.Root.position;Run("UpdateKnockdownIsInCamera",enemy);Time.Now=.05f;
+        LagBegin(enemy);enemy.Root.position=anchor+new Vector3(1,0,0);Run("get_IsBeingCarried",enemy);enemy.Root.position=anchor+new Vector3(2,0,0);Run("UpdateKnockdownIsInCamera",enemy);
         Check(enemy.Root.position.x==anchor.x&&Get<int>("MzLagWrites")==1,"post-update hook holds visible anchor after native movement");
         int lateWrites=enemy.Root.PositionWrites;Run("NeedRunHighFrame",enemy);Run("get_IsBeingCarried",enemy);Check(enemy.Root.position.x==anchor.x&&enemy.Root.PositionWrites==lateWrites,"same-frame avatar LateUpdate queries preserve the held pose until rendering");
-        int nestedLag=0;enemy.Root.OnPositionWrite=delegate(){nestedLag++;Run("NeedRunHighFrame",enemy);Run("GFHCADCHHEO",enemy);};
+        int nestedLag=0;enemy.Root.OnPositionWrite=delegate(){nestedLag++;Run("NeedRunHighFrame",enemy);Run("UpdateKnockdownIsInCamera",enemy);};
         LagBegin(enemy);enemy.Root.OnPositionWrite=null;Check(nestedLag==1&&!Get<bool>("MzLagBusy"),"nested native transform callback does not recurse into lag writes");Check(enemy.Root.position.x==anchor.x+2,"update-entry helper restores latest real position before native logic");
-        enemy.Root.position=anchor+new Vector3(3,0,0);Run("get_IsBeingCarried",enemy);Check(enemy.Root.position.x==anchor.x+3,"post-entry getter leaves a newer native position untouched");Run("GFHCADCHHEO",enemy);
-        Run("GFHCADCHHEO",enemy);switches[17]=false;Run("MzLagPulse");Check(enemy.Root.position.x==anchor.x+3&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers").All(p=>p==null),"duplicate end callback and disabling preserve true pose and release every actor reference");
+        enemy.Root.position=anchor+new Vector3(3,0,0);Run("get_IsBeingCarried",enemy);Check(enemy.Root.position.x==anchor.x+3,"post-entry getter leaves a newer native position untouched");Run("UpdateKnockdownIsInCamera",enemy);
+        Run("UpdateKnockdownIsInCamera",enemy);switches[17]=false;Run("MzLagPulse");Check(enemy.Root.position.x==anchor.x+3&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers").All(p=>p==null),"duplicate end callback and disabling preserve true pose and release every actor reference");
         // Bounded hold interval, explicit native correction, actor reuse and scene identity.
-        switches[17]=true;Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("GFHCADCHHEO",enemy);float first=enemy.Root.position.x;
-        Time.Now=.1f;LagBegin(enemy);enemy.Root.position=new Vector3(first+1,0,10);Run("GFHCADCHHEO",enemy);
+        switches[17]=true;Set("MzLagEnabled",true);Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);float first=enemy.Root.position.x;
+        Time.Now=.1f;LagBegin(enemy);enemy.Root.position=new Vector3(first+1,0,10);Run("UpdateKnockdownIsInCamera",enemy);
         enemy.Root.position=new Vector3(44,0,10);LagBegin(enemy);Check(enemy.Root.position.x==44,"incoming correction is never overwritten by stale real position");
-        Time.Now=.5f;Run("GFHCADCHHEO",enemy);Check(enemy.Root.position.x==44,"expired 150 ms anchor refreshes to current position");
-        Time.Now=.55f;LagBegin(enemy);enemy.Root.position=new Vector3(45,0,10);Run("GFHCADCHHEO",enemy);
-        enemy.Id++;int changed=enemy.Root.PositionWrites;LagBegin(enemy);Check(enemy.Root.PositionWrites==changed,"recycled entity UniqueID prevents old-pose restoration");Run("GFHCADCHHEO",enemy);Check(enemy.Root.PositionWrites==changed,"stale roster identity cannot apply to a recycled entity");
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("GFHCADCHHEO",enemy);Time.Now=.6f;LagBegin(enemy);enemy.Root.position=new Vector3(46,0,10);Run("GFHCADCHHEO",enemy);
+        Time.Now=.5f;Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.position.x==44,"expired 150 ms anchor refreshes to current position");
+        Time.Now=.55f;LagBegin(enemy);enemy.Root.position=new Vector3(45,0,10);Run("UpdateKnockdownIsInCamera",enemy);
+        enemy.Id++;int changed=enemy.Root.PositionWrites;LagBegin(enemy);Check(enemy.Root.PositionWrites==changed,"recycled entity UniqueID prevents old-pose restoration");Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.PositionWrites==changed,"stale roster identity cannot apply to a recycled entity");
+        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);Time.Now=.6f;LagBegin(enemy);enemy.Root.position=new Vector3(46,0,10);Run("UpdateKnockdownIsInCamera",enemy);
         var replacement=Bone(99,0,10);enemy.m_CachedTransform=replacement;LagBegin(enemy);Check(replacement.PositionWrites==1&&replacement.position.x==99,"replacement root transform never receives stale cached restoration");enemy.m_CachedTransform=enemy.Root;
-        Run("MzLagStop");Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("GFHCADCHHEO",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(47,0,10);Run("GFHCADCHHEO",enemy);
+        Run("MzLagStop");Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(47,0,10);Run("UpdateKnockdownIsInCamera",enemy);
         changed=enemy.Root.PositionWrites;COW.GameFacade.Match=new JMAGGLCNGIG();LagBegin(enemy);Check(enemy.Root.PositionWrites==changed&&!Get<bool>("MzLagActive"),"match change drops old-scene references without writing an old actor");
-        COW.GameFacade.Match=match;Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("GFHCADCHHEO",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(48,0,10);Run("GFHCADCHHEO",enemy);
+        COW.GameFacade.Match=match;Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(48,0,10);Run("UpdateKnockdownIsInCamera",enemy);
         var oldLocal=local;COW.GameFacade.Local=Enemy(0);COW.GameFacade.Local.Local=true;changed=enemy.Root.PositionWrites;LagBegin(enemy);Check(enemy.Root.PositionWrites==changed&&!Get<bool>("MzLagActive"),"local-player context replacement drops stale hold without writing");COW.GameFacade.Local=oldLocal;
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("GFHCADCHHEO",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(49,0,10);Run("GFHCADCHHEO",enemy);Time.Now=2;
-        Run("GFHCADCHHEO",enemy);Check(enemy.Root.position.x==49&&!Get<bool>("MzLagActive"),"one-second missing UI heartbeat releases owned pose instead of holding indefinitely");
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("GFHCADCHHEO",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(50,0,10);Run("GFHCADCHHEO",enemy);Run("MzReject","test-key-disabled");
+        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(49,0,10);Run("UpdateKnockdownIsInCamera",enemy);Time.Now=2;
+        Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.position.x==49&&!Get<bool>("MzLagActive"),"one-second missing UI heartbeat releases owned pose instead of holding indefinitely");
+        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(50,0,10);Run("UpdateKnockdownIsInCamera",enemy);Run("MzReject","test-key-disabled");
         Check(enemy.Root.position.x==50&&!Get<bool>("MzLagActive"),"key rejection immediately restores lag pose");Set("MzLeaseDeadline",1000f);
         // Actors absent from the roster, teammates and invalid objects never receive a write.
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");var stranger=Enemy(8);writes=stranger.Root.PositionWrites;Run("GFHCADCHHEO",stranger);stranger.Root.position=new Vector3(9,0,10);Run("GFHCADCHHEO",stranger);Check(stranger.Root.PositionWrites==writes+1,"non-match avatar never enters lag rows");
-        enemy.Team=true;Time.Now+=.2f;Run("MzLagPulse");changed=enemy.Root.PositionWrites;Run("GFHCADCHHEO",enemy);Check(enemy.Root.PositionWrites==changed&&Get<int>("MzLagRosterCount")==0,"team transition releases roster membership");enemy.Team=false;
+        Set("MzLagNextPulse",0f);Run("MzLagPulse");var stranger=Enemy(8);writes=stranger.Root.PositionWrites;Run("UpdateKnockdownIsInCamera",stranger);stranger.Root.position=new Vector3(9,0,10);Run("UpdateKnockdownIsInCamera",stranger);Check(stranger.Root.PositionWrites==writes+1,"non-match avatar never enters lag rows");
+        enemy.Team=true;Time.Now+=.2f;Run("MzLagPulse");changed=enemy.Root.PositionWrites;Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.PositionWrites==changed&&Get<int>("MzLagRosterCount")==0,"team transition releases roster membership");enemy.Team=false;
         foreach(int bad in new[]{0,1,2,3}){
             enemy.HP=bad==0?0:100;enemy.IsKnockedDownBleed=bad==1;enemy.LNHFOHKEAMP=bad==2?local:null;enemy.gameObject.activeInHierarchy=bad!=3;
-            Set("MzLagNextPulse",0f);Run("MzLagPulse");changed=enemy.Root.PositionWrites;Run("GFHCADCHHEO",enemy);Check(enemy.Root.PositionWrites==changed,"dead/knocked/carried/inactive actor receives no lag position writes");
+            Set("MzLagNextPulse",0f);Run("MzLagPulse");changed=enemy.Root.PositionWrites;Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.PositionWrites==changed,"dead/knocked/carried/inactive actor receives no lag position writes");
         }
         enemy.HP=100;enemy.IsKnockedDownBleed=false;enemy.LNHFOHKEAMP=null;enemy.gameObject.activeInHierarchy=true;
-        Run("MzLagStop");Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("GFHCADCHHEO",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(51,0,10);enemy.Root.FailWrite=true;Run("GFHCADCHHEO",enemy);
+        Run("MzLagStop");Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(51,0,10);enemy.Root.FailWrite=true;Run("UpdateKnockdownIsInCamera",enemy);
         Check(Get<bool>("MzLagBlocked")&&!switches[17]&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers").All(p=>p==null),"write failure stops only lag, disables its toggle and releases rows");enemy.Root.FailWrite=false;Set("MzLagBlocked",false);
         // Dense scene: fixed actor arrays and 16 holds across repeated update/post phases.
-        match.Players.Clear();for(int i=0;i<150;i++)match.Players.Add(Enemy(i*.01f));switches[17]=true;Set("MzLagNextPulse",0f);Run("MzLagPulse");var rows=Get<Player[]>("MzLagPlayers");var roster=Get<Player[]>("MzLagRoster");
+        match.Players.Clear();for(int i=0;i<150;i++)match.Players.Add(Enemy(i*.01f));switches[17]=true;Set("MzLagEnabled",true);Set("MzLagNextPulse",0f);Run("MzLagPulse");var rows=Get<Player[]>("MzLagPlayers");var roster=Get<Player[]>("MzLagRoster");
         Check(Get<int>("MzLagRosterCount")==32,"dense roster sampling is capped at 32 eligible enemies");
         for(int i=0;i<=10;i++)switches[i]=true;switches[13]=true;Set("MzEspBlocked",false);Set("MzEspFailures",0);Set("MzSampleFailures",0);Camera.main=new Camera {gameObject=new GameObject("lag-and-esp")};
         for(int frame=0;frame<90;frame++){
             Time.Now+=.016f;Time.Frame++;Run("MzLagPulse");
-            foreach(Player actor in match.Players){Run("NeedRunHighFrame",actor);actor.Root.position=actor.Root.position+new Vector3(.01f,0,0);Run("get_IsBeingCarried",actor);Run("GFHCADCHHEO",actor);}
+            foreach(Player actor in match.Players){Run("NeedRunHighFrame",actor);actor.Root.position=actor.Root.position+new Vector3(.01f,0,0);Run("get_IsBeingCarried",actor);Run("UpdateKnockdownIsInCamera",actor);}
             Check(rows.Count(p=>p!=null)<=16,"dense frame never exceeds 16 retained actors");
             if(frame%10==0){GUI.Calls.Clear();Render();Check(!Get<bool>("MzEspBlocked")&&!Get<bool>("MzSampleFaulted")&&GUI.Calls.Count<=193,"all ESP features and FOV stay inside render budget while lag holds are active");}
         }
         Check(Object.ReferenceEquals(rows,Get<Player[]>("MzLagPlayers"))&&Object.ReferenceEquals(roster,Get<Player[]>("MzLagRoster")),"dense update loop reuses fixed arrays without growing actor storage");
         var held=rows.First(p=>p!=null);Exception workerError=null;changed=held.Root.PositionWrites;
-        var worker=new System.Threading.Thread(delegate(){try{Run("NeedRunHighFrame",held);Run("get_IsBeingCarried",held);Run("GFHCADCHHEO",held);}catch(Exception e){workerError=e;}});worker.Start();worker.Join();Check(workerError==null&&held.Root.PositionWrites==changed,"off-thread native hook calls preserve their return path without mutating positions");
+        var worker=new System.Threading.Thread(delegate(){try{Run("NeedRunHighFrame",held);Run("get_IsBeingCarried",held);Run("UpdateKnockdownIsInCamera",held);}catch(Exception e){workerError=e;}});worker.Start();worker.Join();Check(workerError==null&&held.Root.PositionWrites==changed,"off-thread native hook calls preserve their return path without mutating positions");
         Run("MzLagStop");Check(rows.All(p=>p==null)&&roster.All(p=>p==null),"stop clears all fixed hold and roster references after dense scene");
         Array.Clear(switches,0,switches.Length);Time.Now=0;COW.GameFacade.Match=null;
+    }
+    static void FloatingLagChecks(string[] args)
+    {
+        var sw=Get<bool[]>("MzSwitch");Array.Clear(sw,0,sw.Length);Set("MzLagEnabled",false);Run("MzLagStop");Set("MzLeaseDeadline",10000f);Set("MzKeyHash","");Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",4);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzLagX",800f);Set("MzLagY",200f);Set("MzTouchFailed",false);Set("MzDragMode",0);Time.Now=0;
+        var local=Enemy(0);local.Local=true;var enemy=Enemy(1);var match=new JMAGGLCNGIG();match.Players.Add(enemy);COW.GameFacade.Local=local;COW.GameFacade.Match=match;UICamera.Main=new Camera {gameObject=new GameObject("floating-lag-ui")};Frame(EventType.Repaint);
+        Check(!GUI.Calls.Any(d=>d.Text=="FL TẮT"||d.Text=="FL BẬT")&&!Get<SphereCollider>("MzTouchLag").enabled,"floating button and its input collider start hidden");
+        Click(154,236);Frame(EventType.Repaint);float x=Get<float>("MzLagX")+40,y=Get<float>("MzLagY")+40,scale=Get<float>("MzScale");
+        Check(sw[17]&&!Get<bool>("MzLagEnabled")&&GUI.Calls.Any(d=>d.Text=="FL TẮT")&&UiHit(x*scale,y*scale),"menu switch shows an inactive floating toggle and its exact hit region");for(int i=0;i<30;i++)Frame(EventType.Repaint);Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"fakelag-floating.svg"));
+        Set("MzOpen",false);Set("MzOpenAnim",0f);Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="FL TẮT")&&!Get<BoxCollider>("MzTouchPanel").enabled,"floating control stays usable after menu closes");
+        Click(x,y);Check(Get<bool>("MzLagEnabled")&&Get<bool>("MzLagActive")&&Event.current.type==EventType.Used,"floating tap enables actual hold and consumes game input");
+        var anchor=enemy.Root.position;Run("get_IsBeingCarried",enemy);Run("UpdateKnockdownIsInCamera",enemy);Time.Frame++;Time.Now=.05f;Run("get_IsBeingCarried",enemy);enemy.Root.position=anchor+new Vector3(1,0,0);Run("UpdateKnockdownIsInCamera",enemy);
+        Check(enemy.Root.position.x==anchor.x&&Get<int>("MzLagTailCalls")>0,"native remote path skips local shadow logic yet shared tail actually holds changed position");
+        Click(x,y);Check(!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&enemy.Root.position.x==anchor.x+1&&sw[17],"floating off immediately restores real pose while leaving button visible");
+        Frame(EventType.MouseDown,x,y);Frame(EventType.MouseDrag,x-100,y+90);Frame(EventType.MouseUp,x-100,y+90);Frame(EventType.Repaint);
+        float nx=Get<float>("MzLagX")+40,ny=Get<float>("MzLagY")+40;Check(Math.Abs(nx-(x-100))<.01f&&Math.Abs(ny-(y+90))<.01f&&!Get<bool>("MzLagEnabled")&&UiHit(nx*scale,ny*scale)&&!UiHit(x*scale,y*scale),"drag moves only floating control and collider without activating it");
+        Frame(EventType.MouseDown,900,600);Frame(EventType.MouseUp,nx,ny);Check(!Get<bool>("MzLagEnabled"),"gesture begun outside cannot activate the floating toggle");
+        Click(nx,ny);Check(Get<bool>("MzLagEnabled"),"floating control can re-enable after drag");Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",4);Click(154,236);Frame(EventType.Repaint);
+        Check(!sw[17]&&!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&!Get<SphereCollider>("MzTouchLag").enabled&&!GUI.Calls.Any(d=>d.Text=="FL TẮT"||d.Text=="FL BẬT")&&!UiHit(nx*scale,ny*scale),"menu off hides button and collider, restores/releases holds and frees underlying game input");
+        Click(154,236);Click(nx,ny);Set("MzLeaseDeadline",-.1f);Frame(EventType.Repaint);Check(!Get<bool>("MzLagEnabled")&&!Get<bool>("MzLagActive")&&!Get<SphereCollider>("MzTouchLag").enabled,"expired key removes floating hit region and stops hold");
+        Array.Clear(sw,0,sw.Length);Set("MzLeaseDeadline",10000f);Time.Now=0;UICamera.Main=null;COW.GameFacade.Match=null;Run("MzTouchRelease");
     }
     static int Main(string[] args)
     {
@@ -442,6 +474,7 @@ unsafe static class MizzeRuntimeTest
         FaultIsolationChecks();
         TouchAndSoakChecks();
         FakeLagChecks();
+        FloatingLagChecks(args);
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading, in-game aim and native crash behavior remain unverified; presentation fakelag remains experimental and device-unverified.");GC.KeepAlive(Vm);return 0;
     }
 }
