@@ -6,7 +6,7 @@ using UnityEngine;
 [assembly: System.Reflection.AssemblyVersion("0.86.0.518")]
 namespace GCommon
 {
-    public class Entity : Component {public Transform m_CachedTransform;public uint UniqueID {get{return 0;}}}
+    public class Entity : Component {public Transform m_CachedTransform;public uint UniqueID {get{return 0;}}public Vector3 Position {get{return new Vector3();}}}
     public interface ITransformNode {Transform transform {get;}}
     public class SingletonModule<T> where T:class {public static T instance {get {return null;}}}
     public class UIModelManager : SingletonModule<UIModelManager> {public T GetModel<T>() where T:class {return null;}}
@@ -49,11 +49,15 @@ namespace COW.GamePlay
         public bool IsAmmoFree {get{return false;}set{}}
         public float FireIntervalScale {get{return 1;}set{}}
     }
+    public enum PMCNKMEKFGA {None=0,DummyShadow=1,RTShadow=2}
+    public class SceneGraphicsQuality:Component {public static PMCNKMEKFGA shadowType;}
     public class Player : AttackableEntity
     {
         // Preserve the native boolean expression; recovery only creates the UI driver.
-        public bool JKACHEMNCEI;
-        public bool NeedRunHighFrame(){bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;SceneEditBoxSelectTool.MzRecoverMenu(this);return result;}
+        public bool JKACHEMNCEI,IsKnockedDownBleed;public Player LNHFOHKEAMP;
+        public bool IsBeingCarried {get{SceneEditBoxSelectTool.MzLagBefore(this);return LNHFOHKEAMP!=null;}}
+        public void GFHCADCHHEO(){if((int)SceneGraphicsQuality.shadowType==1){var p=Position;Shader.SetGlobalVector("_LocalPlayerPos",new Vector4(p.x,p.y,p.z,0));}SceneEditBoxSelectTool.MzLagAfter(this);}
+        public bool NeedRunHighFrame(){SceneEditBoxSelectTool.MzLagBefore(this);bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;SceneEditBoxSelectTool.MzRecoverMenu(this);return result;}
         // Existing native cache fields; ESP never populates them.
         public GCommon.ITransformNode IIPBIDIBJDK,GBKFHDFCPMD,DLAHJBJFMCF,BKDOIIEJBFI,BOHFADPGJKH,FCFGLFMIBOO,BDJLHMNECMA,LFIGLLJCDOG,HOPHAMCLGOA,FKHGDFCPCFE,KMMMDCDJOLD;
         public PlayerAttributes get_Attributes(){return null;}

@@ -7,13 +7,13 @@ run(path.join(out,'MizzeRuntimeTest.exe'),[path.join(dir,'dist/Assembly-CSharp-p
 const {inspect}=require('../inspect_patch.cjs');const p=inspect(fs.readFileSync(path.join(dir,'dist/Assembly-CSharp-patch.bytes')));const evidence=JSON.parse(fs.readFileSync(path.join(dir,'bindings-evidence.json')));
 const manifest=JSON.parse(fs.readFileSync(path.join(dir,'dist/manifest.json')));
 if(!/^Mizze_[0-9a-f]{16}_$/.test(manifest.stateNamespace)||p.fields.some(f=>f.isNew&&!f.name.startsWith(manifest.stateNamespace)))throw Error('Unscoped or mixed new fields');
-const expectedFixes=['get_UIModelRole','get_LastAimingInfoFromWeapon','OnGUI','NeedRunHighFrame'].sort();
+const expectedFixes=['get_UIModelRole','get_LastAimingInfoFromWeapon','OnGUI','NeedRunHighFrame','get_IsBeingCarried','GFHCADCHHEO'].sort();
 if(JSON.stringify(p.fixes.map(f=>f.method.name).sort())!==JSON.stringify(expectedFixes))throw Error('Unexpected frame/stealth hook');
 if(p.fields.some(f=>!f.isNew&&f.name==='wrapperArray')||p.externMethods.some(e=>/MUDPSession|UDPSession|WrappersManagerImpl/.test(e.owner)))throw Error('Lag must not mutate transport or shared IFix dispatch');
-if(p.externMethods.some(e=>e.owner.split(',')[0]==='UnityEngine.Transform'&&e.name==='set_position'))throw Error('Suspended fakelag must not write actor positions');
 console.log('PASS: every VM-owned field is isolated by source revision; no stealth hook.');
-const blocked=['UnityEngine.Mesh','UnityEngine.Material','UnityEngine.Shader','UnityEngine.GL','UnityEngine.Graphics','UnityEngine.Font'];
+for(const e of p.externMethods)if(e.owner.split(',')[0]==='UnityEngine.Shader'&&e.name!=='SetGlobalVector')throw Error('Unexpected shader API');
+const blocked=['UnityEngine.Mesh','UnityEngine.Material','UnityEngine.GL','UnityEngine.Graphics','UnityEngine.Font'];
 for(const e of p.externMethods)if(blocked.includes(e.owner.split(',')[0])||(e.owner.split(',')[0]==='UnityEngine.GUIStyle'&&e.name==='SetDefaultFont'))throw Error('Unsafe shared renderer/font API in final patch: '+e.owner+'.'+e.name);
-console.log('PASS: final bytes contain no Mesh/Material/Shader/GL/Graphics/OS-font/default-font native calls.');
+console.log('PASS: final bytes contain no Mesh/Material/GL/Graphics/OS-font/default-font native calls.');
 for(const e of p.externMethods)if(!evidence.some(v=>v.method===e.name&&v.owner===e.owner.split(',')[0].replace(/\+/g,'.')&&JSON.stringify(v.parameters)===JSON.stringify(e.parameters)))throw Error('New unverified extern '+e.owner+'.'+e.name);
 console.log('PASS: all generated extern descriptors are covered by checked TH iOS declarations.');

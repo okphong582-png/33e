@@ -49,7 +49,7 @@ namespace UnityEngine
     public enum TouchScreenKeyboardType {Default=0,ASCIICapable=1}
     public class TouchScreenKeyboard {public enum Status {Visible=0,Done=1,Canceled=2,LostFocus=3}public static TouchScreenKeyboard Open(string text,TouchScreenKeyboardType t,bool a,bool m,bool secure,bool alert,string placeholder,int limit){return new TouchScreenKeyboard {text=text};}public string text {get;set;}public Status status {get;set;}}
     public enum TextureFormat {RGBA32=4}public enum FilterMode {Bilinear=1}public enum TextureWrapMode {Clamp=1}
-    public class Shader:Object {public static bool Available=true;public static Shader Find(string name){return Available?new Shader():null;}}
+    public class Shader:Object {public static bool Available=true;public static Shader Find(string name){return Available?new Shader():null;}public static int VectorWrites;public static string VectorName;public static Vector4 LastVector;public static void SetGlobalVector(string name,Vector4 value){VectorWrites++;VectorName=name;LastVector=value;}}
     public class Material:Object {public static bool FailPass;public static int Created;public Dictionary<string,int> Values=new Dictionary<string,int>();public Material(Shader s){Created++;}public void SetInt(string n,int v){Values[n]=v;}public bool SetPass(int p){return !FailPass;}}
     public class Mesh:Object {public static int Created,Uploads;public Vector3[] Vertices;public Color[] Colors;public int[] Indices;public Mesh(){Created++;}public void MarkDynamic(){}public void Clear(){Vertices=null;Colors=null;Indices=null;}public void SetVertices(Vector3[] a,int start,int length){Uploads++;Vertices=new Vector3[length];Array.Copy(a,start,Vertices,0,length);}public void SetColors(Color[] a,int start,int length){Colors=new Color[length];Array.Copy(a,start,Colors,0,length);}public void SetTriangles(int[] a,int start,int length,int submesh,bool bounds,int baseVertex){Indices=new int[length];Array.Copy(a,start,Indices,0,length);}}
     public static class GL {public static int Depth;public static void PushMatrix(){Depth++;}public static void PopMatrix(){Depth--;}public static void LoadPixelMatrix(float l,float r,float b,float t){}}
@@ -100,7 +100,7 @@ namespace SimpleJSON
 }
 namespace GCommon
 {
-    public class Entity:UnityEngine.Component {static uint Serial;public uint Id=++Serial;public uint UniqueID {get{return Id;}}public UnityEngine.Transform m_CachedTransform;}
+    public class Entity:UnityEngine.Component {static uint Serial;public uint Id=++Serial;public uint UniqueID {get{return Id;}}public UnityEngine.Transform m_CachedTransform;public UnityEngine.Vector3 Position {get{return m_CachedTransform.position;}}}
     public interface ITransformNode {UnityEngine.Transform transform {get;}}
     public class TestTransformNode:ITransformNode {public UnityEngine.Transform Value;public bool Fail;public UnityEngine.Transform transform {get{if(Fail)throw new Exception("cached transform lost");return Value;}}}
 
@@ -126,9 +126,11 @@ namespace COW.GamePlay
         public bool IsAmmoFree {get{return Free;}set{FreeWrites++;Free=value;}}
         public float FireIntervalScale {get{if(FailScale)throw new Exception("attribute lost");return Scale;}set{if(FailScale)throw new Exception("attribute lost");ScaleWrites++;Scale=value;}}
     }
+    public enum PMCNKMEKFGA {None=0,DummyShadow=1,RTShadow=2}
+    public class SceneGraphicsQuality:UnityEngine.Component {public static PMCNKMEKFGA shadowType;}
     public class Player:AttackableEntity
     {
-        public Player LNHFOHKEAMP;public bool JKACHEMNCEI,FFOPCLFLIMO,IsKnockedDownBleed,Dying,Frustum;public BEADLMGGGGL GIEBNLMODIB;public GFLBFKKDAMK GBJCJJNPPEC=new GFLBFKKDAMK();public bool IsBeingCarried {get{return LNHFOHKEAMP!=null;}}public bool NeedRunHighFrame(){return COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;}public bool get_IsDieing(){return Dying;}public bool LastInFrustum(){return Frustum;}public void UpdateKnockdownIsInCamera(){}
+        public Player LNHFOHKEAMP;public bool JKACHEMNCEI,FFOPCLFLIMO,IsKnockedDownBleed,Dying,Frustum;public BEADLMGGGGL GIEBNLMODIB;public GFLBFKKDAMK GBJCJJNPPEC=new GFLBFKKDAMK();public bool IsBeingCarried {get{return LNHFOHKEAMP!=null;}}public bool NeedRunHighFrame(){return COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;}public bool get_IsDieing(){return Dying;}public bool LastInFrustum(){return Frustum;}public void UpdateKnockdownIsInCamera(){}public void GFHCADCHHEO(){}
         public PlayerAttributes Attributes=new PlayerAttributes();public int AttributeReads;public PlayerAttributes get_Attributes(){AttributeReads++;return Attributes;}
         public bool IsReallyInStealth(){return IsInStealth();}public CGKJLKPMGDJ LastAimingInfoFromWeapon {get{return FDMIEDDNCEC;}}
         public CGKJLKPMGDJ FDMIEDDNCEC=new CGKJLKPMGDJ();public bool Local,Team,Stealth,Firing,Movable=true;public int HP=100,MaximumHP=200,StealthCalls,AimCalls;public string Nick="Enemy test";public UnityEngine.Vector3 Origin;public UnityEngine.Quaternion LastRotation;
@@ -157,3 +159,5 @@ public class UIRect:UnityEngine.Component {}
 public class UIWidget:UIRect {public bool fillGeometry;public int width {get;set;}public int height {get;set;}public int depth {get;set;}}
 public class UIPanel:UIRect {public int depth {get;set;}}
 public class UICamera:UnityEngine.Component {public static UnityEngine.Camera Main;public static UnityEngine.Camera mainCamera {get{return Main;}}}
+
+namespace UnityEngine {public struct Vector4 {public float x,y,z,w;public Vector4(float a,float b,float c,float d){x=a;y=b;z=c;w=d;}}}

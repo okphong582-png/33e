@@ -1,0 +1,60 @@
+{
+  "game": "Free Fire TH iOS 1.132.1",
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "mode": "experimental client presentation hold, not outgoing packet lag",
+  "deviceVerified": false,
+  "hooks": [
+    {
+      "symbol": "Player.GFHCADCHHEO",
+      "rva": "0x5685ABC",
+      "ifixId": 19682,
+      "bytes": 232,
+      "callSite": "Player.PostUpdate +0x2A24 at0x569EC08",
+      "nativeBody": "If SceneGraphicsQuality.shadowType==1, Shader.SetGlobalVector(\"_LocalPlayerPos\", new Vector4(Entity.Position.x,y,z,0)); otherwise return.",
+      "preservation": "Preserve the shadow branch before bounded MzLagAfter; does not replace the frame body or knockdown logic."
+    },
+    {
+      "symbol": "Player.get_IsBeingCarried",
+      "rva": "0x5657304",
+      "ifixId": 943,
+      "nativeBody": "LNHFOHKEAMP != null using Unity object semantics",
+      "preservation": "Before helper plus unchanged bool; no body/record/struct reconstruction."
+    },
+    {
+      "symbol": "Player.NeedRunHighFrame",
+      "rva": "0x568B700",
+      "ifixId": 9738,
+      "preservation": "Keep native short-circuit bool and menu recovery; add guarded before helper."
+    }
+  ],
+  "bounds": {
+    "heldActors": 16,
+    "roster": 32,
+    "rosterScan": 64,
+    "refreshSeconds": 0.2,
+    "holdSeconds": [
+      0.1,
+      0.15,
+      0.25
+    ],
+    "missingHeartbeatSeconds": 0.5,
+    "teleportResetMeters": 10
+  },
+  "guards": [
+    "main thread and reentry",
+    "authorized active local match epoch",
+    "entity ID and cached transform identity",
+    "skip local/teammate/dead/knocked/carried/inactive",
+    "native changed position wins over saved restore",
+    "clear retained rows on release",
+    "managed write fault disables only fakelag"
+  ],
+  "orderingLimits": "Restore helper is also queried in avatar late updates; same-frame held poses are preserved. Repeated native update phases and real render ordering still require iPhone validation. Direct call inspection is not a full dynamic call trace.",
+  "notPatched": [
+    "Player.OnUpdate",
+    "Player.PostUpdate",
+    "Player.UpdateKnockdownIsInCamera",
+    "Player.IsLocalObservered"
+  ],
+  "notImplemented": "No packet transport or server-side lag controls."
+}

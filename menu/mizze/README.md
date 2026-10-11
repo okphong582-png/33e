@@ -4,7 +4,7 @@ Nguồn C# riêng biên dịch bằng Tencent InjectFix, mục tiêu TH iOS **1.
 
 ## Giảm đọc ESP và chặn chạm xuyên menu
 
-Bản này đã qua **1.925 kiểm tra offline** trên bytecode cuối và đối chiếu **222 khai báo** với dump TH iOS. Bài chạy dài đi qua 1.800 bước lấy mẫu trên timeline mô phỏng15phút; đây không phải chơi thật15phút trên iPhone.
+Bản này đã qua **2.132 kiểm tra offline** trên bytecode cuối và đối chiếu **230 khai báo** với dump TH iOS. Bài chạy dài đi qua 1.800 bước lấy mẫu trên timeline mô phỏng15phút; đây không phải chơi thật15phút trên iPhone.
 
 - ESP chỉ kiểm tra local actor/xương khi đến lịch lấy mẫu33/66ms, thay vì lặp mỗi Repaint. Local chưa sẵn sàng chờ100ms; hình cũ quá250ms bị xóa. Camera/match/kích thước đổi thì bỏ sample và cache cũ.
 - Cache tên/khoảng cách có64 ô, chỉ giữ ID/chuỗi/số. Tên đọc lại tối đa mỗi5s khi cache không va chạm; khoảng cách chỉ tạo chuỗi khi đổi mét nguyên. Xóa cache khi tắt ESP/FOV hoặc rời trận. Kiểm tra IsDead và ID trước HP/xương của đối thủ.
@@ -12,7 +12,7 @@ Bản này đã qua **1.925 kiểm tra offline** trên bytecode cuối và đố
 - touch-evidence.json ghi đường raycast native đã khảo sát. Bài kiểm tra xác nhận vị trí collider, đóng/mở, kéo, đổi camera/kích thước và không tạo thêm object sau1.000 lần đồng bộ. Chưa xác nhận thứ tự xử lý chạm hoặc đa chạm trên iPhone thật.
 - Khi ESP bật, mỗi30s ghi **Documents/Mizze-session.log**, giữ12 dòng gần nhất bằng cách ghi đè. Log gồm thời gian, bộ nhớ managed, số lệnh và lỗi; không phải stack crash native. Không ghi file mỗi frame.
 
-## Khôi phục menu trong trận và tạm dừng fakelag thử nghiệm
+## Khôi phục menu trong trận
 
 Các bản trước vẫn văng trên thiết bị người dùng. Chưa có crash stack nên chưa xác định được nguyên nhân native; những thay đổi dưới đây sửa các đường xung đột có thể chứng minh trong mã và bổ sung khả năng ghi lỗi, không phải xác nhận hết văng trên iPhone.
 
@@ -24,7 +24,7 @@ Các bản trước vẫn văng trên thiết bị người dùng. Chưa có cra
 - ESP kiểm tra local player còn sống, local, active và đủ root/head trước khi đọc đối thủ. Chuyển sang observer, chết hoặc thiếu actor thì xóa hình cũ, không đọc skeleton đối thủ.
 - **ESP và FOV mặc định tắt khi mở app**; bật trong menu sau khi vào trận. Khi cả hai tắt, renderer trả ngay mà không lấy match/camera/player. Texture vòng chỉ được dựng nếu chức năng tương ứng bật, chuẩn bị trước lúc phát lệnh vẽ.
 - Sau ba ngoại lệ managed liên tiếp ở renderer, dừng ESP và hiện trạng thái trong tiêu đề. Chạm Bật ESP để thử lại chủ động. Lỗi getter của một người làm bỏ sample hiện tại; frame đã lỗi không được phát tiếp dưới dạng hình dở. Lỗi đầu tiên ghi stage + exception stack vào **Documents/Mizze-error.log**, chỉ ghi một lần; các frame thành công không ghi đĩa. Tên người chơi giữ dấu tiếng Việt, bỏ control/UTF-16 lỗi và không cắt giữa cặp surrogate.
-- Vẫn không dùng Mesh/Material/Shader/GL/Graphics.DrawMeshNow, font OS hoặc GUIStyle.SetDefaultFont. Không giữ Player/Transform trong bộ đệm hình học. Xương dùng 11 điểm màn hình, chín bone bổ sung mỗi điểm chiếu một lần.
+- Giao diện/ESP không dùng Mesh/Material/Shader/GL/Graphics.DrawMeshNow, font OS hoặc GUIStyle.SetDefaultFont. Hook fakelag giữ duy nhất SetGlobalVector("_LocalPlayerPos", ...) vốn có của game khi shadowType=1; không tạo shader/material. Không giữ Player/Transform trong bộ đệm hình học. Xương dùng 11 điểm màn hình, chín bone bổ sung mỗi điểm chiếu một lần.
 - Giữ lấy mẫu mỗi33ms, dùng66ms nếu sample tốn hơn8ms;192 lệnh, tối đa64 mục,12 người ESP đơn giản hoặc6 người với3D/xương/XYZ, dừng giữa người khi quá4ms. Các giới hạn này hạn chế công việc; chưa đo FPS/độ trễ thật trên iPhone.
 
 **Ngoại lệ native/EXC_BAD_ACCESS, watchdog, jetsam hoặc game chủ động thoát không thể được chặn bằng các catch C# này.** Nếu vẫn thoát về Home: lấy báo cáo Free Fire/UnityFramework tương ứng trong iOS Cài đặt → Quyền riêng tư & Bảo mật → Phân tích & Cải tiến → Dữ liệu phân tích; JetsamEvent nếu không có báo cáo ứng dụng. File .ips và Mizze-error.log nếu tồn tại mới cho biết tầng nào lỗi. Log managed không có nghĩa là đã bắt được crash native.
@@ -42,7 +42,7 @@ GIF **video-ezgif.com-video-to-gif-converter.gif** do người dùng cung cấp 
 
 UI chỉ vẽ ở Repaint, lượt chạm vẫn xử lý công tắc/slider/kéo nhưng không vẽ. Cache texture nền, GUIStyle, ma trận scale và chuỗi giá trị slider; chỉ đổi khi cần. Animation dừng ở đích và ngừng cập nhật toggle ẩn khi cửa sổ đã đóng. Tiêu đề25, nội dung20, nhãn nhỏ16, thông báo18; chữ UTF-8 có dấu. Bản trước có nền trắng vì overload bo góc cần explicit color; bản hiện tại truyền tint trực tiếp.
 
-Bốn hook: GameFacade.get_UIModelRole, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI và NeedRunHighFrame. Bỏ get_IsBeingCarried/UpdateKnockdownIsInCamera và mọi thao tác giữ/hoàn Transform của bản fakelag trước. NeedRunHighFrame giữ nguyên biểu thức boolean native rồi thử khôi phục driver chỉ với local player. Không thay thân OnUpdate/PostUpdate hoặc hook stealth. Driver dùng DontDestroyOnLoad; khi bị hủy thì tạo lại mà giữ công tắc/màu/vị trí menu. Lỗi managed khi vẽ panel được cách ly để nút Mizze vẫn có lượt vẽ riêng. Chưa xác nhận hết lỗi trên thiết bị.
+Sáu hook: GameFacade.get_UIModelRole, Player.get_LastAimingInfoFromWeapon, SceneEditBoxSelectTool.OnGUI, NeedRunHighFrame, get_IsBeingCarried và GFHCADCHHEO. Bỏ UpdateKnockdownIsInCamera của bản fakelag cũ. NeedRunHighFrame giữ nguyên biểu thức boolean native rồi thử khôi phục driver chỉ với local player. Không thay thân OnUpdate/PostUpdate hoặc hook stealth. Driver dùng DontDestroyOnLoad; khi bị hủy thì tạo lại mà giữ công tắc/màu/vị trí menu. Lỗi managed khi vẽ panel được cách ly để nút Mizze vẫn có lượt vẽ riêng. Chưa xác nhận hết lỗi trên thiết bị.
 
 ## ESP và aim
 
@@ -58,7 +58,11 @@ Aim đầu khi bắn chọn đầu gần tâm trong FOV/tầm, gọi SetAimRotat
 - **Không nạp đạn**: bật PlayerAttributes.IsAmmoFree và ShootNoReload. Hai cờ thuộc hệ thống vũ khí thật; native có đọc ShootNoReload sau get_Attributes. Không gọi FullWeaponAmmo hoặc tự gửi packet.
 - Hai chức năng mặc định tắt, chỉ áp dụng cho local player còn sống trong trận với khóa hợp lệ. Khi bật, kiểm tra tối đa10 lần/giây, chỉ ghi khi giá trị thay đổi. Buff native thay đổi tốc độ trở thành mốc mới, không chia lặp giá trị patch đã đặt.
 - Tắt từng chức năng, chết, rời trận, đổi component hoặc khóa hết hiệu lực sẽ hoàn lại giá trị đã lưu nếu game vẫn giữ giá trị patch đặt; không ghi đè giá trị mới khác mà native đã thay. Bộ kiểm tra có các tình huống này.
-- **Fakelag tạm dừng trong bản này**: người dùng báo không hiện menu trong trận và vẫn văng sau bản thử nghiệm. Chưa xác nhận crash stack, nên bỏ hai hook carrier/knockdown và toàn bộ thao tác ghi vị trí địch. Tab Súng hiển thị trạng thái tạm dừng; không có toggle giả hoặc mức delay hoạt động. Rà thêm IsLocalObservered cho thấy getter này được gọi từ hiệu ứng súng, chết và aim ngoài PostUpdate; dùng nó để giữ/hoàn vị trí có thể ghi giữa pha mô phỏng. fakelag-observer-evidence.json lưu các callsite đã đối chiếu. Chưa tìm được hook gửi vị trí có IFix và vòng đời flush đã kiểm chứng để tạo fakelag mạng từ riêng file .bytes. Khảo sát native ở fakelag-small-hooks-evidence.json là tài liệu của bản trước, không phải hook đang được cài.
+- **Fakelag · Giữ hiển thị (thử nghiệm)**: mặc định tắt, bật riêng trong tab Súng. Chọn100/150/250ms; tối đa16 địch, roster32, scan64. Giữ mốc hiển thị client, lưu vị trí mới và hoàn lại ở helper trước pha cập nhật; không làm trễ packet hoặc xác nhận server.
+- Dùng GFHCADCHHEO tại cuối đường PostUpdate thay hook knockdown có struct của bản cũ. Thân gốc232byte chỉ cập nhật shader _LocalPlayerPos khi shadowType=DummyShadow; hành vi này được giữ nguyên trước khi xử lý hold. get_IsBeingCarried giữ return gốc; NeedRunHighFrame giữ bool và khôi phục menu. Không thay thân OnUpdate/PostUpdate, không sửa bảng dispatch IFix chung, không dùng getter IsLocalObservered làm hook.
+- Bỏ local/đồng đội/chết/knocked/carried/inactive; kiểm tra ID, transform và epoch match/local. Chỉnh mức giữ hoặc tắt thì hoàn vị trí còn thuộc patch và bỏ tham chiếu. Hiệu chỉnh native mới luôn thắng vị trí lưu; mất heartbeat500ms hoặc lỗi managed thì dừng. Sai khác native ngoài mô hình test vẫn có thể gây văng; chưa xác nhận hết văng hoặc hiệu ứng trên iPhone.
+- fakelag-presentation-evidence.json ghi hook/body/callsite và giới hạn thứ tự pha. Bài test chạy bytecode qua bật/tắt, native correction, đổi ID/root/match/local, key hết hiệu lực, hỏng ghi, luồng phụ, guard gọi lồng, native shader branch, roster150 mục với all ESP+FOV và16 hold cố định. Giữ pose cùng frame phục vụ truy vấn avatar LateUpdate; pha cập nhật native lặp trong cùng frame chưa được xác nhận bằng trace thiết bị.
+
 
 weapons-evidence.json ghi API/offset và điểm đọc native đã đối chiếu. Đây là xác nhận đường client, **chưa xác nhận bắn nhanh/không nạp được máy chủ chấp nhận hoặc hoạt động trong trận thật trên iPhone**. Không kết luận chỉ thay client sẽ vượt kiểm tra server.
 
@@ -72,7 +76,7 @@ SimpleJSON thiếu field trả JSONLazyCreator Tag=None/IsNull=false: bản hi�
 
 verify-declarations.cjs đối chiếu extern/field với dump TH cung cấp; bindings-evidence.json ghi khai báo. test.cjs chạy **bytecode cuối** bằng Tencent VM pinned5ba42eb8f63fe37134a3c78690f97d8425e13588 với opcode game. Unity/game/network là doubles offline, không thay thế crash log/thử iPhone.
 
-Regression khôi phục menu gồm nạp patch trong trận trước callback sảnh, bảng return gốc, driver bị hủy, giữ trạng thái UI, 5.000 callback không tạo lại driver, lỗi AddComponent tạm thời và backoff, luồng phụ, lỗi ESP/panel vẫn vẽ nút Mizze, fakelag bị ép cờ vẫn không ghi Transform. Regression khác gồm GIF15 frame khác nhau/timing/pause/cache/decode fail, ESP cấm getter lazy/read-only node/missing và destroyed bone/sample backoff/circuit breaker, lobby/drag/animation/toggle/palette, trạng thái GUI, lọc và hình học ESP, danh sách150 mục với toàn bộ ESP bật, hủy đối tượng/getter lỗi, resource texture, cập nhật theo lịch, từng xương chỉ chiếu một lần, không dùng Mesh/GL/font-global, bộ đệm cố định, aim/silent, key binding/expiry/races, legacy state isolation, gọi lồng và luồng phụ, local actor chưa sẵn sàng, surrogate tên, circuit breaker và log lỗi. SVG xuất từ lệnh vẽ bytecode; không phải ảnh chụp game.
+Regression khôi phục menu gồm nạp patch trong trận trước callback sảnh, bảng return gốc, driver bị hủy, giữ trạng thái UI, 5.000 callback không tạo lại driver, lỗi AddComponent tạm thời và backoff, luồng phụ, lỗi ESP/panel vẫn vẽ nút Mizze, fakelag tắt không ghi vị trí hoặc cấp phát roster. Regression khác gồm GIF15 frame khác nhau/timing/pause/cache/decode fail, ESP cấm getter lazy/read-only node/missing và destroyed bone/sample backoff/circuit breaker, lobby/drag/animation/toggle/palette, trạng thái GUI, lọc và hình học ESP, danh sách150 mục với toàn bộ ESP bật, hủy đối tượng/getter lỗi, resource texture, cập nhật theo lịch, từng xương chỉ chiếu một lần, không dùng Mesh/GL/font-global, bộ đệm cố định, aim/silent, key binding/expiry/races, legacy state isolation, gọi lồng và luồng phụ, local actor chưa sẵn sàng, surrogate tên, circuit breaker và log lỗi. SVG xuất từ lệnh vẽ bytecode; không phải ảnh chụp game.
 
 ## Build
 
@@ -86,4 +90,4 @@ node menu/mizze/verify-declarations.cjs <TH dump Assembly directory>
 node menu/mizze/test.cjs
 ~~~
 
-Bindings chỉ là khai báo compile, body giả không được đưa vào patch; RuntimeApis.cs chỉ dùng test. CompilerHost.cs chọn bốn fix và helperMz*; package.cjs đổi magic/flag phù hợp game và giữ bytecode do compiler sinh.
+Bindings chỉ là khai báo compile, body giả không được đưa vào patch; RuntimeApis.cs chỉ dùng test. CompilerHost.cs chọn sáu fix và helperMz*; package.cjs đổi magic/flag phù hợp game và giữ bytecode do compiler sinh.
