@@ -2,6 +2,16 @@
 
 Nguồn C# riêng biên dịch bằng Tencent InjectFix, mục tiêu TH iOS **1.132.1**, Assembly-CSharp 0.86.0.518. File xuất: Assembly-CSharp-patch.bytes, artifact Mizze-Assembly-CSharp-patch trong workflow Build CSharp IFix Menu.
 
+## Giảm đọc ESP và chặn chạm xuyên menu
+
+Bản này đã qua **1.925 kiểm tra offline** trên bytecode cuối và đối chiếu **222 khai báo** với dump TH iOS. Bài chạy dài đi qua 1.800 bước lấy mẫu trên timeline mô phỏng15phút; đây không phải chơi thật15phút trên iPhone.
+
+- ESP chỉ kiểm tra local actor/xương khi đến lịch lấy mẫu33/66ms, thay vì lặp mỗi Repaint. Local chưa sẵn sàng chờ100ms; hình cũ quá250ms bị xóa. Camera/match/kích thước đổi thì bỏ sample và cache cũ.
+- Cache tên/khoảng cách có64 ô, chỉ giữ ID/chuỗi/số. Tên đọc lại tối đa mỗi5s khi cache không va chạm; khoảng cách chỉ tạo chuỗi khi đổi mét nguyên. Xóa cache khi tắt ESP/FOV hoặc rời trận. Kiểm tra IsDead và ID trước HP/xương của đối thủ.
+- Vùng nhận chạm dùng camera NGUI sẵn có, một panel vô hình và hai widget/collider theo đúng hình chữ nhật menu và nút tròn. Khi đóng, collider menu tắt; kéo/đổi kích thước cập nhật vùng nhận chạm. Không tắt toàn bộ đầu vào game. Thao tác IMGUI bắt đầu trong menu được giữ đến lúc nhả; thao tác bắt đầu ngoài menu không kích hoạt nút khi nhả vào trong.
+- touch-evidence.json ghi đường raycast native đã khảo sát. Bài kiểm tra xác nhận vị trí collider, đóng/mở, kéo, đổi camera/kích thước và không tạo thêm object sau1.000 lần đồng bộ. Chưa xác nhận thứ tự xử lý chạm hoặc đa chạm trên iPhone thật.
+- Khi ESP bật, mỗi30s ghi **Documents/Mizze-session.log**, giữ12 dòng gần nhất bằng cách ghi đè. Log gồm thời gian, bộ nhớ managed, số lệnh và lỗi; không phải stack crash native. Không ghi file mỗi frame.
+
 ## Khôi phục menu trong trận và tạm dừng fakelag thử nghiệm
 
 Các bản trước vẫn văng trên thiết bị người dùng. Chưa có crash stack nên chưa xác định được nguyên nhân native; những thay đổi dưới đây sửa các đường xung đột có thể chứng minh trong mã và bổ sung khả năng ghi lỗi, không phải xác nhận hết văng trên iPhone.
@@ -48,7 +58,7 @@ Aim đầu khi bắn chọn đầu gần tâm trong FOV/tầm, gọi SetAimRotat
 - **Không nạp đạn**: bật PlayerAttributes.IsAmmoFree và ShootNoReload. Hai cờ thuộc hệ thống vũ khí thật; native có đọc ShootNoReload sau get_Attributes. Không gọi FullWeaponAmmo hoặc tự gửi packet.
 - Hai chức năng mặc định tắt, chỉ áp dụng cho local player còn sống trong trận với khóa hợp lệ. Khi bật, kiểm tra tối đa10 lần/giây, chỉ ghi khi giá trị thay đổi. Buff native thay đổi tốc độ trở thành mốc mới, không chia lặp giá trị patch đã đặt.
 - Tắt từng chức năng, chết, rời trận, đổi component hoặc khóa hết hiệu lực sẽ hoàn lại giá trị đã lưu nếu game vẫn giữ giá trị patch đặt; không ghi đè giá trị mới khác mà native đã thay. Bộ kiểm tra có các tình huống này.
-- **Fakelag tạm dừng trong bản này**: người dùng báo không hiện menu trong trận và vẫn văng sau bản thử nghiệm. Chưa xác nhận crash stack, nên bỏ hai hook carrier/knockdown và toàn bộ thao tác ghi vị trí địch. Tab Súng hiển thị trạng thái tạm dừng; không có toggle giả hoặc mức delay hoạt động. Khảo sát native ở fakelag-small-hooks-evidence.json là tài liệu của bản trước, không phải hook đang được cài.
+- **Fakelag tạm dừng trong bản này**: người dùng báo không hiện menu trong trận và vẫn văng sau bản thử nghiệm. Chưa xác nhận crash stack, nên bỏ hai hook carrier/knockdown và toàn bộ thao tác ghi vị trí địch. Tab Súng hiển thị trạng thái tạm dừng; không có toggle giả hoặc mức delay hoạt động. Rà thêm IsLocalObservered cho thấy getter này được gọi từ hiệu ứng súng, chết và aim ngoài PostUpdate; dùng nó để giữ/hoàn vị trí có thể ghi giữa pha mô phỏng. fakelag-observer-evidence.json lưu các callsite đã đối chiếu. Chưa tìm được hook gửi vị trí có IFix và vòng đời flush đã kiểm chứng để tạo fakelag mạng từ riêng file .bytes. Khảo sát native ở fakelag-small-hooks-evidence.json là tài liệu của bản trước, không phải hook đang được cài.
 
 weapons-evidence.json ghi API/offset và điểm đọc native đã đối chiếu. Đây là xác nhận đường client, **chưa xác nhận bắn nhanh/không nạp được máy chủ chấp nhận hoặc hoạt động trong trận thật trên iPhone**. Không kết luận chỉ thay client sẽ vượt kiểm tra server.
 

@@ -40,14 +40,14 @@ namespace COW.GamePlay
                     // The native roster can shrink during a scene/round change. No transform is retained across frames.
                     try {
                         if(i>=players.Count)break;var p=players[i] as Player;if(p==null||p.IsLocalPlayer()||p.IsLocalTeammate(false)||p.IsLocalTeammate(true))continue;
-                        var obj=p.gameObject;if(obj==null||!obj.activeInHierarchy)continue;int hp=p.CurHP;if(hp<=0)continue;
+                        var obj=p.gameObject;if(obj==null||!obj.activeInHierarchy||p.IsDead)continue;uint id=p.UniqueID;if(id==0)continue;int hp=p.CurHP;if(hp<=0)continue;
                         var rootTransform=MzCachedNode(p.IIPBIDIBJDK);var headTransform=MzCachedNode(p.GBKFHDFCPMD);if(rootTransform==null||headTransform==null)continue;
                         Vector3 root=rootTransform.position,head=headTransform.position;if(!MzPoint(root)||!MzPoint(head))continue;float distance=Vector3.Distance(root,cameraPosition);if(!MzFinite(distance)||distance>MzRange)continue;
                         Vector2 feet,top;if(!MzProject(cam,root,out feet)||!MzProject(cam,head,out top))continue;
                         float h=feet.y-top.y,w=h*.5f,x=(feet.x+top.x)*.5f-w*.5f,y=top.y;if(!MzFinite(h)||h<=4||h>Screen.height*2||x+w<0||x>Screen.width||y+h<0||y>Screen.height)continue;shown++;
                         GUI.color=MzEspColor;if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
-                        if(MzSwitch[4]){string name=MzSafeName(p.NickName);if(name!=null){MzText(x-22,y-25,w+150,name);}}
-                        if(MzSwitch[6])MzText(x,y+h+4,w+80,((int)distance).ToString()+" m");
+                        if(MzSwitch[4]){string name=MzCachedName(p,id);if(name!=null){MzText(x-22,y-25,w+150,name);}}
+                        if(MzSwitch[6])MzText(x,y+h+4,w+80,MzCachedDistance(id,distance));
                         if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);GUI.color=MzHealthColor;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
                         GUI.color=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
                         if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}

@@ -52,5 +52,6 @@
   "deviceVerified": false,
   "maximumHeldActors": 0,
   "maximumRoster": 0,
-  "newHookEvidence": "fakelag-small-hooks-evidence.json"
+  "newHookEvidence": "fakelag-small-hooks-evidence.json",
+  "review": "IsLocalObservered candidate rejected: called in aim, weapon effects and death in addition to PostUpdate; see fakelag-observer-evidence.json. No verified outgoing-position packet-delay hook available in this patch."
 }

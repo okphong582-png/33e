@@ -13,9 +13,9 @@ namespace COW.GamePlay
         public static Texture[] MzTextures;
         public static bool[] MzRotated;
         public static int MzCommandCount,MzEspWidth,MzEspHeight;
-        public static bool MzBuilding,MzInRender,MzEspBlocked,MzSampleFaulted;
+        public static bool MzBuilding,MzInRender,MzEspBlocked,MzSampleFaulted,MzEspReady;
         public static int MzEspFailures,MzSampleFailures;
-        public static float MzNextEsp,MzEspSampleStarted;
+        public static float MzNextEsp,MzEspSampleStarted,MzLastSampleAt;
         public static JMAGGLCNGIG MzEspMatch;
         public static Camera MzEspCamera;
         public static float MzFovMaximum()
@@ -67,20 +67,25 @@ namespace COW.GamePlay
         {
             if(!MzOnThread()||MzInRender||MzEspBlocked)return;MzInRender=true;
             try{
-                if(!MzSwitch[0]&&!MzSwitch[13]){if(MzRects!=null)MzClearCommands();return;}
+                if(!MzSwitch[0]&&!MzSwitch[13]){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzClearLabels();return;}
                 var match=COW.GameFacade.CurrentMatch();var camera=Camera.main;
-                if(match==null||camera==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;return;}
-                var local=COW.GameFacade.GetLocalPlayerOrObServer();
-                if(local==null||!local.IsLocalPlayer()||local.CurHP<=0||local.gameObject==null||!local.gameObject.activeInHierarchy||MzCachedNode(local.IIPBIDIBJDK)==null||MzCachedNode(local.GBKFHDFCPMD)==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;return;}
-                MzRendererInit();if(MzSwitch[13]&&MzRing==null)MzRing=MzCreateRing(256,1.5f);if(MzSwitch[0]&&MzSwitch[8]&&MzHeadRing==null)MzHeadRing=MzCreateRing(32,3);float now=Time.realtimeSinceStartup;
+                if(match==null||camera==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;MzClearLabels();return;}
+                float now=Time.realtimeSinceStartup;if(!MzFinite(now)){if(MzRects!=null)MzClearCommands();return;}
                 bool changed=!System.Object.ReferenceEquals(match,MzEspMatch)||camera!=MzEspCamera||MzEspWidth!=Screen.width||MzEspHeight!=Screen.height;
-                if(changed){MzClearCommands();MzNextEsp=0;MzEspMatch=match;MzEspCamera=camera;MzEspWidth=Screen.width;MzEspHeight=Screen.height;}
-                if(MzSwitch[0]){
-                    if(now>=MzNextEsp){MzClearCommands();MzBuilding=true;MzEspSampleStarted=now;
-                        try{MzSampleEsp();if(MzSampleFaulted){MzClearCommands();MzSampleFailures++;if(MzSampleFailures>=3){MzEspBlocked=true;MzSwitch[0]=false;}}else MzSampleFailures=0;}finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(MzSampleFaulted?.5f:cost>.008f?.066f:.033f);}
+                if(changed){if(MzRects!=null)MzClearCommands();MzNextEsp=0;MzEspReady=false;MzEspMatch=match;MzEspCamera=camera;MzEspWidth=Screen.width;MzEspHeight=Screen.height;MzClearLabels();}
+                if(now>=MzNextEsp){
+                    var local=COW.GameFacade.GetLocalPlayerOrObServer();
+                    if(local==null||!local.IsLocalPlayer()||local.gameObject==null||!local.gameObject.activeInHierarchy||local.IsDead||local.CurHP<=0||MzCachedNode(local.IIPBIDIBJDK)==null||MzCachedNode(local.GBKFHDFCPMD)==null){
+                        if(MzRects!=null)MzClearCommands();MzEspReady=false;MzNextEsp=now+.1f;MzClearLabels();return;
                     }
-                    MzDrawCommands();
-                }else MzClearCommands();
+                    MzEspReady=true;MzRendererInit();if(MzSwitch[13]&&MzRing==null)MzRing=MzCreateRing(256,1.5f);if(MzSwitch[0]&&MzSwitch[8]&&MzHeadRing==null)MzHeadRing=MzCreateRing(32,3);
+                    if(MzSwitch[0]){MzClearCommands();MzBuilding=true;MzEspSampleStarted=now;
+                        try{MzSampleEsp();MzLastSampleAt=now;if(MzSampleFaulted){MzClearCommands();MzSampleFailures++;if(MzSampleFailures>=3){MzEspBlocked=true;MzSwitch[0]=false;}}else MzSampleFailures=0;}
+                        finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(MzSampleFaulted?.5f:cost>.008f?.066f:.033f);}
+                    }else {MzClearCommands();MzNextEsp=now+.1f;}
+                }
+                if(!MzEspReady)return;
+                if(MzSwitch[0]){if(now<MzLastSampleAt||now-MzLastSampleAt>.25f){if(MzRects!=null)MzClearCommands();}if(MzCommandCount>0)MzDrawCommands();}else if(MzRects!=null)MzClearCommands();
                 // FOV is one square, unrotated draw. Its outline cannot run out of a
                 // per-enemy segment budget and scales equally on both axes.
                 if(MzSwitch[13]){GUI.color=MzFovColor;MzCircle(Screen.width*.5f,Screen.height*.5f,MzEffectiveFov(),1.5f);}

@@ -102,7 +102,7 @@ namespace COW.GamePlay
             var p=Event.current.mousePosition;MzPointer=new Vector2(p.x/MzScale,p.y/MzScale);
             float width=Screen.width/MzScale,height=Screen.height/MzScale;MzPanelX=Mathf.Clamp(MzPanelX,4,width-386);MzPanelY=Mathf.Clamp(MzPanelY,4,height-444);MzBubbleX=Mathf.Clamp(MzBubbleX,4,width-84);MzBubbleY=Mathf.Clamp(MzBubbleY,4,height-84);
         }
-        public static bool MzTap(float x,float y,float w,float h){var e=Event.current;if(!MzOpen||e==null||e.type!=EventType.MouseUp||MzDragMode!=0)return false;if(!new Rect(x,y,w,h).Contains(MzPointer))return false;e.Use();return true;}
+        public static bool MzTap(float x,float y,float w,float h){var e=Event.current;if(!MzOpen||e==null||e.type!=EventType.MouseUp||!MzOwnPointer||MzDragMode!=0)return false;if(!new Rect(x,y,w,h).Contains(MzPointer))return false;e.Use();return true;}
         public static void MzToggle(int id,float x,float y,string title)
         {
             float a=MzSwitchAnim[id];MzTint(1,1,1,(.035f+.025f*a)*MzOpenAnim);MzFill(x,y,354,40,13);MzTint(1,1,1,.055f*MzOpenAnim);MzFill(x+13,y,328,1,0);MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x+12,y+6,276,title);
@@ -135,14 +135,14 @@ namespace COW.GamePlay
             if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
             if(!MzOnThread()||MzInGui||gameObject==null||gameObject.name!="__mizze_driver")return;MzInGui=true;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;
             try {
-                GUI.matrix=Matrix4x4.identity;MzLayout();MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
+                GUI.matrix=Matrix4x4.identity;MzLayout();if(type==EventType.MouseDown)MzOwnPointer=MzMenuHit(MzPointer);MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
                 if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;try{MzRunAim();}catch(Exception e){MzSwitch[11]=false;MzSwitch[12]=false;MzLogFault("aim-loop",e);}
                     try{MzWeaponPoll();}catch(Exception e){MzSwitch[15]=false;MzSwitch[16]=false;MzLogFault("weapon-loop",e);}
-                    MzLagStop();}}else {MzRestoreSilent();MzRestoreWeapon();MzLagStop();}}
+                    MzLagStop();MzSessionPulse();}}else {MzRestoreSilent();MzRestoreWeapon();MzLagStop();}}
                 if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f){try{MzPanel();}catch(Exception e){MzLogFault("menu-panel",e);}}else MzBackgroundLast=0;
                 if(!MzUiPaint)return;
                 float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.80f,.88f,1,.36f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.03f,.045f,.72f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.97f,.98f,1,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
-            }catch(Exception e){MzLogFault("on-gui",e);}finally{GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;MzInGui=false;}
+            }catch(Exception e){MzLogFault("on-gui",e);}finally{if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;MzUiPaint=previousPaint;MzInGui=false;}
         }
     }
 }

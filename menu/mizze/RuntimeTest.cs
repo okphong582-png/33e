@@ -280,6 +280,40 @@ unsafe static class MizzeRuntimeTest
         GUI.FailRoundedOnce=true;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&!Get<bool>("MzInGui"),"panel draw failure does not prevent the independent launcher from rendering");Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="ESP"),"panel resumes after a transient draw exception");
         COW.GameFacade.Match=null;Set("MzBubbleX",24f);Time.Now=0;
     }
+    static bool UiHit(float x,float y)
+    {
+        var box=Get<BoxCollider>("MzTouchPanel");var bubble=Get<SphereCollider>("MzTouchBubble");
+        if(box!=null&&box.enabled){var p=box.transform.localPosition;var size=box.size;if(Math.Abs(x-Screen.width*.5f-p.x)<=size.x*.5f&&Math.Abs(y-Screen.height*.5f+p.y)<=size.y*.5f)return true;}
+        if(bubble!=null&&bubble.enabled){var p=bubble.transform.localPosition;float dx=x-Screen.width*.5f-p.x,dy=y-Screen.height*.5f+p.y;if(dx*dx+dy*dy<=bubble.radius*bubble.radius)return true;}return false;
+    }
+    static void TouchAndSoakChecks()
+    {
+        var switches=Get<bool[]>("MzSwitch");Array.Clear(switches,0,switches.Length);Set("MzLeaseDeadline",10000f);Set("MzKeyHash","");Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzBubbleX",24f);Set("MzBubbleY",96f);Set("MzTab",0);Set("MzEspPage",0);Time.Now=0;
+        UICamera.Main=new Camera {gameObject=new GameObject("ngui-camera")};UICamera.Main.gameObject.layer=5;Frame(EventType.Repaint);
+        Check(Get<GameObject>("MzTouchRoot")!=null&&Get<GameObject>("MzTouchRoot").layer==5&&Object.ReferenceEquals(Get<GameObject>("MzTouchRoot").transform.Parent,UICamera.Main.transform),"input shield uses existing NGUI camera/layer without replacing any global input provider");
+        float scale=Get<float>("MzScale");Check(UiHit(154*scale,148*scale)&&UiHit(60*scale,136*scale)&&!UiHit(900,600),"panel and bubble collider regions block underlay; outside remains clear");
+        Frame(EventType.MouseDown,470,430);Check(Event.current.type==EventType.Used,"blank panel space consumes mouse down");Frame(EventType.MouseUp,470,430);Check(Event.current.type==EventType.Used&&!Get<bool>("MzOwnPointer"),"blank panel space consumes release and clears ownership");
+        Frame(EventType.MouseDown,900,600);Check(Event.current.type==EventType.MouseDown,"outside click passes through IMGUI");Frame(EventType.MouseUp,154,148);Check(!switches[0],"outside-start gesture cannot activate a menu toggle after moving inside");
+        Frame(EventType.MouseDown,60,136);Frame(EventType.MouseDrag,160,236);Frame(EventType.MouseUp,160,236);scale=Get<float>("MzScale");Check(UiHit(160*scale,236*scale)&&!UiHit(60*scale,136*scale),"circular shield follows dragged launcher rather than covering its previous location");Set("MzBubbleX",24f);Set("MzBubbleY",96f);
+        Set("MzOpen",false);Set("MzOpenAnim",0f);Frame(EventType.Repaint);Check(!Get<BoxCollider>("MzTouchPanel").enabled&&UiHit(60*scale,136*scale)&&!UiHit(154*scale,148*scale),"closed menu releases panel region while launcher remains protected");
+        Set("MzOpen",true);Set("MzOpenAnim",1f);Frame(EventType.Repaint);int adds=GameObject.AddCalls;for(int i=0;i<1000;i++)Run("MzTouchSync");Check(GameObject.AddCalls==adds,"steady input shield reuses two widgets/colliders without creating frame objects");
+        Screen.Width=2340;Screen.Height=1080;Frame(EventType.Repaint);scale=Get<float>("MzScale");Check(UiHit(154*scale,148*scale)&&!UiHit(2300,1000),"input shield rescales with display dimensions");Screen.Width=1280;Screen.Height=720;Frame(EventType.Repaint);
+        var previous=Get<GameObject>("MzTouchRoot");UICamera.Main=new Camera {gameObject=new GameObject("ngui-replacement")};Frame(EventType.Repaint);Check(previous.Destroyed&&Get<GameObject>("MzTouchRoot")!=null&&!Object.ReferenceEquals(previous,Get<GameObject>("MzTouchRoot")),"camera replacement releases old shield hierarchy before creating a new one");
+        UICamera.Main.FailScreenProjection=true;Screen.Width=1281;Frame(EventType.Repaint);Check(Get<bool>("MzTouchFailed")&&Get<GameObject>("MzTouchRoot")==null&&GUI.Calls.Any(d=>d.Text=="Mizze"),"failed shield projection releases colliders without hiding launcher or disabling game input globally");UICamera.Main=null;Screen.Width=1280;Set("MzTouchFailed",false);Frame(EventType.Repaint);
+        var local=Enemy(0);local.Local=true;var enemy=Enemy();COW.GameFacade.Local=local;Camera.main=new Camera {gameObject=new GameObject("soak-camera")};var match=new JMAGGLCNGIG();match.Players.Add(enemy);COW.GameFacade.Match=match;Array.Clear(switches,0,switches.Length);switches[0]=true;switches[1]=true;switches[4]=true;switches[5]=true;switches[6]=true;switches[13]=true;
+        Set("MzEspBlocked",false);Set("MzEspFailures",0);Set("MzSampleFailures",0);Set("MzNextSession",0f);Time.Now=0;Render();Run("MzSessionPulse");var rects=Get<Rect[]>("MzRects");var names=Get<string[]>("MzNameCache");int created=Texture2D.Created,uploads=Texture2D.Uploaded,calls=COW.GameFacade.LocalCalls;
+        for(int i=0;i<60;i++){GUI.Calls.Clear();Run("MzRender");}Check(COW.GameFacade.LocalCalls==calls,"repeated repaint before sample deadline does not repeat local actor/native bone validation");
+        long baseline=GC.GetTotalMemory(true);for(int frame=1;frame<=1800;frame++){
+            Time.Now=frame*.5f;Time.Frame++;GUI.Calls.Clear();Run("MzRender");Run("MzSessionPulse");
+            if(frame%120==0)Check(Get<int>("MzCommandCount")<=192&&!Get<bool>("MzEspBlocked")&&!Get<bool>("MzInRender"),"ESP stays active at simulated minute "+(frame/120));
+        }
+        long retained=GC.GetTotalMemory(true)-baseline;Check(retained<8*1024*1024,"15-minute simulated soak has bounded retained managed memory");
+        Check(Object.ReferenceEquals(rects,Get<Rect[]>("MzRects"))&&Object.ReferenceEquals(names,Get<string[]>("MzNameCache"))&&Texture2D.Created==created&&Texture2D.Uploaded==uploads,"15-minute soak reuses draw buffers, text caches and textures");
+        var lines=Get<string[]>("MzSessionLines");string log=File.ReadAllText(Path.Combine(Application.TestFolder,"Mizze-session.log"));Check(lines.Length==12&&Get<int>("MzSessionCount")==12&&log.Length<4096&&log.Contains("t=900"),"session diagnostics retain only twelve bounded records through simulated minute fifteen");
+        enemy.Dead=true;GUI.Calls.Clear();Render();Check(Get<int>("MzCommandCount")==0,"despawn/death guard rejects actor before reading pooled HP and bones");enemy.Dead=false;
+        COW.GameFacade.Match=null;Run("MzRender");Check(Get<string[]>("MzNameCache").All(n=>n==null)&&Get<string[]>("MzDistanceCache").All(n=>n==null)&&Get<JMAGGLCNGIG>("MzEspMatch")==null,"match teardown releases label values and cached context");
+        Array.Clear(switches,0,switches.Length);Time.Now=0;
+    }
     static int Main(string[] args)
     {
         foreach(var line in File.ReadAllLines(args[1])){var a=line.Split('\t');Methods.Add(a[2],int.Parse(a[0]));}
@@ -333,6 +367,7 @@ unsafe static class MizzeRuntimeTest
         WeaponChecks(args);
         MenuRecoveryChecks();
         FaultIsolationChecks();
+        TouchAndSoakChecks();
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading, in-game aim and native crash behavior remain unverified; presentation fakelag is suspended.");GC.KeepAlive(Vm);return 0;
     }
 }

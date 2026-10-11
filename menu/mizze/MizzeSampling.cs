@@ -4,6 +4,33 @@ namespace COW.GamePlay
 {
     public partial class SceneEditBoxSelectTool
     {
+        // Bounded value/string caches only; never keep a Player or bone alive.
+        public static uint[] MzLabelIds;
+        public static string[] MzNameCache,MzDistanceCache;
+        public static int[] MzDistanceValues;
+        public static float[] MzNameUntil;
+        public static void MzClearLabels()
+        {
+            if(MzLabelIds==null)return;
+            for(int i=0;i<64;i++){MzLabelIds[i]=0;MzNameCache[i]=null;MzDistanceCache[i]=null;MzNameUntil[i]=0;}
+        }
+        public static int MzLabelSlot(uint id)
+        {
+            if(MzLabelIds==null){var ids=new uint[64];var names=new string[64];var distances=new string[64];var values=new int[64];var until=new float[64];
+                MzNameCache=names;MzDistanceCache=distances;MzDistanceValues=values;MzNameUntil=until;MzLabelIds=ids;}
+            int slot=(int)(id%64);if(MzLabelIds[slot]!=id){MzNameCache[slot]=null;MzDistanceCache[slot]=null;MzNameUntil[slot]=0;MzLabelIds[slot]=id;}return slot;
+        }
+        public static string MzCachedName(Player p,uint id)
+        {
+            int slot=MzLabelSlot(id);float now=Time.realtimeSinceStartup;
+            if(MzNameCache[slot]==null||now>=MzNameUntil[slot]){MzNameCache[slot]=MzSafeName(p.NickName);MzNameUntil[slot]=now+5;}
+            return MzNameCache[slot];
+        }
+        public static string MzCachedDistance(uint id,float distance)
+        {
+            int slot=MzLabelSlot(id),value=(int)distance;
+            if(MzDistanceCache[slot]==null||MzDistanceValues[slot]!=value){MzDistanceValues[slot]=value;MzDistanceCache[slot]=value.ToString()+" m";}return MzDistanceCache[slot];
+        }
         public static Transform MzCachedNode(GCommon.ITransformNode node)
         {
             if(System.Object.ReferenceEquals(node,null))return null;var transform=node.transform;return transform==null?null:transform;

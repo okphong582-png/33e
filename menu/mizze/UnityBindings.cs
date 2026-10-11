@@ -3,15 +3,15 @@ namespace UnityEngine
 {
     public class Object {public string name {get;set;}public static bool operator ==(Object a,Object b){return ReferenceEquals(a,b);}public static bool operator !=(Object a,Object b){return !ReferenceEquals(a,b);}public override bool Equals(object o){return ReferenceEquals(this,o);}public override int GetHashCode(){return base.GetHashCode();}public static void DontDestroyOnLoad(Object o){}public static void Destroy(Object o){} }
     public class Component:Object {public GameObject gameObject {get;set;}public Transform transform {get{return gameObject.transform;}}}
-    public class GameObject:Object {public GameObject(string n){name=n;}public Transform transform {get{return null;}}public bool activeInHierarchy {get{return true;}}public static GameObject Find(string n){return null;}public Component GetComponent(Type t){return null;}public Component AddComponent(Type t){return null;}}
-    public class Transform:Component {public Vector3 position {get;set;}public Vector3 localScale {get;set;}}
+    public class GameObject:Object {public int layer {get;set;}public void SetActive(bool value){}public GameObject(string n){name=n;}public Transform transform {get{return null;}}public bool activeInHierarchy {get{return true;}}public static GameObject Find(string n){return null;}public Component GetComponent(Type t){return null;}public Component AddComponent(Type t){return null;}}
+    public class Transform:Component {public void SetParent(Transform parent,bool worldPositionStays){}public Vector3 localPosition {get;set;}public Vector3 position {get;set;}public Vector3 localScale {get;set;}}
     public struct Vector3 {public float x,y,z;public Vector3(float a,float b,float c){x=a;y=b;z=c;}public static Vector3 operator +(Vector3 a,Vector3 b){return new Vector3();}public static Vector3 operator -(Vector3 a,Vector3 b){return new Vector3();}public static Vector3 operator *(Vector3 a,float b){return new Vector3();}public static Vector3 Normalize(Vector3 v){return v;}public static float Distance(Vector3 a,Vector3 b){return 0;}}
     public struct Vector2 {public float x,y;public Vector2(float a,float b){x=a;y=b;}}
     public struct Color {public float r,g,b,a;public Color(float x,float y,float z,float w){r=x;g=y;b=z;a=w;}}
     public struct Quaternion {public static Quaternion Euler(float a,float b,float c){return new Quaternion();}public static Quaternion LookRotation(Vector3 d){return new Quaternion();}}
     public struct Matrix4x4 {public static Matrix4x4 identity {get{return new Matrix4x4();}}public static Matrix4x4 TRS(Vector3 p,Quaternion q,Vector3 s){return new Matrix4x4();}}
     public struct Rect {public float x {get;set;}public float y {get;set;}public float width {get;set;}public float height {get;set;}public Rect(float a,float b,float c,float d){this=new Rect();x=a;y=b;width=c;height=d;}public bool Contains(Vector2 p){return p.x>=x&&p.x<x+width&&p.y>=y&&p.y<y+height;}}
-    public class Camera:Component {public static Camera main {get;set;}public Vector3 WorldToScreenPoint(Vector3 p){return p;}}
+    public class Camera:Component {public float nearClipPlane {get{return 0;}}public Vector3 ScreenToWorldPoint(Vector3 position){return position;}public static Camera main {get;set;}public Vector3 WorldToScreenPoint(Vector3 p){return p;}}
     public static class Screen {public static int height {get{return 720;}}public static int width {get{return 1280;}}}
     public static class Application {public static string persistentDataPath {get{return "";}}}
     public static class Time {public static int frameCount {get{return 0;}}public static float unscaledDeltaTime {get{return .016f;}}public static float realtimeSinceStartup {get{return 0;}}}

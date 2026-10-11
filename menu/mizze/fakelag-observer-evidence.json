@@ -1,0 +1,46 @@
+{
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "candidate": "Player.IsLocalObservered",
+  "rva": "0x5614FCC",
+  "enabled": false,
+  "reason": "Direct calls occur in weapon effects, death, aim and other updates as well as PostUpdate. A frame-only guard cannot establish before/after native simulation ownership. Do not write enemy transforms from this getter.",
+  "examples": [
+    {
+      "call": "0x565759c",
+      "owner": "COW.GamePlay.Player.ShowHandWeaponFireEffect",
+      "offset": "0x184"
+    },
+    {
+      "call": "0x5659db8",
+      "owner": "COW.GamePlay.Player.Dead",
+      "offset": "0x354"
+    },
+    {
+      "call": "0x565be74",
+      "owner": "COW.GamePlay.Player.Dead",
+      "offset": "0x2410"
+    },
+    {
+      "call": "0x569ec4c",
+      "owner": "COW.GamePlay.Player.PostUpdate",
+      "offset": "0x2a68"
+    },
+    {
+      "call": "0x56a6730",
+      "owner": "COW.GamePlay.Player.UpdateAiming",
+      "offset": "0x26c"
+    },
+    {
+      "call": "0x56a6bc8",
+      "owner": "COW.GamePlay.Player.UpdateAiming",
+      "offset": "0x704"
+    },
+    {
+      "call": "0x56a6c28",
+      "owner": "COW.GamePlay.Player.UpdateAiming",
+      "offset": "0x764"
+    }
+  ],
+  "deviceVerified": false,
+  "ifixId": 378
+}

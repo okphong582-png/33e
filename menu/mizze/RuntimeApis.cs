@@ -19,12 +19,15 @@ namespace UnityEngine
         public static Dictionary<string,GameObject> World=new Dictionary<string,GameObject>();public static bool FailAdd;public static int FindCalls,AddCalls;public static Action OnAdd;
         public Transform transform {get;private set;}public bool activeInHierarchy {get;set;}public Component Added;
         public GameObject(string n){name=n;transform=new Transform();activeInHierarchy=true;World[n]=this;}
+        public int layer {get;set;}public void SetActive(bool value){activeInHierarchy=value;}public Dictionary<Type,Component> Components=new Dictionary<Type,Component>();
         public static GameObject Find(string n){FindCalls++;GameObject g;return World.TryGetValue(n,out g)?g:null;}
-        public Component GetComponent(Type t){return Added!=null&&t.IsInstanceOfType(Added)?Added:null;}
-        public Component AddComponent(Type t){AddCalls++;if(OnAdd!=null)OnAdd();if(FailAdd)throw new Exception("creation failure");Added=(Component)Activator.CreateInstance(t);Added.gameObject=this;return Added;}
+        public Component GetComponent(Type t){Component c;return Components.TryGetValue(t,out c)?c:null;}
+        public Component AddComponent(Type t){AddCalls++;if(OnAdd!=null)OnAdd();if(FailAdd)throw new Exception("creation failure");Added=(Component)Activator.CreateInstance(t);Added.gameObject=this;Components[t]=Added;return Added;}
     }
-    public class Transform:Component {Vector3 Position;public int PositionWrites;public Action OnPositionWrite;public bool FailWrite,FailRead;public Vector3 position {get{if(FailRead)throw new Exception("transform read failed");return Position;}set{if(FailWrite)throw new Exception("transform write failed");PositionWrites++;Position=value;if(OnPositionWrite!=null)OnPositionWrite();}}public Vector3 localScale {get;set;}}
-    public class Collider:Component {}
+    public class Transform:Component {public Transform Parent;public void SetParent(Transform p,bool worldPositionStays){Parent=p;}public Vector3 localPosition {get;set;}Vector3 Position;public int PositionWrites;public Action OnPositionWrite;public bool FailWrite,FailRead;public Vector3 position {get{if(FailRead)throw new Exception("transform read failed");return Position;}set{if(FailWrite)throw new Exception("transform write failed");PositionWrites++;Position=value;if(OnPositionWrite!=null)OnPositionWrite();}}public Vector3 localScale {get;set;}}
+    public class Collider:Component {public Collider(){enabled=true;}public bool enabled {get;set;}}
+    public class BoxCollider:Collider {public Vector3 size {get;set;}}
+    public class SphereCollider:Collider {public float radius {get;set;}}
     public struct Vector3
     {
         public float x,y,z;public Vector3(float a,float b,float c){x=a;y=b;z=c;}
@@ -36,7 +39,7 @@ namespace UnityEngine
     public struct Quaternion {public Vector3 Direction;public float Angle;public static Quaternion Euler(float a,float b,float c){return new Quaternion {Angle=c};}public static Quaternion LookRotation(Vector3 d){return new Quaternion {Direction=Vector3.Normalize(d)};}}
     public struct Matrix4x4 {public static int TrsCalls;public Vector3 Position,Scale;public float Angle;public int Tag;public static Matrix4x4 identity {get{return new Matrix4x4 {Tag=1,Scale=new Vector3(1,1,1)};}}public static Matrix4x4 TRS(Vector3 p,Quaternion q,Vector3 s){TrsCalls++;return new Matrix4x4 {Position=p,Scale=s,Angle=q.Angle,Tag=2};}}
     public struct Rect {public float x {get;set;}public float y {get;set;}public float width {get;set;}public float height {get;set;}public Rect(float a,float b,float c,float d){this=new Rect();x=a;y=b;width=c;height=d;}public bool Contains(Vector2 p){return p.x>=x&&p.x<x+width&&p.y>=y&&p.y<y+height;}}
-    public class Camera:Component {public static Camera main {get;set;}public static int ProjectionCalls;public bool FailProjection;public static Action OnProjection;public Vector3 WorldToScreenPoint(Vector3 p){ProjectionCalls++;if(OnProjection!=null)OnProjection();p=p-transform.position;if(FailProjection)throw new Exception("projection failure");return new Vector3(640+p.x*1000/p.z,360+p.y*1000/p.z,p.z);}}
+    public class Camera:Component {public bool FailScreenProjection;public float nearClipPlane {get{return .3f;}}public Vector3 ScreenToWorldPoint(Vector3 p){if(FailScreenProjection)throw new Exception("UI projection failure");return new Vector3((p.x-Screen.width*.5f)/360,(p.y-Screen.height*.5f)/360,p.z);}public static Camera main {get;set;}public static int ProjectionCalls;public bool FailProjection;public static Action OnProjection;public Vector3 WorldToScreenPoint(Vector3 p){ProjectionCalls++;if(OnProjection!=null)OnProjection();p=p-transform.position;if(FailProjection)throw new Exception("projection failure");return new Vector3(640+p.x*1000/p.z,360+p.y*1000/p.z,p.z);}}
     public static class Screen {public static int Width=1280,Height=720;public static int height {get{return Height;}}public static int width {get{return Width;}}}
     public static class Application {public static string TestFolder=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"Mizze-test-"+Guid.NewGuid().ToString("N"));public static string persistentDataPath {get{System.IO.Directory.CreateDirectory(TestFolder);return TestFolder;}}}
     public static class Time {public static int Frame;public static int frameCount {get{return Frame;}}public static float Now;public static float unscaledDeltaTime {get{return .016f;}}public static float realtimeSinceStartup {get{return Now;}}}
@@ -149,3 +152,8 @@ namespace COW.GamePlay
 
 namespace message {public enum KOJPEFFGGIJ : uint {None=0,Knocked=8}}
 public class GFLBFKKDAMK {public message.KOJPEFFGGIJ State;public message.KOJPEFFGGIJ OILOHAELLEC(){return State;}}
+
+public class UIRect:UnityEngine.Component {}
+public class UIWidget:UIRect {public bool fillGeometry;public int width {get;set;}public int height {get;set;}public int depth {get;set;}}
+public class UIPanel:UIRect {public int depth {get;set;}}
+public class UICamera:UnityEngine.Component {public static UnityEngine.Camera Main;public static UnityEngine.Camera mainCamera {get{return Main;}}}

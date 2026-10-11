@@ -1038,6 +1038,13 @@
   },
   {
     "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.AttackableEntity",
+    "method": "get_IsDead",
+    "parameters": [],
+    "declaration": "public bool get_IsDead() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
     "owner": "GCommon.ITransformNode",
     "method": "get_transform",
     "parameters": [],
@@ -1116,6 +1123,13 @@
       "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
     ],
     "declaration": "public static void Destroy(object obj) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "GCommon.Entity",
+    "method": "get_UniqueID",
+    "parameters": [],
+    "declaration": "public uint get_UniqueID() { }"
   },
   {
     "assembly": "UnityEngine.IMGUIModule",
@@ -1340,6 +1354,31 @@
   },
   {
     "assembly": "mscorlib",
+    "owner": "System.GC",
+    "method": "GetTotalMemory",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static long GetTotalMemory(bool forceFullCollection) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Int64",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public override string ToString() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Text.StringBuilder",
+    "method": "Append",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public StringBuilder Append(string value) { }"
+  },
+  {
+    "assembly": "mscorlib",
     "owner": "System.Convert",
     "method": "FromBase64String",
     "parameters": [
@@ -1412,6 +1451,143 @@
       "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public string ToString(string format) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp-firstpass",
+    "owner": "UICamera",
+    "method": "get_mainCamera",
+    "parameters": [],
+    "declaration": "public static Camera get_mainCamera() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "method": "get_layer",
+    "parameters": [],
+    "declaration": "public int get_layer() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "method": "set_layer",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_layer(int value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "method": "get_transform",
+    "parameters": [],
+    "declaration": "public Transform get_transform() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Transform",
+    "method": "SetParent",
+    "parameters": [
+      "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetParent(Transform parent, bool worldPositionStays) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp-firstpass",
+    "owner": "UIPanel",
+    "method": "set_depth",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_depth(int value) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp-firstpass",
+    "owner": "UIWidget",
+    "method": "set_depth",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_depth(int value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Camera",
+    "method": "get_nearClipPlane",
+    "parameters": [],
+    "declaration": "public float get_nearClipPlane() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Camera",
+    "method": "ScreenToWorldPoint",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public Vector3 ScreenToWorldPoint(Vector3 position) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Transform",
+    "method": "set_localPosition",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_localPosition(Vector3 value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Transform",
+    "method": "set_localScale",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_localScale(Vector3 value) { }"
+  },
+  {
+    "assembly": "UnityEngine.PhysicsModule",
+    "owner": "UnityEngine.BoxCollider",
+    "method": "set_size",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_size(Vector3 value) { }"
+  },
+  {
+    "assembly": "UnityEngine.PhysicsModule",
+    "owner": "UnityEngine.SphereCollider",
+    "method": "set_radius",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_radius(float value) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp-firstpass",
+    "owner": "UIWidget",
+    "method": "set_width",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_width(int value) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp-firstpass",
+    "owner": "UIWidget",
+    "method": "set_height",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_height(int value) { }"
+  },
+  {
+    "assembly": "UnityEngine.PhysicsModule",
+    "owner": "UnityEngine.Collider",
+    "method": "set_enabled",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_enabled(bool value) { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -1616,5 +1792,11 @@
     "owner": "UnityEngine.Color",
     "field": "b",
     "declaration": "public float b; // 0x18"
+  },
+  {
+    "assembly": "Assembly-CSharp-firstpass",
+    "owner": "UIWidget",
+    "field": "fillGeometry",
+    "declaration": "public bool fillGeometry; // 0x150"
   }
 ]

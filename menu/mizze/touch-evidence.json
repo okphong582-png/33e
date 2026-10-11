@@ -1,0 +1,25 @@
+{
+  "game": "Free Fire TH iOS 1.132.1",
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "inputPath": "GCommon.UserControlAxisData.CanTouchingThrough consults UICamera.Raycast(Vector3, out GameObject); Event.Use alone does not intercept input polling.",
+  "inspectedInputRvas": [
+    "0x6B5B3A0",
+    "0x6B5BEF4",
+    "0x6B5B848",
+    "0x6B54194"
+  ],
+  "raycastOutRva": "0x1545C2C",
+  "implementation": "Existing UICamera.mainCamera; one owned UIPanel, two geometry-free UIWidget instances and BoxCollider/SphereCollider. No new UICamera, global event delegate mutation or game-input disable.",
+  "uiState": "Panel enabled only while open/animating; bubble always available; bounded objects; positions and dimensions updated only when changed.",
+  "declarationEvidence": "bindings-evidence.json; includes Assembly-CSharp-firstpass types",
+  "offlineTests": [
+    "hit region follows panel/bubble drag and resize",
+    "outside gesture cannot activate an ESP toggle",
+    "closed panel does not block its former rectangle",
+    "1000 syncs reuse the same objects",
+    "camera replacement releases owned hierarchy",
+    "projection error releases hierarchy and keeps launcher draw"
+  ],
+  "deviceVerified": false,
+  "multiTouchOnDeviceVerified": false
+}
