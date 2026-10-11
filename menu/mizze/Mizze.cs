@@ -29,16 +29,11 @@ namespace COW.GamePlay
         // no reload, floating fakelag visibility; its active state is separate.
         public static void MzEnsure()
         {
-            if(MzBooting)return;if(MzInitialized&&MzDriver!=null)return;
-            if(MzGuiEntered&&!MzOnThread())return;
-            if(MzNextBootstrap>0&&Time.realtimeSinceStartup<MzNextBootstrap)return;
-            int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;
-            MzBooting=true;
+            if(MzBooting)return;MzBooting=true;
             try {
-                MzThreadId=thread;
-                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}
-                if(MzDriver==null){var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;}MzStartupLog("driver-ready");
-            }catch(Exception e){MzNextBootstrap=Time.realtimeSinceStartup+1;if(!MzGuiEntered)MzThreadId=0;MzLogFault("bootstrap",e);}finally{MzBooting=false;}
+                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzFireMultiplier=2;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[2]=false;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";}}
+                if(MzDriver!=null)return;var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;MzStartupLog("driver-ready");
+            }catch(Exception e){MzNextBootstrap=Time.realtimeSinceStartup+1;MzLogFault("bootstrap",e);}finally{MzBooting=false;}
         }
         public static void MzRecoverMenu(Player player)
         {
@@ -148,10 +143,9 @@ namespace COW.GamePlay
         public void OnGUI()
         {
             if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
-            if(MzInGui||gameObject==null||gameObject.name!="__mizze_driver")return;
+            if(gameObject==null||gameObject.name!="__mizze_driver")return;if(MzInGui)return;
             // Unity owns OnGUI: the first real GUI callback establishes its thread.
             // A lobby getter may have initialized on a different thread earlier.
-            if(!MzInitialized)MzEnsure();if(!MzInitialized)return;
             MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;Color color;Color contentColor;Matrix4x4 matrix;try{color=GUI.color;contentColor=GUI.contentColor;matrix=GUI.matrix;}catch(Exception e){MzLogFault("gui-snapshot",e);return;}MzInGui=true;bool previousPaint=MzUiPaint;
             try {
                 MzUiPaint=type==EventType.Repaint;if(MzUiPaint&&!MzGuiEntered){MzGuiEntered=true;MzStartupLog("gui-entered");}

@@ -1,0 +1,17 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{inspect}=require('../inspect_patch.cjs');
+const dir=__dirname,old=path.join(dir,'legacy-baseline'),proof=JSON.parse(fs.readFileSync(path.join(old,'provenance.json'),'utf8'));
+for(const f of proof.files)assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(old,f.name),'utf8').replace(/\r\n/g,'\n')).digest('hex'),f.canonicalSha256,'Baseline altered: '+f.name);
+const legacy=fs.readFileSync(path.join(old,'Mizze.cs'),'utf8'),current=fs.readFileSync(path.join(dir,'Mizze.cs'),'utf8');
+const begin=legacy.indexOf('if(MzDriver!=null)return;'),end=legacy.indexOf('MzDriver=g;',begin)+'MzDriver=g;'.length;
+assert(current.includes(legacy.slice(begin,end)),'Old Find/create/AddComponent/DontDestroy/assign sequence changed');
+const ensure=current.slice(current.indexOf('public static void MzEnsure()'),current.indexOf('public static void MzRecoverMenu'));
+assert(!ensure.includes('if(MzGuiEntered')&&!ensure.includes('if(MzNextBootstrap')&&!ensure.includes('if(MzInitialized&&MzDriver'),'New bootstrap admission gates reintroduced');
+assert(ensure.indexOf('MzInitialized=true')<ensure.indexOf('g.AddComponent'),'State must exist before old component creation');
+const gui=current.slice(current.indexOf('public void OnGUI()'));
+assert(!gui.includes('MzEnsure()')&&!gui.includes('if(!MzInitialized)'),'Old driver callback cannot depend on a second bootstrap');
+assert(gui.indexOf('MzCenter(MzBubbleX')>gui.indexOf('MzAuthorized()'),'Launcher is drawn outside authorization branch');
+const p=inspect(fs.readFileSync(path.join(dir,'dist/Assembly-CSharp-patch.bytes'))),manifest=JSON.parse(fs.readFileSync(path.join(dir,'dist/manifest.json'),'utf8'));
+assert.equal(manifest.stateMode,'legacy-field-names');assert.equal(manifest.stateNamespace,'');
+assert(p.fields.filter(f=>f.isNew).every(f=>/^Mz/.test(f.name)&&!/^Mizze_[a-f0-9]{16}_/.test(f.name)),'Serializer renamed old-source state');
+const common=p.fields.filter(f=>f.isNew&&proof.originalNewFields.includes(f.name));assert(common.length>=70,'Too little old state retained');
+console.log('PASS: immutable old-source baseline, original driver creation sequence and '+common.length+' legacy field names retained.');

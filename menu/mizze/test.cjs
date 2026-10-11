@@ -7,11 +7,11 @@ run(csc,['/nologo','/codepage:65001','/unsafe','/optimize+','/nowarn:0169','/tar
 run(path.join(out,'MizzeRuntimeTest.exe'),[path.join(dir,'dist/Assembly-CSharp-patch.bytes'),path.join(dir,'dist/methods.tsv')]);
 const {inspect}=require('../inspect_patch.cjs');const p=inspect(fs.readFileSync(path.join(dir,'dist/Assembly-CSharp-patch.bytes')));const evidence=JSON.parse(fs.readFileSync(path.join(dir,'bindings-evidence.json')));
 const manifest=JSON.parse(fs.readFileSync(path.join(dir,'dist/manifest.json')));
-if(!/^Mizze_[0-9a-f]{16}_$/.test(manifest.stateNamespace)||p.fields.some(f=>f.isNew&&!f.name.startsWith(manifest.stateNamespace)))throw Error('Unscoped or mixed new fields');
+if(manifest.stateMode!=='legacy-field-names'||manifest.stateNamespace!==''||p.fields.some(f=>f.isNew&&!f.name.startsWith('Mz')))throw Error('Old-source field format not preserved');
 const expectedFixes=['get_UIModelRole','get_LastAimingInfoFromWeapon','OnGUI','IsReallyInStealth','NeedRunHighFrame','get_IsBeingCarried','UpdateKnockdownIsInCamera'].sort();
 if(JSON.stringify(p.fixes.map(f=>f.method.name).sort())!==JSON.stringify(expectedFixes))throw Error('Unexpected patch hook');
 if(p.fields.some(f=>!f.isNew&&f.name==='wrapperArray')||p.externMethods.some(e=>/MUDPSession|UDPSession|WrappersManagerImpl/.test(e.owner)))throw Error('Lag must not mutate transport or shared IFix dispatch');
-console.log('PASS: every VM-owned field is isolated by source revision; restored native stealth hook is explicitly checked.');
+console.log('PASS: VM fields use the working old-source names; process restart is required when replacing bytes.');
 const blocked=['UnityEngine.Mesh','UnityEngine.Material','UnityEngine.Shader','UnityEngine.GL','UnityEngine.Graphics','UnityEngine.Font'];
 for(const e of p.externMethods)if(blocked.includes(e.owner.split(',')[0])||(e.owner.split(',')[0]==='UnityEngine.GUIStyle'&&e.name==='SetDefaultFont'))throw Error('Unsafe shared renderer/font API in final patch: '+e.owner+'.'+e.name);
 console.log('PASS: final bytes contain no Mesh/Material/Shader/GL/Graphics/OS-font/default-font native calls.');
@@ -32,3 +32,5 @@ console.log('PASS: all four entry points recorded from actual source cũ are res
 if(p.externMethods.some(e=>/^System\.Collections\.Generic\.(Dictionary|KeyValuePair)/.test(e.owner)))throw Error('New AOT generic enumeration extern introduced');
 const collectors=p.externMethods.filter(e=>e.owner.startsWith('COW.GcUtil,'));if(collectors.length!==1||collectors[0].name!=='Collect'||collectors[0].parameters[0].split(',')[0]!=='ManualGCReason')throw Error('Unexpected collector dependency');
 console.log('PASS: only existing native game collector is used; no generic Dictionary/Enumerator/KeyValuePair externs.');
+
+run(process.execPath,[path.join(dir,'verify-legacy-base.cjs')]);

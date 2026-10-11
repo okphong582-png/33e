@@ -1,5 +1,5 @@
 {
-  "revision": "R7",
+  "revision": "R8",
   "frames": 300,
   "environment": "offline .NET IFix VM; includes test doubles, not iOS measurements",
   "baselineCommit": "4ad95b9194e14468f9932b9fa48a641182a80841",
@@ -7,8 +7,8 @@
     {
       "name": "launcher",
       "beforeAllocatedBytes": 5996600,
-      "afterAllocatedBytes": 5997896,
-      "reductionPercent": -0.022,
+      "afterAllocatedBytes": 5996592,
+      "reductionPercent": 0,
       "beforeRetainedDelta": 0,
       "afterRetainedDelta": 0
     },
@@ -23,7 +23,7 @@
     {
       "name": "allEsp6",
       "beforeAllocatedBytes": 129378712,
-      "afterAllocatedBytes": 121169952,
+      "afterAllocatedBytes": 121169960,
       "reductionPercent": 6.345,
       "beforeRetainedDelta": 0,
       "afterRetainedDelta": 0
@@ -31,7 +31,7 @@
     {
       "name": "allEsp6-menuOpen",
       "beforeAllocatedBytes": 164850864,
-      "afterAllocatedBytes": 156633856,
+      "afterAllocatedBytes": 156633744,
       "reductionPercent": 4.985,
       "beforeRetainedDelta": 0,
       "afterRetainedDelta": 0

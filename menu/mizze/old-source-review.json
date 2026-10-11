@@ -13,10 +13,11 @@
     "SceneEditBoxSelectTool.OnGUI"
   ],
   "differences": [
-    "State initialized before AddComponent as in actual old source.",
-    "No thread/clock prerequisite before cold driver creation; valid driver OnGUI binds thread without rejecting bootstrap identity.",
-    "Original match and lobby entry points retained; real-stealth uses non-generic interfaces to avoid new AOT Enumerator/KeyValuePair externs.",
-    "Later renderer limits retained, repeated boxing/color/matrix work reduced; native pressure collector runs outside GUI only after first GUI callback."
+    "Original MzEnsure Find/create/GetComponent/AddComponent/DontDestroyOnLoad/driver assignment copied verbatim from legacy-baseline/Mizze.cs.",
+    "Bootstrap admits cold entry regardless of clock or stale thread; initialization before component creation; only reentry protection retained.",
+    "OnGUI follows old Event and driver filters, never invokes MzEnsure; GUI thread is established by actual callback.",
+    "Package serializer preserves Mz field descriptors from old source; no per-revision field renaming; process restart mandatory.",
+    "Ported R7 glass/GIF/palette/feature controls and memory-pressure handling; native real-stealth predicate retained for game-state correctness."
   ],
   "nativeStealth": {
     "rva": "0x573EFF8",
