@@ -38,7 +38,7 @@ unsafe static class MizzeRuntimeTest
             var externs=new MethodBase[r.ReadInt32()];for(int i=0;i<externs.Length;i++)externs[i]=ReadMethod(r,types);var strings=new string[r.ReadInt32()];for(int i=0;i<strings.Length;i++)strings[i]=r.ReadString();
             var fields=new FieldInfo[r.ReadInt32()];var newFields=new Dictionary<int,NewFieldInfo>();
             for(int i=0;i<fields.Length;i++){bool added=r.ReadBoolean();var owner=types[r.ReadInt32()];string name=r.ReadString();if(added){var f=new NewFieldInfo {Name=name,DeclaringType=owner,FieldType=types[r.ReadInt32()],MethodId=r.ReadInt32()};newFields.Add(i,f);string logical=System.Text.RegularExpressions.Regex.Replace(name,@"^Mizze_[0-9a-f]{16}_","");Check(logical!=name,"build-isolated new field name "+name);Fields.Add(logical,f);Check(owner.GetField(name)==null,"VM owns new field "+name);}else{fields[i]=owner.GetField(name,BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.Static);Check(fields[i]!=null,"resolve field "+name);}}
-            Check(r.ReadInt32()==0,"no static-slot metadata");Check(r.ReadInt32()==0,"no closures");r.ReadString();r.ReadString();Check(!r.ReadBoolean(),"game flag");int fixes=r.ReadInt32();Check(fixes==6,"six UI/aim/presentation fixes, no stealth or main frame replacement");for(int i=0;i<fixes;i++){var m=ReadMethod(r,types);int id=r.ReadInt32();Check(Methods[m.Name]==id,"fix table maps "+m.Name);}Check(r.ReadInt32()==0&&r.BaseStream.Position==r.BaseStream.Length,"complete container");
+            Check(r.ReadInt32()==0,"no static-slot metadata");Check(r.ReadInt32()==0,"no closures");r.ReadString();r.ReadString();Check(!r.ReadBoolean(),"game flag");int fixes=r.ReadInt32();Check(fixes==4,"four UI/aim/recovery fixes; no presentation hold or main frame replacement");for(int i=0;i<fixes;i++){var m=ReadMethod(r,types);int id=r.ReadInt32();Check(Methods[m.Name]==id,"fix table maps "+m.Name);}Check(r.ReadInt32()==0&&r.BaseStream.Position==r.BaseStream.Length,"complete container");
             return new VirtualMachine(codes,delegate{foreach(var ptr in allocated)Marshal.FreeHGlobal(ptr);}) {ExternTypes=types,ExternMethods=externs,InternStrings=strings,FieldInfos=fields,NewFieldInfos=newFields,ExceptionHandlers=handlers,StaticFieldTypes=new Type[0],Cctors=new int[0]};
         }
     }
@@ -216,7 +216,7 @@ unsafe static class MizzeRuntimeTest
         attributes.FireIntervalScale=.8f;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Check(Math.Abs(attributes.FireIntervalScale-.8f/3)<.0001f&&Get<float>("MzOldFireScale")==.8f,"native buff change becomes new baseline while enabled");
         Click(154,192);Check(switches[16]&&attributes.IsAmmoFree&&attributes.ShootNoReload,"no-reload toggle sets both real client ammo flags");
         int freeWrites=attributes.FreeWrites;Time.Now=.4f;Run("MzWeaponPoll");Check(attributes.FreeWrites==freeWrites,"unchanged ammo flag is never written each poll");
-        for(int i=0;i<30;i++)Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Súng")&&GUI.Calls.Any(d=>d.Text=="Không nạp đạn")&&GUI.Calls.Any(d=>d.Text!=null&&d.Text.Contains("Fakelag · Giữ hiển thị")),"weapon tab labels the presentation-only fakelag mode");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-weapons.svg"));
+        for(int i=0;i<30;i++)Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Súng")&&GUI.Calls.Any(d=>d.Text=="Không nạp đạn")&&GUI.Calls.Any(d=>d.Text!=null&&d.Text.Contains("Fakelag · Tạm dừng")),"weapon tab honestly marks fakelag unavailable");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-weapons.svg"));
         Click(154,148);Check(!switches[15]&&attributes.FireIntervalScale==.8f&&attributes.IsAmmoFree,"fast off restores current native baseline independently of ammo feature");
         Click(154,192);Check(!switches[16]&&!attributes.IsAmmoFree&&!attributes.ShootNoReload&&Get<PlayerAttributes>("MzWeaponAttributes")==null,"both off restores original ammo state and releases native wrapper");
         attributes.Free=true;attributes.ShootNoReload=true;switches[16]=true;Set("MzNextWeapon",0f);Run("MzWeaponPoll");Run("MzRestoreWeapon");Check(attributes.Free&&attributes.ShootNoReload,"preexisting native free-ammo flags survive restoration");attributes.Free=false;attributes.ShootNoReload=false;
@@ -240,7 +240,7 @@ unsafe static class MizzeRuntimeTest
         Exception workerError=null;int finds=GameObject.FindCalls,adds=GameObject.AddCalls,projections=Camera.ProjectionCalls,attrs=local.AttributeReads;switches[0]=true;switches[1]=true;switches[12]=true;switches[15]=true;
         var worker=new System.Threading.Thread(delegate(){try{Run("MzEnsure");Run("MzRender");Run("MzWeaponPoll");Run("get_LastAimingInfoFromWeapon",local);}catch(Exception e){workerError=e;}});worker.Start();worker.Join();Check(workerError==null&&GameObject.FindCalls==finds&&GameObject.AddCalls==adds&&Camera.ProjectionCalls==projections&&local.AttributeReads==attrs&&local.LocalReads==reads,"off-thread hook calls cannot touch Unity scene, players, aim or weapon attributes");
         switches[15]=false;int nested=0;enemy.OnHead=delegate(){nested++;Run("get_LastAimingInfoFromWeapon",local);};Run("get_LastAimingInfoFromWeapon",local);Check(nested>0&&nested<10&&!Get<bool>("MzInSilent")&&local.FDMIEDDNCEC.JHAINOBIFMA==enemy.gameObject,"nested aiming getter does not recurse and releases silent guard");enemy.OnHead=null;Run("MzRestoreSilent");switches[12]=false;
-        Set("MzDriver",null);GameObject.World.Remove("__mizze_driver");int bootNested=0;GameObject.OnAdd=delegate(){bootNested++;Run("MzEnsure");};Run("MzEnsure");GameObject.OnAdd=null;Check(bootNested==1&&!Get<bool>("MzBooting")&&GameObject.Find("__mizze_driver").Added!=null,"nested native component creation creates one driver without recursion");Driver=GameObject.Find("__mizze_driver").Added;
+        Set("MzDriver",null);GameObject.World.Remove("__mizze_driver");Set("MzNextBootstrap",0f);int bootNested=0;GameObject.OnAdd=delegate(){bootNested++;Run("MzEnsure");};Run("MzEnsure");GameObject.OnAdd=null;Check(bootNested==1&&!Get<bool>("MzBooting")&&GameObject.Find("__mizze_driver").Added!=null,"nested native component creation creates one driver without recursion");Driver=GameObject.Find("__mizze_driver").Added;
         int renderNested=0;Camera.OnProjection=delegate(){renderNested++;Run("MzRender");};GUI.Calls.Clear();Render();Camera.OnProjection=null;Check(renderNested==2&&Lines()==4&&!Get<bool>("MzInRender"),"native projection callback cannot reenter renderer or replace its command buffer");
         var ring=Get<Texture2D>("MzRing");var headRing=Get<Texture2D>("MzHeadRing");Set("MzRing",null);Set("MzHeadRing",null);int created=Texture2D.Created;Render();Check(Texture2D.Created==created&&Get<Texture2D>("MzRing")==null&&Get<Texture2D>("MzHeadRing")==null,"box-only ESP performs no procedural ring allocation");Set("MzRing",ring);Set("MzHeadRing",headRing);
         local.HP=0;heads=enemy.HeadReads;GUI.Calls.Clear();Render();Check(Get<int>("MzCommandCount")==0&&enemy.HeadReads==heads,"local death clears old ESP before touching enemy skeletons");local.HP=100;local.Local=false;Render();Check(enemy.HeadReads==heads,"observer or incomplete local actor prevents ESP sampling");local.Local=true;local.gameObject.activeInHierarchy=false;Render();Check(enemy.HeadReads==heads,"inactive local actor prevents ESP sampling during scene transitions");local.gameObject.activeInHierarchy=true;
@@ -251,92 +251,43 @@ unsafe static class MizzeRuntimeTest
         Array.Clear(switches,0,switches.Length);switches[11]=true;int aimCalls=local.AimCalls;Set("MzLastLogicFrame",-1);Event.current=new Event {type=EventType.Repaint};Run("OnGUI",Driver);Event.current=new Event {type=EventType.Repaint};Run("OnGUI",Driver);Check(local.AimCalls==aimCalls+1,"two repaint passes in one game frame execute aim only once");Time.Frame++;Event.current=new Event {type=EventType.Repaint};Run("OnGUI",Driver);Check(local.AimCalls==aimCalls+2,"next game frame still executes aim");
         File.Delete(log);Directory.Delete(Application.TestFolder);COW.GameFacade.Match=null;
     }
-    static void LagBegin(Player actor){Time.Frame++;Run("NeedRunHighFrame",actor);}
-    static void FakeLagChecks()
+    static void MenuRecoveryChecks()
     {
-        var switches=Get<bool[]>("MzSwitch");Array.Clear(switches,0,switches.Length);
-        Time.Now=0;Set("MzLeaseDeadline",1000f);Set("MzKeyHash","");Set("MzThreadId",System.Threading.Thread.CurrentThread.ManagedThreadId);
-        var local=Enemy(0);local.Local=true;var enemy=Enemy(1);var match=new JMAGGLCNGIG();match.Players.Add(enemy);
-        COW.GameFacade.Local=local;COW.GameFacade.Match=match;int calls=COW.GameFacade.LocalCalls,writes=enemy.Root.PositionWrites;
-        Run("MzLagPulse");LagBegin(enemy);Run("get_IsBeingCarried",enemy);Run("UpdateKnockdownIsInCamera",enemy);
-        Check(!switches[17]&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers")==null&&enemy.Root.PositionWrites==writes&&COW.GameFacade.LocalCalls==calls,"disabled lag allocates no actor arrays and performs no native position or local queries");
-        // Original small-hook semantics must hold independently of the new feature.
+        var switches=Get<bool[]>("MzSwitch");Array.Clear(switches,0,switches.Length);Set("MzLeaseDeadline",1000f);Set("MzKeyHash","");
+        var local=Enemy(0);local.Local=true;var enemy=Enemy(1);COW.GameFacade.Local=local;COW.GameFacade.Match=new JMAGGLCNGIG();COW.GameFacade.Match.Players.Add(enemy);
         for(int smooth=0;smooth<2;smooth++)for(int isLocal=0;isLocal<2;isLocal++)for(int skip=0;skip<2;skip++){
             COW.GameSettingData.Smooth=smooth!=0;local.Local=isLocal!=0;local.JKACHEMNCEI=skip!=0;
-            Check((bool)Run("NeedRunHighFrame",local)==(smooth!=0&&isLocal!=0&&skip==0),"NeedRunHighFrame preserves native short-circuit return table");
+            Check((bool)Run("NeedRunHighFrame",local)==(smooth!=0&&isLocal!=0&&skip==0),"recovery hook preserves native boolean return table");
         }
         local.Local=true;local.JKACHEMNCEI=false;COW.GameSettingData.Smooth=false;
-        Check(!(bool)Run("get_IsBeingCarried",enemy),"carried getter preserves absent carrier");enemy.LNHFOHKEAMP=local;
-        Check((bool)Run("get_IsBeingCarried",enemy),"carried getter preserves living carrier");local.Destroyed=true;
-        Check(!(bool)Run("get_IsBeingCarried",enemy),"carried getter preserves Unity destroyed-object semantics");local.Destroyed=false;enemy.LNHFOHKEAMP=null;
-        local.GBJCJJNPPEC.State=message.KOJPEFFGGIJ.Knocked;local.GIEBNLMODIB=BEADLMGGGGL.DEIPJDIGKIP(7u);match.Lookup=enemy;enemy.Frustum=true;
-        Run("UpdateKnockdownIsInCamera",local);Check(local.FFOPCLFLIMO&&match.LookupCalls==1&&!match.LookupOption,"local knocked camera hook preserves target lookup and frustum assignment");
-        Run("UpdateKnockdownIsInCamera",local);Check(match.LookupCalls==1,"local frustum flag still suppresses repeat lookup");
-        local.FFOPCLFLIMO=false;local.GIEBNLMODIB=BEADLMGGGGL.DEIPJDIGKIP(0u);Run("UpdateKnockdownIsInCamera",local);Check(match.LookupCalls==1,"zero target ID still skips native match lookup");
-        local.GIEBNLMODIB=BEADLMGGGGL.DEIPJDIGKIP(7u);
-        foreach(int mode in new[]{0,1,2,3,4}){
-            match.Lookup=mode==0?null:enemy;enemy.Destroyed=mode==1;enemy.Dead=mode==2;enemy.Dying=mode==3;enemy.Local=mode==4;
-            Run("UpdateKnockdownIsInCamera",local);Check(!local.FFOPCLFLIMO,"native local camera rejects missing/destroyed/dead/dying/local target");
-        }
-        enemy.Destroyed=false;enemy.Dead=false;enemy.Dying=false;enemy.Local=false;local.GBJCJJNPPEC.State=message.KOJPEFFGGIJ.None;
-        // Drive the actual three patched methods around simulated native movement.
-        Set("MzOpen",true);Set("MzTab",4);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzLagNextPulse",0f);Set("MzLagSeconds",.3f);Click(154,236);Check(switches[17],"fakelag UI toggle activates the real presentation hook");Click(400,390);Check(Get<float>("MzLagSeconds")==.5f&&Get<bool>("MzLagActive"),"500 ms UI selector reconnects the actual hold duration");Click(280,390);Check(Get<float>("MzLagSeconds")==.3f,"300 ms UI selector changes actual hold duration");Check(Get<bool>("MzLagActive")&&Get<int>("MzLagRosterCount")==1,"lag activation selects only current-match enemies");
-        Vector3 anchor=enemy.Root.position;Run("UpdateKnockdownIsInCamera",enemy);Time.Now=.05f;
-        LagBegin(enemy);enemy.Root.position=anchor+new Vector3(1,0,0);Run("get_IsBeingCarried",enemy);enemy.Root.position=anchor+new Vector3(2,0,0);Run("UpdateKnockdownIsInCamera",enemy);
-        Check(enemy.Root.position.x==anchor.x&&Get<int>("MzLagWrites")==1,"post-update hook holds visible anchor after native movement");
-        int lateWrites=enemy.Root.PositionWrites;Run("NeedRunHighFrame",enemy);Run("get_IsBeingCarried",enemy);Check(enemy.Root.position.x==anchor.x&&enemy.Root.PositionWrites==lateWrites,"same-frame avatar LateUpdate queries preserve the held pose until rendering");
-        int nestedLag=0;enemy.Root.OnPositionWrite=delegate(){nestedLag++;Run("NeedRunHighFrame",enemy);Run("UpdateKnockdownIsInCamera",enemy);};
-        LagBegin(enemy);enemy.Root.OnPositionWrite=null;Check(nestedLag==1&&!Get<bool>("MzLagBusy"),"nested native transform callback does not recurse into lag writes");Check(enemy.Root.position.x==anchor.x+2,"update-entry helper restores latest real position before native logic");
-        enemy.Root.position=anchor+new Vector3(3,0,0);Run("get_IsBeingCarried",enemy);Check(enemy.Root.position.x==anchor.x+3,"post-entry getter leaves a newer native position untouched");Run("UpdateKnockdownIsInCamera",enemy);
-        Run("UpdateKnockdownIsInCamera",enemy);switches[17]=false;Run("MzLagPulse");Check(enemy.Root.position.x==anchor.x+3&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers").All(p=>p==null),"duplicate end callback and disabling preserve true pose and release every actor reference");
-        // Bounded hold interval, explicit native correction, actor reuse and scene identity.
-        switches[17]=true;Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);float first=enemy.Root.position.x;
-        Time.Now=.1f;LagBegin(enemy);enemy.Root.position=new Vector3(first+1,0,10);Run("UpdateKnockdownIsInCamera",enemy);
-        enemy.Root.position=new Vector3(44,0,10);LagBegin(enemy);Check(enemy.Root.position.x==44,"incoming correction is never overwritten by stale real position");
-        Time.Now=.5f;Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.position.x==44,"expired 300 ms anchor refreshes to current position");
-        Time.Now=.55f;LagBegin(enemy);enemy.Root.position=new Vector3(45,0,10);Run("UpdateKnockdownIsInCamera",enemy);
-        enemy.Id++;int changed=enemy.Root.PositionWrites;LagBegin(enemy);Check(enemy.Root.PositionWrites==changed,"recycled entity UniqueID prevents old-pose restoration");Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.PositionWrites==changed,"stale roster identity cannot apply to a recycled entity");
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);Time.Now=.6f;LagBegin(enemy);enemy.Root.position=new Vector3(46,0,10);Run("UpdateKnockdownIsInCamera",enemy);
-        var replacement=Bone(99,0,10);enemy.m_CachedTransform=replacement;LagBegin(enemy);Check(replacement.PositionWrites==1&&replacement.position.x==99,"replacement root transform never receives stale cached restoration");enemy.m_CachedTransform=enemy.Root;
-        Run("MzLagStop");Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(47,0,10);Run("UpdateKnockdownIsInCamera",enemy);
-        changed=enemy.Root.PositionWrites;COW.GameFacade.Match=new JMAGGLCNGIG();LagBegin(enemy);Check(enemy.Root.PositionWrites==changed&&!Get<bool>("MzLagActive"),"match change drops old-scene references without writing an old actor");
-        COW.GameFacade.Match=match;Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(48,0,10);Run("UpdateKnockdownIsInCamera",enemy);
-        var oldLocal=local;COW.GameFacade.Local=Enemy(0);COW.GameFacade.Local.Local=true;changed=enemy.Root.PositionWrites;LagBegin(enemy);Check(enemy.Root.PositionWrites==changed&&!Get<bool>("MzLagActive"),"local-player context replacement drops stale hold without writing");COW.GameFacade.Local=oldLocal;
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(49,0,10);Run("UpdateKnockdownIsInCamera",enemy);Time.Now=2;
-        Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.position.x==49&&!Get<bool>("MzLagActive"),"one-second missing UI heartbeat releases owned pose instead of holding indefinitely");
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(50,0,10);Run("UpdateKnockdownIsInCamera",enemy);Run("MzReject","test-key-disabled");
-        Check(enemy.Root.position.x==50&&!Get<bool>("MzLagActive"),"key rejection immediately restores lag pose");Set("MzLeaseDeadline",1000f);
-        // Actors absent from the roster, teammates and invalid objects never receive a write.
-        Set("MzLagNextPulse",0f);Run("MzLagPulse");var stranger=Enemy(8);writes=stranger.Root.PositionWrites;Run("UpdateKnockdownIsInCamera",stranger);stranger.Root.position=new Vector3(9,0,10);Run("UpdateKnockdownIsInCamera",stranger);Check(stranger.Root.PositionWrites==writes+1,"non-match avatar never enters lag rows");
-        enemy.Team=true;Time.Now+=.2f;Run("MzLagPulse");changed=enemy.Root.PositionWrites;Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.PositionWrites==changed&&Get<int>("MzLagRosterCount")==0,"team transition releases roster membership");enemy.Team=false;
-        foreach(int bad in new[]{0,1,2,3}){
-            enemy.HP=bad==0?0:100;enemy.IsKnockedDownBleed=bad==1;enemy.LNHFOHKEAMP=bad==2?local:null;enemy.gameObject.activeInHierarchy=bad!=3;
-            Set("MzLagNextPulse",0f);Run("MzLagPulse");changed=enemy.Root.PositionWrites;Run("UpdateKnockdownIsInCamera",enemy);Check(enemy.Root.PositionWrites==changed,"dead/knocked/carried/inactive actor receives no lag position writes");
-        }
-        enemy.HP=100;enemy.IsKnockedDownBleed=false;enemy.LNHFOHKEAMP=null;enemy.gameObject.activeInHierarchy=true;
-        Run("MzLagStop");Set("MzLagNextPulse",0f);Run("MzLagPulse");Run("UpdateKnockdownIsInCamera",enemy);LagBegin(enemy);enemy.Root.position=new Vector3(51,0,10);enemy.Root.FailWrite=true;Run("UpdateKnockdownIsInCamera",enemy);
-        Check(Get<bool>("MzLagBlocked")&&!switches[17]&&!Get<bool>("MzLagActive")&&Get<Player[]>("MzLagPlayers").All(p=>p==null),"write failure stops only lag, disables its toggle and releases rows");enemy.Root.FailWrite=false;Set("MzLagBlocked",false);
-        // Dense scene: fixed actor arrays and 32 holds across repeated update/post phases.
-        match.Players.Clear();for(int i=0;i<150;i++)match.Players.Add(Enemy(i*.01f));switches[17]=true;Set("MzLagNextPulse",0f);Run("MzLagPulse");var rows=Get<Player[]>("MzLagPlayers");var roster=Get<Player[]>("MzLagRoster");
-        Check(Get<int>("MzLagRosterCount")==64,"dense roster sampling is capped at 64 eligible enemies");
-        for(int i=0;i<=10;i++)switches[i]=true;switches[13]=true;Set("MzEspBlocked",false);Set("MzEspFailures",0);Set("MzSampleFailures",0);Camera.main=new Camera {gameObject=new GameObject("lag-and-esp")};
-        for(int frame=0;frame<90;frame++){
-            Time.Now+=.016f;Time.Frame++;Run("MzLagPulse");
-            foreach(Player actor in match.Players){Run("NeedRunHighFrame",actor);actor.Root.position=actor.Root.position+new Vector3(.01f,0,0);Run("get_IsBeingCarried",actor);Run("UpdateKnockdownIsInCamera",actor);}
-            Check(rows.Count(p=>p!=null)<=32,"dense frame never exceeds 32 retained actors");
-            if(frame%10==0){GUI.Calls.Clear();Render();Check(!Get<bool>("MzEspBlocked")&&!Get<bool>("MzSampleFaulted")&&GUI.Calls.Count<=193,"all ESP features and FOV stay inside render budget while lag holds are active");}
-        }
-        Check(Object.ReferenceEquals(rows,Get<Player[]>("MzLagPlayers"))&&Object.ReferenceEquals(roster,Get<Player[]>("MzLagRoster")),"dense update loop reuses fixed arrays without growing actor storage");
-        var held=rows.First(p=>p!=null);Exception workerError=null;changed=held.Root.PositionWrites;
-        var worker=new System.Threading.Thread(delegate(){try{Run("NeedRunHighFrame",held);Run("get_IsBeingCarried",held);Run("UpdateKnockdownIsInCamera",held);}catch(Exception e){workerError=e;}});worker.Start();worker.Join();Check(workerError==null&&held.Root.PositionWrites==changed,"off-thread native hook calls preserve their return path without mutating positions");
-        Run("MzLagStop");Check(rows.All(p=>p==null)&&roster.All(p=>p==null),"stop clears all fixed hold and roster references after dense scene");
-        Array.Clear(switches,0,switches.Length);Time.Now=0;COW.GameFacade.Match=null;
+        Set("MzOpen",true);Set("MzBubbleX",84f);Set("MzPanelX",120f);Set("MzPanelY",16f);Set("MzTab",0);Set("MzOpenAnim",1f);
+        var color=Get<Color>("MzEspColor");switches[1]=true;var old=Get<GameObject>("MzDriver");old.Destroyed=true;Time.Now=5;Set("MzNextBootstrap",0f);int adds=GameObject.AddCalls;
+        Run("NeedRunHighFrame",enemy);Check(GameObject.AddCalls==adds,"remote actors never create replacement menu drivers");
+        Run("NeedRunHighFrame",local);var recovered=Get<GameObject>("MzDriver");Check(recovered!=null&&!Object.ReferenceEquals(old,recovered)&&recovered.Persistent&&GameObject.AddCalls==adds+1,"local frame recreates destroyed menu driver without a lobby model callback");Driver=recovered.Added;
+        Check(Get<bool>("MzOpen")&&Get<float>("MzBubbleX")==84&&Get<Color>("MzEspColor").r==color.r&&Object.ReferenceEquals(switches,Get<bool[]>("MzSwitch")),"scene recovery preserves open state, position, colors and switches");
+        int finds=GameObject.FindCalls,localReads=local.LocalReads;adds=GameObject.AddCalls;int writes=enemy.Root.PositionWrites;
+        for(int i=0;i<5000;i++)Run("NeedRunHighFrame",local);
+        Check(GameObject.FindCalls==finds&&GameObject.AddCalls==adds&&local.LocalReads==localReads&&enemy.Root.PositionWrites==writes,"healthy menu recovery performs no roster, player, transform or component work in repeated callbacks");
+        recovered.Destroyed=true;Time.Now=7;GameObject.FailAdd=true;Run("NeedRunHighFrame",local);adds=GameObject.AddCalls;
+        for(int i=0;i<100;i++)Run("NeedRunHighFrame",local);
+        Check(GameObject.AddCalls==adds&&!Get<bool>("MzBooting"),"failed component creation is throttled and cannot recurse or crash original callback");
+        GameObject.FailAdd=false;Time.Now=8.1f;Run("NeedRunHighFrame",local);Driver=Get<GameObject>("MzDriver").Added;Check(Driver!=null&&GameObject.AddCalls==adds+1,"next recovery attempt succeeds after transient creation failure");
+        var stableDriver=Get<GameObject>("MzDriver");stableDriver.Destroyed=true;Time.Now=10;Set("MzNextBootstrap",0f);adds=GameObject.AddCalls;finds=GameObject.FindCalls;Exception workerError=null;
+        var worker=new System.Threading.Thread(delegate(){try{Run("NeedRunHighFrame",local);}catch(Exception e){workerError=e;}});worker.Start();worker.Join();
+        Check(workerError==null&&GameObject.AddCalls==adds&&GameObject.FindCalls==finds,"worker callback cannot create or inspect Unity driver objects");Run("NeedRunHighFrame",local);Driver=Get<GameObject>("MzDriver").Added;
+        switches[17]=true;Run("MzLagPulse");Check(!switches[17]&&enemy.Root.PositionWrites==writes&&Get<string>("MzLagMessage").Contains("tạm dừng"),"suspended fakelag cannot write actor transforms even if its reserved flag is forced on");
+        Set("MzEspBlocked",false);switches[0]=true;switches[1]=true;GUI.FailTexture=true;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&!Get<bool>("MzInGui"),"managed ESP draw failure leaves the launcher visible and releases GUI guard");GUI.FailTexture=false;switches[0]=false;
+        GUI.FailRoundedOnce=true;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&!Get<bool>("MzInGui"),"panel draw failure does not prevent the independent launcher from rendering");Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="ESP"),"panel resumes after a transient draw exception");
+        COW.GameFacade.Match=null;Set("MzBubbleX",24f);Time.Now=0;
     }
     static int Main(string[] args)
     {
         foreach(var line in File.ReadAllLines(args[1])){var a=line.Split('\t');Methods.Add(a[2],int.Parse(a[0]));}
         var legacyInit=new NewFieldInfo {Name="MzInitialized",FieldType=typeof(bool)};legacyInit.SetValue(null,true);var legacySwitch=new NewFieldInfo {Name="MzSwitch",FieldType=typeof(bool[])};legacySwitch.SetValue(null,new bool[1]);Vm=Load(args[0]);
-        // Lobby getter preserves the lazy model and bootstraps with no match or player.
+        // A late patch load can enter a match before any lobby getter is called.
+        var bootPlayer=Enemy(0);bootPlayer.Local=true;COW.GameFacade.Local=bootPlayer;COW.GameFacade.Match=new JMAGGLCNGIG();
+        Check(!(bool)Run("NeedRunHighFrame",bootPlayer)&&Get<bool>("MzInitialized")&&Get<GameObject>("MzDriver")!=null&&GCommon.UIModelManager.instance.Calls==0,"cold match startup creates launcher without touching lazy lobby model");COW.GameFacade.Match=null;
+        // Lobby getter preserves the lazy model and reuses the already persistent driver.
         var model=Run("get_UIModelRole");Check(Get<bool[]>("MzSwitch").Length==18&&(bool)legacyInit.GetValue(null)&&((bool[])legacySwitch.GetValue(null)).Length==1,"new patch ignores retained state from previous unscoped patch");Check(model!=null&&System.Object.ReferenceEquals(model,Run("get_UIModelRole")),"lobby cached model preserved");Check(GCommon.UIModelManager.instance.Calls==1,"model initialized once");
         var g=GameObject.Find("__mizze_driver");Check(g!=null&&g.Added!=null&&g.Persistent,"persistent driver created in lobby");Driver=g.Added;Check(Get<float>("MzPanelX")==120&&Get<float>("MzPanelY")==16,"new initial panel position");Check(!Get<bool[]>("MzSwitch")[0]&&!Get<bool[]>("MzSwitch")[13],"fresh boot keeps ESP and FOV inactive until explicitly enabled");Set("MzPanelX",98f);Set("MzPanelY",30f);
         Frame(EventType.Repaint);Check(Labels()==1&&GUI.Calls.Any(d=>d.Text=="Mizze"),"only circular Mizze launcher initially");Check(Math.Abs(Get<float>("MzScale")-1.35f)<.0001f,"larger display scale at 720p");Check(GUI.Calls.Any(d=>d.Text==null&&d.Rect.width==74&&d.Color.r<.03f&&d.Color.g<.04f),"launcher uses explicit black shader color");Check(GUI.Calls.Single(d=>d.Text=="Mizze").FontSize==20&&GUI.Calls.Single(d=>d.Text=="Mizze").Matrix.Scale.x==1.35f,"larger launcher font and size");Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"launcher.svg"));
@@ -372,7 +323,7 @@ unsafe static class MizzeRuntimeTest
         Screen.Width=2340;Screen.Height=1080;Frame(EventType.Repaint);Check(Math.Abs(Get<float>("MzScale")-2.025f)<.0001f,"high resolution scaling");Set("MzTab",1);Click(Get<float>("MzPanelX")+30,Get<float>("MzPanelY")+126);Check(!switches[11],"scaled touch toggles correct aim row");
         Screen.Width=390;Screen.Height=844;Frame(EventType.Repaint);float scale=Get<float>("MzScale");Check((Get<float>("MzPanelX")+382)*scale<=Screen.width&&(Get<float>("MzPanelY")+440)*scale<=Screen.height,"portrait layout clamps within viewport");
         Screen.Width=1280;Screen.Height=720;Frame(EventType.Repaint);Check(Get<float>("MzScale")==1.35f,"landscape scale restored after resize");
-        Set("MzDriver",null);GameObject.World.Clear();GameObject.FailAdd=true;int stealthAdds=GameObject.AddCalls;Check(!local.IsReallyInStealth()&&local.Movable&&GameObject.AddCalls==stealthAdds,"unpatched stealth never initializes menu");Run("MzEnsure");Check(!Get<bool>("MzBooting"),"bootstrap exception releases reentry guard");GameObject.FailAdd=false;Run("MzEnsure");Check(GameObject.Find("__mizze_driver").Added!=null,"bootstrap retries component creation");
+        Set("MzDriver",null);GameObject.World.Clear();GameObject.FailAdd=true;Set("MzNextBootstrap",0f);int stealthAdds=GameObject.AddCalls;Check(!local.IsReallyInStealth()&&local.Movable&&GameObject.AddCalls==stealthAdds,"unpatched stealth never initializes menu");Run("MzEnsure");Check(!Get<bool>("MzBooting"),"bootstrap exception releases reentry guard");GameObject.FailAdd=false;Time.Now+=1.1f;Run("MzEnsure");Check(GameObject.Find("__mizze_driver").Added!=null,"bootstrap retries component creation");
         BackgroundChecks(args);
         ExtendedChecks(args);
         StabilityChecks(args);
@@ -380,8 +331,8 @@ unsafe static class MizzeRuntimeTest
         CachedNodeChecks();
         UiPerformanceChecks();
         WeaponChecks(args);
-        FakeLagChecks();
+        MenuRecoveryChecks();
         FaultIsolationChecks();
-        Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading, in-game aim and presentation fakelag remain unverified.");GC.KeepAlive(Vm);return 0;
+        Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading, in-game aim and native crash behavior remain unverified; presentation fakelag is suspended.");GC.KeepAlive(Vm);return 0;
     }
 }

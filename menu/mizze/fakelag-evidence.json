@@ -1,6 +1,6 @@
 {
   "game": "Free Fire TH 1.132.1",
-  "implemented": true,
+  "implemented": false,
   "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
   "findings": [
     {
@@ -43,21 +43,14 @@
         "PlayerNetworkOnUpdate": "0x5A4BEC0",
         "PlayerPostUpdate": "0x569C1E4"
       },
-      "integration": "Implemented using three smaller existing IFix hooks with reconstructed native original bodies: NeedRunHighFrame, get_IsBeingCarried, UpdateKnockdownIsInCamera. Preserve the end pose within a Unity frame; restore at the next frame. No OnUpdate/PostUpdate body replacement or shared wrapperArray mutation."
+      "integration": "Previous experimental build 45f63ad used three small hooks. Current build removes carrier/knockdown hooks and all Transform writes; NeedRunHighFrame is retained only for local menu-driver recovery."
     }
   ],
   "requiredForImplementation": "Outgoing packet lag remains unimplemented. Device validation still needed for the frame schedule, repeated simulation phases, late avatar queries, visual effect, interaction with aim/ESP and native crash behavior.",
-  "status": "experimental; offline bytecode verified; device unverified",
-  "mode": "bounded client presentation hold, not outgoing packet lag",
+  "status": "suspended after user reported missing menu and crashes; cause unconfirmed",
+  "mode": "disabled; no transform hold or packet delay",
   "deviceVerified": false,
-  "holdMilliseconds": [
-    150,
-    300,
-    500
-  ],
-  "maximumHeldActors": 32,
-  "maximumRoster": 64,
-  "rosterPollMilliseconds": 200,
-  "callbackLeaseMilliseconds": 1000,
+  "maximumHeldActors": 0,
+  "maximumRoster": 0,
   "newHookEvidence": "fakelag-small-hooks-evidence.json"
 }

@@ -64,11 +64,11 @@ namespace UnityEngine
     public static class GUI
     {
         static GUISkin Skin=new GUISkin {font=new Font {Name="game-original"}};public static GUISkin skin {get{return Skin;}set{Skin=value;}}
-        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static bool FailTexture;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
+        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static bool FailTexture,FailRoundedOnce;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
         public static void Label(Rect r,string s){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Text=s});}
         public static void Label(Rect r,string s,GUIStyle style){Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
         public static void DrawTexture(Rect r,Texture t){if(FailTexture)throw new Exception("GUI texture failure");NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
-        public static void DrawTexture(Rect r,Texture t,ScaleMode m,bool a,float aspect,Color c,float b,float radius){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=c,Radius=radius});}
+        public static void DrawTexture(Rect r,Texture t,ScaleMode m,bool a,float aspect,Color c,float b,float radius){if(FailRoundedOnce){FailRoundedOnce=false;throw new Exception("rounded panel draw failed");}Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=c,Radius=radius});}
     }
 }
 namespace UnityEngine.Networking

@@ -51,24 +51,9 @@ namespace COW.GamePlay
     }
     public class Player : AttackableEntity
     {
-        // Small native hook bodies reconstructed from TH 1.132.1; preserve return values.
-        public Player LNHFOHKEAMP;
-        public bool JKACHEMNCEI,FFOPCLFLIMO,IsKnockedDownBleed;
-        public BEADLMGGGGL GIEBNLMODIB;
-        public GFLBFKKDAMK GBJCJJNPPEC;
-        public bool IsBeingCarried {get {SceneEditBoxSelectTool.MzLagBefore(this);return LNHFOHKEAMP!=null;}}
-        public bool NeedRunHighFrame(){SceneEditBoxSelectTool.MzLagBefore(this);return COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;}
-        public bool get_IsDieing(){return false;}
-        public bool LastInFrustum(){return false;}
-        public void UpdateKnockdownIsInCamera()
-        {
-            if(!IsLocalPlayer()){SceneEditBoxSelectTool.MzLagAfter(this);return;}
-            if((int)GBJCJJNPPEC.OILOHAELLEC()!=8||FFOPCLFLIMO)return;
-            if(BEADLMGGGGL.GHAMDLFNMMA(GIEBNLMODIB,BEADLMGGGGL.DEIPJDIGKIP(0u)))return;
-            var target=COW.GameFacade.CurrentMatch().HFMDJGBOJKF(GIEBNLMODIB,false);
-            if(target==null||target.IsDead||target.get_IsDieing()||target.IsLocalPlayer())return;
-            FFOPCLFLIMO=target.LastInFrustum();
-        }
+        // Preserve the native boolean expression; recovery only creates the UI driver.
+        public bool JKACHEMNCEI;
+        public bool NeedRunHighFrame(){bool result=COW.GameSettingData.CachedSmoothHighFrame()&&IsLocalPlayer()&&!JKACHEMNCEI;SceneEditBoxSelectTool.MzRecoverMenu(this);return result;}
         // Existing native cache fields; ESP never populates them.
         public GCommon.ITransformNode IIPBIDIBJDK,GBKFHDFCPMD,DLAHJBJFMCF,BKDOIIEJBFI,BOHFADPGJKH,FCFGLFMIBOO,BDJLHMNECMA,LFIGLLJCDOG,HOPHAMCLGOA,FKHGDFCPCFE,KMMMDCDJOLD;
         public PlayerAttributes get_Attributes(){return null;}

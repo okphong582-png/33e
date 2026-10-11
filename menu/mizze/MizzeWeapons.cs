@@ -45,12 +45,11 @@ namespace COW.GamePlay
         }
         public static void MzWeaponPanel(float x,float y)
         {
-            MzToggle(15,x,y,"Bắn nhanh");MzToggle(16,x,y+44,"Không nạp đạn");MzToggle(17,x,y+88,"Fakelag · Giữ hiển thị");
+            MzToggle(15,x,y,"Bắn nhanh");MzToggle(16,x,y+44,"Không nạp đạn");MzTint(.65f,.73f,.81f,MzOpenAnim);MzMessage(x+12,y+94,330,32,"Fakelag · Tạm dừng");
             MzTint(.94f,.96f,.98f,MzOpenAnim);MzText(x,y+132,354,"Tốc độ bắn");
             for(int i=0;i<3;i++){float rate=i==0?1.5f:i==1?2:3;bool active=MzFireMultiplier==rate;MzTint(.10f,active?.32f:.17f,active?.25f:.19f,.65f*MzOpenAnim);MzFill(x+i*120,y+162,114,38,11);MzTint(.9f,1,.96f,MzOpenAnim);MzCenter(x+i*120,y+162,114,38,i==0?"1,5×":i==1?"2×":"3×");if(MzTap(x+i*120,y+162,114,38)){MzFireMultiplier=rate;MzNextWeapon=0;MzWeaponPoll();}}
             MzTint(.79f,.85f,.91f,MzOpenAnim);MzMessage(x,y+205,354,36,MzWeaponMessage??"Chỉ áp dụng khi đang trong trận");
-            for(int i=0;i<3;i++){float hold=i==0?.15f:i==1?.3f:.5f;bool selected=MzLagSeconds==hold;MzTint(.85f,.90f,1,(selected?.24f:.09f)*MzOpenAnim);MzFill(x+i*120,y+246,114,32,12);MzTint(.94f,.97f,1,MzOpenAnim);MzCenter(x+i*120,y+246,114,32,i==0?"150 ms":i==1?"300 ms":"500 ms");if(MzTap(x+i*120,y+246,114,32)){MzLagSeconds=hold;MzLagStop();MzLagNextPulse=0;MzLagPulse();}}
-            MzTint(.65f,.73f,.81f,MzOpenAnim);MzMessage(x,y+284,354,36,MzLagMessage??"Fakelag hiển thị · Thử nghiệm");
+            MzTint(.65f,.73f,.81f,MzOpenAnim);MzMessage(x,y+258,354,54,"Fakelag tạm dừng để kiểm tra lỗi văng");
         }
     }
 }
