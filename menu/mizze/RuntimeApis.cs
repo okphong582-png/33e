@@ -14,6 +14,8 @@ namespace UnityEngine
         public override bool Equals(object o){return ReferenceEquals(this,o);}public override int GetHashCode(){return base.GetHashCode();}public static void DontDestroyOnLoad(Object o){o.Persistent=true;}public static void Destroy(Object o){o.Destroyed=true;}
     }
     public class Component:Object {public GameObject gameObject {get;set;}public Transform transform {get{return gameObject.transform;}}}
+    public class Behaviour:Component {public Behaviour(){enabled=true;}public bool enabled {get;set;}}
+    public class MonoBehaviour:Behaviour {}
     public class GameObject:Object
     {
         public static Dictionary<string,GameObject> World=new Dictionary<string,GameObject>();public static bool FailAdd;public static int FindCalls,AddCalls;public static Action OnAdd;
@@ -66,11 +68,11 @@ namespace UnityEngine
     public class Draw {public bool MeshQuad;public Texture Texture;public Rect Rect;public Matrix4x4 Matrix;public Color Color;public float Radius;public string Text;public int FontSize;public bool Enabled;public TextAnchor Align;public bool Wrap;}
     public static class GUI
     {
-        public static bool enabled {get;set;}public static bool FailMizzeLabelOnce;
+        static bool Enabled;public static bool FailEnabled;public static bool RawEnabled {get{return Enabled;}set{Enabled=value;}}public static bool enabled {get{if(FailEnabled)throw new Exception("GUI enabled unavailable");return Enabled;}set{if(FailEnabled)throw new Exception("GUI enabled unavailable");Enabled=value;}}public static bool FailMizzeLabelOnce;
         static GUISkin Skin=new GUISkin {font=new Font {Name="game-original"}};public static GUISkin skin {get{return Skin;}set{Skin=value;}}
         static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static bool FailTexture,FailRoundedOnce;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
         public static void Label(Rect r,string s){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Text=s});}
-        public static void Label(Rect r,string s,GUIStyle style){if(FailMizzeLabelOnce&&s=="Mizze"){FailMizzeLabelOnce=false;throw new Exception("launcher label failed");}Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,Enabled=enabled,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
+        public static void Label(Rect r,string s,GUIStyle style){if(FailMizzeLabelOnce&&s=="Mizze"){FailMizzeLabelOnce=false;throw new Exception("launcher label failed");}Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,Enabled=RawEnabled,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
         public static void DrawTexture(Rect r,Texture t){if(FailTexture)throw new Exception("GUI texture failure");NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
         public static void DrawTexture(Rect r,Texture t,ScaleMode m,bool a,float aspect,Color c,float b,float radius){if(FailRoundedOnce){FailRoundedOnce=false;throw new Exception("rounded panel draw failed");}Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=c,Radius=radius});}
     }
@@ -118,7 +120,7 @@ namespace COW
 }
 namespace COW.GamePlay
 {
-    public class SceneEditBoxSelectTool:UnityEngine.Component {public void OnGUI(){}}
+    public class SceneEditBoxSelectTool:UnityEngine.MonoBehaviour {public void OnGUI(){}}
     public class JMAGGLCNGIG {public IList Players=new ArrayList();public Player Lookup;public int LookupCalls;public bool LookupOption;public BEADLMGGGGL LastLookupId;public IList ILPNGCMEFFI(){return Players;}public Player HFMDJGBOJKF(BEADLMGGGGL id,bool b){LookupCalls++;LookupOption=b;LastLookupId=id;return Lookup;}}
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential,Size=24)]
     public struct BEADLMGGGGL {public uint EOKFPKOEDDJ,DDJGLLGPBJD;public byte JLIDCJLKLBD,JHHPHPJMFNG;public ulong IKNFINCJNLH;public uint Id {get{return EOKFPKOEDDJ;}set{EOKFPKOEDDJ=value;}}public static BEADLMGGGGL DEIPJDIGKIP(uint id){return new BEADLMGGGGL {Id=id};}public static bool GHAMDLFNMMA(BEADLMGGGGL a,BEADLMGGGGL b){return a.EOKFPKOEDDJ==b.EOKFPKOEDDJ&&a.DDJGLLGPBJD==b.DDJGLLGPBJD&&a.JLIDCJLKLBD==b.JLIDCJLKLBD&&a.JHHPHPJMFNG==b.JHHPHPJMFNG&&a.IKNFINCJNLH==b.IKNFINCJNLH;}}

@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 namespace COW.GamePlay
 {
-    public partial class SceneEditBoxSelectTool:Component
+    public partial class SceneEditBoxSelectTool:MonoBehaviour
     {
         // VM-owned state; player movement and the game's shared GUI skin stay separate.
         public static bool MzInitialized,MzOpen,MzDragged,MzDrawingEsp,MzBooting;
@@ -10,6 +10,9 @@ namespace COW.GamePlay
         public static float MzNextBootstrap;
         public static bool MzOnThread(){return MzInitialized&&MzThreadId==System.Threading.Thread.CurrentThread.ManagedThreadId;}
         public static GameObject MzDriver;
+        public static SceneEditBoxSelectTool MzDriverComponent;
+        public static bool MzGuiThreadBound,MzHasPaint;public static int MzGuiPaints;
+        public static float MzNextDriverCheck,MzMemoryArmAt;
         public static int MzDrawBudget;
         public static bool MzUiPaint,MzInGui;
         public static Texture2D MzUiWhite;
@@ -31,13 +34,19 @@ namespace COW.GamePlay
         {
             int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;
             if(MzBooting||(MzThreadId!=0&&MzThreadId!=thread))return;
-            if(MzInitialized&&MzDriver!=null)return;
+            if(MzInitialized&&MzDriver!=null&&MzDriverComponent!=null&&MzDriver.activeInHierarchy&&MzDriverComponent.enabled)return;
             float now=Time.realtimeSinceStartup;if(!MzFinite(now)||now<MzNextBootstrap)return;MzNextBootstrap=now+1;
             MzBooting=true;
             try {
-                if(MzDriver==null){var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null&&g.AddComponent(typeof(SceneEditBoxSelectTool))==null)throw new InvalidOperationException("Menu component was not created");UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;}
+                var g=MzDriver;if(g==null){g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");}
+                var component=g.GetComponent(typeof(SceneEditBoxSelectTool)) as SceneEditBoxSelectTool;
+                if(component==null)component=g.AddComponent(typeof(SceneEditBoxSelectTool)) as SceneEditBoxSelectTool;
+                if(component==null)throw new InvalidOperationException("Menu component was not created");
+                if(!g.activeInHierarchy){g.transform.SetParent(null,false);g.SetActive(true);}
+                if(!component.enabled)component.enabled=true;
+                UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;MzDriverComponent=component;
                 MzThreadId=thread;
-                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzAppearanceInit();MzInitialized=true;try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}
+                if(!MzInitialized){MzUiPaint=true;MzLastLogicFrame=-1;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[18];MzLagSeconds=.15f;MzLagX=-1;MzLagY=96;MzSwitchAnim=new float[18];MzSwitch[1]=true;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzFireMultiplier=2;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzAppearanceInit();MzInitialized=true;try{MzLicenseInit();}catch(Exception e){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";MzLogFault("license-init",e);}}MzStartupLog("driver-ready");
             }catch(Exception e){MzLogFault("bootstrap",e);}finally{MzBooting=false;}
         }
         public static void MzRecoverMenu(Player player)
@@ -45,11 +54,22 @@ namespace COW.GamePlay
             int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;
             if(MzBooting||(MzThreadId!=0&&MzThreadId!=thread))return;
             try {
-                if(MzInitialized&&MzDriver!=null)return;
+                if(MzInitialized&&MzDriver!=null&&MzDriverComponent!=null&&MzDriver.activeInHierarchy&&MzDriverComponent.enabled)return;
                 float now=Time.realtimeSinceStartup;if(!MzFinite(now)||now<MzNextBootstrap)return;
                 if(player==null||!player.IsLocalPlayer())return;
                 MzEnsure();
             }catch(Exception e){MzLogFault("menu-recovery",e);}
+        }
+        // Called from the local branch of the shared PostUpdate tail. No global frame body replacement.
+        public static void MzMenuHeartbeat()
+        {
+            int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;
+            if(MzGuiThreadBound&&MzThreadId!=thread)return;
+            // OnGUI is the authoritative thread binding; the original lobby getter can run first.
+            if(!MzGuiThreadBound)MzThreadId=thread;
+            float now=Time.realtimeSinceStartup;if(!MzFinite(now))return;
+            if(now>=MzNextDriverCheck){MzNextDriverCheck=now+1;MzEnsure();}
+            if(MzHasPaint&&now>=MzMemoryArmAt)MzMemoryPulse();
         }
         public static bool MzFinite(float f){return !Single.IsNaN(f)&&!Single.IsInfinity(f);}
         public static bool MzPoint(Vector3 p){return MzFinite(p.x)&&MzFinite(p.y)&&MzFinite(p.z);}
@@ -148,29 +168,33 @@ namespace COW.GamePlay
         {
             float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.80f,.88f,1,.36f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.03f,.045f,.72f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.97f,.98f,1,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
         }
+        public static void MzGuiEnable() {try{GUI.enabled=true;}catch(Exception e){MzLogFault("gui-enable",e);}}
         public static void MzFloatingDraw()
         {
             if(!MzUiPaint||!MzFinite(MzScale)||MzScale<=0)return;
             if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}
-            GUI.matrix=MzUiMatrix;GUI.enabled=true;GUI.contentColor=new Color(1,1,1,1);
+            GUI.matrix=MzUiMatrix;MzGuiEnable();GUI.contentColor=new Color(1,1,1,1);
             // Each floating control survives a managed failure in the panel/logic/other control.
-            try{MzLauncherDraw();}catch(Exception e){MzLogFault("launcher-draw",e);}
-            GUI.matrix=MzUiMatrix;GUI.enabled=true;GUI.contentColor=new Color(1,1,1,1);
+            try{MzLauncherDraw();MzGuiPaints++;if(!MzHasPaint){MzHasPaint=true;MzMemoryArmAt=Time.realtimeSinceStartup+5;MzStartupLog("launcher-painted");}}catch(Exception e){MzLogFault("launcher-draw",e);}
+            GUI.matrix=MzUiMatrix;MzGuiEnable();GUI.contentColor=new Color(1,1,1,1);
             try{MzLagButtonDraw();}catch(Exception e){MzLogFault("fl-draw",e);}
         }
         public void OnGUI()
         {
             if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
-            if(!MzOnThread()||MzInGui||gameObject==null||gameObject.name!="__mizze_driver")return;MzInGui=true;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;bool enabled=GUI.enabled;
+            if(MzGuiThreadBound&&MzThreadId!=System.Threading.Thread.CurrentThread.ManagedThreadId)return;
+            if(gameObject==null||gameObject.name!="__mizze_driver")return;
+            if(!MzGuiThreadBound){MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;MzGuiThreadBound=true;}
+            if(!MzInitialized)MzEnsure();if(!MzOnThread()||MzInGui)return;MzInGui=true;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;bool enabled=true,enabledRead=false;try{enabled=GUI.enabled;enabledRead=true;}catch(Exception e){MzLogFault("gui-enabled-read",e);}
             try {
-                GUI.enabled=true;GUI.matrix=Matrix4x4.identity;MzLayout();if(type==EventType.MouseDown)MzOwnPointer=MzMenuHit(MzPointer);MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
-                if(Event.current.type==EventType.Repaint){MzMemoryPulse();MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;try{MzRunAim();}catch(Exception e){MzSwitch[11]=false;MzSwitch[12]=false;MzLogFault("aim-loop",e);}
+                MzGuiEnable();GUI.matrix=Matrix4x4.identity;MzLayout();if(type==EventType.MouseDown)MzOwnPointer=MzMenuHit(MzPointer);MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
+                if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;try{MzRunAim();}catch(Exception e){MzSwitch[11]=false;MzSwitch[12]=false;MzLogFault("aim-loop",e);}
                     try{MzWeaponPoll();}catch(Exception e){MzSwitch[15]=false;MzSwitch[16]=false;MzLogFault("weapon-loop",e);}
                     MzLagPulse();MzSessionPulse();}}else {MzRestoreSilent();MzRestoreWeapon();MzLagEnabled=false;MzLagStop();}}
                 if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f){try{MzPanel();}catch(Exception e){MzLogFault("menu-panel",e);}}else MzBackgroundLast=0;
                 if(!MzUiPaint)return;
 
-            }catch(Exception e){MzLogFault("on-gui",e);}finally{try{MzFloatingDraw();}catch(Exception e){MzLogFault("floating-draw",e);}if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;GUI.enabled=enabled;MzUiPaint=previousPaint;MzInGui=false;}
+            }catch(Exception e){MzLogFault("on-gui",e);}finally{try{MzFloatingDraw();}catch(Exception e){MzLogFault("floating-draw",e);}if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;if(enabledRead)try{GUI.enabled=enabled;}catch(Exception e){MzLogFault("gui-enabled-restore",e);}MzUiPaint=previousPaint;MzInGui=false;}
         }
     }
 }

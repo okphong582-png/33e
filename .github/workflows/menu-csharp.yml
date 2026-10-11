@@ -62,6 +62,7 @@ jobs:
             menu/mizze/dist/methods.tsv
             menu/mizze/dist/*.svg
             menu/mizze/README.md
+            menu/mizze/localConfig.json
           if-no-files-found: error
       - name: Upload ESP Box fallback artifact
         uses: actions/upload-artifact@v4

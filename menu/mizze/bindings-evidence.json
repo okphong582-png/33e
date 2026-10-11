@@ -25,6 +25,20 @@
   },
   {
     "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "method": "get_activeInHierarchy",
+    "parameters": [],
+    "declaration": "public bool get_activeInHierarchy() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Behaviour",
+    "method": "get_enabled",
+    "parameters": [],
+    "declaration": "public bool get_enabled() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Time",
     "method": "get_realtimeSinceStartup",
     "parameters": [],
@@ -102,6 +116,41 @@
       "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public void .ctor(string message) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "method": "get_transform",
+    "parameters": [],
+    "declaration": "public Transform get_transform() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Transform",
+    "method": "SetParent",
+    "parameters": [
+      "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetParent(Transform parent, bool worldPositionStays) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "method": "SetActive",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetActive(bool value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Behaviour",
+    "method": "set_enabled",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_enabled(bool value) { }"
   },
   {
     "assembly": "UnityEngine.CoreModule",
@@ -374,6 +423,13 @@
     "declaration": "public static void WriteAllText(string path, string contents) { }"
   },
   {
+    "assembly": "mscorlib",
+    "owner": "System.Int32",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public override string ToString() { }"
+  },
+  {
     "assembly": "Assembly-CSharp",
     "owner": "GCommon.SingletonModule`1[[GCommon.UIModelManager",
     "method": "get_instance",
@@ -424,13 +480,6 @@
     "method": "get_gameObject",
     "parameters": [],
     "declaration": "public GameObject get_gameObject() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.GameObject",
-    "method": "get_activeInHierarchy",
-    "parameters": [],
-    "declaration": "public bool get_activeInHierarchy() { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -505,6 +554,24 @@
       "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public static float Clamp(float value, float min, float max) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.GC",
+    "method": "GetTotalMemory",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static long GetTotalMemory(bool forceFullCollection) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GcUtil",
+    "method": "Collect",
+    "parameters": [
+      "ManualGCReason, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Collect(ManualGCReason reason) { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -807,13 +874,6 @@
     "declaration": "public void Use() { }"
   },
   {
-    "assembly": "mscorlib",
-    "owner": "System.Int32",
-    "method": "ToString",
-    "parameters": [],
-    "declaration": "public override string ToString() { }"
-  },
-  {
     "assembly": "UnityEngine.IMGUIModule",
     "owner": "UnityEngine.GUI",
     "method": "set_contentColor",
@@ -1102,24 +1162,6 @@
       "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public static void SetString(string key, string value) { }"
-  },
-  {
-    "assembly": "mscorlib",
-    "owner": "System.GC",
-    "method": "GetTotalMemory",
-    "parameters": [
-      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public static long GetTotalMemory(bool forceFullCollection) { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GcUtil",
-    "method": "Collect",
-    "parameters": [
-      "ManualGCReason, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"
-    ],
-    "declaration": "public static void Collect(ManualGCReason reason) { }"
   },
   {
     "assembly": "UnityEngine.CoreModule",
@@ -1565,23 +1607,6 @@
       "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
     ],
     "declaration": "public void set_layer(int value) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.GameObject",
-    "method": "get_transform",
-    "parameters": [],
-    "declaration": "public Transform get_transform() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Transform",
-    "method": "SetParent",
-    "parameters": [
-      "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
-    ],
-    "declaration": "public void SetParent(Transform parent, bool worldPositionStays) { }"
   },
   {
     "assembly": "Assembly-CSharp-firstpass",

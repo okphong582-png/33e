@@ -3,6 +3,8 @@ namespace UnityEngine
 {
     public class Object {public string name {get;set;}public static bool operator ==(Object a,Object b){return ReferenceEquals(a,b);}public static bool operator !=(Object a,Object b){return !ReferenceEquals(a,b);}public override bool Equals(object o){return ReferenceEquals(this,o);}public override int GetHashCode(){return base.GetHashCode();}public static void DontDestroyOnLoad(Object o){}public static void Destroy(Object o){} }
     public class Component:Object {public GameObject gameObject {get;set;}public Transform transform {get{return gameObject.transform;}}}
+    public class Behaviour:Component {public bool enabled {get;set;}}
+    public class MonoBehaviour:Behaviour {}
     public class GameObject:Object {public int layer {get;set;}public void SetActive(bool value){}public GameObject(string n){name=n;}public Transform transform {get{return null;}}public bool activeInHierarchy {get{return true;}}public static GameObject Find(string n){return null;}public Component GetComponent(Type t){return null;}public Component AddComponent(Type t){return null;}}
     public class Transform:Component {public void SetParent(Transform parent,bool worldPositionStays){}public Vector3 localPosition {get;set;}public Vector3 position {get;set;}public Vector3 localScale {get;set;}}
     public struct Vector3 {public float x,y,z;public Vector3(float a,float b,float c){x=a;y=b;z=c;}public static Vector3 operator +(Vector3 a,Vector3 b){return new Vector3();}public static Vector3 operator -(Vector3 a,Vector3 b){return new Vector3();}public static Vector3 operator *(Vector3 a,float b){return new Vector3();}public static Vector3 Normalize(Vector3 v){return v;}public static float Distance(Vector3 a,Vector3 b){return 0;}}

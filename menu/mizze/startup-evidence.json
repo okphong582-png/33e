@@ -1,0 +1,40 @@
+{
+  "revision": "R3",
+  "target": "Free Fire TH iOS 1.132.1",
+  "reported": "R2 user reports no Mizze launcher in lobby or match; supplied session log lacks R2 marker and is not a bootstrap error log.",
+  "confirmedCodeGaps": [
+    "Recovery previously treated a surviving GameObject as sufficient even if component was removed/disabled or object inactive.",
+    "Initial thread ownership came from bootstrap callback; a mismatched captured thread could reject all future OnGUI callbacks.",
+    "R2 memory poll ran before first menu paint inside OnGUI."
+  ],
+  "causeOnUserDeviceConfirmed": false,
+  "callback": {
+    "existingHook": "Player.UpdateKnockdownIsInCamera",
+    "sharedTailCallsite": "0x569EC60",
+    "localBranch": "calls MzMenuHeartbeat before original local knockdown-camera logic",
+    "remoteBranch": "presentation hold remains independently guarded"
+  },
+  "changes": [
+    "One-second lifecycle watchdog reactivates owned object and recreates/reenables its component.",
+    "First owned OnGUI binds GUI thread; subsequent worker callbacks are rejected before Unity access.",
+    "GC runs only from local tail after successful launcher paint and five-second delay, never from OnGUI.",
+    "GUI.enabled failures are isolated from launcher drawing.",
+    "Documents/Mizze-startup.log has R3 marker plus bounded driver-ready/launcher-painted records."
+  ],
+  "bindings": "bindings-evidence.json; new Behaviour.enabled access matches provided TH native declarations",
+  "logs": {
+    "startup": "Documents/Mizze-startup.log",
+    "error": "Documents/Mizze-error.log",
+    "session": "Documents/Mizze-session.log"
+  },
+  "r2DependencyCheck": {
+    "nativeMetadataTypes": [
+      "COW.GcUtil",
+      "ManualGCReason",
+      "UnityEngine.GUI"
+    ],
+    "allFound": true,
+    "meaning": "These definitions exist in provided native metadata; this does not confirm device version or patch-load success."
+  },
+  "deviceVerified": false
+}

@@ -50,7 +50,7 @@ unsafe static class MizzeRuntimeTest
     }
     static void Frame(EventType type,float x=0,float y=0)
     {
-        if(type==EventType.Repaint)Time.Frame++;Event.current=new Event {type=type,mousePosition=new Vector2(x*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f),y*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f))};GUI.Calls.Clear();GUI.enabled=false;GUI.color=new Color(.3f,.4f,.5f,1);GUI.contentColor=new Color(.4f,.5f,.6f,.7f);GUI.matrix=new Matrix4x4 {Tag=99};Run("OnGUI",Driver);Check(GUI.color.r==.3f&&GUI.contentColor.r==.4f&&GUI.contentColor.a==.7f&&GUI.matrix.Tag==99&&!GUI.enabled,"GUI color/content/matrix/enabled restored");
+        if(type==EventType.Repaint)Time.Frame++;Event.current=new Event {type=type,mousePosition=new Vector2(x*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f),y*(Get<float>("MzScale")>0?Get<float>("MzScale"):1.35f))};GUI.Calls.Clear();GUI.RawEnabled=false;GUI.color=new Color(.3f,.4f,.5f,1);GUI.contentColor=new Color(.4f,.5f,.6f,.7f);GUI.matrix=new Matrix4x4 {Tag=99};Run("OnGUI",Driver);Check(GUI.color.r==.3f&&GUI.contentColor.r==.4f&&GUI.contentColor.a==.7f&&GUI.matrix.Tag==99&&!GUI.RawEnabled,"GUI color/content/matrix/enabled restored");
     }
     static void Click(float x,float y){Frame(EventType.MouseDown,x,y);Frame(EventType.MouseUp,x,y);}
     static Transform Bone(float x,float y,float z){return new Transform {position=new Vector3(x,y,z)};}
@@ -249,7 +249,7 @@ unsafe static class MizzeRuntimeTest
         string log=Path.Combine(Application.TestFolder,"Mizze-error.log");Check(File.Exists(log)&&File.ReadAllText(log).Contains("esp-render")&&File.ReadAllText(log).Contains("GUI texture failure"),"managed renderer fault writes phase and exception stack to Documents log");string firstLog=File.ReadAllText(log);Run("MzLogFault","another",new Exception("second"));Check(File.ReadAllText(log)==firstLog,"successful frames and duplicate faults never rewrite log");GUI.FailTexture=false;GUI.Calls.Clear();Run("MzRender");Check(GUI.Calls.Count==0,"blocked renderer performs no automatic unsafe retry");
         Set("MzTab",0);Set("MzEspPage",0);Set("MzOpen",true);Set("MzPanelX",120f);Set("MzPanelY",16f);Click(154,148);Check(switches[0]&&!Get<bool>("MzEspBlocked")&&Get<int>("MzEspFailures")==0,"explicit ESP toggle resets circuit breaker");Render();Check(Get<int>("MzCommandCount")==4,"ESP resumes after explicit retry when renderer succeeds");
         Array.Clear(switches,0,switches.Length);switches[11]=true;int aimCalls=local.AimCalls;Set("MzLastLogicFrame",-1);Event.current=new Event {type=EventType.Repaint};Run("OnGUI",Driver);Event.current=new Event {type=EventType.Repaint};Run("OnGUI",Driver);Check(local.AimCalls==aimCalls+1,"two repaint passes in one game frame execute aim only once");Time.Frame++;Event.current=new Event {type=EventType.Repaint};Run("OnGUI",Driver);Check(local.AimCalls==aimCalls+2,"next game frame still executes aim");
-        File.Delete(log);Directory.Delete(Application.TestFolder);COW.GameFacade.Match=null;
+        File.Delete(log);COW.GameFacade.Match=null;
     }
     static void MenuRecoveryChecks()
     {
@@ -440,13 +440,30 @@ unsafe static class MizzeRuntimeTest
         Run("MzMemoryStep",-1L,100f);Run("MzMemoryStep",900L*1024*1024,Single.NaN);Check(COW.GcUtil.ManualGcCount==2,"invalid metric or time never triggers collection");Run("MzMemoryStep",80L*1024*1024,100f);Check(Get<long>("MzMemoryBaseline")==80L*1024*1024,"native collection reducing memory resets pressure baseline");
         Set("MzMemoryBaseline",0L);Set("MzMemoryNextCollect",0f);COW.GcUtil.AutoGcDisabled=false;
     }
+    static void StartupRecoveryChecks()
+    {
+        var local=Enemy(0);local.Local=true;local.GBJCJJNPPEC.State=message.KOJPEFFGGIJ.None;COW.GameFacade.Local=local;COW.GameFacade.Match=new JMAGGLCNGIG();Set("MzKeyHash","");Set("MzLeaseDeadline",10000f);Set("MzOpen",false);Set("MzOpenAnim",0f);
+        int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;Set("MzGuiThreadBound",false);Set("MzThreadId",thread+77);Frame(EventType.Repaint);
+        Check(Get<int>("MzThreadId")==thread&&Get<bool>("MzGuiThreadBound")&&GUI.Calls.Any(d=>d.Text=="Mizze"),"first owned Unity GUI callback corrects a bootstrap thread mismatch");
+        GUI.FailEnabled=true;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&!Get<bool>("MzInGui"),"unavailable GUI.enabled access cannot hide launcher or strand GUI guard");GUI.FailEnabled=false;
+        var g=Get<GameObject>("MzDriver");var c=Get<SceneEditBoxSelectTool>("MzDriverComponent");c.enabled=false;Time.Now=30;Set("MzNextDriverCheck",0f);Set("MzNextBootstrap",0f);Run("UpdateKnockdownIsInCamera",local);
+        Check(c.enabled&&Object.ReferenceEquals(g,Get<GameObject>("MzDriver")),"shared local tail reenables existing disabled menu component");
+        g.activeInHierarchy=false;g.transform.SetParent(new GameObject("disabled-parent").transform,false);Time.Now=32;Run("UpdateKnockdownIsInCamera",local);Check(g.activeInHierarchy&&g.transform.Parent==null,"inactive owned menu object is detached and reactivated");
+        c.Destroyed=true;g.Components.Remove(typeof(SceneEditBoxSelectTool));int adds=GameObject.AddCalls;Time.Now=34;Run("UpdateKnockdownIsInCamera",local);var replacement=Get<SceneEditBoxSelectTool>("MzDriverComponent");
+        Check(replacement!=null&&!Object.ReferenceEquals(c,replacement)&&GameObject.AddCalls==adds+1&&replacement.enabled,"lost component is recreated even when its GameObject survived");Driver=replacement;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Mizze"),"restored component draws launcher");
+        int frames=Get<int>("MzGuiPaints");Check(frames>0&&File.ReadAllText(Path.Combine(Application.TestFolder,"Mizze-startup.log")).Contains("Mizze R3 startup"),"startup log identifies R3 and distinguishes component readiness from first paint");
+        Set("MzHasPaint",false);Set("MzMemoryNext",0f);Time.Now=36;Run("UpdateKnockdownIsInCamera",local);Check(Get<float>("MzMemoryNext")==0,"memory collection is not armed before first launcher paint");Frame(EventType.Repaint);float armedAt=Get<float>("MzMemoryArmAt");Check(armedAt==41&&Get<float>("MzMemoryNext")==0,"GUI only arms memory servicing; no collection inside OnGUI");
+        Time.Now=40;Run("UpdateKnockdownIsInCamera",local);Check(Get<float>("MzMemoryNext")==0,"memory servicing waits five seconds after first paint");Time.Now=42;Run("UpdateKnockdownIsInCamera",local);Check(Get<float>("MzMemoryNext")==44,"local shared tail performs delayed throttled memory servicing");
+        Time.Now=43;Set("MzNextDriverCheck",0f);replacement.enabled=false;Exception error=null;var worker=new System.Threading.Thread(delegate(){try{Run("UpdateKnockdownIsInCamera",local);}catch(Exception e){error=e;}});worker.Start();worker.Join();Check(error==null&&!replacement.enabled,"worker cannot reactivate Unity menu after GUI thread is bound");Run("UpdateKnockdownIsInCamera",local);Check(replacement.enabled,"main-thread tail recovers after blocked worker attempt");
+        COW.GameFacade.Match=null;Time.Now=0;
+    }
     static int Main(string[] args)
     {
         foreach(var line in File.ReadAllLines(args[1])){var a=line.Split('\t');Methods.Add(a[2],int.Parse(a[0]));}
         var legacyInit=new NewFieldInfo {Name="MzInitialized",FieldType=typeof(bool)};legacyInit.SetValue(null,true);var legacySwitch=new NewFieldInfo {Name="MzSwitch",FieldType=typeof(bool[])};legacySwitch.SetValue(null,new bool[1]);Vm=Load(args[0]);
         // A late patch load can enter a match before any lobby getter is called.
         var bootPlayer=Enemy(0);bootPlayer.Local=true;COW.GameFacade.Local=bootPlayer;COW.GameFacade.Match=new JMAGGLCNGIG();
-        Check(!(bool)Run("NeedRunHighFrame",bootPlayer)&&Get<bool>("MzInitialized")&&Get<GameObject>("MzDriver")!=null&&GCommon.UIModelManager.instance.Calls==0,"cold match startup creates launcher without touching lazy lobby model");COW.GameFacade.Match=null;
+        Run("UpdateKnockdownIsInCamera",bootPlayer);Check(!(bool)Run("NeedRunHighFrame",bootPlayer)&&Get<bool>("MzInitialized")&&Get<GameObject>("MzDriver")!=null&&GCommon.UIModelManager.instance.Calls==0,"cold shared tail creates launcher without lobby getter or high-frame callback");COW.GameFacade.Match=null;
         // Lobby getter preserves the lazy model and reuses the already persistent driver.
         var model=Run("get_UIModelRole");Check(Get<bool[]>("MzSwitch").Length==18&&(bool)legacyInit.GetValue(null)&&((bool[])legacySwitch.GetValue(null)).Length==1,"new patch ignores retained state from previous unscoped patch");Check(model!=null&&System.Object.ReferenceEquals(model,Run("get_UIModelRole")),"lobby cached model preserved");Check(GCommon.UIModelManager.instance.Calls==1,"model initialized once");
         var g=GameObject.Find("__mizze_driver");Check(g!=null&&g.Added!=null&&g.Persistent,"persistent driver created in lobby");Driver=g.Added;Check(Get<float>("MzPanelX")==120&&Get<float>("MzPanelY")==16,"new initial panel position");Check(!Get<bool[]>("MzSwitch")[0]&&!Get<bool[]>("MzSwitch")[13],"fresh boot keeps ESP and FOV inactive until explicitly enabled");Set("MzPanelX",98f);Set("MzPanelY",30f);
@@ -497,6 +514,7 @@ unsafe static class MizzeRuntimeTest
         FakeLagChecks();
         FloatingLagChecks(args);
         MemoryPressureChecks();
+        StartupRecoveryChecks();
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading, in-game aim and native crash behavior remain unverified; presentation fakelag remains experimental and device-unverified.");GC.KeepAlive(Vm);return 0;
     }
 }

@@ -62,6 +62,7 @@ namespace COW.GamePlay
         public void UpdateKnockdownIsInCamera()
         {
             if(!IsLocalPlayer()){if(SceneEditBoxSelectTool.MzLagActive)SceneEditBoxSelectTool.MzLagAfter(this);return;}
+            SceneEditBoxSelectTool.MzMenuHeartbeat();
             if((int)GBJCJJNPPEC.OILOHAELLEC()!=8||FFOPCLFLIMO)return;
             if(BEADLMGGGGL.GHAMDLFNMMA(GIEBNLMODIB,BEADLMGGGGL.DEIPJDIGKIP(0u)))return;
             var target=COW.GameFacade.CurrentMatch().HFMDJGBOJKF(GIEBNLMODIB,false);
