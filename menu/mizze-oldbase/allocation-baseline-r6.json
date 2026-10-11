@@ -1,0 +1,1 @@
+{"frames":300,"environment":"offline .NET IFix VM; includes test doubles, not iOS measurements","modes":[{"name":"launcher","allocatedBytes":5996600,"retainedDelta":0},{"name":"box12","allocatedBytes":47277120,"retainedDelta":0},{"name":"allEsp6","allocatedBytes":129378712,"retainedDelta":0},{"name":"allEsp6-menuOpen","allocatedBytes":164850864,"retainedDelta":0}]}

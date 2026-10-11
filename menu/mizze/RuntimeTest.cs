@@ -421,7 +421,7 @@ unsafe static class MizzeRuntimeTest
     }
     static void CompatibilityChecks()
     {
-        string log=File.ReadAllText(Path.Combine(Application.TestFolder,"Mizze-startup.log"));Check(log.Contains("Mizze R8 legacy startup")&&log.Contains("driver-ready")&&log.Contains("gui-entered")&&log.Contains("launcher-painted"),"R8 log confirms bootstrap, GUI entry and successful launcher draw through baseline path");
+        string log=File.ReadAllText(Path.Combine(Application.TestFolder,"Mizze-startup.log"));Check(log.Contains("Mizze R9 legacy startup")&&log.Contains("driver-ready")&&log.Contains("gui-entered")&&log.Contains("launcher-painted"),"R9 log confirms bootstrap, GUI entry and successful launcher draw through baseline path");
         var sw=Get<bool[]>("MzSwitch");Array.Clear(sw,0,sw.Length);Set("MzOpen",false);Set("MzOpenAnim",0f);Set("MzLeaseDeadline",10000f);Set("MzKeyHash","");Set("MzBubbleX",24f);Set("MzBubbleY",96f);Screen.Width=1280;Screen.Height=720;Frame(EventType.Repaint);Run("MzLagButtonPlace");Check(Get<float>("MzLagX")==24&&Get<float>("MzLagY")==188,"FL is placed directly below visible Mizze launcher");
         float width=Screen.width/Get<float>("MzScale"),height=Screen.height/Get<float>("MzScale");Set("MzBubbleY",height-84);Run("MzLagButtonPlace");Check(Get<float>("MzLagY")==height-176,"FL falls above bubble when below would leave viewport");
         Set("MzBubbleX",24f);Set("MzBubbleY",4f);Screen.Width=390;Screen.Height=100;Set("MzScale",1f);Run("MzLagButtonPlace");Check(Get<float>("MzLagX")==116&&Get<float>("MzLagY")==4,"short viewport places FL beside bubble instead of hiding off-screen");Screen.Width=1280;Screen.Height=720;Set("MzBubbleX",24f);Set("MzBubbleY",96f);Frame(EventType.Repaint);

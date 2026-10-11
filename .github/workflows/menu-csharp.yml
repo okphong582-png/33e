@@ -64,6 +64,25 @@ jobs:
             menu/mizze/README.md
             menu/mizze/localConfig.json
           if-no-files-found: error
+      - name: Build Mizze from old-source core
+        run: node menu/mizze-oldbase/build.cjs .ifix-runtime
+      - name: Package old-source four-hook menu
+        run: node menu/mizze-oldbase/package.cjs
+      - name: Verify old-source bytes and core
+        run: node menu/mizze-oldbase/test.cjs
+      - name: Upload old-source menu
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-OldSource-Menu
+          path: |
+            menu/mizze-oldbase/dist/Assembly-CSharp-patch.bytes
+            menu/mizze-oldbase/dist/SHA256SUMS.txt
+            menu/mizze-oldbase/dist/manifest.json
+            menu/mizze-oldbase/dist/methods.tsv
+            menu/mizze-oldbase/dist/*.svg
+            menu/mizze-oldbase/README.md
+            menu/mizze-oldbase/localConfig.json
+          if-no-files-found: error
       - name: Upload ESP Box fallback artifact
         uses: actions/upload-artifact@v4
         with:

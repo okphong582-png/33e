@@ -143,20 +143,15 @@ namespace COW.GamePlay
         public void OnGUI()
         {
             if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
-            if(gameObject==null||gameObject.name!="__mizze_driver")return;if(MzInGui)return;
-            // Unity owns OnGUI: the first real GUI callback establishes its thread.
-            // A lobby getter may have initialized on a different thread earlier.
-            MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;Color color;Color contentColor;Matrix4x4 matrix;try{color=GUI.color;contentColor=GUI.contentColor;matrix=GUI.matrix;}catch(Exception e){MzLogFault("gui-snapshot",e);return;}MzInGui=true;bool previousPaint=MzUiPaint;
+            if(gameObject==null||gameObject.name!="__mizze_driver"||MzInGui)return;MzThreadId=System.Threading.Thread.CurrentThread.ManagedThreadId;bool previousPaint=MzUiPaint;Color color;Color contentColor;Matrix4x4 matrix;try{color=GUI.color;contentColor=GUI.contentColor;matrix=GUI.matrix;}catch(Exception e){MzLogFault("gui-snapshot",e);return;}MzUiPaint=type==EventType.Repaint;
+            MzInGui=true;if(!MzGuiEntered){MzGuiEntered=true;MzStartupLog("gui-entered");}
             try {
-                MzUiPaint=type==EventType.Repaint;if(MzUiPaint&&!MzGuiEntered){MzGuiEntered=true;MzStartupLog("gui-entered");}
                 GUI.matrix=Matrix4x4.identity;MzLayout();if(type==EventType.MouseDown)MzOwnPointer=MzMenuHit(MzPointer);MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();}
-                if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;try{MzRunAim();}catch(Exception e){MzSwitch[11]=false;MzSwitch[12]=false;MzLogFault("aim-loop",e);}
-                    try{MzWeaponPoll();}catch(Exception e){MzSwitch[15]=false;MzSwitch[16]=false;MzLogFault("weapon-loop",e);}
-                    MzLagPulse();MzSessionPulse();}}else {MzRestoreSilent();MzRestoreWeapon();MzLagEnabled=false;MzLagStop();}}
+                if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){MzRender();int frame=Time.frameCount;if(MzLastLogicFrame!=frame){MzLastLogicFrame=frame;MzRunAim();MzWeaponPoll();MzLagPulse();MzSessionPulse();}}else {MzRestoreSilent();MzRestoreWeapon();MzLagEnabled=false;MzLagStop();}}
                 if(MzUiPaint){if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f){try{MzPanel();}catch(Exception e){MzLogFault("menu-panel",e);}}else MzBackgroundLast=0;
                 if(!MzUiPaint)return;
                 float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.20f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.80f,.88f,1,.36f);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.03f,.045f,.72f);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.88f,1,.97f,.28f);MzFill(MzBubbleX+22,MzBubbleY+10,36,2,1);MzTint(.97f,.98f,1,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");if(!MzLauncherPainted){MzLauncherPainted=true;MzStartupLog("launcher-painted");}MzLagButtonDraw();
-            }catch(Exception e){MzLogFault("on-gui",e);}finally{MzUiPaint=previousPaint;MzInGui=false;try{if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){if(Event.current!=null)Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;}catch(Exception e){MzLogFault("gui-cleanup",e);}}
+            }catch(Exception e){MzLogFault("on-gui",e);}finally{MzInGui=false;MzUiPaint=previousPaint;try{if(MzOwnPointer&&(type==EventType.MouseDown||type==EventType.MouseDrag||type==EventType.MouseUp)){Event.current.Use();if(type==EventType.MouseUp)MzOwnPointer=false;}MzTouchSync();GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;}catch(Exception e){MzLogFault("gui-restore",e);}}
         }
     }
 }

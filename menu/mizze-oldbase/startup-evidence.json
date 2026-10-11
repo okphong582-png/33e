@@ -1,0 +1,29 @@
+{
+  "revision": "R9 old-source four-hook build",
+  "target": "Free Fire TH iOS 1.132.1",
+  "userReports": "R7 still invisible in lobby and match; user requests old-source foundation",
+  "causeOnUserDeviceConfirmed": false,
+  "reference": "legacy-baseline/provenance.json",
+  "changes": [
+    "Original MzEnsure Find/create/GetComponent/AddComponent/DontDestroyOnLoad/driver assignment copied verbatim from legacy-baseline/Mizze.cs.",
+    "Bootstrap admits cold entry regardless of clock or stale thread; initialization before component creation; only reentry protection retained.",
+    "OnGUI follows old Event and driver filters, never invokes MzEnsure; GUI thread is established by actual callback.",
+    "Package serializer preserves Mz field descriptors from old source; no per-revision field renaming; process restart mandatory.",
+    "Ported R7 glass/GIF/palette/feature controls and memory-pressure handling; native real-stealth predicate retained for game-state correctness."
+  ],
+  "nativeHook": "Player.IsReallyInStealth; slot24093",
+  "coldStartWithoutClock": true,
+  "noEarlyGuiThreadRejection": true,
+  "noNewStartupHooks": true,
+  "collectorBeforeGui": false,
+  "genericEnumerationExterns": false,
+  "deviceVerified": false,
+  "nativeCrashCauseConfirmed": false,
+  "guiFaultRecovery": "Pinned VM checks snapshot getter failure and GUI restore setter failure; MzInGui is released and next frame paints Mizze.",
+  "fieldMode": "legacy-field-names; process restart required",
+  "originalDirectoryPreserved": true,
+  "guiFoundation": "Copied original OnGUI Event filter, layout/input/logic/draw ordering; ported glass/features and safe cleanup",
+  "fakelag": false,
+  "ngui": false,
+  "originalHookSet": true
+}

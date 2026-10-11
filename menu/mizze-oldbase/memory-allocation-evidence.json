@@ -1,0 +1,39 @@
+{
+  "revision": "R9 old-source four-hook edition",
+  "environment": "offline .NET IFix VM; includes test doubles, not iOS measurements",
+  "frames": 300,
+  "modes": [
+    {
+      "name": "launcher",
+      "beforeAllocatedBytes": 5996600,
+      "afterAllocatedBytes": 5234744,
+      "reductionPercent": 12.705,
+      "retainedDeltaAfterGc": 0
+    },
+    {
+      "name": "box12",
+      "beforeAllocatedBytes": 47277120,
+      "afterAllocatedBytes": 42713816,
+      "reductionPercent": 9.652,
+      "retainedDeltaAfterGc": 0
+    },
+    {
+      "name": "allEsp6",
+      "beforeAllocatedBytes": 129378712,
+      "afterAllocatedBytes": 120400200,
+      "reductionPercent": 6.94,
+      "retainedDeltaAfterGc": 0
+    },
+    {
+      "name": "allEsp6-menuOpen",
+      "beforeAllocatedBytes": 164850864,
+      "afterAllocatedBytes": 155831176,
+      "reductionPercent": 5.471,
+      "retainedDeltaAfterGc": 0
+    }
+  ],
+  "checks": 1882,
+  "declarations": 210,
+  "deviceVerified": false,
+  "interpretation": "Offline allocation includes doubles; no proof of iPhone memory limit or native crash cause."
+}

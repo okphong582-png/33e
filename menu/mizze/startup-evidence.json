@@ -1,5 +1,5 @@
 {
-  "revision": "R8 old-source core and serializer",
+  "revision": "R9 full old-source GUI callback",
   "target": "Free Fire TH iOS 1.132.1",
   "userReports": "R7 still invisible in lobby and match; user requests old-source foundation",
   "causeOnUserDeviceConfirmed": false,
@@ -20,5 +20,10 @@
   "deviceVerified": false,
   "nativeCrashCauseConfirmed": false,
   "guiFaultRecovery": "Pinned VM checks snapshot getter failure and GUI restore setter failure; MzInGui is released and next frame paints Mizze.",
-  "fieldMode": "legacy-field-names; process restart required"
+  "fieldMode": "legacy-field-names; process restart required",
+  "originalDirectoryPreserved": true,
+  "guiFoundation": "Copied original OnGUI Event filter, layout/input/logic/draw ordering; ported glass/features and safe cleanup",
+  "fakelag": true,
+  "ngui": true,
+  "originalHookSet": false
 }

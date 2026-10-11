@@ -1,0 +1,1870 @@
+[
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Threading.Thread",
+    "runtimeOwner": "System.Threading.Thread, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_CurrentThread",
+    "parameters": [],
+    "declaration": "public static Thread get_CurrentThread() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Threading.Thread",
+    "runtimeOwner": "System.Threading.Thread, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_ManagedThreadId",
+    "parameters": [],
+    "declaration": "public int get_ManagedThreadId() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Color",
+    "runtimeOwner": "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": ".ctor",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(float r, float g, float b, float a) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Concat",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static string Concat(string str0, string str1) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.PlayerPrefs",
+    "runtimeOwner": "UnityEngine.PlayerPrefs, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "GetString",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static string GetString(string key, string defaultValue) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_Length",
+    "parameters": [],
+    "declaration": "public int get_Length() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Convert",
+    "runtimeOwner": "System.Convert, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToInt32",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static int ToInt32(string value, int fromBase) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.SystemInfo",
+    "runtimeOwner": "UnityEngine.SystemInfo, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_deviceUniqueIdentifier",
+    "parameters": [],
+    "declaration": "public static string get_deviceUniqueIdentifier() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "IsNullOrEmpty",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool IsNullOrEmpty(string value) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "op_Equality",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool op_Equality(string a, string b) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Security.Cryptography.SHA256",
+    "runtimeOwner": "System.Security.Cryptography.SHA256, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Create",
+    "parameters": [],
+    "declaration": "public static SHA256 Create() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Text.Encoding",
+    "runtimeOwner": "System.Text.Encoding, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_UTF8",
+    "parameters": [],
+    "declaration": "public static Encoding get_UTF8() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Text.Encoding",
+    "runtimeOwner": "System.Text.Encoding, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "GetBytes",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public virtual byte[] GetBytes(string s) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Security.Cryptography.HashAlgorithm",
+    "runtimeOwner": "System.Security.Cryptography.HashAlgorithm, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ComputeHash",
+    "parameters": [
+      "System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public byte[] ComputeHash(byte[] buffer) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.BitConverter",
+    "runtimeOwner": "System.BitConverter, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToString",
+    "parameters": [
+      "System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static string ToString(byte[] value) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Replace",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public string Replace(string oldValue, string newValue) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToLowerInvariant",
+    "parameters": [],
+    "declaration": "public string ToLowerInvariant() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_Chars",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public char get_Chars(int index) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Concat",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static string Concat(string str0, string str1, string str2) { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Get",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static UnityWebRequest Get(string uri) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Time",
+    "runtimeOwner": "UnityEngine.Time, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_realtimeSinceStartup",
+    "parameters": [],
+    "declaration": "public static float get_realtimeSinceStartup() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_timeout",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_timeout(int value) { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "SetRequestHeader",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetRequestHeader(string name, string value) { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "SendWebRequest",
+    "parameters": [],
+    "declaration": "public UnityWebRequestAsyncOperation SendWebRequest() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Object",
+    "runtimeOwner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "op_Inequality",
+    "parameters": [
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static bool op_Inequality(object x, object y) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "runtimeOwner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Find",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static GameObject Find(string name) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Object",
+    "runtimeOwner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "op_Equality",
+    "parameters": [
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static bool op_Equality(object x, object y) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "runtimeOwner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": ".ctor",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(string name) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "runtimeOwner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "GetComponent",
+    "parameters": [
+      "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public Component GetComponent(Type type) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "runtimeOwner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "AddComponent",
+    "parameters": [
+      "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public Component AddComponent(Type componentType) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Object",
+    "runtimeOwner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "DontDestroyOnLoad",
+    "parameters": [
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void DontDestroyOnLoad(object target) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.DateTime",
+    "runtimeOwner": "System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_UtcNow",
+    "parameters": [],
+    "declaration": "public static DateTime get_UtcNow() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.DateTime",
+    "runtimeOwner": "System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToString",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public string ToString(string format) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Concat",
+    "parameters": [
+      "System.String[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static string Concat(string[] values) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Application",
+    "runtimeOwner": "UnityEngine.Application, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_persistentDataPath",
+    "parameters": [],
+    "declaration": "public static string get_persistentDataPath() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.IO.Path",
+    "runtimeOwner": "System.IO.Path, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Combine",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static string Combine(string path1, string path2) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.IO.File",
+    "runtimeOwner": "System.IO.File, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "WriteAllText",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static void WriteAllText(string path, string contents) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Exception",
+    "runtimeOwner": "System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "GetType",
+    "parameters": [],
+    "declaration": "public Type GetType() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Reflection.MemberInfo",
+    "runtimeOwner": "System.Reflection.MemberInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_Name",
+    "parameters": [],
+    "declaration": "public abstract string get_Name() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Object",
+    "runtimeOwner": "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public virtual string ToString() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Single",
+    "runtimeOwner": "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "IsNaN",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool IsNaN(float f) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Single",
+    "runtimeOwner": "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "IsInfinity",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool IsInfinity(float f) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.GC",
+    "runtimeOwner": "System.GC, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "GetTotalMemory",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static long GetTotalMemory(bool forceFullCollection) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GcUtil",
+    "runtimeOwner": "COW.GcUtil, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "Collect",
+    "parameters": [
+      "ManualGCReason, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Collect(ManualGCReason reason) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Object",
+    "runtimeOwner": "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ReferenceEquals",
+    "parameters": [
+      "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool ReferenceEquals(object objA, object objB) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "runtimeOwner": "COW.GamePlay.PlayerAttributes, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_FireIntervalScale",
+    "parameters": [],
+    "declaration": "public float get_FireIntervalScale() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "runtimeOwner": "COW.GamePlay.PlayerAttributes, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "set_FireIntervalScale",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_FireIntervalScale(float BOKHFCBMCAB) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "runtimeOwner": "COW.GamePlay.PlayerAttributes, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_IsAmmoFree",
+    "parameters": [],
+    "declaration": "public bool get_IsAmmoFree() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "runtimeOwner": "COW.GamePlay.PlayerAttributes, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "set_IsAmmoFree",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_IsAmmoFree(bool BOKHFCBMCAB) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Object",
+    "runtimeOwner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Destroy",
+    "parameters": [
+      "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Destroy(object obj) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "GCommon.SingletonModule`1[[GCommon.UIModelManager",
+    "runtimeOwner": "GCommon.SingletonModule`1[[GCommon.UIModelManager, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null]], Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_instance",
+    "parameters": [],
+    "declaration": "public static T get_instance() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "GCommon.UIModelManager",
+    "runtimeOwner": "GCommon.UIModelManager, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "GetModel",
+    "parameters": [],
+    "declaration": "public T GetModel() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Collections.IDictionary",
+    "runtimeOwner": "System.Collections.IDictionary, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "GetEnumerator",
+    "parameters": [],
+    "declaration": "public abstract IDictionaryEnumerator GetEnumerator() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Collections.IDictionaryEnumerator",
+    "runtimeOwner": "System.Collections.IDictionaryEnumerator, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_Value",
+    "parameters": [],
+    "declaration": "public abstract object get_Value() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.FHAPNJGMHLM",
+    "runtimeOwner": "COW.GamePlay.FHAPNJGMHLM, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "MKGBABFOOFP",
+    "parameters": [],
+    "declaration": "public abstract bool MKGBABFOOFP() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Collections.IEnumerator",
+    "runtimeOwner": "System.Collections.IEnumerator, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "MoveNext",
+    "parameters": [],
+    "declaration": "public abstract bool MoveNext() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.IDisposable",
+    "runtimeOwner": "System.IDisposable, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Dispose",
+    "parameters": [],
+    "declaration": "public abstract void Dispose() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "IsLocalPlayer",
+    "parameters": [],
+    "declaration": "public bool IsLocalPlayer() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_CurHP",
+    "parameters": [],
+    "declaration": "public int get_CurHP() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "IsFiring",
+    "parameters": [],
+    "declaration": "public bool IsFiring() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Camera",
+    "runtimeOwner": "UnityEngine.Camera, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_main",
+    "parameters": [],
+    "declaration": "public static Camera get_main() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GameFacade",
+    "runtimeOwner": "COW.GameFacade, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "CurrentMatch",
+    "parameters": [],
+    "declaration": "public static JMAGGLCNGIG CurrentMatch() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.JMAGGLCNGIG",
+    "runtimeOwner": "COW.GamePlay.JMAGGLCNGIG, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "ILPNGCMEFFI",
+    "parameters": [],
+    "declaration": "public List<Player> ILPNGCMEFFI() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Screen",
+    "runtimeOwner": "UnityEngine.Screen, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_height",
+    "parameters": [],
+    "declaration": "public static int get_height() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Screen",
+    "runtimeOwner": "UnityEngine.Screen, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_width",
+    "parameters": [],
+    "declaration": "public static int get_width() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "runtimeOwner": "UnityEngine.Mathf, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Clamp",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Clamp(float value, float min, float max) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Collections.IList",
+    "runtimeOwner": "System.Collections.IList, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_Item",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public abstract object get_Item(int index) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "IsLocalTeammate",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public virtual bool IsLocalTeammate(bool KOFPEGGJNDA) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Component",
+    "runtimeOwner": "UnityEngine.Component, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_gameObject",
+    "parameters": [],
+    "declaration": "public GameObject get_gameObject() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.GameObject",
+    "runtimeOwner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_activeInHierarchy",
+    "parameters": [],
+    "declaration": "public bool get_activeInHierarchy() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_RootTransform",
+    "parameters": [],
+    "declaration": "public Transform get_RootTransform() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "GetHeadTF",
+    "parameters": [],
+    "declaration": "public virtual Transform GetHeadTF() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Component",
+    "runtimeOwner": "UnityEngine.Component, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_transform",
+    "parameters": [],
+    "declaration": "public Transform get_transform() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Transform",
+    "runtimeOwner": "UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_position",
+    "parameters": [],
+    "declaration": "public Vector3 get_position() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "runtimeOwner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Distance",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static float Distance(Vector3 a, Vector3 b) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Camera",
+    "runtimeOwner": "UnityEngine.Camera, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "WorldToScreenPoint",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public Vector3 WorldToScreenPoint(Vector3 position) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector2",
+    "runtimeOwner": "UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": ".ctor",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(float x, float y) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Collections.ICollection",
+    "runtimeOwner": "System.Collections.ICollection, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_Count",
+    "parameters": [],
+    "declaration": "public abstract int get_Count() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_HeadCollider",
+    "parameters": [],
+    "declaration": "public virtual Collider get_HeadCollider() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_AimStartPostion",
+    "parameters": [],
+    "declaration": "public Vector3 get_AimStartPostion() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "runtimeOwner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "op_Subtraction",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static Vector3 op_Subtraction(Vector3 a, Vector3 b) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "runtimeOwner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Normalize",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static Vector3 Normalize(Vector3 value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "runtimeOwner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_current",
+    "parameters": [],
+    "declaration": "public static Event get_current() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "runtimeOwner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_type",
+    "parameters": [],
+    "declaration": "public EventType get_type() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Object",
+    "runtimeOwner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_name",
+    "parameters": [],
+    "declaration": "public string get_name() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "op_Inequality",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool op_Inequality(string a, string b) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_color",
+    "parameters": [],
+    "declaration": "public static Color get_color() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_contentColor",
+    "parameters": [],
+    "declaration": "public static Color get_contentColor() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_matrix",
+    "parameters": [],
+    "declaration": "public static Matrix4x4 get_matrix() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Matrix4x4",
+    "runtimeOwner": "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_identity",
+    "parameters": [],
+    "declaration": "public static Matrix4x4 get_identity() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_matrix",
+    "parameters": [
+      "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void set_matrix(Matrix4x4 value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "runtimeOwner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_mousePosition",
+    "parameters": [],
+    "declaration": "public Vector2 get_mousePosition() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Rect",
+    "runtimeOwner": "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": ".ctor",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(float x, float y, float width, float height) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Rect",
+    "runtimeOwner": "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Contains",
+    "parameters": [
+      "UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public bool Contains(Vector2 point) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.Event",
+    "runtimeOwner": "UnityEngine.Event, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Use",
+    "parameters": [],
+    "declaration": "public void Use() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_contentColor",
+    "parameters": [
+      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void set_contentColor(Color value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.TouchScreenKeyboard",
+    "runtimeOwner": "UnityEngine.TouchScreenKeyboard, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_status",
+    "parameters": [],
+    "declaration": "public Status get_status() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.TouchScreenKeyboard",
+    "runtimeOwner": "UnityEngine.TouchScreenKeyboard, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_text",
+    "parameters": [],
+    "declaration": "public string get_text() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Dispose",
+    "parameters": [],
+    "declaration": "public void Dispose() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Trim",
+    "parameters": [],
+    "declaration": "public string Trim() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToUpperInvariant",
+    "parameters": [],
+    "declaration": "public string ToUpperInvariant() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_isDone",
+    "parameters": [],
+    "declaration": "public bool get_isDone() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_responseCode",
+    "parameters": [],
+    "declaration": "public long get_responseCode() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_error",
+    "parameters": [],
+    "declaration": "public string get_error() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_downloadHandler",
+    "parameters": [],
+    "declaration": "public DownloadHandler get_downloadHandler() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.DownloadHandler",
+    "runtimeOwner": "UnityEngine.Networking.DownloadHandler, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_text",
+    "parameters": [],
+    "declaration": "public string get_text() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "GetResponseHeader",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public string GetResponseHeader(string name) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "Parse",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static JSONNode Parse(string aJSON) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_IsNull",
+    "parameters": [],
+    "declaration": "public virtual bool get_IsNull() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_Tag",
+    "parameters": [],
+    "declaration": "public abstract JSONNodeType get_Tag() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_IsObject",
+    "parameters": [],
+    "declaration": "public virtual bool get_IsObject() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_Item",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public virtual JSONNode get_Item(string aKey) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_IsNumber",
+    "parameters": [],
+    "declaration": "public virtual bool get_IsNumber() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_AsDouble",
+    "parameters": [],
+    "declaration": "public virtual double get_AsDouble() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_IsBoolean",
+    "parameters": [],
+    "declaration": "public virtual bool get_IsBoolean() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_AsBool",
+    "parameters": [],
+    "declaration": "public virtual bool get_AsBool() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Globalization.CultureInfo",
+    "runtimeOwner": "System.Globalization.CultureInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_InvariantCulture",
+    "parameters": [],
+    "declaration": "public static CultureInfo get_InvariantCulture() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.DateTime",
+    "runtimeOwner": "System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "TryParse",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.IFormatProvider, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Globalization.DateTimeStyles, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.DateTime&, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool TryParse(string s, IFormatProvider provider, DateTimeStyles styles, out DateTime result) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.DateTime",
+    "runtimeOwner": "System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": ".ctor",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.DateTimeKind, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(int year, int month, int day, int hour, int minute, int second, DateTimeKind kind) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.DateTime",
+    "runtimeOwner": "System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "op_Subtraction",
+    "parameters": [
+      "System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static TimeSpan op_Subtraction(DateTime d1, DateTime d2) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.TimeSpan",
+    "runtimeOwner": "System.TimeSpan, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "get_TotalMilliseconds",
+    "parameters": [],
+    "declaration": "public double get_TotalMilliseconds() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Double",
+    "runtimeOwner": "System.Double, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "IsNaN",
+    "parameters": [
+      "System.Double, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool IsNaN(double d) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Double",
+    "runtimeOwner": "System.Double, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "IsInfinity",
+    "parameters": [
+      "System.Double, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool IsInfinity(double d) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_IsString",
+    "parameters": [],
+    "declaration": "public virtual bool get_IsString() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "SimpleJSON.JSONNode",
+    "runtimeOwner": "SimpleJSON.JSONNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_Value",
+    "parameters": [],
+    "declaration": "public virtual string get_Value() { }"
+  },
+  {
+    "assembly": "UnityEngine.UnityWebRequestModule",
+    "owner": "UnityEngine.Networking.UnityWebRequest",
+    "runtimeOwner": "UnityEngine.Networking.UnityWebRequest, UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Put",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static UnityWebRequest Put(string uri, byte[] bodyData) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.PlayerPrefs",
+    "runtimeOwner": "UnityEngine.PlayerPrefs, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "SetString",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static void SetString(string key, string value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "runtimeOwner": "UnityEngine.Mathf, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Sin",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Sin(float f) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Time",
+    "runtimeOwner": "UnityEngine.Time, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_unscaledDeltaTime",
+    "parameters": [],
+    "declaration": "public static float get_unscaledDeltaTime() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Math",
+    "runtimeOwner": "System.Math, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Abs",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Abs(float value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "runtimeOwner": "UnityEngine.Mathf, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Lerp",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Lerp(float a, float b, float t) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GameFacade",
+    "runtimeOwner": "COW.GameFacade, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "GetLocalPlayerOrObServer",
+    "parameters": [],
+    "declaration": "public static Player GetLocalPlayerOrObServer() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.AttackableEntity",
+    "runtimeOwner": "COW.GamePlay.AttackableEntity, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_IsDead",
+    "parameters": [],
+    "declaration": "public bool get_IsDead() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "GCommon.ITransformNode",
+    "runtimeOwner": "GCommon.ITransformNode, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_transform",
+    "parameters": [],
+    "declaration": "public abstract Transform get_transform() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "runtimeOwner": "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_whiteTexture",
+    "parameters": [],
+    "declaration": "public static Texture2D get_whiteTexture() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "runtimeOwner": "UnityEngine.Mathf, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Sqrt",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Sqrt(float f) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "runtimeOwner": "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": ".ctor",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "UnityEngine.TextureFormat, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(int width, int height, TextureFormat textureFormat, bool mipChain) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture",
+    "runtimeOwner": "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_filterMode",
+    "parameters": [
+      "UnityEngine.FilterMode, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_filterMode(FilterMode value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture",
+    "runtimeOwner": "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_wrapMode",
+    "parameters": [
+      "UnityEngine.TextureWrapMode, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_wrapMode(TextureWrapMode value) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "runtimeOwner": "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "SetPixels",
+    "parameters": [
+      "UnityEngine.Color[], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void SetPixels(Color[] colors) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Texture2D",
+    "runtimeOwner": "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Apply",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void Apply(bool updateMipmaps, bool makeNoLongerReadable) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "GCommon.Entity",
+    "runtimeOwner": "GCommon.Entity, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_UniqueID",
+    "parameters": [],
+    "declaration": "public uint get_UniqueID() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "runtimeOwner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": ".ctor",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(float x, float y, float z) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "DrawTexture",
+    "parameters": [
+      "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void DrawTexture(Rect position, Texture image) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Mathf",
+    "runtimeOwner": "UnityEngine.Mathf, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Atan2",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static float Atan2(float y, float x) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Quaternion",
+    "runtimeOwner": "UnityEngine.Quaternion, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Euler",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static Quaternion Euler(float x, float y, float z) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Matrix4x4",
+    "runtimeOwner": "UnityEngine.Matrix4x4, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "TRS",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Quaternion, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static Matrix4x4 TRS(Vector3 pos, Quaternion q, Vector3 s) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "runtimeOwner": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "op_Addition",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static Vector3 op_Addition(Vector3 a, Vector3 b) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_NickName",
+    "parameters": [],
+    "declaration": "public string get_NickName() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Text.StringBuilder",
+    "runtimeOwner": "System.Text.StringBuilder, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": ".ctor",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(int capacity) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Text.StringBuilder",
+    "runtimeOwner": "System.Text.StringBuilder, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Append",
+    "parameters": [
+      "System.Char, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public StringBuilder Append(char value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "runtimeOwner": "UnityEngine.GUIStyle, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": ".ctor",
+    "parameters": [],
+    "declaration": "public void .ctor() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "runtimeOwner": "UnityEngine.GUIStyle, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_fontSize",
+    "parameters": [
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_fontSize(int value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "runtimeOwner": "UnityEngine.GUIStyle, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_wordWrap",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_wordWrap(bool value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "runtimeOwner": "UnityEngine.GUIStyle, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_alignment",
+    "parameters": [
+      "UnityEngine.TextAnchor, UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_alignment(TextAnchor value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyle",
+    "runtimeOwner": "UnityEngine.GUIStyle, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_normal",
+    "parameters": [],
+    "declaration": "public GUIStyleState get_normal() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUIStyleState",
+    "runtimeOwner": "UnityEngine.GUIStyleState, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_textColor",
+    "parameters": [
+      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public void set_textColor(Color value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Label",
+    "parameters": [
+      "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "UnityEngine.GUIStyle, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Label(Rect position, string text, GUIStyle style) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Int32",
+    "runtimeOwner": "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public override string ToString() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_MaxHP",
+    "parameters": [],
+    "declaration": "public int get_MaxHP() { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "set_color",
+    "parameters": [
+      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void set_color(Color value) { }"
+  },
+  {
+    "assembly": "UnityEngine.IMGUIModule",
+    "owner": "UnityEngine.GUI",
+    "runtimeOwner": "UnityEngine.GUI, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "DrawTexture",
+    "parameters": [
+      "UnityEngine.Rect, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.ScaleMode, UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static void DrawTexture(Rect position, Texture image, ScaleMode scaleMode, bool alphaBlend, float imageAspect, Color color, float borderWidth, float borderRadius) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Time",
+    "runtimeOwner": "UnityEngine.Time, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "get_frameCount",
+    "parameters": [],
+    "declaration": "public static int get_frameCount() { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Quaternion",
+    "runtimeOwner": "UnityEngine.Quaternion, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "LookRotation",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static Quaternion LookRotation(Vector3 forward) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "SetAimRotation",
+    "parameters": [
+      "UnityEngine.Quaternion, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void SetAimRotation(Quaternion FMLGGLAFNEC, bool KDCHOPMDKKE) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "runtimeOwner": "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+    "method": "get_Attributes",
+    "parameters": [],
+    "declaration": "public PlayerAttributes get_Attributes() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Int64",
+    "runtimeOwner": "System.Int64, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public override string ToString() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Boolean",
+    "runtimeOwner": "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToString",
+    "parameters": [],
+    "declaration": "public override string ToString() { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Text.StringBuilder",
+    "runtimeOwner": "System.Text.StringBuilder, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Append",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public StringBuilder Append(string value) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Convert",
+    "runtimeOwner": "System.Convert, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "FromBase64String",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static byte[] FromBase64String(string s) { }"
+  },
+  {
+    "assembly": "UnityEngine.ImageConversionModule",
+    "owner": "UnityEngine.ImageConversion",
+    "runtimeOwner": "UnityEngine.ImageConversion, UnityEngine.ImageConversionModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "LoadImage",
+    "parameters": [
+      "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool LoadImage(Texture2D tex, byte[] data, bool markNonReadable) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Exception",
+    "runtimeOwner": "System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": ".ctor",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(string message) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "runtimeOwner": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "Concat",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static string Concat(string str0, string str1, string str2, string str3) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.TouchScreenKeyboard",
+    "runtimeOwner": "UnityEngine.TouchScreenKeyboard, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "Open",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "UnityEngine.TouchScreenKeyboardType, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static TouchScreenKeyboard Open(string text, TouchScreenKeyboardType keyboardType, bool autocorrection, bool multiline, bool secure, bool alert, string textPlaceholder, int characterLimit) { }"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.PlayerPrefs",
+    "runtimeOwner": "UnityEngine.PlayerPrefs, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "method": "DeleteKey",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static void DeleteKey(string key) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Int32",
+    "runtimeOwner": "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+    "method": "ToString",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public string ToString(string format) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "FDMIEDDNCEC",
+    "declaration": "private CGKJLKPMGDJ FDMIEDDNCEC; // 0xE50"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "JHAINOBIFMA",
+    "declaration": "public GameObject JHAINOBIFMA; // 0x18"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "JINDNOFABKB",
+    "declaration": "public Collider JINDNOFABKB; // 0x20"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "HPCOJHGFEEG",
+    "declaration": "public Vector3 HPCOJHGFEEG; // 0x28"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "field": "x",
+    "declaration": "public float x; // 0x10"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "field": "y",
+    "declaration": "public float y; // 0x14"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "field": "z",
+    "declaration": "public float z; // 0x18"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "DOJDNHCGFGK",
+    "declaration": "public Vector3 DOJDNHCGFGK; // 0x34"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "HLDECMJFKJK",
+    "declaration": "public Vector3 HLDECMJFKJK; // 0x40"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "EKPLMDDKOGB",
+    "declaration": "public Vector3 EKPLMDDKOGB; // 0x4C"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "ONMKMEGMHOL",
+    "declaration": "public Vector3 ONMKMEGMHOL; // 0x74"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "DKPDBLLJEAA",
+    "declaration": "public LKOOALMKJND DKPDBLLJEAA; // 0x64"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "EFMBNPNFGHM",
+    "declaration": "public bool EFMBNPNFGHM; // 0x70"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "CEOKOILBODN",
+    "declaration": "public bool CEOKOILBODN; // 0x71"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.CGKJLKPMGDJ",
+    "field": "CLOLKHNMNEK",
+    "declaration": "public short CLOLKHNMNEK; // 0x80"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "field": "ShootNoReload",
+    "declaration": "public bool ShootNoReload; // 0x111"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GameFacade",
+    "field": "m_modelRole",
+    "declaration": "private static UIModelRole m_modelRole; // 0x350"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "BLNAPOLKCDL",
+    "declaration": "protected Dictionary<uint, FHAPNJGMHLM> BLNAPOLKCDL; // 0x21D0"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector2",
+    "field": "x",
+    "declaration": "public float x; // 0x10"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector2",
+    "field": "y",
+    "declaration": "public float y; // 0x14"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "IIPBIDIBJDK",
+    "declaration": "protected ITransformNode IIPBIDIBJDK; // 0x6C8"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "GBKFHDFCPMD",
+    "declaration": "protected ITransformNode GBKFHDFCPMD; // 0x6A0"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "DLAHJBJFMCF",
+    "declaration": "protected ITransformNode DLAHJBJFMCF; // 0x2178"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "BKDOIIEJBFI",
+    "declaration": "protected ITransformNode BKDOIIEJBFI; // 0x2148"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "FCFGLFMIBOO",
+    "declaration": "protected ITransformNode FCFGLFMIBOO; // 0x2168"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "BOHFADPGJKH",
+    "declaration": "protected ITransformNode BOHFADPGJKH; // 0x2150"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "BDJLHMNECMA",
+    "declaration": "protected ITransformNode BDJLHMNECMA; // 0x2170"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "LFIGLLJCDOG",
+    "declaration": "protected ITransformNode LFIGLLJCDOG; // 0x2138"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "FKHGDFCPCFE",
+    "declaration": "protected ITransformNode FKHGDFCPCFE; // 0x2158"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "HOPHAMCLGOA",
+    "declaration": "protected ITransformNode HOPHAMCLGOA; // 0x2140"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "field": "KMMMDCDJOLD",
+    "declaration": "protected ITransformNode KMMMDCDJOLD; // 0x2160"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Color",
+    "field": "r",
+    "declaration": "public float r; // 0x10"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Color",
+    "field": "g",
+    "declaration": "public float g; // 0x14"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Color",
+    "field": "b",
+    "declaration": "public float b; // 0x18"
+  }
+]

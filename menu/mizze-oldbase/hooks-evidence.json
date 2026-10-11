@@ -1,0 +1,42 @@
+{
+  "target": "Free Fire TH iOS 1.132.1",
+  "deviceVerified": false,
+  "hooks": [
+    {
+      "owner": "COW.GameFacade",
+      "method": "get_UIModelRole",
+      "vmMethod": 0,
+      "map": "IDMAP0",
+      "id": 7680,
+      "declaration": "public const IDMAP0 COW-GameFacade-get_UIModelRole0 = 7680;",
+      "native": "// RVA: 0x59344E0 Offset: 0x59344E0 VA: 0x59344E0\n\tpublic static UIModelRole get_UIModelRole() { }"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "method": "IsReallyInStealth",
+      "vmMethod": 24,
+      "map": "IDMAP0",
+      "id": 24093,
+      "declaration": "public const IDMAP0 COW-GamePlay-Player-IsReallyInStealth0 = 24093;",
+      "native": "// RVA: 0x573EFF8 Offset: 0x573EFF8 VA: 0x573EFF8\n\tpublic bool IsReallyInStealth() { }"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "method": "get_LastAimingInfoFromWeapon",
+      "vmMethod": 25,
+      "map": "IDMAP0",
+      "id": 19026,
+      "declaration": "public const IDMAP0 COW-GamePlay-Player-get_LastAimingInfoFromWeapon0 = 19026;",
+      "native": "// RVA: 0x562453C Offset: 0x562453C VA: 0x562453C\n\tpublic CGKJLKPMGDJ get_LastAimingInfoFromWeapon() { }"
+    },
+    {
+      "owner": "COW.GamePlay.SceneEditBoxSelectTool",
+      "method": "OnGUI",
+      "vmMethod": 34,
+      "map": "IDMAP4",
+      "id": 156465,
+      "declaration": "public const IDMAP4 COW-GamePlay-SceneEditBoxSelectTool-OnGUI0 = 156465;",
+      "native": "// RVA: 0x65FDB20 Offset: 0x65FDB20 VA: 0x65FDB20\n\tprivate void OnGUI() { }"
+    }
+  ]
+}

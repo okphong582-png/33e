@@ -1,0 +1,66 @@
+{
+  "source": "User-provided screenshot of Mizze-session.log received 2026-10-11",
+  "samples": [
+    {
+      "t": 74,
+      "managed": 103030784,
+      "commands": 6,
+      "samplesFailed": 0
+    },
+    {
+      "t": 104,
+      "managed": 98898324,
+      "commands": 0,
+      "samplesFailed": 1
+    },
+    {
+      "t": 134,
+      "managed": 239738880,
+      "commands": 12,
+      "samplesFailed": 0
+    },
+    {
+      "t": 164,
+      "managed": 498335744,
+      "commands": 9,
+      "samplesFailed": 0
+    },
+    {
+      "t": 194,
+      "managed": 751353856,
+      "commands": 0,
+      "samplesFailed": 0
+    },
+    {
+      "t": 224,
+      "managed": 950857728,
+      "commands": 12,
+      "samplesFailed": 0
+    },
+    {
+      "t": 254,
+      "managed": 1224839168,
+      "commands": 9,
+      "samplesFailed": 0
+    }
+  ],
+  "backgrounds": 15,
+  "drawFailed": 0,
+  "conclusion": "Process-wide managed heap growth. Offline R6 VM reproduces high temporary allocation with stable post-GC retained memory; native game has an auto-GC-disabled path. Actual GC mode and crash cause on user device remain unconfirmed.",
+  "rateBytesPerSecond": 7506272.293333333,
+  "patchVersionInScreenshot": "No build marker or lagTail/lagWrites; session may come from an older run.",
+  "additionalUserSamples": [
+    {
+      "t": 92,
+      "managed": 1142366208
+    },
+    {
+      "t": 122,
+      "managed": 1362927616
+    },
+    {
+      "t": 234,
+      "managed": 1452036096
+    }
+  ]
+}

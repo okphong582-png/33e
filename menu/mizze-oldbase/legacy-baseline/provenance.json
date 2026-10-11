@@ -1,0 +1,216 @@
+{
+  "source": "User directory source cũ; copied byte-for-byte, never edited",
+  "files": [
+    {
+      "name": "build.cjs",
+      "sha256": "8a68cdb7816647258d2aeb2a40f8dc946dfed3f8fc65e9326ba2866392a3b272",
+      "canonicalSha256": "8a68cdb7816647258d2aeb2a40f8dc946dfed3f8fc65e9326ba2866392a3b272"
+    },
+    {
+      "name": "CompilerHost.cs",
+      "sha256": "59fb0bdbad559fdb8b60d25c6ae2de7d71115db4307d36563f450efccc44a890",
+      "canonicalSha256": "59fb0bdbad559fdb8b60d25c6ae2de7d71115db4307d36563f450efccc44a890"
+    },
+    {
+      "name": "GameBindings.cs",
+      "sha256": "fbe2d386bc7d8630c0da221b1201157f827fb132ccb416a32c59ff5ddc10d4cf",
+      "canonicalSha256": "fbe2d386bc7d8630c0da221b1201157f827fb132ccb416a32c59ff5ddc10d4cf"
+    },
+    {
+      "name": "GuiBindings.cs",
+      "sha256": "d5d8482d195b48f9a932ea7b05c3abb02bdc662dd0a6978cfbef3a0cacd336de",
+      "canonicalSha256": "d5d8482d195b48f9a932ea7b05c3abb02bdc662dd0a6978cfbef3a0cacd336de"
+    },
+    {
+      "name": "JsonBindings.cs",
+      "sha256": "deaa8fbb76de230c8fc408220752a4e4df745b76d748b3c85b82f0d899f79ef0",
+      "canonicalSha256": "deaa8fbb76de230c8fc408220752a4e4df745b76d748b3c85b82f0d899f79ef0"
+    },
+    {
+      "name": "Mizze.cs",
+      "sha256": "cc8df38c295e39169fb2f09db3523f54ce2df928787325511246789fee6e7dd1",
+      "canonicalSha256": "cc8df38c295e39169fb2f09db3523f54ce2df928787325511246789fee6e7dd1"
+    },
+    {
+      "name": "MizzeAppearance.cs",
+      "sha256": "ec70402910b3921e7122053ef37670c18649de166ef1a15063eab957b892f5f0",
+      "canonicalSha256": "ec70402910b3921e7122053ef37670c18649de166ef1a15063eab957b892f5f0"
+    },
+    {
+      "name": "MizzeBatch.cs",
+      "sha256": "3355f558727b1476e8b781a007d182b0b92f7f6040320774d6634bfd2385cb68",
+      "canonicalSha256": "3355f558727b1476e8b781a007d182b0b92f7f6040320774d6634bfd2385cb68"
+    },
+    {
+      "name": "MizzeGameplay.cs",
+      "sha256": "1075b82f714ecbec34e99014caf7aa2c5b78d0cf4edbd8ab464273170fe1e8a4",
+      "canonicalSha256": "1075b82f714ecbec34e99014caf7aa2c5b78d0cf4edbd8ab464273170fe1e8a4"
+    },
+    {
+      "name": "MizzeLicense.cs",
+      "sha256": "e60b9163cfce818c99208afe49fc66ff4aaa00acb5a2db734851e2e77949739e",
+      "canonicalSha256": "e60b9163cfce818c99208afe49fc66ff4aaa00acb5a2db734851e2e77949739e"
+    },
+    {
+      "name": "MizzeRenderer.cs",
+      "sha256": "fa906b74e8fd83ce6528c8d64dd414348225a56bd4a4257064aafe9ff01b3044",
+      "canonicalSha256": "fa906b74e8fd83ce6528c8d64dd414348225a56bd4a4257064aafe9ff01b3044"
+    },
+    {
+      "name": "NetworkBindings.cs",
+      "sha256": "5e32bd0b722fe10a683336ef0460d1a35f5ae63e36339347bd4f5f125ab741ab",
+      "canonicalSha256": "5e32bd0b722fe10a683336ef0460d1a35f5ae63e36339347bd4f5f125ab741ab"
+    },
+    {
+      "name": "package.cjs",
+      "sha256": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967",
+      "canonicalSha256": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967"
+    },
+    {
+      "name": "PhysicsBindings.cs",
+      "sha256": "2ea8d3966579fb8be0713d08397b9a76d7fbaff7efb3872f4cd969184dcbc7dd",
+      "canonicalSha256": "2ea8d3966579fb8be0713d08397b9a76d7fbaff7efb3872f4cd969184dcbc7dd"
+    },
+    {
+      "name": "RuntimeApis.cs",
+      "sha256": "318dd4c39aba404a4e9f9c5912b08f441c68529cde6fa13c3192301c161fbf96",
+      "canonicalSha256": "318dd4c39aba404a4e9f9c5912b08f441c68529cde6fa13c3192301c161fbf96"
+    },
+    {
+      "name": "RuntimeTest.cs",
+      "sha256": "3762ca1898a7de2949ff230d2d3fdbfa2bd6bea1300817d9a74e997d28169ea3",
+      "canonicalSha256": "3762ca1898a7de2949ff230d2d3fdbfa2bd6bea1300817d9a74e997d28169ea3"
+    },
+    {
+      "name": "TextBindings.cs",
+      "sha256": "ea5389ee08549f5777a33ceb842145701d30cddcf87de74dc6158d6b6161aebc",
+      "canonicalSha256": "ea5389ee08549f5777a33ceb842145701d30cddcf87de74dc6158d6b6161aebc"
+    },
+    {
+      "name": "UnityBindings.cs",
+      "sha256": "e78343880825c1faccb06af5c7bb33c5e3d139bd583bbcdc2b2bf51dd28e11f9",
+      "canonicalSha256": "e78343880825c1faccb06af5c7bb33c5e3d139bd583bbcdc2b2bf51dd28e11f9"
+    }
+  ],
+  "originalNewFields": [
+    "MzInitialized",
+    "MzUiPaint",
+    "MzSliderTitles",
+    "MzSliderText",
+    "MzSliderValues",
+    "MzSwitch",
+    "MzSwitchAnim",
+    "MzFov",
+    "MzRange",
+    "MzBubbleX",
+    "MzBubbleY",
+    "MzPanelX",
+    "MzPanelY",
+    "MzPalette",
+    "MzEspColor",
+    "MzFovColor",
+    "MzHealthColor",
+    "MzLicenseMessage",
+    "MzDeviceHash",
+    "MzKeyHash",
+    "MzCanClaim",
+    "MzRequest",
+    "MzRequestStage",
+    "MzRequestStarted",
+    "MzDriver",
+    "MzChangedAim",
+    "MzAimOwner",
+    "MzAppliedObject",
+    "MzAppliedCollider",
+    "MzAppliedPoint",
+    "MzAppliedDirection",
+    "MzAppliedOrigin",
+    "MzOldAimObject",
+    "MzOldAimCollider",
+    "MzOldHpc",
+    "MzOldDoj",
+    "MzOldDirection",
+    "MzOldOrigin",
+    "MzOldOnm",
+    "MzOldDkp",
+    "MzOldEfm",
+    "MzOldCeo",
+    "MzOldClo",
+    "MzLeaseDeadline",
+    "MzScale",
+    "MzPointer",
+    "MzDragMode",
+    "MzDragDX",
+    "MzDragDY",
+    "MzOpen",
+    "MzDownX",
+    "MzDownY",
+    "MzDragged",
+    "MzTab",
+    "MzKeyboard",
+    "MzNextRefresh",
+    "MzClaimAttempted",
+    "MzFontTried",
+    "MzFont",
+    "MzMotion",
+    "MzOpenAnim",
+    "MzTabAnim",
+    "MzRects",
+    "MzTexts",
+    "MzTextures",
+    "MzCommandCount",
+    "MzQuadCounts",
+    "MzQuadCount",
+    "MzBatchDirty",
+    "MzEspMatch",
+    "MzEspCamera",
+    "MzNextEsp",
+    "MzVertices",
+    "MzVertexColors",
+    "MzIndices",
+    "MzMesh",
+    "MzMaterial",
+    "MzBatchReady",
+    "MzBatchRetry",
+    "MzWhite",
+    "MzColors",
+    "MzMatrices",
+    "MzRotated",
+    "MzSolids",
+    "MzRing",
+    "MzHeadRing",
+    "MzEspWidth",
+    "MzEspHeight",
+    "MzBuilding",
+    "MzEspSampleStarted",
+    "MzDrawingEsp",
+    "MzDrawBudget",
+    "MzLabelStyle",
+    "MzCenterStyle",
+    "MzWrapStyle",
+    "MzUiWhite",
+    "MzLineOrigin",
+    "MzUiMatrixScale",
+    "MzUiMatrix",
+    "MzTitleStyle",
+    "MzSmallStyle",
+    "MzEspPage",
+    "MzColorTarget"
+  ],
+  "oldHooks": [
+    "COW.GameFacade, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null::get_UIModelRole",
+    "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null::IsReallyInStealth",
+    "COW.GamePlay.Player, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null::get_LastAimingInfoFromWeapon",
+    "COW.GamePlay.SceneEditBoxSelectTool, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null::OnGUI"
+  ],
+  "upgradeNotes": [
+    "Driver Find/create/GetComponent/AddComponent/DontDestroyOnLoad/assign sequence copied verbatim from old MzEnsure",
+    "No thread or Unity-clock gates before first bootstrap",
+    "OnGUI follows old Event/driver filter; it does not call MzEnsure",
+    "Original field names preserved in final serializer; full process restart required",
+    "Keep only a reentry guard and cleanup protection around baseline callback",
+    "Port glass/background, weapons, FL button, touch shield and bounded ESP/GC logic from R7",
+    "Native real-stealth predicate remains verified native behavior rather than old shortcut IsInStealth"
+  ],
+  "deviceVerified": false
+}

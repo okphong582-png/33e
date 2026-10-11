@@ -1,0 +1,3936 @@
+{
+  "nativeSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "methods": [
+    {
+      "name": "MemoryUtil.GCCollect",
+      "rva": "0x15a0384",
+      "size": 852,
+      "instructions": [
+        {
+          "address": "0x15a0384",
+          "instruction": "stp d9, d8, [sp, #-0x50]!"
+        },
+        {
+          "address": "0x15a0388",
+          "instruction": "stp x24, x23, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a038c",
+          "instruction": "stp x22, x21, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a0390",
+          "instruction": "stp x20, x19, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a0394",
+          "instruction": "stp x29, x30, [sp, #0x40]"
+        },
+        {
+          "address": "0x15a0398",
+          "instruction": "add x29, sp, #0x40"
+        },
+        {
+          "address": "0x15a039c",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x15a03a0",
+          "instruction": "adrp x20, #0xc048000"
+        },
+        {
+          "address": "0x15a03a4",
+          "instruction": "ldrb w8, [x20, #0xf36]"
+        },
+        {
+          "address": "0x15a03a8",
+          "instruction": "adrp x22, #0xbb46000"
+        },
+        {
+          "address": "0x15a03ac",
+          "instruction": "add x22, x22, #0xaf8"
+        },
+        {
+          "address": "0x15a03b0",
+          "instruction": "tbnz w8, #0, #0x15a03e0"
+        },
+        {
+          "address": "0x15a03b4",
+          "instruction": "adrp x0, #0xbb43000"
+        },
+        {
+          "address": "0x15a03b8",
+          "instruction": "add x0, x0, #0xfd0"
+        },
+        {
+          "address": "0x15a03bc",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a03c0",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x15a03c4",
+          "instruction": "add x0, x0, #0xaf8"
+        },
+        {
+          "address": "0x15a03c8",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a03cc",
+          "instruction": "adrp x0, #0xbb4b000"
+        },
+        {
+          "address": "0x15a03d0",
+          "instruction": "add x0, x0, #0x738"
+        },
+        {
+          "address": "0x15a03d4",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a03d8",
+          "instruction": "mov w8, #1"
+        },
+        {
+          "address": "0x15a03dc",
+          "instruction": "strb w8, [x20, #0xf36]"
+        },
+        {
+          "address": "0x15a03e0",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a03e4",
+          "instruction": "bl #0x8d667ec",
+          "target": "public static float get_realtimeSinceStartup() { }"
+        },
+        {
+          "address": "0x15a03e8",
+          "instruction": "fmov s8, s0"
+        },
+        {
+          "address": "0x15a03ec",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a03f0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a03f4",
+          "instruction": "cbnz w8, #0x15a0400"
+        },
+        {
+          "address": "0x15a03f8",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a03fc",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0400",
+          "instruction": "adrp x21, #0xbb4b000"
+        },
+        {
+          "address": "0x15a0404",
+          "instruction": "add x21, x21, #0x738"
+        },
+        {
+          "address": "0x15a0408",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a040c",
+          "instruction": "mov w9, #0x28b6"
+        },
+        {
+          "address": "0x15a0410",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x15a0414",
+          "instruction": "cmp w8, #1"
+        },
+        {
+          "address": "0x15a0418",
+          "instruction": "b.ne #0x15a04a8"
+        },
+        {
+          "address": "0x15a041c",
+          "instruction": "adrp x23, #0xbb43000"
+        },
+        {
+          "address": "0x15a0420",
+          "instruction": "add x23, x23, #0xfd0"
+        },
+        {
+          "address": "0x15a0424",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0428",
+          "instruction": "bl #0x6465270",
+          "target": "public static long GetLastGCFinishTime() { }"
+        },
+        {
+          "address": "0x15a042c",
+          "instruction": "mov x20, x0"
+        },
+        {
+          "address": "0x15a0430",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0434",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0438",
+          "instruction": "cbz w8, #0x15a04f4"
+        },
+        {
+          "address": "0x15a043c",
+          "instruction": "scvtf d0, x20"
+        },
+        {
+          "address": "0x15a0440",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0444",
+          "instruction": "str d0, [x8, #8]"
+        },
+        {
+          "address": "0x15a0448",
+          "instruction": "ldr x0, [x23]"
+        },
+        {
+          "address": "0x15a044c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0450",
+          "instruction": "cbz w8, #0x15a0514"
+        },
+        {
+          "address": "0x15a0454",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0458",
+          "instruction": "bl #0x6b79c0c",
+          "target": "public static ulong GetCurrentLocalTimeStampSeconds() { }"
+        },
+        {
+          "address": "0x15a045c",
+          "instruction": "ucvtf d8, x0"
+        },
+        {
+          "address": "0x15a0460",
+          "instruction": "cmp w19, #1"
+        },
+        {
+          "address": "0x15a0464",
+          "instruction": "b.le #0x15a04b4"
+        },
+        {
+          "address": "0x15a0468",
+          "instruction": "cmp w19, #2"
+        },
+        {
+          "address": "0x15a046c",
+          "instruction": "b.eq #0x15a0530"
+        },
+        {
+          "address": "0x15a0470",
+          "instruction": "cmp w19, #3"
+        },
+        {
+          "address": "0x15a0474",
+          "instruction": "b.eq #0x15a05ac"
+        },
+        {
+          "address": "0x15a0478",
+          "instruction": "cmp w19, #4"
+        },
+        {
+          "address": "0x15a047c",
+          "instruction": "b.ne #0x15a06c0"
+        },
+        {
+          "address": "0x15a0480",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0484",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0488",
+          "instruction": "cbz w8, #0x15a0678"
+        },
+        {
+          "address": "0x15a048c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0490",
+          "instruction": "mov w9, #0x17ac"
+        },
+        {
+          "address": "0x15a0494",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x15a0498",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a049c",
+          "instruction": "cmp w8, #1"
+        },
+        {
+          "address": "0x15a04a0",
+          "instruction": "b.ne #0x15a0640"
+        },
+        {
+          "address": "0x15a04a4",
+          "instruction": "b #0x15a0698"
+        },
+        {
+          "address": "0x15a04a8",
+          "instruction": "fcvt d8, s8"
+        },
+        {
+          "address": "0x15a04ac",
+          "instruction": "cmp w19, #1"
+        },
+        {
+          "address": "0x15a04b0",
+          "instruction": "b.gt #0x15a0468"
+        },
+        {
+          "address": "0x15a04b4",
+          "instruction": "cbz w19, #0x15a05bc"
+        },
+        {
+          "address": "0x15a04b8",
+          "instruction": "cmp w19, #1"
+        },
+        {
+          "address": "0x15a04bc",
+          "instruction": "b.ne #0x15a06c0"
+        },
+        {
+          "address": "0x15a04c0",
+          "instruction": "ldr x8, [x22]"
+        },
+        {
+          "address": "0x15a04c4",
+          "instruction": "ldr w9, [x8, #0xe0]"
+        },
+        {
+          "address": "0x15a04c8",
+          "instruction": "cbnz w9, #0x15a04d8"
+        },
+        {
+          "address": "0x15a04cc",
+          "instruction": "mov x0, x8"
+        },
+        {
+          "address": "0x15a04d0",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a04d4",
+          "instruction": "ldr x8, [x22]"
+        },
+        {
+          "address": "0x15a04d8",
+          "instruction": "ldr x9, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a04dc",
+          "instruction": "mov w10, #0x15e8"
+        },
+        {
+          "address": "0x15a04e0",
+          "instruction": "ldrb w9, [x9, x10]"
+        },
+        {
+          "address": "0x15a04e4",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a04e8",
+          "instruction": "cmp w9, #1"
+        },
+        {
+          "address": "0x15a04ec",
+          "instruction": "b.eq #0x15a0560"
+        },
+        {
+          "address": "0x15a04f0",
+          "instruction": "b #0x15a0640"
+        },
+        {
+          "address": "0x15a04f4",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a04f8",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a04fc",
+          "instruction": "scvtf d0, x20"
+        },
+        {
+          "address": "0x15a0500",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0504",
+          "instruction": "str d0, [x8, #8]"
+        },
+        {
+          "address": "0x15a0508",
+          "instruction": "ldr x0, [x23]"
+        },
+        {
+          "address": "0x15a050c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0510",
+          "instruction": "cbnz w8, #0x15a0454"
+        },
+        {
+          "address": "0x15a0514",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0518",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a051c",
+          "instruction": "bl #0x6b79c0c",
+          "target": "public static ulong GetCurrentLocalTimeStampSeconds() { }"
+        },
+        {
+          "address": "0x15a0520",
+          "instruction": "ucvtf d8, x0"
+        },
+        {
+          "address": "0x15a0524",
+          "instruction": "cmp w19, #1"
+        },
+        {
+          "address": "0x15a0528",
+          "instruction": "b.gt #0x15a0468"
+        },
+        {
+          "address": "0x15a052c",
+          "instruction": "b #0x15a04b4"
+        },
+        {
+          "address": "0x15a0530",
+          "instruction": "ldr x8, [x22]"
+        },
+        {
+          "address": "0x15a0534",
+          "instruction": "ldr w9, [x8, #0xe0]"
+        },
+        {
+          "address": "0x15a0538",
+          "instruction": "cbnz w9, #0x15a0548"
+        },
+        {
+          "address": "0x15a053c",
+          "instruction": "mov x0, x8"
+        },
+        {
+          "address": "0x15a0540",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0544",
+          "instruction": "ldr x8, [x22]"
+        },
+        {
+          "address": "0x15a0548",
+          "instruction": "ldr x9, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a054c",
+          "instruction": "mov w10, #0x15f0"
+        },
+        {
+          "address": "0x15a0550",
+          "instruction": "ldrb w9, [x9, x10]"
+        },
+        {
+          "address": "0x15a0554",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0558",
+          "instruction": "cmp w9, #1"
+        },
+        {
+          "address": "0x15a055c",
+          "instruction": "b.ne #0x15a0640"
+        },
+        {
+          "address": "0x15a0560",
+          "instruction": "ldr w9, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0564",
+          "instruction": "cbnz w9, #0x15a0574"
+        },
+        {
+          "address": "0x15a0568",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a056c",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0570",
+          "instruction": "ldr x8, [x22]"
+        },
+        {
+          "address": "0x15a0574",
+          "instruction": "ldr x9, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0578",
+          "instruction": "ldr d9, [x9, #8]"
+        },
+        {
+          "address": "0x15a057c",
+          "instruction": "ldr w9, [x8, #0xe0]"
+        },
+        {
+          "address": "0x15a0580",
+          "instruction": "cbnz w9, #0x15a0590"
+        },
+        {
+          "address": "0x15a0584",
+          "instruction": "mov x0, x8"
+        },
+        {
+          "address": "0x15a0588",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a058c",
+          "instruction": "ldr x8, [x22]"
+        },
+        {
+          "address": "0x15a0590",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a0594",
+          "instruction": "fsub d0, d8, d9"
+        },
+        {
+          "address": "0x15a0598",
+          "instruction": "ldr s1, [x8, #0x15ec]"
+        },
+        {
+          "address": "0x15a059c",
+          "instruction": "sshll v1.2d, v1.2s, #0"
+        },
+        {
+          "address": "0x15a05a0",
+          "instruction": "scvtf d1, d1"
+        },
+        {
+          "address": "0x15a05a4",
+          "instruction": "fcmp d0, d1"
+        },
+        {
+          "address": "0x15a05a8",
+          "instruction": "b.mi #0x15a06c0"
+        },
+        {
+          "address": "0x15a05ac",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a05b0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a05b4",
+          "instruction": "cbnz w8, #0x15a0638"
+        },
+        {
+          "address": "0x15a05b8",
+          "instruction": "b #0x15a0630"
+        },
+        {
+          "address": "0x15a05bc",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a05c0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a05c4",
+          "instruction": "cbz w8, #0x15a05e4"
+        },
+        {
+          "address": "0x15a05c8",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a05cc",
+          "instruction": "mov w9, #0x15df"
+        },
+        {
+          "address": "0x15a05d0",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x15a05d4",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a05d8",
+          "instruction": "cmp w8, #1"
+        },
+        {
+          "address": "0x15a05dc",
+          "instruction": "b.eq #0x15a0604"
+        },
+        {
+          "address": "0x15a05e0",
+          "instruction": "b #0x15a0640"
+        },
+        {
+          "address": "0x15a05e4",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a05e8",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a05ec",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a05f0",
+          "instruction": "mov w9, #0x15df"
+        },
+        {
+          "address": "0x15a05f4",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x15a05f8",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a05fc",
+          "instruction": "cmp w8, #1"
+        },
+        {
+          "address": "0x15a0600",
+          "instruction": "b.ne #0x15a0640"
+        },
+        {
+          "address": "0x15a0604",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0608",
+          "instruction": "cbnz w8, #0x15a0614"
+        },
+        {
+          "address": "0x15a060c",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0610",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0614",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0618",
+          "instruction": "ldp d0, d1, [x8, #8]"
+        },
+        {
+          "address": "0x15a061c",
+          "instruction": "fsub d0, d8, d0"
+        },
+        {
+          "address": "0x15a0620",
+          "instruction": "fcmp d0, d1"
+        },
+        {
+          "address": "0x15a0624",
+          "instruction": "b.mi #0x15a06c0"
+        },
+        {
+          "address": "0x15a0628",
+          "instruction": "ldr w9, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a062c",
+          "instruction": "cbnz w9, #0x15a063c"
+        },
+        {
+          "address": "0x15a0630",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0634",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0638",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a063c",
+          "instruction": "str d8, [x8, #8]"
+        },
+        {
+          "address": "0x15a0640",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0644",
+          "instruction": "cbnz w8, #0x15a064c"
+        },
+        {
+          "address": "0x15a0648",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a064c",
+          "instruction": "cmp w19, #1"
+        },
+        {
+          "address": "0x15a0650",
+          "instruction": "cset w0, eq"
+        },
+        {
+          "address": "0x15a0654",
+          "instruction": "bl #0x15a06d8",
+          "target": "public static void ReleaseMonoRefs(bool emergency) { }"
+        },
+        {
+          "address": "0x15a0658",
+          "instruction": "mov w0, #0xd"
+        },
+        {
+          "address": "0x15a065c",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0660",
+          "instruction": "ldp x29, x30, [sp, #0x40]"
+        },
+        {
+          "address": "0x15a0664",
+          "instruction": "ldp x20, x19, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a0668",
+          "instruction": "ldp x22, x21, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a066c",
+          "instruction": "ldp x24, x23, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a0670",
+          "instruction": "ldp d9, d8, [sp], #0x50"
+        },
+        {
+          "address": "0x15a0674",
+          "instruction": "b #0x646568c"
+        },
+        {
+          "address": "0x15a0678",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a067c",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0680",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0684",
+          "instruction": "mov w9, #0x17ac"
+        },
+        {
+          "address": "0x15a0688",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x15a068c",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0690",
+          "instruction": "cmp w8, #1"
+        },
+        {
+          "address": "0x15a0694",
+          "instruction": "b.ne #0x15a0640"
+        },
+        {
+          "address": "0x15a0698",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a069c",
+          "instruction": "cbnz w8, #0x15a06a8"
+        },
+        {
+          "address": "0x15a06a0",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a06a4",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a06a8",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a06ac",
+          "instruction": "ldr d0, [x8, #8]"
+        },
+        {
+          "address": "0x15a06b0",
+          "instruction": "ldr d1, [x8, #0x18]"
+        },
+        {
+          "address": "0x15a06b4",
+          "instruction": "fsub d0, d8, d0"
+        },
+        {
+          "address": "0x15a06b8",
+          "instruction": "fcmp d0, d1"
+        },
+        {
+          "address": "0x15a06bc",
+          "instruction": "b.pl #0x15a0628"
+        },
+        {
+          "address": "0x15a06c0",
+          "instruction": "ldp x29, x30, [sp, #0x40]"
+        },
+        {
+          "address": "0x15a06c4",
+          "instruction": "ldp x20, x19, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a06c8",
+          "instruction": "ldp x22, x21, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a06cc",
+          "instruction": "ldp x24, x23, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a06d0",
+          "instruction": "ldp d9, d8, [sp], #0x50"
+        },
+        {
+          "address": "0x15a06d4",
+          "instruction": "ret "
+        }
+      ]
+    },
+    {
+      "name": "MemoryUtil.CheckAndDisableAutoGcOnMatchStart",
+      "rva": "0x15a081c",
+      "size": 1336,
+      "instructions": [
+        {
+          "address": "0x15a081c",
+          "instruction": "stp d9, d8, [sp, #-0x40]!"
+        },
+        {
+          "address": "0x15a0820",
+          "instruction": "stp x22, x21, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a0824",
+          "instruction": "stp x20, x19, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a0828",
+          "instruction": "stp x29, x30, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a082c",
+          "instruction": "add x29, sp, #0x30"
+        },
+        {
+          "address": "0x15a0830",
+          "instruction": "adrp x20, #0xc048000"
+        },
+        {
+          "address": "0x15a0834",
+          "instruction": "ldrb w8, [x20, #0xf39]"
+        },
+        {
+          "address": "0x15a0838",
+          "instruction": "adrp x19, #0xbb46000"
+        },
+        {
+          "address": "0x15a083c",
+          "instruction": "add x19, x19, #0xae8"
+        },
+        {
+          "address": "0x15a0840",
+          "instruction": "tbz w8, #0, #0x15a0898"
+        },
+        {
+          "address": "0x15a0844",
+          "instruction": "adrp x20, #0xbb46000"
+        },
+        {
+          "address": "0x15a0848",
+          "instruction": "add x20, x20, #0xaf8"
+        },
+        {
+          "address": "0x15a084c",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0850",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0854",
+          "instruction": "cbz w8, #0x15a08fc"
+        },
+        {
+          "address": "0x15a0858",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a085c",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0860",
+          "instruction": "bl #0x7221718",
+          "target": "public static bool OptMemFor3gIOSOr32bitAndroid(bool checkMode) { }"
+        },
+        {
+          "address": "0x15a0864",
+          "instruction": "mov x8, x0"
+        },
+        {
+          "address": "0x15a0868",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a086c",
+          "instruction": "cbz w8, #0x15a0918"
+        },
+        {
+          "address": "0x15a0870",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0874",
+          "instruction": "cbnz w8, #0x15a0880"
+        },
+        {
+          "address": "0x15a0878",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a087c",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0880",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0884",
+          "instruction": "mov w9, #0x2246"
+        },
+        {
+          "address": "0x15a0888",
+          "instruction": "ldrb w22, [x8, x9]"
+        },
+        {
+          "address": "0x15a088c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0890",
+          "instruction": "cbnz w8, #0x15a092c"
+        },
+        {
+          "address": "0x15a0894",
+          "instruction": "b #0x15a0924"
+        },
+        {
+          "address": "0x15a0898",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x15a089c",
+          "instruction": "add x0, x0, #0x298"
+        },
+        {
+          "address": "0x15a08a0",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a08a4",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x15a08a8",
+          "instruction": "add x0, x0, #0xa48"
+        },
+        {
+          "address": "0x15a08ac",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a08b0",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x15a08b4",
+          "instruction": "add x0, x0, #0xae8"
+        },
+        {
+          "address": "0x15a08b8",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a08bc",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x15a08c0",
+          "instruction": "add x0, x0, #0xaf8"
+        },
+        {
+          "address": "0x15a08c4",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a08c8",
+          "instruction": "adrp x0, #0xbb4b000"
+        },
+        {
+          "address": "0x15a08cc",
+          "instruction": "add x0, x0, #0x738"
+        },
+        {
+          "address": "0x15a08d0",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a08d4",
+          "instruction": "adrp x0, #0xbb4d000"
+        },
+        {
+          "address": "0x15a08d8",
+          "instruction": "add x0, x0, #0x898"
+        },
+        {
+          "address": "0x15a08dc",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a08e0",
+          "instruction": "mov w8, #1"
+        },
+        {
+          "address": "0x15a08e4",
+          "instruction": "strb w8, [x20, #0xf39]"
+        },
+        {
+          "address": "0x15a08e8",
+          "instruction": "adrp x20, #0xbb46000"
+        },
+        {
+          "address": "0x15a08ec",
+          "instruction": "add x20, x20, #0xaf8"
+        },
+        {
+          "address": "0x15a08f0",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a08f4",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a08f8",
+          "instruction": "cbnz w8, #0x15a0858"
+        },
+        {
+          "address": "0x15a08fc",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0900",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a0904",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0908",
+          "instruction": "bl #0x7221718",
+          "target": "public static bool OptMemFor3gIOSOr32bitAndroid(bool checkMode) { }"
+        },
+        {
+          "address": "0x15a090c",
+          "instruction": "mov x8, x0"
+        },
+        {
+          "address": "0x15a0910",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0914",
+          "instruction": "cbnz w8, #0x15a0870"
+        },
+        {
+          "address": "0x15a0918",
+          "instruction": "mov w22, #0"
+        },
+        {
+          "address": "0x15a091c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0920",
+          "instruction": "cbnz w8, #0x15a092c"
+        },
+        {
+          "address": "0x15a0924",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0928",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a092c",
+          "instruction": "adrp x21, #0xbb4b000"
+        },
+        {
+          "address": "0x15a0930",
+          "instruction": "add x21, x21, #0x738"
+        },
+        {
+          "address": "0x15a0934",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0938",
+          "instruction": "mov w9, #0x2958"
+        },
+        {
+          "address": "0x15a093c",
+          "instruction": "ldrb w9, [x8, x9]"
+        },
+        {
+          "address": "0x15a0940",
+          "instruction": "orn w9, w22, w9"
+        },
+        {
+          "address": "0x15a0944",
+          "instruction": "tbnz w9, #0, #0x15a0d14"
+        },
+        {
+          "address": "0x15a0948",
+          "instruction": "ldr w9, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a094c",
+          "instruction": "cbz w9, #0x15a0964"
+        },
+        {
+          "address": "0x15a0950",
+          "instruction": "mov w9, #0x4234"
+        },
+        {
+          "address": "0x15a0954",
+          "instruction": "ldrb w9, [x8, x9]"
+        },
+        {
+          "address": "0x15a0958",
+          "instruction": "cmp w9, #1"
+        },
+        {
+          "address": "0x15a095c",
+          "instruction": "b.eq #0x15a0980"
+        },
+        {
+          "address": "0x15a0960",
+          "instruction": "b #0x15a0d14"
+        },
+        {
+          "address": "0x15a0964",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0968",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a096c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0970",
+          "instruction": "mov w9, #0x4234"
+        },
+        {
+          "address": "0x15a0974",
+          "instruction": "ldrb w9, [x8, x9]"
+        },
+        {
+          "address": "0x15a0978",
+          "instruction": "cmp w9, #1"
+        },
+        {
+          "address": "0x15a097c",
+          "instruction": "b.ne #0x15a0d14"
+        },
+        {
+          "address": "0x15a0980",
+          "instruction": "ldr w9, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0984",
+          "instruction": "cbz w9, #0x15a09b4"
+        },
+        {
+          "address": "0x15a0988",
+          "instruction": "ldr s8, [x8, #0x295c]"
+        },
+        {
+          "address": "0x15a098c",
+          "instruction": "adrp x22, #0xbb4d000"
+        },
+        {
+          "address": "0x15a0990",
+          "instruction": "add x22, x22, #0x898"
+        },
+        {
+          "address": "0x15a0994",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0998",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a099c",
+          "instruction": "cbz w8, #0x15a09d8"
+        },
+        {
+          "address": "0x15a09a0",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a09a4",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a09a8",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a09ac",
+          "instruction": "tbz w0, #0, #0x15a09ec"
+        },
+        {
+          "address": "0x15a09b0",
+          "instruction": "b #0x15a0c1c"
+        },
+        {
+          "address": "0x15a09b4",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a09b8",
+          "instruction": "ldr x8, [x20]"
+        },
+        {
+          "address": "0x15a09bc",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a09c0",
+          "instruction": "ldr s8, [x8, #0x295c]"
+        },
+        {
+          "address": "0x15a09c4",
+          "instruction": "adrp x22, #0xbb4d000"
+        },
+        {
+          "address": "0x15a09c8",
+          "instruction": "add x22, x22, #0x898"
+        },
+        {
+          "address": "0x15a09cc",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a09d0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a09d4",
+          "instruction": "cbnz w8, #0x15a09a0"
+        },
+        {
+          "address": "0x15a09d8",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a09dc",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a09e0",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a09e4",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a09e8",
+          "instruction": "tbnz w0, #0, #0x15a0c1c"
+        },
+        {
+          "address": "0x15a09ec",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a09f0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a09f4",
+          "instruction": "cbz w8, #0x15a0a14"
+        },
+        {
+          "address": "0x15a09f8",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a09fc",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x15a0a00",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x15a0a04",
+          "instruction": "bl #0x721eecc",
+          "target": "public static BEPINDCEFLH GetQuality(bool InAfterSystemInited, bool useSocialLobbySnapshot) { }"
+        },
+        {
+          "address": "0x15a0a08",
+          "instruction": "cmp w0, #2"
+        },
+        {
+          "address": "0x15a0a0c",
+          "instruction": "b.eq #0x15a0a30"
+        },
+        {
+          "address": "0x15a0a10",
+          "instruction": "b #0x15a0a94"
+        },
+        {
+          "address": "0x15a0a14",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0a18",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a0a1c",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x15a0a20",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x15a0a24",
+          "instruction": "bl #0x721eecc",
+          "target": "public static BEPINDCEFLH GetQuality(bool InAfterSystemInited, bool useSocialLobbySnapshot) { }"
+        },
+        {
+          "address": "0x15a0a28",
+          "instruction": "cmp w0, #2"
+        },
+        {
+          "address": "0x15a0a2c",
+          "instruction": "b.ne #0x15a0a94"
+        },
+        {
+          "address": "0x15a0a30",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0a34",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0a38",
+          "instruction": "cbz w8, #0x15a0a64"
+        },
+        {
+          "address": "0x15a0a3c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0a40",
+          "instruction": "ldr s8, [x8, #0x296c]"
+        },
+        {
+          "address": "0x15a0a44",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0a48",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0a4c",
+          "instruction": "cbz w8, #0x15a0a80"
+        },
+        {
+          "address": "0x15a0a50",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0a54",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0a58",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0a5c",
+          "instruction": "tbz w0, #0, #0x15a0a94"
+        },
+        {
+          "address": "0x15a0a60",
+          "instruction": "b #0x15a0c1c"
+        },
+        {
+          "address": "0x15a0a64",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0a68",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0a6c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0a70",
+          "instruction": "ldr s8, [x8, #0x296c]"
+        },
+        {
+          "address": "0x15a0a74",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0a78",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0a7c",
+          "instruction": "cbnz w8, #0x15a0a50"
+        },
+        {
+          "address": "0x15a0a80",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0a84",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0a88",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0a8c",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0a90",
+          "instruction": "tbnz w0, #0, #0x15a0c1c"
+        },
+        {
+          "address": "0x15a0a94",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0a98",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0a9c",
+          "instruction": "cbz w8, #0x15a0abc"
+        },
+        {
+          "address": "0x15a0aa0",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a0aa4",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x15a0aa8",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x15a0aac",
+          "instruction": "bl #0x721eecc",
+          "target": "public static BEPINDCEFLH GetQuality(bool InAfterSystemInited, bool useSocialLobbySnapshot) { }"
+        },
+        {
+          "address": "0x15a0ab0",
+          "instruction": "cmp w0, #1"
+        },
+        {
+          "address": "0x15a0ab4",
+          "instruction": "b.eq #0x15a0ad8"
+        },
+        {
+          "address": "0x15a0ab8",
+          "instruction": "b #0x15a0b3c"
+        },
+        {
+          "address": "0x15a0abc",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0ac0",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a0ac4",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x15a0ac8",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x15a0acc",
+          "instruction": "bl #0x721eecc",
+          "target": "public static BEPINDCEFLH GetQuality(bool InAfterSystemInited, bool useSocialLobbySnapshot) { }"
+        },
+        {
+          "address": "0x15a0ad0",
+          "instruction": "cmp w0, #1"
+        },
+        {
+          "address": "0x15a0ad4",
+          "instruction": "b.ne #0x15a0b3c"
+        },
+        {
+          "address": "0x15a0ad8",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0adc",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0ae0",
+          "instruction": "cbz w8, #0x15a0b0c"
+        },
+        {
+          "address": "0x15a0ae4",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0ae8",
+          "instruction": "ldr s8, [x8, #0x2970]"
+        },
+        {
+          "address": "0x15a0aec",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0af0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0af4",
+          "instruction": "cbz w8, #0x15a0b28"
+        },
+        {
+          "address": "0x15a0af8",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0afc",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0b00",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0b04",
+          "instruction": "tbz w0, #0, #0x15a0b3c"
+        },
+        {
+          "address": "0x15a0b08",
+          "instruction": "b #0x15a0c1c"
+        },
+        {
+          "address": "0x15a0b0c",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0b10",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0b14",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0b18",
+          "instruction": "ldr s8, [x8, #0x2970]"
+        },
+        {
+          "address": "0x15a0b1c",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0b20",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0b24",
+          "instruction": "cbnz w8, #0x15a0af8"
+        },
+        {
+          "address": "0x15a0b28",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0b2c",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0b30",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0b34",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0b38",
+          "instruction": "tbnz w0, #0, #0x15a0c1c"
+        },
+        {
+          "address": "0x15a0b3c",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0b40",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0b44",
+          "instruction": "cbnz w8, #0x15a0b4c"
+        },
+        {
+          "address": "0x15a0b48",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0b4c",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a0b50",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x15a0b54",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x15a0b58",
+          "instruction": "bl #0x721eecc",
+          "target": "public static BEPINDCEFLH GetQuality(bool InAfterSystemInited, bool useSocialLobbySnapshot) { }"
+        },
+        {
+          "address": "0x15a0b5c",
+          "instruction": "cbnz w0, #0x15a0bc4"
+        },
+        {
+          "address": "0x15a0b60",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0b64",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0b68",
+          "instruction": "cbz w8, #0x15a0b94"
+        },
+        {
+          "address": "0x15a0b6c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0b70",
+          "instruction": "ldr s8, [x8, #0x2974]"
+        },
+        {
+          "address": "0x15a0b74",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0b78",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0b7c",
+          "instruction": "cbz w8, #0x15a0bb0"
+        },
+        {
+          "address": "0x15a0b80",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0b84",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0b88",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0b8c",
+          "instruction": "tbz w0, #0, #0x15a0bc4"
+        },
+        {
+          "address": "0x15a0b90",
+          "instruction": "b #0x15a0c1c"
+        },
+        {
+          "address": "0x15a0b94",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0b98",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0b9c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0ba0",
+          "instruction": "ldr s8, [x8, #0x2974]"
+        },
+        {
+          "address": "0x15a0ba4",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0ba8",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0bac",
+          "instruction": "cbnz w8, #0x15a0b80"
+        },
+        {
+          "address": "0x15a0bb0",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0bb4",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0bb8",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0bbc",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0bc0",
+          "instruction": "tbnz w0, #0, #0x15a0c1c"
+        },
+        {
+          "address": "0x15a0bc4",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0bc8",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0bcc",
+          "instruction": "cbnz w8, #0x15a0bd4"
+        },
+        {
+          "address": "0x15a0bd0",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0bd4",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x15a0bd8",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x15a0bdc",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x15a0be0",
+          "instruction": "bl #0x721eecc",
+          "target": "public static BEPINDCEFLH GetQuality(bool InAfterSystemInited, bool useSocialLobbySnapshot) { }"
+        },
+        {
+          "address": "0x15a0be4",
+          "instruction": "cmp w0, #4"
+        },
+        {
+          "address": "0x15a0be8",
+          "instruction": "b.ne #0x15a0d14"
+        },
+        {
+          "address": "0x15a0bec",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0bf0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0bf4",
+          "instruction": "cbz w8, #0x15a0ce4"
+        },
+        {
+          "address": "0x15a0bf8",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0bfc",
+          "instruction": "ldr s8, [x8, #0x2978]"
+        },
+        {
+          "address": "0x15a0c00",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0c04",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0c08",
+          "instruction": "cbz w8, #0x15a0d00"
+        },
+        {
+          "address": "0x15a0c0c",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0c10",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0c14",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0c18",
+          "instruction": "cbz w0, #0x15a0d14"
+        },
+        {
+          "address": "0x15a0c1c",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0c20",
+          "instruction": "bl #0x646597c",
+          "target": "public static void DisableAutoGc() { }"
+        },
+        {
+          "address": "0x15a0c24",
+          "instruction": "adrp x8, #0xbb46000"
+        },
+        {
+          "address": "0x15a0c28",
+          "instruction": "add x8, x8, #0x298"
+        },
+        {
+          "address": "0x15a0c2c",
+          "instruction": "ldr x0, [x8]"
+        },
+        {
+          "address": "0x15a0c30",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0c34",
+          "instruction": "cbnz w8, #0x15a0c3c"
+        },
+        {
+          "address": "0x15a0c38",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0c3c",
+          "instruction": "mov w0, #0"
+        },
+        {
+          "address": "0x15a0c40",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0c44",
+          "instruction": "bl #0x8b6e484",
+          "target": "public static long GetTotalMemory(bool forceFullCollection) { }"
+        },
+        {
+          "address": "0x15a0c48",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x15a0c4c",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0c50",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0c54",
+          "instruction": "cbnz w8, #0x15a0c60"
+        },
+        {
+          "address": "0x15a0c58",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0c5c",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0c60",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0c64",
+          "instruction": "ldr x9, [x8, #0x70]"
+        },
+        {
+          "address": "0x15a0c68",
+          "instruction": "add x9, x9, x19"
+        },
+        {
+          "address": "0x15a0c6c",
+          "instruction": "str x9, [x8, #0x80]"
+        },
+        {
+          "address": "0x15a0c70",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0c74",
+          "instruction": "ldr w9, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0c78",
+          "instruction": "cbnz w9, #0x15a0c8c"
+        },
+        {
+          "address": "0x15a0c7c",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0c80",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0c84",
+          "instruction": "ldr x8, [x21]"
+        },
+        {
+          "address": "0x15a0c88",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a0c8c",
+          "instruction": "ldr x9, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0c90",
+          "instruction": "ldr w9, [x9, #0x2968]"
+        },
+        {
+          "address": "0x15a0c94",
+          "instruction": "str w9, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0c98",
+          "instruction": "adrp x19, #0xbb46000"
+        },
+        {
+          "address": "0x15a0c9c",
+          "instruction": "add x19, x19, #0xa48"
+        },
+        {
+          "address": "0x15a0ca0",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0ca4",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0ca8",
+          "instruction": "cbnz w8, #0x15a0cb4"
+        },
+        {
+          "address": "0x15a0cac",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0cb0",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0cb4",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0cb8",
+          "instruction": "ldr x0, [x8]"
+        },
+        {
+          "address": "0x15a0cbc",
+          "instruction": "cbz x0, #0x15a0d50"
+        },
+        {
+          "address": "0x15a0cc0",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0cc4",
+          "instruction": "bl #0x6b341d4",
+          "target": "public void EnableMaualGcWhenCloseInGameAutoGC() { }"
+        },
+        {
+          "address": "0x15a0cc8",
+          "instruction": "mov w8, #1"
+        },
+        {
+          "address": "0x15a0ccc",
+          "instruction": "mov x0, x8"
+        },
+        {
+          "address": "0x15a0cd0",
+          "instruction": "ldp x29, x30, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a0cd4",
+          "instruction": "ldp x20, x19, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a0cd8",
+          "instruction": "ldp x22, x21, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a0cdc",
+          "instruction": "ldp d9, d8, [sp], #0x40"
+        },
+        {
+          "address": "0x15a0ce0",
+          "instruction": "ret "
+        },
+        {
+          "address": "0x15a0ce4",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0ce8",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0cec",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0cf0",
+          "instruction": "ldr s8, [x8, #0x2978]"
+        },
+        {
+          "address": "0x15a0cf4",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x15a0cf8",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0cfc",
+          "instruction": "cbnz w8, #0x15a0c0c"
+        },
+        {
+          "address": "0x15a0d00",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0d04",
+          "instruction": "fmov s0, s8"
+        },
+        {
+          "address": "0x15a0d08",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x15a0d0c",
+          "instruction": "bl #0x6b89674",
+          "target": "public static bool IsTotalMemoryAboveThreshold(float number_gigabytes) { }"
+        },
+        {
+          "address": "0x15a0d10",
+          "instruction": "cbnz w0, #0x15a0c1c"
+        },
+        {
+          "address": "0x15a0d14",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0d18",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0d1c",
+          "instruction": "cbnz w8, #0x15a0d28"
+        },
+        {
+          "address": "0x15a0d20",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0d24",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0d28",
+          "instruction": "mov w8, #0"
+        },
+        {
+          "address": "0x15a0d2c",
+          "instruction": "ldr x9, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0d30",
+          "instruction": "str wzr, [x9, #0x88]"
+        },
+        {
+          "address": "0x15a0d34",
+          "instruction": "str xzr, [x9, #0x80]"
+        },
+        {
+          "address": "0x15a0d38",
+          "instruction": "mov x0, x8"
+        },
+        {
+          "address": "0x15a0d3c",
+          "instruction": "ldp x29, x30, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a0d40",
+          "instruction": "ldp x20, x19, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a0d44",
+          "instruction": "ldp x22, x21, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a0d48",
+          "instruction": "ldp d9, d8, [sp], #0x40"
+        },
+        {
+          "address": "0x15a0d4c",
+          "instruction": "ret "
+        },
+        {
+          "address": "0x15a0d50",
+          "instruction": "bl #0x7c08160"
+        }
+      ]
+    },
+    {
+      "name": "MemoryUtil.CheckGCOnMatchUpdate",
+      "rva": "0x15a0d54",
+      "size": 892,
+      "instructions": [
+        {
+          "address": "0x15a0d54",
+          "instruction": "sub sp, sp, #0x40"
+        },
+        {
+          "address": "0x15a0d58",
+          "instruction": "stp x22, x21, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a0d5c",
+          "instruction": "stp x20, x19, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a0d60",
+          "instruction": "stp x29, x30, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a0d64",
+          "instruction": "add x29, sp, #0x30"
+        },
+        {
+          "address": "0x15a0d68",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x15a0d6c",
+          "instruction": "adrp x21, #0xc048000"
+        },
+        {
+          "address": "0x15a0d70",
+          "instruction": "ldrb w8, [x21, #0xf3a]"
+        },
+        {
+          "address": "0x15a0d74",
+          "instruction": "adrp x20, #0xbb4b000"
+        },
+        {
+          "address": "0x15a0d78",
+          "instruction": "add x20, x20, #0x738"
+        },
+        {
+          "address": "0x15a0d7c",
+          "instruction": "tbz w8, #0, #0x15a0db0"
+        },
+        {
+          "address": "0x15a0d80",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0d84",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0d88",
+          "instruction": "cbz w8, #0x15a0e24"
+        },
+        {
+          "address": "0x15a0d8c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0d90",
+          "instruction": "ldr w9, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0d94",
+          "instruction": "cmp w9, #1"
+        },
+        {
+          "address": "0x15a0d98",
+          "instruction": "b.ge #0x15a0e3c"
+        },
+        {
+          "address": "0x15a0d9c",
+          "instruction": "ldp x29, x30, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a0da0",
+          "instruction": "ldp x20, x19, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a0da4",
+          "instruction": "ldp x22, x21, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a0da8",
+          "instruction": "add sp, sp, #0x40"
+        },
+        {
+          "address": "0x15a0dac",
+          "instruction": "ret "
+        },
+        {
+          "address": "0x15a0db0",
+          "instruction": "adrp x0, #0xbb44000"
+        },
+        {
+          "address": "0x15a0db4",
+          "instruction": "add x0, x0, #0x18"
+        },
+        {
+          "address": "0x15a0db8",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0dbc",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x15a0dc0",
+          "instruction": "add x0, x0, #0x298"
+        },
+        {
+          "address": "0x15a0dc4",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0dc8",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x15a0dcc",
+          "instruction": "add x0, x0, #0xaf8"
+        },
+        {
+          "address": "0x15a0dd0",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0dd4",
+          "instruction": "adrp x0, #0xbb4b000"
+        },
+        {
+          "address": "0x15a0dd8",
+          "instruction": "add x0, x0, #0x738"
+        },
+        {
+          "address": "0x15a0ddc",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0de0",
+          "instruction": "adrp x0, #0xbb3d000"
+        },
+        {
+          "address": "0x15a0de4",
+          "instruction": "add x0, x0, #0x2e0"
+        },
+        {
+          "address": "0x15a0de8",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0dec",
+          "instruction": "adrp x0, #0xbc43000"
+        },
+        {
+          "address": "0x15a0df0",
+          "instruction": "add x0, x0, #0xe80"
+        },
+        {
+          "address": "0x15a0df4",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0df8",
+          "instruction": "adrp x0, #0xbc3f000"
+        },
+        {
+          "address": "0x15a0dfc",
+          "instruction": "add x0, x0, #0xcf0"
+        },
+        {
+          "address": "0x15a0e00",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0e04",
+          "instruction": "adrp x0, #0xbc43000"
+        },
+        {
+          "address": "0x15a0e08",
+          "instruction": "add x0, x0, #0xd68"
+        },
+        {
+          "address": "0x15a0e0c",
+          "instruction": "bl #0x7c0811c"
+        },
+        {
+          "address": "0x15a0e10",
+          "instruction": "mov w8, #1"
+        },
+        {
+          "address": "0x15a0e14",
+          "instruction": "strb w8, [x21, #0xf3a]"
+        },
+        {
+          "address": "0x15a0e18",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0e1c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0e20",
+          "instruction": "cbnz w8, #0x15a0d8c"
+        },
+        {
+          "address": "0x15a0e24",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0e28",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0e2c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0e30",
+          "instruction": "ldr w9, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0e34",
+          "instruction": "cmp w9, #1"
+        },
+        {
+          "address": "0x15a0e38",
+          "instruction": "b.lt #0x15a0d9c"
+        },
+        {
+          "address": "0x15a0e3c",
+          "instruction": "ldr w10, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0e40",
+          "instruction": "cbz w10, #0x15a0e54"
+        },
+        {
+          "address": "0x15a0e44",
+          "instruction": "subs w9, w9, #1"
+        },
+        {
+          "address": "0x15a0e48",
+          "instruction": "str w9, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0e4c",
+          "instruction": "b.ne #0x15a0d9c"
+        },
+        {
+          "address": "0x15a0e50",
+          "instruction": "b #0x15a0e70"
+        },
+        {
+          "address": "0x15a0e54",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0e58",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0e5c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0e60",
+          "instruction": "ldr w9, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0e64",
+          "instruction": "subs w9, w9, #1"
+        },
+        {
+          "address": "0x15a0e68",
+          "instruction": "str w9, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0e6c",
+          "instruction": "b.ne #0x15a0d9c"
+        },
+        {
+          "address": "0x15a0e70",
+          "instruction": "cbz w19, #0x15a0ea4"
+        },
+        {
+          "address": "0x15a0e74",
+          "instruction": "ldr w9, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0e78",
+          "instruction": "cbnz w9, #0x15a0e88"
+        },
+        {
+          "address": "0x15a0e7c",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0e80",
+          "instruction": "ldr x8, [x20]"
+        },
+        {
+          "address": "0x15a0e84",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a0e88",
+          "instruction": "mov w9, #1"
+        },
+        {
+          "address": "0x15a0e8c",
+          "instruction": "str w9, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0e90",
+          "instruction": "ldp x29, x30, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a0e94",
+          "instruction": "ldp x20, x19, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a0e98",
+          "instruction": "ldp x22, x21, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a0e9c",
+          "instruction": "add sp, sp, #0x40"
+        },
+        {
+          "address": "0x15a0ea0",
+          "instruction": "ret "
+        },
+        {
+          "address": "0x15a0ea4",
+          "instruction": "adrp x21, #0xbb46000"
+        },
+        {
+          "address": "0x15a0ea8",
+          "instruction": "add x21, x21, #0xaf8"
+        },
+        {
+          "address": "0x15a0eac",
+          "instruction": "ldr x8, [x21]"
+        },
+        {
+          "address": "0x15a0eb0",
+          "instruction": "ldr w9, [x8, #0xe0]"
+        },
+        {
+          "address": "0x15a0eb4",
+          "instruction": "cbnz w9, #0x15a0ec8"
+        },
+        {
+          "address": "0x15a0eb8",
+          "instruction": "mov x0, x8"
+        },
+        {
+          "address": "0x15a0ebc",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0ec0",
+          "instruction": "ldr x8, [x21]"
+        },
+        {
+          "address": "0x15a0ec4",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0ec8",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a0ecc",
+          "instruction": "ldr w19, [x8, #0x2968]"
+        },
+        {
+          "address": "0x15a0ed0",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0ed4",
+          "instruction": "cbnz w8, #0x15a0ee0"
+        },
+        {
+          "address": "0x15a0ed8",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0edc",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0ee0",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0ee4",
+          "instruction": "str w19, [x8, #0x88]"
+        },
+        {
+          "address": "0x15a0ee8",
+          "instruction": "adrp x19, #0xbb46000"
+        },
+        {
+          "address": "0x15a0eec",
+          "instruction": "add x19, x19, #0x298"
+        },
+        {
+          "address": "0x15a0ef0",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0ef4",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0ef8",
+          "instruction": "cbnz w8, #0x15a0f00"
+        },
+        {
+          "address": "0x15a0efc",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0f00",
+          "instruction": "mov w0, #0"
+        },
+        {
+          "address": "0x15a0f04",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0f08",
+          "instruction": "bl #0x8b6e484",
+          "target": "public static long GetTotalMemory(bool forceFullCollection) { }"
+        },
+        {
+          "address": "0x15a0f0c",
+          "instruction": "mov x8, x0"
+        },
+        {
+          "address": "0x15a0f10",
+          "instruction": "str x0, [sp, #8]"
+        },
+        {
+          "address": "0x15a0f14",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a0f18",
+          "instruction": "ldr x9, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0f1c",
+          "instruction": "ldr x9, [x9, #0x80]"
+        },
+        {
+          "address": "0x15a0f20",
+          "instruction": "cmp x8, x9"
+        },
+        {
+          "address": "0x15a0f24",
+          "instruction": "b.lt #0x15a0d9c"
+        },
+        {
+          "address": "0x15a0f28",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0f2c",
+          "instruction": "cbnz w8, #0x15a0f34"
+        },
+        {
+          "address": "0x15a0f30",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0f34",
+          "instruction": "mov w0, #2"
+        },
+        {
+          "address": "0x15a0f38",
+          "instruction": "bl #0x15a0384",
+          "target": "public static void GCCollect(GCCollectLevel gcCollectLevel) { }"
+        },
+        {
+          "address": "0x15a0f3c",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x15a0f40",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0f44",
+          "instruction": "cbnz w8, #0x15a0f4c"
+        },
+        {
+          "address": "0x15a0f48",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0f4c",
+          "instruction": "mov w0, #0"
+        },
+        {
+          "address": "0x15a0f50",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0f54",
+          "instruction": "bl #0x8b6e484",
+          "target": "public static long GetTotalMemory(bool forceFullCollection) { }"
+        },
+        {
+          "address": "0x15a0f58",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x15a0f5c",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0f60",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0f64",
+          "instruction": "cbnz w8, #0x15a0f70"
+        },
+        {
+          "address": "0x15a0f68",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0f6c",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0f70",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0f74",
+          "instruction": "ldr x8, [x8, #0x2960]"
+        },
+        {
+          "address": "0x15a0f78",
+          "instruction": "add x8, x8, x19"
+        },
+        {
+          "address": "0x15a0f7c",
+          "instruction": "ldr x9, [x20]"
+        },
+        {
+          "address": "0x15a0f80",
+          "instruction": "ldr x9, [x9, #0xb8]"
+        },
+        {
+          "address": "0x15a0f84",
+          "instruction": "str x8, [x9, #0x80]"
+        },
+        {
+          "address": "0x15a0f88",
+          "instruction": "adrp x21, #0xbb44000"
+        },
+        {
+          "address": "0x15a0f8c",
+          "instruction": "add x21, x21, #0x18"
+        },
+        {
+          "address": "0x15a0f90",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0f94",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a0f98",
+          "instruction": "cbnz w8, #0x15a0fa4"
+        },
+        {
+          "address": "0x15a0f9c",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a0fa0",
+          "instruction": "ldr x0, [x21]"
+        },
+        {
+          "address": "0x15a0fa4",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a0fa8",
+          "instruction": "ldrb w8, [x8]"
+        },
+        {
+          "address": "0x15a0fac",
+          "instruction": "cmp w8, #1"
+        },
+        {
+          "address": "0x15a0fb0",
+          "instruction": "b.ne #0x15a0d9c"
+        },
+        {
+          "address": "0x15a0fb4",
+          "instruction": "adrp x8, #0xbb3d000"
+        },
+        {
+          "address": "0x15a0fb8",
+          "instruction": "add x8, x8, #0x2e0"
+        },
+        {
+          "address": "0x15a0fbc",
+          "instruction": "ldr x0, [x8]"
+        },
+        {
+          "address": "0x15a0fc0",
+          "instruction": "mov w1, #6"
+        },
+        {
+          "address": "0x15a0fc4",
+          "instruction": "bl #0x7c0812c"
+        },
+        {
+          "address": "0x15a0fc8",
+          "instruction": "cbz x0, #0x15a10cc"
+        },
+        {
+          "address": "0x15a0fcc",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x15a0fd0",
+          "instruction": "adrp x8, #0xbc43000"
+        },
+        {
+          "address": "0x15a0fd4",
+          "instruction": "add x8, x8, #0xe80"
+        },
+        {
+          "address": "0x15a0fd8",
+          "instruction": "ldr x2, [x8]"
+        },
+        {
+          "address": "0x15a0fdc",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0fe0",
+          "instruction": "bl #0x1474030"
+        },
+        {
+          "address": "0x15a0fe4",
+          "instruction": "add x0, sp, #8"
+        },
+        {
+          "address": "0x15a0fe8",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a0fec",
+          "instruction": "bl #0x8b1efc0",
+          "target": "public override string ToString() { }"
+        },
+        {
+          "address": "0x15a0ff0",
+          "instruction": "mov x2, x0"
+        },
+        {
+          "address": "0x15a0ff4",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x15a0ff8",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x15a0ffc",
+          "instruction": "bl #0x1474030"
+        },
+        {
+          "address": "0x15a1000",
+          "instruction": "adrp x8, #0xbc43000"
+        },
+        {
+          "address": "0x15a1004",
+          "instruction": "add x8, x8, #0xd68"
+        },
+        {
+          "address": "0x15a1008",
+          "instruction": "ldr x2, [x8]"
+        },
+        {
+          "address": "0x15a100c",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x15a1010",
+          "instruction": "mov w1, #2"
+        },
+        {
+          "address": "0x15a1014",
+          "instruction": "bl #0x1474030"
+        },
+        {
+          "address": "0x15a1018",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a101c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x15a1020",
+          "instruction": "cbnz w8, #0x15a102c"
+        },
+        {
+          "address": "0x15a1024",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a1028",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x15a102c",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x15a1030",
+          "instruction": "add x0, x8, #0x80"
+        },
+        {
+          "address": "0x15a1034",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a1038",
+          "instruction": "bl #0x8b1efc0",
+          "target": "public override string ToString() { }"
+        },
+        {
+          "address": "0x15a103c",
+          "instruction": "mov x2, x0"
+        },
+        {
+          "address": "0x15a1040",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x15a1044",
+          "instruction": "mov w1, #3"
+        },
+        {
+          "address": "0x15a1048",
+          "instruction": "bl #0x1474030"
+        },
+        {
+          "address": "0x15a104c",
+          "instruction": "adrp x8, #0xbc3f000"
+        },
+        {
+          "address": "0x15a1050",
+          "instruction": "add x8, x8, #0xcf0"
+        },
+        {
+          "address": "0x15a1054",
+          "instruction": "ldr x2, [x8]"
+        },
+        {
+          "address": "0x15a1058",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x15a105c",
+          "instruction": "mov w1, #4"
+        },
+        {
+          "address": "0x15a1060",
+          "instruction": "bl #0x1474030"
+        },
+        {
+          "address": "0x15a1064",
+          "instruction": "ldr x8, [x20]"
+        },
+        {
+          "address": "0x15a1068",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x15a106c",
+          "instruction": "add x0, x8, #0x80"
+        },
+        {
+          "address": "0x15a1070",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a1074",
+          "instruction": "bl #0x8b1efc0",
+          "target": "public override string ToString() { }"
+        },
+        {
+          "address": "0x15a1078",
+          "instruction": "mov x2, x0"
+        },
+        {
+          "address": "0x15a107c",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x15a1080",
+          "instruction": "mov w1, #5"
+        },
+        {
+          "address": "0x15a1084",
+          "instruction": "bl #0x1474030"
+        },
+        {
+          "address": "0x15a1088",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x15a108c",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a1090",
+          "instruction": "bl #0x8964e80",
+          "target": "public static string Concat(string[] values) { }"
+        },
+        {
+          "address": "0x15a1094",
+          "instruction": "ldr x8, [x21]"
+        },
+        {
+          "address": "0x15a1098",
+          "instruction": "ldr w9, [x8, #0xe0]"
+        },
+        {
+          "address": "0x15a109c",
+          "instruction": "cbnz w9, #0x15a10b0"
+        },
+        {
+          "address": "0x15a10a0",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x15a10a4",
+          "instruction": "mov x0, x8"
+        },
+        {
+          "address": "0x15a10a8",
+          "instruction": "bl #0x7c08148"
+        },
+        {
+          "address": "0x15a10ac",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x15a10b0",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x15a10b4",
+          "instruction": "bl #0x2a6a65c",
+          "target": "public static void Log(object message) { }"
+        },
+        {
+          "address": "0x15a10b8",
+          "instruction": "ldp x29, x30, [sp, #0x30]"
+        },
+        {
+          "address": "0x15a10bc",
+          "instruction": "ldp x20, x19, [sp, #0x20]"
+        },
+        {
+          "address": "0x15a10c0",
+          "instruction": "ldp x22, x21, [sp, #0x10]"
+        },
+        {
+          "address": "0x15a10c4",
+          "instruction": "add sp, sp, #0x40"
+        },
+        {
+          "address": "0x15a10c8",
+          "instruction": "ret "
+        },
+        {
+          "address": "0x15a10cc",
+          "instruction": "bl #0x7c08160"
+        }
+      ]
+    },
+    {
+      "name": "COW.GcUtil.Collect",
+      "rva": "0x646568c",
+      "size": 556,
+      "instructions": [
+        {
+          "address": "0x646568c",
+          "instruction": "stp x22, x21, [sp, #-0x30]!"
+        },
+        {
+          "address": "0x6465690",
+          "instruction": "stp x20, x19, [sp, #0x10]"
+        },
+        {
+          "address": "0x6465694",
+          "instruction": "stp x29, x30, [sp, #0x20]"
+        },
+        {
+          "address": "0x6465698",
+          "instruction": "add x29, sp, #0x20"
+        },
+        {
+          "address": "0x646569c",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x64656a0",
+          "instruction": "adrp x20, #0xc067000"
+        },
+        {
+          "address": "0x64656a4",
+          "instruction": "ldrb w8, [x20, #0x94b]"
+        },
+        {
+          "address": "0x64656a8",
+          "instruction": "tbnz w8, #0, #0x64656e4"
+        },
+        {
+          "address": "0x64656ac",
+          "instruction": "adrp x0, #0xbb45000"
+        },
+        {
+          "address": "0x64656b0",
+          "instruction": "add x0, x0, #0x450"
+        },
+        {
+          "address": "0x64656b4",
+          "instruction": "bl #0xa11121c"
+        },
+        {
+          "address": "0x64656b8",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x64656bc",
+          "instruction": "add x0, x0, #0x298"
+        },
+        {
+          "address": "0x64656c0",
+          "instruction": "bl #0xa11121c"
+        },
+        {
+          "address": "0x64656c4",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x64656c8",
+          "instruction": "add x0, x0, #0xaf8"
+        },
+        {
+          "address": "0x64656cc",
+          "instruction": "bl #0xa11121c"
+        },
+        {
+          "address": "0x64656d0",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x64656d4",
+          "instruction": "add x0, x0, #0xb70"
+        },
+        {
+          "address": "0x64656d8",
+          "instruction": "bl #0xa11121c"
+        },
+        {
+          "address": "0x64656dc",
+          "instruction": "mov w8, #1"
+        },
+        {
+          "address": "0x64656e0",
+          "instruction": "strb w8, [x20, #0x94b]"
+        },
+        {
+          "address": "0x64656e4",
+          "instruction": "mov w0, #0x3389"
+        },
+        {
+          "address": "0x64656e8",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x64656ec",
+          "instruction": "bl #0x7104a58",
+          "target": "public static bool IsPatched(int id) { }"
+        },
+        {
+          "address": "0x64656f0",
+          "instruction": "cbz w0, #0x646571c"
+        },
+        {
+          "address": "0x64656f4",
+          "instruction": "mov w0, #0x3389"
+        },
+        {
+          "address": "0x64656f8",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x64656fc",
+          "instruction": "bl #0x7104b40",
+          "target": "public static ILFixDynamicMethodWrapper GetPatch(int id) { }"
+        },
+        {
+          "address": "0x6465700",
+          "instruction": "cbz x0, #0x64658b4"
+        },
+        {
+          "address": "0x6465704",
+          "instruction": "mov x1, x19"
+        },
+        {
+          "address": "0x6465708",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x646570c",
+          "instruction": "ldp x29, x30, [sp, #0x20]"
+        },
+        {
+          "address": "0x6465710",
+          "instruction": "ldp x20, x19, [sp, #0x10]"
+        },
+        {
+          "address": "0x6465714",
+          "instruction": "ldp x22, x21, [sp], #0x30"
+        },
+        {
+          "address": "0x6465718",
+          "instruction": "b #0x6df0e1c"
+        },
+        {
+          "address": "0x646571c",
+          "instruction": "adrp x21, #0xbb46000"
+        },
+        {
+          "address": "0x6465720",
+          "instruction": "add x21, x21, #0xb70"
+        },
+        {
+          "address": "0x6465724",
+          "instruction": "adrp x22, #0xbb45000"
+        },
+        {
+          "address": "0x6465728",
+          "instruction": "add x22, x22, #0x450"
+        },
+        {
+          "address": "0x646572c",
+          "instruction": "adrp x20, #0xbb46000"
+        },
+        {
+          "address": "0x6465730",
+          "instruction": "add x20, x20, #0xaf8"
+        },
+        {
+          "address": "0x6465734",
+          "instruction": "mov w0, #0x103"
+        },
+        {
+          "address": "0x6465738",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x646573c",
+          "instruction": "bl #0x50b5714",
+          "target": "public static void SampleTagTimeSumBegin(TagType tag) { }"
+        },
+        {
+          "address": "0x6465740",
+          "instruction": "ldr x8, [x21]"
+        },
+        {
+          "address": "0x6465744",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x6465748",
+          "instruction": "ldr w9, [x8, #8]"
+        },
+        {
+          "address": "0x646574c",
+          "instruction": "add w9, w9, #1"
+        },
+        {
+          "address": "0x6465750",
+          "instruction": "str w9, [x8, #8]"
+        },
+        {
+          "address": "0x6465754",
+          "instruction": "ldr x0, [x22]"
+        },
+        {
+          "address": "0x6465758",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x646575c",
+          "instruction": "cbnz w8, #0x6465764"
+        },
+        {
+          "address": "0x6465760",
+          "instruction": "bl #0xa1113c0"
+        },
+        {
+          "address": "0x6465764",
+          "instruction": "mov x0, x19"
+        },
+        {
+          "address": "0x6465768",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x646576c",
+          "instruction": "bl #0x53c3a38",
+          "target": "public static void RecordManualGCReason(ManualGCReason reason) { }"
+        },
+        {
+          "address": "0x6465770",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x6465774",
+          "instruction": "bl #0x8d68634",
+          "target": "public static int get_frameCount() { }"
+        },
+        {
+          "address": "0x6465778",
+          "instruction": "ldr x8, [x21]"
+        },
+        {
+          "address": "0x646577c",
+          "instruction": "ldr x8, [x8, #0xb8]"
+        },
+        {
+          "address": "0x6465780",
+          "instruction": "str w0, [x8, #0xc]"
+        },
+        {
+          "address": "0x6465784",
+          "instruction": "ldrb w19, [x8, #0x19]"
+        },
+        {
+          "address": "0x6465788",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x646578c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x6465790",
+          "instruction": "cbz w8, #0x6465810"
+        },
+        {
+          "address": "0x6465794",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x6465798",
+          "instruction": "mov w9, #0x4234"
+        },
+        {
+          "address": "0x646579c",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x64657a0",
+          "instruction": "eor w8, w8, #0xff"
+        },
+        {
+          "address": "0x64657a4",
+          "instruction": "tst w19, w8"
+        },
+        {
+          "address": "0x64657a8",
+          "instruction": "b.eq #0x6465830"
+        },
+        {
+          "address": "0x64657ac",
+          "instruction": "adrp x19, #0xc067000"
+        },
+        {
+          "address": "0x64657b0",
+          "instruction": "ldrb w8, [x19, #0x94d]"
+        },
+        {
+          "address": "0x64657b4",
+          "instruction": "tbnz w8, #0, #0x64657cc"
+        },
+        {
+          "address": "0x64657b8",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x64657bc",
+          "instruction": "add x0, x0, #0xaf8"
+        },
+        {
+          "address": "0x64657c0",
+          "instruction": "bl #0xa11121c"
+        },
+        {
+          "address": "0x64657c4",
+          "instruction": "mov w8, #1"
+        },
+        {
+          "address": "0x64657c8",
+          "instruction": "strb w8, [x19, #0x94d]"
+        },
+        {
+          "address": "0x64657cc",
+          "instruction": "mov w0, #0x3387"
+        },
+        {
+          "address": "0x64657d0",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x64657d4",
+          "instruction": "bl #0x7104a58",
+          "target": "public static bool IsPatched(int id) { }"
+        },
+        {
+          "address": "0x64657d8",
+          "instruction": "cbz w0, #0x6465868"
+        },
+        {
+          "address": "0x64657dc",
+          "instruction": "mov w0, #0x3387"
+        },
+        {
+          "address": "0x64657e0",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x64657e4",
+          "instruction": "bl #0x7104b40",
+          "target": "public static ILFixDynamicMethodWrapper GetPatch(int id) { }"
+        },
+        {
+          "address": "0x64657e8",
+          "instruction": "cbz x0, #0x64658b4"
+        },
+        {
+          "address": "0x64657ec",
+          "instruction": "mov w1, #1"
+        },
+        {
+          "address": "0x64657f0",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x64657f4",
+          "instruction": "bl #0x6d334e8",
+          "target": "public void __Gen_Wrap_4(bool P0) { }"
+        },
+        {
+          "address": "0x64657f8",
+          "instruction": "adrp x8, #0xbb46000"
+        },
+        {
+          "address": "0x64657fc",
+          "instruction": "add x8, x8, #0x298"
+        },
+        {
+          "address": "0x6465800",
+          "instruction": "ldr x0, [x8]"
+        },
+        {
+          "address": "0x6465804",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x6465808",
+          "instruction": "cbnz w8, #0x646588c"
+        },
+        {
+          "address": "0x646580c",
+          "instruction": "b #0x6465888"
+        },
+        {
+          "address": "0x6465810",
+          "instruction": "bl #0xa1113c0"
+        },
+        {
+          "address": "0x6465814",
+          "instruction": "ldr x0, [x20]"
+        },
+        {
+          "address": "0x6465818",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x646581c",
+          "instruction": "mov w9, #0x4234"
+        },
+        {
+          "address": "0x6465820",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x6465824",
+          "instruction": "eor w8, w8, #0xff"
+        },
+        {
+          "address": "0x6465828",
+          "instruction": "tst w19, w8"
+        },
+        {
+          "address": "0x646582c",
+          "instruction": "b.ne #0x64657ac"
+        },
+        {
+          "address": "0x6465830",
+          "instruction": "adrp x8, #0xbb46000"
+        },
+        {
+          "address": "0x6465834",
+          "instruction": "add x8, x8, #0x298"
+        },
+        {
+          "address": "0x6465838",
+          "instruction": "ldr x0, [x8]"
+        },
+        {
+          "address": "0x646583c",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x6465840",
+          "instruction": "cbnz w8, #0x6465848"
+        },
+        {
+          "address": "0x6465844",
+          "instruction": "bl #0xa1113c0"
+        },
+        {
+          "address": "0x6465848",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x646584c",
+          "instruction": "bl #0x8b6e120",
+          "target": "public static void Collect() { }"
+        },
+        {
+          "address": "0x6465850",
+          "instruction": "mov w0, #0x103"
+        },
+        {
+          "address": "0x6465854",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x6465858",
+          "instruction": "ldp x29, x30, [sp, #0x20]"
+        },
+        {
+          "address": "0x646585c",
+          "instruction": "ldp x20, x19, [sp, #0x10]"
+        },
+        {
+          "address": "0x6465860",
+          "instruction": "ldp x22, x21, [sp], #0x30"
+        },
+        {
+          "address": "0x6465864",
+          "instruction": "b #0x50b5768"
+        },
+        {
+          "address": "0x6465868",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x646586c",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x6465870",
+          "instruction": "bl #0x8d761dc",
+          "target": "public static void set_GCMode(Mode value) { }"
+        },
+        {
+          "address": "0x6465874",
+          "instruction": "adrp x8, #0xbb46000"
+        },
+        {
+          "address": "0x6465878",
+          "instruction": "add x8, x8, #0x298"
+        },
+        {
+          "address": "0x646587c",
+          "instruction": "ldr x0, [x8]"
+        },
+        {
+          "address": "0x6465880",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x6465884",
+          "instruction": "cbnz w8, #0x646588c"
+        },
+        {
+          "address": "0x6465888",
+          "instruction": "bl #0xa1113c0"
+        },
+        {
+          "address": "0x646588c",
+          "instruction": "mov x0, #0"
+        },
+        {
+          "address": "0x6465890",
+          "instruction": "bl #0x8b6e120",
+          "target": "public static void Collect() { }"
+        },
+        {
+          "address": "0x6465894",
+          "instruction": "mov w0, #0"
+        },
+        {
+          "address": "0x6465898",
+          "instruction": "bl #0x64658b8",
+          "target": "private static void EnableGcImpl(bool enable) { }"
+        },
+        {
+          "address": "0x646589c",
+          "instruction": "mov w0, #0x103"
+        },
+        {
+          "address": "0x64658a0",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x64658a4",
+          "instruction": "ldp x29, x30, [sp, #0x20]"
+        },
+        {
+          "address": "0x64658a8",
+          "instruction": "ldp x20, x19, [sp, #0x10]"
+        },
+        {
+          "address": "0x64658ac",
+          "instruction": "ldp x22, x21, [sp], #0x30"
+        },
+        {
+          "address": "0x64658b0",
+          "instruction": "b #0x50b5768"
+        },
+        {
+          "address": "0x64658b4",
+          "instruction": "bl #0xa111500"
+        }
+      ]
+    },
+    {
+      "name": "COW.GcUtil.EnableGcImpl",
+      "rva": "0x64658b8",
+      "size": 196,
+      "instructions": [
+        {
+          "address": "0x64658b8",
+          "instruction": "stp x20, x19, [sp, #-0x20]!"
+        },
+        {
+          "address": "0x64658bc",
+          "instruction": "stp x29, x30, [sp, #0x10]"
+        },
+        {
+          "address": "0x64658c0",
+          "instruction": "add x29, sp, #0x10"
+        },
+        {
+          "address": "0x64658c4",
+          "instruction": "mov x19, x0"
+        },
+        {
+          "address": "0x64658c8",
+          "instruction": "adrp x20, #0xc067000"
+        },
+        {
+          "address": "0x64658cc",
+          "instruction": "ldrb w8, [x20, #0x94d]"
+        },
+        {
+          "address": "0x64658d0",
+          "instruction": "tbnz w8, #0, #0x64658e8"
+        },
+        {
+          "address": "0x64658d4",
+          "instruction": "adrp x0, #0xbb46000"
+        },
+        {
+          "address": "0x64658d8",
+          "instruction": "add x0, x0, #0xaf8"
+        },
+        {
+          "address": "0x64658dc",
+          "instruction": "bl #0xa11121c"
+        },
+        {
+          "address": "0x64658e0",
+          "instruction": "mov w8, #1"
+        },
+        {
+          "address": "0x64658e4",
+          "instruction": "strb w8, [x20, #0x94d]"
+        },
+        {
+          "address": "0x64658e8",
+          "instruction": "mov w0, #0x3387"
+        },
+        {
+          "address": "0x64658ec",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x64658f0",
+          "instruction": "bl #0x7104a58",
+          "target": "public static bool IsPatched(int id) { }"
+        },
+        {
+          "address": "0x64658f4",
+          "instruction": "cbz w0, #0x646591c"
+        },
+        {
+          "address": "0x64658f8",
+          "instruction": "mov w0, #0x3387"
+        },
+        {
+          "address": "0x64658fc",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x6465900",
+          "instruction": "bl #0x7104b40",
+          "target": "public static ILFixDynamicMethodWrapper GetPatch(int id) { }"
+        },
+        {
+          "address": "0x6465904",
+          "instruction": "cbz x0, #0x6465978"
+        },
+        {
+          "address": "0x6465908",
+          "instruction": "mov x1, x19"
+        },
+        {
+          "address": "0x646590c",
+          "instruction": "mov x2, #0"
+        },
+        {
+          "address": "0x6465910",
+          "instruction": "ldp x29, x30, [sp, #0x10]"
+        },
+        {
+          "address": "0x6465914",
+          "instruction": "ldp x20, x19, [sp], #0x20"
+        },
+        {
+          "address": "0x6465918",
+          "instruction": "b #0x6d334e8"
+        },
+        {
+          "address": "0x646591c",
+          "instruction": "tbz w19, #0, #0x6465934"
+        },
+        {
+          "address": "0x6465920",
+          "instruction": "mov w0, #1"
+        },
+        {
+          "address": "0x6465924",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x6465928",
+          "instruction": "ldp x29, x30, [sp, #0x10]"
+        },
+        {
+          "address": "0x646592c",
+          "instruction": "ldp x20, x19, [sp], #0x20"
+        },
+        {
+          "address": "0x6465930",
+          "instruction": "b #0x8d761dc"
+        },
+        {
+          "address": "0x6465934",
+          "instruction": "adrp x19, #0xbb46000"
+        },
+        {
+          "address": "0x6465938",
+          "instruction": "add x19, x19, #0xaf8"
+        },
+        {
+          "address": "0x646593c",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x6465940",
+          "instruction": "ldr w8, [x0, #0xe0]"
+        },
+        {
+          "address": "0x6465944",
+          "instruction": "cbnz w8, #0x6465950"
+        },
+        {
+          "address": "0x6465948",
+          "instruction": "bl #0xa1113c0"
+        },
+        {
+          "address": "0x646594c",
+          "instruction": "ldr x0, [x19]"
+        },
+        {
+          "address": "0x6465950",
+          "instruction": "ldr x8, [x0, #0xb8]"
+        },
+        {
+          "address": "0x6465954",
+          "instruction": "mov w9, #0x4234"
+        },
+        {
+          "address": "0x6465958",
+          "instruction": "ldrb w8, [x8, x9]"
+        },
+        {
+          "address": "0x646595c",
+          "instruction": "cmp w8, #0"
+        },
+        {
+          "address": "0x6465960",
+          "instruction": "mov w8, #2"
+        },
+        {
+          "address": "0x6465964",
+          "instruction": "csel w0, w8, wzr, ne"
+        },
+        {
+          "address": "0x6465968",
+          "instruction": "mov x1, #0"
+        },
+        {
+          "address": "0x646596c",
+          "instruction": "ldp x29, x30, [sp, #0x10]"
+        },
+        {
+          "address": "0x6465970",
+          "instruction": "ldp x20, x19, [sp], #0x20"
+        },
+        {
+          "address": "0x6465974",
+          "instruction": "b #0x8d761dc"
+        },
+        {
+          "address": "0x6465978",
+          "instruction": "bl #0xa111500"
+        }
+      ]
+    }
+  ],
+  "conclusions": [
+    "MemoryUtil.CheckAndDisableAutoGcOnMatchStart has a call at0x15A0C20 to COW.GcUtil.DisableAutoGc, followed by memory baseline read at0x15A0C44. It is conditional and has not been observed active on the user phone.",
+    "COW.GcUtil.Collect at0x646568C uses the original game manual-GC reason path and restores disabled/manual policy through EnableGcImpl after its temporary collection-enable branch.",
+    "Pressure handler calls only original COW.GcUtil.Collect(ManualGCReason.MemoryUtilCollect), keeps all shared GC state untouched and samples memory every2seconds. It does not unload game resources."
+  ],
+  "policy": {
+    "minimumBytes": 268435456,
+    "minimumGrowthBytes": 67108864,
+    "hardThresholdBytes": 536870912,
+    "pollSeconds": 2,
+    "collectionCooldownSeconds": 15,
+    "faultCooldownSeconds": 30,
+    "deviceVerified": false,
+    "limitation": "Full collection may cause a visible frame hitch; a true retained reference leak or native allocation/crash is not cured by collection."
+  },
+  "documentation": "https://docs.unity3d.com/2021.3/Documentation/Manual/performance-disabling-garbage-collection.html"
+}

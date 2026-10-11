@@ -18,7 +18,7 @@ namespace COW.GamePlay
                 if(MzSessionLines==null)MzSessionLines=new string[12];
                 MzSessionLines[MzSessionHead]="t="+((int)now).ToString()+" managed="+GC.GetTotalMemory(false).ToString()+" commands="+MzCommandCount.ToString()+" backgrounds="+MzBackgroundLoaded.ToString()+" samplesFailed="+MzSampleFailures.ToString()+" drawFailed="+MzEspFailures.ToString()+" gcCount="+MzMemoryCollections.ToString()+" gcPeak="+MzMemoryPeak.ToString()+" gcBefore="+MzMemoryBefore.ToString()+" gcAfter="+MzMemoryAfter.ToString()+" gcFreed="+MzMemoryFreed.ToString()+" memPaused="+MzMemoryPaused.ToString()+" gcFaults="+MzMemoryFaults.ToString()+" lagTail="+MzLagTailCalls.ToString()+" lagWrites="+MzLagWrites.ToString();
                 MzSessionHead=(MzSessionHead+1)%12;if(MzSessionCount<12)MzSessionCount++;
-                var log=new StringBuilder(2048);log.Append("Mizze R8 session diagnostics; managed memory only, no native crash stack\n");
+                var log=new StringBuilder(2048);log.Append("Mizze R9 session diagnostics; managed memory only, no native crash stack\n");
                 int start=(MzSessionHead-MzSessionCount+12)%12;for(int i=0;i<MzSessionCount;i++){log.Append(MzSessionLines[(start+i)%12]);log.Append('\n');}
                 string folder=Application.persistentDataPath;if(!String.IsNullOrEmpty(folder))File.WriteAllText(Path.Combine(folder,"Mizze-session.log"),log.ToString());
             }catch(Exception){}

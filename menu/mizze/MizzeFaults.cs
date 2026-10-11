@@ -11,7 +11,7 @@ namespace COW.GamePlay
         public static void MzStartupLog(string stage)
         {
             if(MzStartupCount>=8)return;MzStartupCount++;
-            try{MzStartupTrace=(MzStartupTrace??"Mizze R8 legacy startup\n")+DateTime.UtcNow.ToString("o")+" "+stage+"\n";string folder=Application.persistentDataPath;if(!String.IsNullOrEmpty(folder))File.WriteAllText(Path.Combine(folder,"Mizze-startup.log"),MzStartupTrace);}catch(Exception){}
+            try{MzStartupTrace=(MzStartupTrace??"Mizze R9 legacy startup\n")+DateTime.UtcNow.ToString("o")+" "+stage+"\n";string folder=Application.persistentDataPath;if(!String.IsNullOrEmpty(folder))File.WriteAllText(Path.Combine(folder,"Mizze-startup.log"),MzStartupTrace);}catch(Exception){}
         }
         public static string MzRuntimeError;
         public static bool MzErrorWritten;
