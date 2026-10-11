@@ -71,6 +71,19 @@ namespace COW.GamePlay
             if(now>=MzNextDriverCheck){MzNextDriverCheck=now+1;MzEnsure();}
             if(MzHasPaint&&now>=MzMemoryArmAt)MzMemoryPulse();
         }
+        public static bool MzEntrySeen,MzGuiWaitLogged;
+        public static float MzEntryStarted;
+        public static int MzEntryTicks;
+        public static void MzEntryHeartbeat()
+        {
+            int thread=System.Threading.Thread.CurrentThread.ManagedThreadId;
+            if(MzGuiThreadBound&&MzThreadId!=thread)return;
+            try {
+                if(!MzEntrySeen){MzEntrySeen=true;MzEntryStarted=Time.realtimeSinceStartup;MzStartupLog("entry-tick");}
+                MzEntryTicks++;MzMenuHeartbeat();
+                if(!MzHasPaint&&!MzGuiWaitLogged&&Time.realtimeSinceStartup-MzEntryStarted>=5){MzGuiWaitLogged=true;MzStartupLog("awaiting-gui");}
+            }catch(Exception e){MzLogFault("entry-heartbeat",e);}
+        }
         public static bool MzFinite(float f){return !Single.IsNaN(f)&&!Single.IsInfinity(f);}
         public static bool MzPoint(Vector3 p){return MzFinite(p.x)&&MzFinite(p.y)&&MzFinite(p.z);}
         public static void MzTint(float r,float g,float b,float a){if(MzUiPaint||MzBuilding)GUI.color=new Color(r,g,b,a);}

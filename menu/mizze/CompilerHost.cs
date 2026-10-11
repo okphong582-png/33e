@@ -9,7 +9,8 @@ sealed class MizzeConfigure : GenerateConfigure
     public override bool TryGetConfigure(string tag,MethodReference m,out int flag)
     {
         flag=0;return tag=="IFix.IFixAttribute" &&
-            ((m.DeclaringType.FullName=="COW.GamePlay.SceneEditBoxSelectTool" && m.Name=="OnGUI") ||
+            ((m.DeclaringType.FullName=="COW.COWGameEntry" && m.Name=="LateUpdate") ||
+             (m.DeclaringType.FullName=="COW.GamePlay.SceneEditBoxSelectTool" && m.Name=="OnGUI") ||
              (m.DeclaringType.FullName=="COW.GamePlay.Player" && (m.Name=="get_LastAimingInfoFromWeapon" || m.Name=="NeedRunHighFrame" || m.Name=="get_IsBeingCarried" || m.Name=="UpdateKnockdownIsInCamera")) ||
              (m.DeclaringType.FullName=="COW.GameFacade" && m.Name=="get_UIModelRole"));
     }

@@ -6,6 +6,7 @@ using UnityEngine;
 [assembly: System.Reflection.AssemblyVersion("0.86.0.518")]
 namespace GCommon
 {
+    public class GameEngine:MonoBehaviour {public void LateRunOneFrame(){}}
     public class Entity : Component {public Transform m_CachedTransform;public uint UniqueID {get{return 0;}}public Vector3 Position {get{return new Vector3();}}}
     public interface ITransformNode {Transform transform {get;}}
     public class SingletonModule<T> where T:class {public static T instance {get {return null;}}}
@@ -16,6 +17,16 @@ namespace COW
 {
     public static class GcUtil {public static bool AutoGcDisabled;public static int GcCount,ManualGcCount;public static void Collect(ManualGCReason reason){}}
     public static class GameSettingData {public static bool CachedSmoothHighFrame(){return false;}}
+    public class COWGameEntry:MonoBehaviour
+    {
+        public GCommon.GameEngine m_GameEngine;
+        public void LateUpdate()
+        {
+            // Exact native body: tick engine first. Menu faults cannot interrupt that tick.
+            m_GameEngine.LateRunOneFrame();
+            GamePlay.SceneEditBoxSelectTool.MzEntryHeartbeat();
+        }
+    }
     public class UIModelRole {}
     public static partial class GameFacade
     {

@@ -103,6 +103,7 @@ namespace SimpleJSON
 }
 namespace GCommon
 {
+    public class GameEngine:UnityEngine.MonoBehaviour {public int LateCalls;public Action OnLate;public void LateRunOneFrame(){LateCalls++;if(OnLate!=null)OnLate();}}
     public class Entity:UnityEngine.Component {static uint Serial;public uint Id=++Serial;public uint UniqueID {get{return Id;}}public UnityEngine.Transform m_CachedTransform;public UnityEngine.Vector3 Position {get{return m_CachedTransform.position;}}}
     public interface ITransformNode {UnityEngine.Transform transform {get;}}
     public class TestTransformNode:ITransformNode {public UnityEngine.Transform Value;public bool Fail;public UnityEngine.Transform transform {get{if(Fail)throw new Exception("cached transform lost");return Value;}}}
@@ -115,6 +116,7 @@ namespace COW
 {
     public static class GcUtil {public static bool AutoGcDisabled;public static int GcCount,ManualGcCount;public static bool FailCollect;public static ManualGCReason LastReason;public static Action OnCollect;public static void Collect(ManualGCReason reason){LastReason=reason;if(OnCollect!=null)OnCollect();if(FailCollect)throw new Exception("native collect unavailable");GC.Collect();GcCount++;ManualGcCount++;}}
     public static class GameSettingData {public static bool Smooth;public static bool CachedSmoothHighFrame(){return Smooth;}}
+    public class COWGameEntry:UnityEngine.MonoBehaviour {public GCommon.GameEngine m_GameEngine;public void LateUpdate(){m_GameEngine.LateRunOneFrame();}}
     public class UIModelRole {}
     public static class GameFacade {public static UIModelRole m_modelRole;public static UIModelRole UIModelRole {get{return m_modelRole;}}public static GamePlay.JMAGGLCNGIG Match;public static GamePlay.Player Local;public static GamePlay.JMAGGLCNGIG CurrentMatch(){return Match;}public static int LocalCalls;public static GamePlay.Player GetLocalPlayerOrObServer(){LocalCalls++;return Local;}}
 }

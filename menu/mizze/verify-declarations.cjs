@@ -22,3 +22,9 @@ for(const f of p.fields.filter(f=>!f.isNew)){
  if(!line)errors.push('Missing field '+owner+'.'+f.name);else evidence.push({assembly:asm,owner,field:f.name,declaration:line.trim()});
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1);}fs.writeFileSync(path.join(__dirname,'bindings-evidence.json'),JSON.stringify(evidence,null,2)+'\n');console.log('PASS: '+evidence.length+' extern/field declarations match TH iOS dump.');
+
+// Patch targets also need their native IFix IDMAP slot; declaration resolution alone is insufficient.
+const game=files.get('Assembly-CSharp')||fs.readFileSync(path.join(root,'Assembly-CSharp.dll.cs'),'utf8');
+const mapChunks=game.split('// Namespace: ').filter(c=>c.startsWith('IFix\n')&&/enum IDMAP\d+\b/.test(c.slice(0,500)));
+const hooks=p.fixes.map(f=>{const owner=bare(f.method.owner),key=owner.replace(/[.+]/g,'-')+'-'+f.method.name+'0';let slot=null;for(const chunk of mapChunks){const line=chunk.split('\n').find(l=>l.includes(' '+key+' = '));if(line){slot={map:chunk.match(/enum (IDMAP\d+)/)[1],id:Number(line.match(/ = (\d+);/)[1]),declaration:line.trim()};break;}}if(!slot)throw Error('Missing native IFix slot: '+key);const ns=owner.slice(0,owner.lastIndexOf('.')),name=owner.slice(owner.lastIndexOf('.')+1),chunk=game.split('// Namespace: ').find(c=>c.startsWith(ns+'\n')&&new RegExp('class '+name+'(?: :| //)').test(c));const lines=chunk.split('\n'),idx=lines.findIndex(l=>l.includes(' '+f.method.name+'('));if(idx<0)throw Error('Missing patch target declaration: '+owner+'.'+f.method.name);return{owner,method:f.method.name,vmMethod:f.id,...slot,native:lines.slice(Math.max(0,idx-2),idx+1).join('\n').trim()};});
+fs.writeFileSync(path.join(__dirname,'hooks-evidence.json'),JSON.stringify({target:'Free Fire TH iOS 1.132.1',deviceVerified:false,hooks},null,2)+'\n');console.log('PASS: '+hooks.length+' patch targets have native IFix IDMAP slots.');

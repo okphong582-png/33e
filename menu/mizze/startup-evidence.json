@@ -1,40 +1,26 @@
 {
-  "revision": "R3",
+  "revision": "R4",
   "target": "Free Fire TH iOS 1.132.1",
-  "reported": "R2 user reports no Mizze launcher in lobby or match; supplied session log lacks R2 marker and is not a bootstrap error log.",
-  "confirmedCodeGaps": [
-    "Recovery previously treated a surviving GameObject as sufficient even if component was removed/disabled or object inactive.",
-    "Initial thread ownership came from bootstrap callback; a mismatched captured thread could reject all future OnGUI callbacks.",
-    "R2 memory poll ran before first menu paint inside OnGUI."
-  ],
+  "reported": "R3 menu absent in lobby and match. No new R3 startup/error log supplied yet.",
   "causeOnUserDeviceConfirmed": false,
-  "callback": {
-    "existingHook": "Player.UpdateKnockdownIsInCamera",
-    "sharedTailCallsite": "0x569EC60",
-    "localBranch": "calls MzMenuHeartbeat before original local knockdown-camera logic",
-    "remoteBranch": "presentation hold remains independently guarded"
+  "newHook": {
+    "owner": "COW.COWGameEntry",
+    "method": "LateUpdate",
+    "rva": "0x504DD78",
+    "nativeMap": 13470,
+    "originalBody": "m_GameEngine.LateRunOneFrame();",
+    "originalFieldOffset": "0x20",
+    "nativeTailCall": "0x504DDD0 -> 0x6B32B50",
+    "nativePatchGate": "0x504DD88 mov w0,#0x349e; 0x504DD90 bl IsPatched",
+    "ordering": "Original engine tick first, menu heartbeat after success. Engine exceptions remain visible; managed menu errors caught separately."
   },
   "changes": [
-    "One-second lifecycle watchdog reactivates owned object and recreates/reenables its component.",
-    "First owned OnGUI binds GUI thread; subsequent worker callbacks are rejected before Unity access.",
-    "GC runs only from local tail after successful launcher paint and five-second delay, never from OnGUI.",
-    "GUI.enabled failures are isolated from launcher drawing.",
-    "Documents/Mizze-startup.log has R3 marker plus bounded driver-ready/launcher-painted records."
+    "Global main-thread entry heartbeat creates and repairs persistent driver without a player, match, lobby getter, or high-frame mode.",
+    "All seven patch targets checked against native IFix IDMAP slots.",
+    "R4 startup records entry-tick, driver-ready, awaiting-gui after five seconds, launcher-painted; bounded eight records.",
+    "Retains R3 component/active/enabled recovery and delayed memory collection outside OnGUI."
   ],
-  "bindings": "bindings-evidence.json; new Behaviour.enabled access matches provided TH native declarations",
-  "logs": {
-    "startup": "Documents/Mizze-startup.log",
-    "error": "Documents/Mizze-error.log",
-    "session": "Documents/Mizze-session.log"
-  },
-  "r2DependencyCheck": {
-    "nativeMetadataTypes": [
-      "COW.GcUtil",
-      "ManualGCReason",
-      "UnityEngine.GUI"
-    ],
-    "allFound": true,
-    "meaning": "These definitions exist in provided native metadata; this does not confirm device version or patch-load success."
-  },
+  "thread": "Unity LateUpdate offers a main-thread bootstrap; first owned OnGUI still authoritative. After GUI binding, mismatched threads rejected before Unity calls.",
+  "evidence": "hooks-evidence.json and bindings-evidence.json",
   "deviceVerified": false
 }

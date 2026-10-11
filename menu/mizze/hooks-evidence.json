@@ -1,0 +1,69 @@
+{
+  "target": "Free Fire TH iOS 1.132.1",
+  "deviceVerified": false,
+  "hooks": [
+    {
+      "owner": "COW.COWGameEntry",
+      "method": "LateUpdate",
+      "vmMethod": 0,
+      "map": "IDMAP0",
+      "id": 13470,
+      "declaration": "public const IDMAP0 COW-COWGameEntry-LateUpdate0 = 13470;",
+      "native": "// RVA: 0x504DD78 Offset: 0x504DD78 VA: 0x504DD78\n\tprivate void LateUpdate() { }"
+    },
+    {
+      "owner": "COW.GameFacade",
+      "method": "get_UIModelRole",
+      "vmMethod": 18,
+      "map": "IDMAP0",
+      "id": 7680,
+      "declaration": "public const IDMAP0 COW-GameFacade-get_UIModelRole0 = 7680;",
+      "native": "// RVA: 0x59344E0 Offset: 0x59344E0 VA: 0x59344E0\n\tpublic static UIModelRole get_UIModelRole() { }"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "method": "get_IsBeingCarried",
+      "vmMethod": 19,
+      "map": "IDMAP0",
+      "id": 943,
+      "declaration": "public const IDMAP0 COW-GamePlay-Player-get_IsBeingCarried0 = 943;",
+      "native": "// RVA: 0x5657304 Offset: 0x5657304 VA: 0x5657304\n\tpublic bool get_IsBeingCarried() { }"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "method": "UpdateKnockdownIsInCamera",
+      "vmMethod": 30,
+      "map": "IDMAP0",
+      "id": 19731,
+      "declaration": "public const IDMAP0 COW-GamePlay-Player-UpdateKnockdownIsInCamera0 = 19731;",
+      "native": "// RVA: 0x56A0194 Offset: 0x56A0194 VA: 0x56A0194\n\tpublic void UpdateKnockdownIsInCamera() { }"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "method": "NeedRunHighFrame",
+      "vmMethod": 33,
+      "map": "IDMAP0",
+      "id": 9738,
+      "declaration": "public const IDMAP0 COW-GamePlay-Player-NeedRunHighFrame0 = 9738;",
+      "native": "// RVA: 0x568B700 Offset: 0x568B700 VA: 0x568B700\n\tpublic bool NeedRunHighFrame() { }"
+    },
+    {
+      "owner": "COW.GamePlay.Player",
+      "method": "get_LastAimingInfoFromWeapon",
+      "vmMethod": 35,
+      "map": "IDMAP0",
+      "id": 19026,
+      "declaration": "public const IDMAP0 COW-GamePlay-Player-get_LastAimingInfoFromWeapon0 = 19026;",
+      "native": "// RVA: 0x562453C Offset: 0x562453C VA: 0x562453C\n\tpublic CGKJLKPMGDJ get_LastAimingInfoFromWeapon() { }"
+    },
+    {
+      "owner": "COW.GamePlay.SceneEditBoxSelectTool",
+      "method": "OnGUI",
+      "vmMethod": 43,
+      "map": "IDMAP4",
+      "id": 156465,
+      "declaration": "public const IDMAP4 COW-GamePlay-SceneEditBoxSelectTool-OnGUI0 = 156465;",
+      "native": "// RVA: 0x65FDB20 Offset: 0x65FDB20 VA: 0x65FDB20\n\tprivate void OnGUI() { }"
+    }
+  ]
+}
