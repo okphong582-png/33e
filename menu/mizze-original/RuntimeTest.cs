@@ -18,6 +18,7 @@ unsafe static class MizzeRuntimeTest
     static void Check(bool ok,string message){Checks++;if(!ok)throw new Exception("FAIL: "+message);}
     static Type Resolve(string full)
     {
+        if(full.Split(',')[0]=="System.GC")return typeof(ControlledGc);
         return Type.GetType(full,a=>a.Name=="mscorlib"?typeof(object).Assembly:typeof(MizzeRuntimeTest).Assembly,(a,n,c)=>a.GetType(n,true,c),true);
     }
     static MethodBase ReadMethod(BinaryReader r,Type[] types)
@@ -45,7 +46,7 @@ unsafe static class MizzeRuntimeTest
     static void Set(string name,object value){Fields[name].SetValue(null,value);}static T Get<T>(string name){return (T)Fields[name].GetValue(null);}
     static object Run(string name,params object[] args)
     {
-        var c=Call.Begin();foreach(var a in args){if(a is float)c.PushSingle((float)a);else if(a is int)c.PushInt32((int)a);else if(a is bool)c.PushBoolean((bool)a);else if(a!=null&&a.GetType().IsValueType)c.PushValueType(a);else c.PushObject(a);}Vm.Execute(Methods[name],ref c,args.Length);object result=null;
+        var c=Call.Begin();foreach(var a in args){if(a is long)c.PushInt64((long)a);else if(a is float)c.PushSingle((float)a);else if(a is int)c.PushInt32((int)a);else if(a is bool)c.PushBoolean((bool)a);else if(a!=null&&a.GetType().IsValueType)c.PushValueType(a);else c.PushObject(a);}try{Vm.Execute(Methods[name],ref c,args.Length);}catch(Exception e){Console.Error.WriteLine("VM failure method="+name+" checks="+Checks+" time="+Time.Now+" "+e.Message);throw;}object result=null;
         if(name=="get_UIModelRole"||name=="get_LastAimingInfoFromWeapon"||name=="MzPickTarget"||name=="MzHash")result=c.GetObject();else if(name=="IsReallyInStealth"||name=="MzAuthorized"||name=="MzEnemy")result=c.GetBoolean();Call.End(ref c);return result;
     }
     static void Frame(EventType type,float x=0,float y=0)
@@ -100,9 +101,9 @@ unsafe static class MizzeRuntimeTest
     {
         var switches=Get<bool[]>("MzSwitch");Array.Clear(switches,0,switches.Length);switches[0]=true;switches[1]=true;switches[13]=true;
         var enemy=Enemy();COW.GameFacade.Match=new JMAGGLCNGIG();COW.GameFacade.Match.Players.Add(enemy);Time.Now=0;Set("MzNextEsp",0f);GUI.Calls.Clear();Run("MzRender");int reads=Camera.ProjectionCalls,uploads=Texture2D.Uploaded,created=Texture2D.Created;
-        for(int frame=0;frame<60;frame++){Time.Now=.001f*frame;GUI.Calls.Clear();Run("MzRender");}
+        for(int frame=0;frame<60;frame++){Time.Now=.0005f*frame;GUI.Calls.Clear();Run("MzRender");}
         Check(Camera.ProjectionCalls==reads,"sixty repaint calls reuse projected values before refresh");Check(Texture2D.Uploaded==uploads&&Texture2D.Created==created,"rings never allocate or upload per repaint");
-        Time.Now=.08f;Run("MzRender");Check(Camera.ProjectionCalls==reads+2,"sample refresh updates current world positions once");
+        Time.Now=.051f;Run("MzRender");Check(Camera.ProjectionCalls==reads+2,"sample refresh updates current world positions once");
         var ring=Get<Texture2D>("MzRing");Check(ring.Width==256&&ring.Pixels[128*256+128].a==0&&ring.Released,"ring centre transparent, upload releases CPU storage on device");
         for(int i=0;i<360;i++){double angle=i*Math.PI/180;bool found=false;for(int radius=124;radius<=127;radius++){int x=(int)(128+Math.Cos(angle)*radius),y=(int)(128+Math.Sin(angle)*radius);if(x>=0&&x<256&&y>=0&&y<256&&ring.Pixels[y*256+x].a>.15f)found=true;}Check(found,"continuous raster ring angle "+i);}
         GUI.Calls.Clear();Render();var circle=GUI.Calls.Single(d=>d.Texture==ring);Check(circle.Rect.width==circle.Rect.height&&circle.Matrix.Tag!=2,"FOV remains square and unrotated");
@@ -187,9 +188,65 @@ unsafe static class MizzeRuntimeTest
         Set("MzTab",0);Set("MzTabAnim",0f);Set("MzOpenAnim",1f);Frame(EventType.Repaint);Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-glass.svg"));
     }
 
+
+    static void EspMemoryChecks()
+    {
+        var sw=Get<bool[]>("MzSwitch");Array.Clear(sw,0,sw.Length);sw[0]=true;sw[1]=true;sw[4]=true;sw[6]=true;
+        COW.GameFacade.Match=new JMAGGLCNGIG();var enemy=Enemy();enemy.Nick=new string('N',80);COW.GameFacade.Match.Players.Add(enemy);
+        Time.Now=1;Render();Check(Math.Abs(Get<float>("MzNextEsp")-1.05f)<.001f,"sparse ESP targets 20Hz");Check(Get<int>("MzCommandCount")==2&&Get<int>("MzQuadCount")==4,"solid ESP kept only in mesh, labels in command buffer");
+        var label=Get<string[]>("MzNameLabels")[0];var distances=Get<string[]>("MzDistanceLabels");
+        Time.Now=1.1f;Render();Check(Object.ReferenceEquals(label,Get<string[]>("MzNameLabels")[0])&&Object.ReferenceEquals(distances,Get<string[]>("MzDistanceLabels")),"stable labels reuse bounded cached strings");
+        enemy.Nick="Changed";Time.Now=2.1f;Render();Check(Get<string[]>("MzNameLabels")[0]=="Changed","nickname cache refreshes without retaining stale text indefinitely");
+        sw[4]=false;Time.Now=2.2f;Render();Check(Get<Player[]>("MzNameOwners").All(p=>p==null),"disabling names releases all cached owners");sw[4]=true;
+        var vertices=Get<Vector3[]>("MzVertices");var rects=Get<Rect[]>("MzRects");int textures=Texture2D.Created,meshes=Mesh.Created;
+        for(int i=0;i<600;i++){Time.Now+=1f/60;GUI.Calls.Clear();Run("MzRender");}
+        Check(Object.ReferenceEquals(vertices,Get<Vector3[]>("MzVertices"))&&Object.ReferenceEquals(rects,Get<Rect[]>("MzRects"))&&Texture2D.Created==textures&&Mesh.Created==meshes,"ESP soak reuses managed/native drawing resources");
+        COW.GameFacade.Match=null;GUI.Calls.Clear();Run("MzRender");Check(Get<Player[]>("MzNameOwners").All(p=>p==null)&&Get<string[]>("MzNameLabels").All(s=>s==null),"leaving match releases cached player and name references");
+        Set("MzGuiThread",System.Threading.Thread.CurrentThread.ManagedThreadId);Set("MzGuiActive",false);Set("MzBuilding",false);Set("MzDrawingEsp",false);
+        Set("MzMemoryBaseline",0L);Set("MzMemoryNextCollect",0f);Set("MzMemoryPressure",0);Set("MzMemoryPaused",false);COW.GcUtil.After=201326592;ControlledGc.Override=201326592;
+        int calls=COW.GcUtil.Calls;Run("MzMemoryStep",134217728L,1f);Check(COW.GcUtil.Calls==calls,"healthy heap does not trigger manual collection");
+        Run("MzMemoryStep",1073741824L,2f);Check(COW.GcUtil.Calls==calls+1&&Get<long>("MzMemoryFreed")==872415232L&&!Get<bool>("MzMemoryBusy"),"GB pressure invokes original game collector outside GUI");
+        Run("MzMemoryStep",1073741824L,3f);Check(COW.GcUtil.Calls==calls+1,"collection cooldown prevents per-frame GC stalls");
+        Set("MzGuiActive",true);Set("MzMemoryNextCollect",0f);Run("MzMemoryStep",1073741824L,20f);Check(COW.GcUtil.Calls==calls+1,"collector cannot run during GUI");Set("MzGuiActive",false);
+        Set("MzGuiThread",System.Threading.Thread.CurrentThread.ManagedThreadId+1);Run("MzMemoryStep",1073741824L,20f);Check(COW.GcUtil.Calls==calls+1,"collector ignores non-GUI thread callbacks");Set("MzGuiThread",System.Threading.Thread.CurrentThread.ManagedThreadId);
+        COW.GcUtil.After=943718400L;Set("MzMemoryNextCollect",0f);Run("MzMemoryStep",943718400L,21f);Check(!Get<bool>("MzMemoryPaused")&&Get<int>("MzMemoryPressure")==1,"first unreclaimed high reading does not hide ESP immediately");
+        var backgrounds=Get<Texture2D[]>("MzBackgroundFrames");Run("MzMemoryStep",943718400L,52f);
+        Check(Get<bool>("MzMemoryPaused")&&Get<bool>("MzMemoryTrimmed")&&Get<int>("MzCommandCount")==0,"persistent unreclaimed heap pressure suspends heavy work and trims caches");
+        Check(backgrounds==null||backgrounds.All(p=>p==null||p.Destroyed),"pressure trim destroys owned GIF textures");
+        Set("MzLeaseDeadline",100000f);Set("MzKeyHash","");Set("MzRequest",null);Set("MzOpen",true);Set("MzOpenAnim",1f);
+        int samples=Camera.ProjectionCalls,reads=ControlledGc.Reads;Frame(EventType.Repaint);
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&GUI.Calls.Any(d=>d.Text=="Giảm tải · RAM cao")&&!Get<bool>("MzGuiActive"),"pressure fallback preserves launcher and menu");
+        Check(Camera.ProjectionCalls==samples&&ControlledGc.Reads==reads,"paused GUI does no ESP sampling or heap polling");
+        Run("MzMemoryStep",268435456L,53f);Check(!Get<bool>("MzMemoryPaused")&&!Get<bool>("MzBackgroundFailed"),"memory recovery resumes ESP and GIF with hysteresis");
+        COW.GcUtil.After=1288490188L;Set("MzMemoryPressure",0);Set("MzMemoryNextCollect",0f);Run("MzMemoryStep",1288490188L,53.1f);Check(Get<bool>("MzMemoryPaused"),"unreclaimed GB heap trims immediately instead of waiting thirty seconds");Run("MzMemoryStep",268435456L,53.2f);
+        COW.GcUtil.Fail=true;Set("MzMemoryNextCollect",0f);int faults=Get<int>("MzMemoryFaults");Run("MzMemoryStep",1073741824L,54f);
+        Check(Get<int>("MzMemoryFaults")==faults+1&&!Get<bool>("MzMemoryBusy")&&Get<float>("MzMemoryNextCollect")>=84,"collector exception releases guard and backs off");
+        int attempts=COW.GcUtil.Attempts;Run("MzMemoryStep",1073741824L,55f);Check(COW.GcUtil.Attempts==attempts,"collector failure is not retried every callback");
+        COW.GcUtil.Fail=false;COW.GcUtil.After=-1;ControlledGc.Override=-1;Set("MzMemoryNext",0f);Set("MzMemoryNextCollect",10000f);
+        reads=ControlledGc.Reads;Time.Now=60;Run("MzMemoryPulse");Run("MzMemoryPulse");Check(ControlledGc.Reads==reads+1,"heap is polled at most once each second");
+        Set("MzMemoryBaseline",0L);Set("MzMemoryNextCollect",0f);Time.Now=0;Set("MzMemoryNext",0f);
+    }
+    static void AllocationProfile(string file)
+    {
+        Run("get_UIModelRole");Driver=GameObject.Find("__mizze_driver").Added;AppDomain.MonitoringIsEnabled=true;var sw=Get<bool[]>("MzSwitch");
+        var local=Enemy(0);local.Local=true;COW.GameFacade.Local=local;var match=new JMAGGLCNGIG();COW.GameFacade.Match=match;for(int i=0;i<12;i++)match.Players.Add(Enemy((i-6)*.25f));
+        Camera.main=new Camera {gameObject=new GameObject("allocation-camera")};Set("MzLeaseDeadline",10000f);Set("MzKeyHash","");Time.Now=0;
+        var output=new StringBuilder();output.Append("{\"frames\":300,\"environment\":\"offline .NET IFix VM; includes test doubles, not iOS measurements\",\"modes\":[");
+        for(int mode=0;mode<4;mode++){
+            Array.Clear(sw,0,sw.Length);if(mode>0){sw[0]=true;sw[1]=true;}if(mode==2||mode==3){for(int i=4;i<11;i++)sw[i]=true;sw[13]=true;}
+            Set("MzOpen",mode==3);Set("MzOpenAnim",mode==3?1f:0f);Set("MzTab",0);
+            for(int i=0;i<60;i++){Time.Now+=1f/60;Frame(EventType.Repaint);}
+            int colorBefore=GUI.ColorWrites,projectionBefore=Camera.ProjectionCalls;long retainedBefore=GC.GetTotalMemory(true),allocatedBefore=AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize;
+            for(int i=0;i<300;i++){Time.Now+=1f/60;Frame(EventType.Repaint);}
+            long allocated=AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize-allocatedBefore,retainedAfter=GC.GetTotalMemory(true);
+            if(mode>0)output.Append(',');output.Append("{\"name\":\"");output.Append(mode==0?"launcher":mode==1?"box12":mode==2?"allEsp12":"allEsp12-menuOpen");output.Append("\",\"allocatedBytes\":");output.Append(allocated);output.Append(",\"retainedDelta\":");output.Append(retainedAfter-retainedBefore);output.Append(",\"nativeColorWrites\":");output.Append(GUI.ColorWrites-colorBefore);output.Append(",\"projections\":");output.Append(Camera.ProjectionCalls-projectionBefore);output.Append('}');
+        }
+        output.Append("]}\n");File.WriteAllText(file,output.ToString());Console.WriteLine(output.ToString());
+    }
     static int Main(string[] args)
     {
         foreach(var line in File.ReadAllLines(args[1])){var a=line.Split('\t');Methods.Add(a[2],int.Parse(a[0]));}Vm=Load(args[0]);
+        if(args.Length>2&&args[2]=="profile"){AllocationProfile(Path.Combine(Path.GetDirectoryName(args[0]),"allocation-profile.json"));return 0;}
         // Lobby getter preserves the lazy model and bootstraps with no match or player.
         var model=Run("get_UIModelRole");Check(model!=null&&System.Object.ReferenceEquals(model,Run("get_UIModelRole")),"lobby cached model preserved");Check(GCommon.UIModelManager.instance.Calls==1,"model initialized once");
         var g=GameObject.Find("__mizze_driver");Check(g!=null&&g.Added!=null&&g.Persistent,"persistent driver created in lobby");Driver=g.Added;Check(Get<float>("MzPanelX")==120&&Get<float>("MzPanelY")==16,"new initial panel position");Set("MzPanelX",98f);Set("MzPanelY",30f);
@@ -212,7 +269,7 @@ unsafe static class MizzeRuntimeTest
         switches[11]=true;Run("MzRunAim");Check(local.AimCalls==0,"normal aim idle without firing");local.Firing=true;Run("MzRunAim");var expected=Vector3.Normalize(enemy.Head.position-Camera.main.transform.position);Check(local.AimCalls==1&&Vector3.Distance(local.LastRotation.Direction,expected)<.0001,"normal aim calls game rotation toward head");switches[11]=false;switches[12]=true;
         var aim=local.FDMIEDDNCEC;aim.HPCOJHGFEEG=new Vector3(7,8,9);aim.EFMBNPNFGHM=true;var result=Run("get_LastAimingInfoFromWeapon",local);Check(Object.ReferenceEquals(result,aim)&&aim.JHAINOBIFMA==enemy.gameObject&&aim.JINDNOFABKB==enemy.Collider&&Vector3.Distance(aim.HLDECMJFKJK,Vector3.Normalize(enemy.Head.position-local.Origin))<.0001&&aim.DKPDBLLJEAA&&!aim.EFMBNPNFGHM,"silent updates native aiming record and preserves returned object");Check(local.AimCalls==1,"silent avoids camera rotation call");Run("get_LastAimingInfoFromWeapon",enemy);Check(aim.JHAINOBIFMA==enemy.gameObject,"remote aiming getter leaves local silent record intact");local.Firing=false;Run("get_LastAimingInfoFromWeapon",local);Check(aim.HPCOJHGFEEG.x==7&&aim.EFMBNPNFGHM&&aim.JHAINOBIFMA==null,"silent restores when firing stops");
         local.Firing=true;Run("get_LastAimingInfoFromWeapon",local);aim.JHAINOBIFMA=new GameObject("native-new-target");Run("MzRestoreSilent");Check(aim.JHAINOBIFMA.name=="native-new-target","native updates not overwritten by restoration");switches[12]=false;local.Firing=false;
-        COW.GameFacade.Match.Players.Clear();for(int i=0;i<150;i++)COW.GameFacade.Match.Players.Add(enemy);GUI.Calls.Clear();Render();Check(Lines()==16*4,"bounded ESP traversal and sixteen visible-player cap");COW.GameFacade.Match.Players.Clear();COW.GameFacade.Match.Players.Add(enemy);
+        COW.GameFacade.Match.Players.Clear();for(int i=0;i<150;i++)COW.GameFacade.Match.Players.Add(enemy);GUI.Calls.Clear();Render();Check(Lines()==16*4,"bounded ESP traversal and sixteen visible-player cap");Check(Get<int>("MzEspShown")==16&&Math.Abs(Get<float>("MzNextEsp")-Time.Now-.066667f)<.001f,"dense ESP uses bounded 15Hz sampling");COW.GameFacade.Match.Players.Clear();COW.GameFacade.Match.Players.Add(enemy);
         Set("MzTab",1);Set("MzOpen",true);Set("MzFov",150f);Frame(EventType.MouseDown,289,368);Frame(EventType.MouseDrag,466,368);Frame(EventType.MouseUp,466,368);Check(Get<float>("MzFov")==352,"FOV slider stops at full visible circle");
         Click(140,176);Check(switches[11]&&!switches[12],"aim head toggle connected");Click(140,224);Check(switches[12]&&!switches[11],"silent toggle mutually exclusive");Click(140,224);Check(!switches[12],"silent toggle turns off");
         Set("MzTab",0);Set("MzEspPage",1);Click(337,438);Check(Get<int>("MzLineOrigin")==1,"line origin cycles to center");Click(337,438);Check(Get<int>("MzLineOrigin")==2,"line origin cycles to top");switches[10]=true;GUI.Calls.Clear();Render();Check(GUI.Calls.Any(d=>d.Texture==Texture2D.whiteTexture&&d.Matrix.Tag==2&&Math.Abs(d.Matrix.Position.y-8)<2),"top line projects from selected origin");Click(337,438);Check(Get<int>("MzLineOrigin")==0,"line origin cycles to bottom");
@@ -232,6 +289,7 @@ unsafe static class MizzeRuntimeTest
         BatchChecks();
         UiPerformanceChecks();
         OldSourceGlossChecks(args);
+        EspMemoryChecks();
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading and in-game aim remain unverified.");GC.KeepAlive(Vm);return 0;
     }
 }

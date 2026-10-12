@@ -16,7 +16,7 @@ namespace COW.GamePlay
             if(MzOpen){
                 if(MzBackgroundLast>0){float elapsed=now-MzBackgroundLast;if(elapsed>=0&&elapsed<.2f)MzBackgroundClock+=elapsed;}
                 MzBackgroundLast=now;
-                if(!MzBackgroundFailed&&MzBackgroundLoaded<15&&now>=MzBackgroundNextLoad){
+                if(!MzMemoryPaused&&!MzBackgroundFailed&&MzBackgroundLoaded<15&&now>=MzBackgroundNextLoad){
                     Texture2D texture=null;
                     try{
                         if(MzBackgroundFrames==null){MzBackgroundFrames=new Texture2D[15];MzBackgroundEncoded=MzBackgroundData();}
@@ -35,7 +35,7 @@ namespace COW.GamePlay
             float cycle=MzBackgroundClock%2.5f;int group=(int)(cycle/.5f);float part=cycle-group*.5f;int index=group*3+(part<.17f?0:part<.33f?1:2);
             if(index>=MzBackgroundLoaded)index=0;
             var frame=MzBackgroundFrames[index];if(frame==null)return;
-            MzTint(1,1,1,.62f*MzOpenAnim);GUI.DrawTexture(new Rect(x,y,382,440),frame);
+            MzTint(1,1,1,.62f*MzOpenAnim);MzApplyUiTint();GUI.DrawTexture(new Rect(x,y,382,440),frame);
         }
         public static void MzGlassPanel(float x,float y)
         {
@@ -49,7 +49,7 @@ namespace COW.GamePlay
             MzTint(1,1,1,.21f*MzOpenAnim);MzFill(x+25,y+1,332,1,0);
             MzTint(.88f,.94f,1,(.13f+.05f*MzMotion)*MzOpenAnim);MzFill(x+41+MzMotion*70,y+3,146,1,0);
             MzTint(.97f,.98f,1,MzOpenAnim);MzTitle(x+23,y+11,180,"Mizze");
-            MzTint(.75f,.78f,.83f,.88f*MzOpenAnim);MzSmall(x+24,y+39,290,"GLASS  /  iOS");
+            MzTint(.75f,.78f,.83f,.88f*MzOpenAnim);MzSmall(x+24,y+39,290,MzMemoryPaused?"Giảm tải · RAM cao":"GLASS  /  iOS");
             MzTint(1,1,1,.06f*MzOpenAnim);MzFill(x+330,y+18,30,30,15);
             MzTint(.9f,.92f,.95f,MzOpenAnim);MzCenter(x+326,y+10,46,48,"×");
             if(MzTap(x+326,y+10,46,48)){MzOpen=false;MzDragMode=0;MzBackgroundLast=0;}

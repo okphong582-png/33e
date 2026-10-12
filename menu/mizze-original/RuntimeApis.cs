@@ -62,7 +62,7 @@ namespace UnityEngine
     public static class GUI
     {
         static GUISkin Skin=new GUISkin {font=new Font {Name="game-original"}};public static GUISkin skin {get{return Skin;}set{Skin=value;}}
-        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
+        static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}static Color Color;public static int ColorWrites;public static Color color {get{return Color;}set{Color=value;ColorWrites++;}}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
         public static void Label(Rect r,string s){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Text=s});}
         public static void Label(Rect r,string s,GUIStyle style){Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
         public static void DrawTexture(Rect r,Texture t){NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
@@ -123,3 +123,8 @@ namespace COW.GamePlay
 public enum PIOEKCEKPNI {Run=0}
 namespace COW.GamePlay {public class PlayerAttributes:UnityEngine.Component {public float ForceSetRunAndDashSpeed;public float FireIntervalScale {get;set;}public float BaseRun=5;public PlayerAttributes(){FireIntervalScale=1;}public float GetSpeedByType(PIOEKCEKPNI t){return ForceSetRunAndDashSpeed>0?ForceSetRunAndDashSpeed:BaseRun;}}}
 namespace UnityEngine {public static class ImageConversion {public static int Loads;public static bool Fail;public static bool LoadImage(Texture2D t,byte[] data,bool nonReadable){Loads++;if(Fail)return false;if(data.Length<24||data[0]!=137||data[1]!=80)throw new Exception("bad PNG");t.Width=(data[16]<<24)|(data[17]<<16)|(data[18]<<8)|data[19];t.Height=(data[20]<<24)|(data[21]<<16)|(data[22]<<8)|data[23];t.Released=nonReadable;t.Png=data;return true;}}}
+
+public enum ManualGCReason {MemoryUtilCollect=13}
+namespace COW {public static class GcUtil {public static int Calls,Attempts;public static long After=-1;public static bool Fail;public static void Collect(ManualGCReason reason){Attempts++;if(Fail)throw new Exception("collector failure");Calls++;if(After>=0)ControlledGc.Override=After;GC.Collect();}}}
+
+public static class ControlledGc {public static long Override=-1;public static int Reads;public static long GetTotalMemory(bool force){Reads++;return Override>=0?Override:GC.GetTotalMemory(force);}}

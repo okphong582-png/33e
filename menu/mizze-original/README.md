@@ -11,7 +11,7 @@ Không dùng kiến trúc R2–R9 hoặc thay đổi thư mục menu/mizze, menu
 - Chạy ghi ForceSetRunAndDashSpeed từ tốc độ Run thực tế × hệ số. Native GetSpeedByType đọc trực tiếp trường này cho Run/Dash.
 - Bắn ghi FireIntervalScale từ giá trị gốc / hệ số. Không thay đổi số đạn hay bỏ nạp.
 - Khôi phục khi tắt, chết, rời trận, đổi thuộc tính người chơi hoặc khóa hết hiệu lực. Không ghi đè thay đổi mới của game khi khôi phục.
-- Không thay đổi hệ thống khóa hoặc ESP/aim cũ.
+- Giữ hệ thống khóa và bốn hook cũ. Tối ưu phần vẽ ESP trên cùng nhánh source cũ.
 
 Dùng Assembly-CSharp-patch.bytes với localConfig.json hiện có của bản cũ.
 Chưa xác minh trên iPhone thật. Máy chủ có thể giới hạn tốc độ, và kết quả test giả lập không bảo đảm game không văng.
@@ -23,3 +23,18 @@ node menu/mizze-original/test.cjs
 
 mizze-original-baseline-hashes.json giữ dấu vân tay bản cũ nguyên trạng.
 mizze-original-hashes.json kiểm tra chính xác phiên bản hiện tại.
+
+## ESP và bộ nhớ
+
+- Một buffer mesh cố định cho nét đặc; bỏ bản sao lệnh Rect/Matrix cho từng đường.
+- Khung 3D chiếu 8 góc duy nhất; xương chiếu 9 khớp bổ sung, dùng lại đầu/chân; XYZ dùng lại gốc.
+- Cache cố định 501 chữ khoảng cách và tối đa 16 tên/người chơi; xóa tham chiếu khi tắt, đổi cảnh, rời trận hoặc hết khóa.
+- Lấy mẫu mỗi 50 ms (20 Hz) khi tối đa 8 người; trên 8 người dùng 66,7 ms (15 Hz), tự lùi 100 ms khi một mẫu tốn hơn 8 ms; vẽ mesh đã cache mỗi Repaint.
+- Khi tắt cả ESP và FOV, bỏ công việc camera/material.
+- Gộp đổi màu native của menu; giữ màu shader tường minh và khôi phục GUI của game.
+- Đo managed heap tối đa 1 lần/giây từ callback cũ, trên thread GUI và ngoài OnGUI.
+- Thu gom qua COW.GcUtil.Collect(MemoryUtilCollect), giữ chính sách GC gốc của game. Chỉ chạy khi có áp lực, nghỉ ít nhất 8 giây; lỗi/thu hồi ít nghỉ 30 giây.
+- Nếu sau thu gom RAM vẫn trên 1 GiB, hoặc hai lần trên 768 MiB, tạm dừng ESP/aim và giải phóng nền GIF. Nút/menu vẫn hiện; dưới 384 MiB thì phục hồi.
+- Đây là managed heap toàn game, không phải tổng RAM tiến trình. Thu gom có thể gây khựng; không sửa được mọi leak native hay đối tượng game vẫn sống.
+
+Có phép đo trước/sau trong memory-allocation-evidence.json; đây là IFix VM trên máy tính với game/Unity giả lập, không phải số đo iPhone.

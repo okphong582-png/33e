@@ -1,0 +1,58 @@
+{
+  "baselineCommit": "da816425f711e2744b1ada1b4c6708df9dea8be2",
+  "frames": 300,
+  "environment": "offline .NET IFix VM; includes test doubles, not iOS measurements",
+  "modes": [
+    {
+      "name": "launcher",
+      "beforeAllocatedBytes": 4661304,
+      "afterAllocatedBytes": 3932208,
+      "reductionPercent": 15.64,
+      "beforeProjections": 0,
+      "afterProjections": 0,
+      "beforeNativeColorWrites": 3600,
+      "afterNativeColorWrites": 1200,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    },
+    {
+      "name": "box12",
+      "beforeAllocatedBytes": 26444336,
+      "afterAllocatedBytes": 22577616,
+      "reductionPercent": 14.62,
+      "beforeProjections": 1440,
+      "afterProjections": 1512,
+      "beforeNativeColorWrites": 5340,
+      "afterNativeColorWrites": 1500,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    },
+    {
+      "name": "allEsp12",
+      "beforeAllocatedBytes": 142201944,
+      "afterAllocatedBytes": 95274712,
+      "reductionPercent": 33,
+      "beforeProjections": 20160,
+      "afterProjections": 10080,
+      "beforeNativeColorWrites": 20760,
+      "afterNativeColorWrites": 12600,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    },
+    {
+      "name": "allEsp12-menuOpen",
+      "beforeAllocatedBytes": 177635456,
+      "afterAllocatedBytes": 125093272,
+      "reductionPercent": 29.58,
+      "beforeProjections": 20160,
+      "afterProjections": 10080,
+      "beforeNativeColorWrites": 58860,
+      "afterNativeColorWrites": 20700,
+      "beforeRetainedDelta": 0,
+      "afterRetainedDelta": 0
+    }
+  ],
+  "deviceVerified": false,
+  "interpretation": "Allocation churn over 300 frames at 60Hz in offline IFix VM; includes doubles. It is not retained RAM, total iPhone process RAM, or proof of zero crashes. ESP targets 20Hz for <=8 players, 15Hz when denser, 10Hz on costly samples; old target ~13Hz. Pressure recovery tested separately with controlled heap values.",
+  "checks": 1504
+}

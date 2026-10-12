@@ -5,7 +5,7 @@
   },
   {
     "name": "GameBindings.cs",
-    "sha256": "2a3a3254af678d40926efa290e8ba67e9c372bd40dedc2318bb9c50c14aa988c"
+    "sha256": "d4d0982cafb7284a1412e3bcfd0367fec392e9e442998530ad5136ea66bb9967"
   },
   {
     "name": "GuiBindings.cs",
@@ -21,11 +21,11 @@
   },
   {
     "name": "Mizze.cs",
-    "sha256": "786dfd45ddf33e36af8ba50cb4c8bc9d0e7ddbb12e46fd6430acd2deb5d7bdd1"
+    "sha256": "49b32ce5fb934bbf06b794804ab9c4defea0abb8a1f4b5d709c164fdd9af7c85"
   },
   {
     "name": "MizzeAppearance.cs",
-    "sha256": "ec70402910b3921e7122053ef37670c18649de166ef1a15063eab957b892f5f0"
+    "sha256": "42b0b98d2bcc9d8fa33577989d542aa2c6c55e282d3b3c633945981deedcee03"
   },
   {
     "name": "MizzeBackgroundData.cs",
@@ -33,7 +33,11 @@
   },
   {
     "name": "MizzeBatch.cs",
-    "sha256": "3355f558727b1476e8b781a007d182b0b92f7f6040320774d6634bfd2385cb68"
+    "sha256": "56c80bb19c70d281ebf55207b855689716ef8643fb3e2414fb8ab6a3953a0b8a"
+  },
+  {
+    "name": "MizzeEspBuffers.cs",
+    "sha256": "3135b8dd63552a289973945444d6bfa7ea5232f602f7cca51175ab02203b2706"
   },
   {
     "name": "MizzeExtras.cs",
@@ -41,19 +45,23 @@
   },
   {
     "name": "MizzeGameplay.cs",
-    "sha256": "1075b82f714ecbec34e99014caf7aa2c5b78d0cf4edbd8ab464273170fe1e8a4"
+    "sha256": "8e8bc11b80b93e646a704c53ad5d99f0dd916b30391d0d09d571c0330f7b8ef9"
   },
   {
     "name": "MizzeGlass.cs",
-    "sha256": "773ea65c656f821be4ab5c882f4f343246ba811b744f4d9196ee38db3ebad199"
+    "sha256": "3d2b4dbd1fdc92c545af52e65da70816c30d2435aa3746a687b746cdcfc8d82e"
   },
   {
     "name": "MizzeLicense.cs",
     "sha256": "e60b9163cfce818c99208afe49fc66ff4aaa00acb5a2db734851e2e77949739e"
   },
   {
+    "name": "MizzeMemory.cs",
+    "sha256": "f70f1151e63f7d5d90b8ecf973ecb9bb84e62605c8ac1e33f7ca4792fb2a4bc1"
+  },
+  {
     "name": "MizzeRenderer.cs",
-    "sha256": "fa906b74e8fd83ce6528c8d64dd414348225a56bd4a4257064aafe9ff01b3044"
+    "sha256": "f51f2aa87ee87bd534f36e97f1324b446956d7fc451e40e9905a00a3254e85c7"
   },
   {
     "name": "NetworkBindings.cs",
@@ -65,15 +73,15 @@
   },
   {
     "name": "README.md",
-    "sha256": "32b91f3f4d46158e4d3535ac109a3c9b8a13b2e79c3b2f52832fc3bf26e919f7"
+    "sha256": "24bdbeded0a29c576e121716779fcdfab84d62cbae5a52247a11f6ac4f690f54"
   },
   {
     "name": "RuntimeApis.cs",
-    "sha256": "e33d4823a04a6ecd1c7bb9e59fb8cff80ec4b1355894e6108e34d9d784ef7681"
+    "sha256": "e561a87981e791469bddd1454d8244aa7aa5c23ac2f98f36727afc5411bc52e3"
   },
   {
     "name": "RuntimeTest.cs",
-    "sha256": "f4a754039bec26f8ac84f19a8a95e0cf4218db333c6de3ce1e322c0900126f73"
+    "sha256": "adaff2d9523a9e829791d3a2da964afac174cbe3b212d2f3cc8b60fc337f8a23"
   },
   {
     "name": "TextBindings.cs",
@@ -93,15 +101,23 @@
   },
   {
     "name": "bindings-evidence.json",
-    "sha256": "966c63e8a2586ea84f199b148a4206e5fbc21a575d2c766e048c18010966fe16"
+    "sha256": "36e53fdd36d24e919b64002ed97e241849c9b8c656299d889e111e1c7a547364"
   },
   {
     "name": "build.cjs",
-    "sha256": "255f7da9ef2aeb3e00fd47ce61c8f8076f4cc1960131908c49fdccfdab473f53"
+    "sha256": "aaf6cf755de93b9eac154d378346eab88d649b6ae48599b3fcf5b6354c5f119f"
   },
   {
     "name": "loader-evidence.json",
     "sha256": "3285b48bd079ca96a179d6da14de3408d1b56a4b526ee7063ff3d5a3ee4ec746"
+  },
+  {
+    "name": "memory-allocation-evidence.json",
+    "sha256": "87f2193fed5442d90fb6bfda77cafdcaf9e041b73e8690cd5e7135c44f5e8e16"
+  },
+  {
+    "name": "memory-native-evidence.json",
+    "sha256": "d0dfa2b1ea1755ecb4b7c0281220f44c9af95e9251bc945da7e37db5bd4676ac"
   },
   {
     "name": "native-loader.cjs",
@@ -109,7 +125,7 @@
   },
   {
     "name": "package.cjs",
-    "sha256": "8aab52b5dc1aa4419e136408061ba65dbb0c1eb8950eeb4be87655d98ab285d5"
+    "sha256": "f1f04cfb63d5a585e721884927c6bad311cd20eaa3248c87e580f5796498f9a2"
   },
   {
     "name": "speed-native-evidence.json",
@@ -117,7 +133,7 @@
   },
   {
     "name": "test.cjs",
-    "sha256": "a33f6d09355a2f543caa331854716bee95ae8245a82ba1aa2e86923467949316"
+    "sha256": "ce343620711c13c20524e3216d1771f616db75ed7f821636d6d31676e1cd8380"
   },
   {
     "name": "verify-declarations.cjs",

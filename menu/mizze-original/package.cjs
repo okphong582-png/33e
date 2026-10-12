@@ -15,5 +15,5 @@ i(0);i(0);s(p.wrappers);s(p.assembly);bit(false);list(p.fixes,f=>{method(f.metho
 const bytes=Buffer.concat(parts),result=inspect(bytes),out=path.join(dir,'dist');fs.mkdirSync(out,{recursive:true});
 fs.writeFileSync(path.join(out,'Assembly-CSharp-patch.bytes'),bytes);fs.writeFileSync(path.join(out,'SHA256SUMS.txt'),result.sha256+'  Assembly-CSharp-patch.bytes\n');
 fs.copyFileSync(path.join(dir,'build/methods.tsv'),path.join(out,'methods.tsv'));
-fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({size:result.size,sha256:result.sha256,magic:result.magic,methods:result.methods.length,externMethods:result.externMethods.length,newFields:result.fields.filter(f=>f.isNew).length,fixes:result.fixes,source:'menu/mizze-original/*.cs',edition:'Old source + glossy GIF UI + run/rapid fire',target:'Free Fire TH iOS 1.132.1',deviceVerified:false},null,2)+'\n');
+fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({size:result.size,sha256:result.sha256,magic:result.magic,methods:result.methods.length,externMethods:result.externMethods.length,newFields:result.fields.filter(f=>f.isNew).length,fixes:result.fixes,source:'menu/mizze-original/*.cs',edition:'Old source + glossy GIF UI + ESP/RAM optimization',target:'Free Fire TH iOS 1.132.1',deviceVerified:false},null,2)+'\n');
 console.log('Packaged Mizze: '+result.size+' bytes; SHA256 '+result.sha256);
