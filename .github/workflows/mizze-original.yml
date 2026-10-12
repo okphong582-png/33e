@@ -1,4 +1,4 @@
-name: Build Old Source ESP Stability
+name: Build Compatible ESP Menu
 on:
   workflow_dispatch:
   push:
@@ -32,14 +32,14 @@ jobs:
         run: node menu/mizze-original/package.cjs
       - name: Run final bytecode and ten-minute ESP soak
         run: node menu/mizze-original/test.cjs
-      - name: Verify native compatibility and GIF pixels
+      - name: Reject any new native dependency; verify original hooks/GIF
         run: node menu/verify-mizze-original-build.cjs
       - name: Verify build leaves reviewed source unchanged
         run: node menu/verify-mizze-original.cjs
       - name: Upload old-source ESP stability build
         uses: actions/upload-artifact@v4
         with:
-          name: Mizze-OldSource-ESP-Stability
+          name: Mizze-Compatible-ESP
           path: |
             menu/mizze-original/dist/Assembly-CSharp-patch.bytes
             menu/mizze-original/dist/SHA256SUMS.txt
@@ -47,7 +47,7 @@ jobs:
             menu/mizze-original/dist/ui-verification.json
             menu/mizze-original/dist/esp-soak.json
             menu/mizze-original/dist/esp-profile.json
-            menu/mizze-original/esp-stability-evidence.json
+            menu/mizze-original/esp-compatibility-evidence.json
             menu/mizze-original/dist/methods.tsv
             menu/mizze-original/dist/*.svg
             menu/mizze-original/ui-only-evidence.json

@@ -1,0 +1,26 @@
+{
+  "scope": "Restore previous menu native dependency contract while retaining ESP allocation/projection fixes",
+  "menuBaselineCommit": "283fc399cc1dabaf2c0e92dcf2bbb4411c282d79",
+  "userReport": "ESP stability build b6cef29 did not show menu",
+  "cause": "Not confirmed on device; optional collector introduced additional load-time native types and methods. This build removes those dependencies entirely.",
+  "removed": [
+    "System.GC.GetTotalMemory",
+    "COW.GcUtil.Collect",
+    "ManualGCReason enum dependency",
+    "UnityEngine.Color.a read for new quad-color cache"
+  ],
+  "preserved": [
+    "original GameBindings",
+    "MzEnsure",
+    "OnGUI",
+    "four original hooks",
+    "GIF/font/glass paint",
+    "aim/key/input",
+    "bounded ESP buffers",
+    "single storage of solid geometry",
+    "shared 3D/skeleton projections",
+    "per-player rollback"
+  ],
+  "memoryPolicy": "No forced collection or memory monitor; allocation reduction and bounded caches only. Cannot guarantee no game/native crash.",
+  "deviceVerified": false
+}

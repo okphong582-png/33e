@@ -199,14 +199,9 @@ unsafe static class MizzeRuntimeTest
         Check(Texture2D.Created==textures&&Mesh.Created==meshes,"soak does not create native textures or meshes over time");
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(args[0]),"esp-soak.json"),"{\"simulatedSeconds\":600,\"frames\":36000,\"retainedDeltaBytes\":"+retained+",\"nativeTexturesAdded\":0,\"nativeMeshesAdded\":0,\"deviceVerified\":false}");
         COW.GameFacade.Match=null;Run("MzRender");Check(Get<int>("MzCommandCount")==0&&Get<int>("MzQuadCount")==0&&Get<Camera>("MzEspCamera")==null&&Get<JMAGGLCNGIG>("MzEspMatch")==null,"scene teardown clears geometry and native scene references");
-        COW.GcUtil.Calls=0;Set("MzEspMemoryBaseline",0L);Set("MzEspMemoryNextCollect",0f);Set("MzEspMemoryDisabled",false);
-        Run("MzEspMemoryStep",220000000L,2000f);Check(COW.GcUtil.Calls==0,"ordinary heap never forces collection");Run("MzEspMemoryStep",240000000L,2002f);Check(COW.GcUtil.Calls==0,"small growth does not trigger collection");
-        COW.GcUtil.DuringCollect=()=>Run("MzRender");Set("MzRendering",true);Run("MzEspMemoryStep",400000000L,2004f);Set("MzRendering",false);COW.GcUtil.DuringCollect=null;Check(COW.GcUtil.Calls==1&&Get<long>("MzEspMemoryFreed")>0,"growth threshold calls verified game collector and measures reclaimed bytes");
-        Run("MzEspMemoryStep",900000000L,2005f);Check(COW.GcUtil.Calls==1,"collection cooldown prevents every-frame full GC");
-        Set("MzEspMemoryBaseline",0L);Set("MzEspMemoryNextCollect",0f);Run("MzEspMemoryStep",1200000000L,2020f);Check(COW.GcUtil.Calls==2,"already inflated heap from reported log can collect on first check");
-        COW.GcUtil.Fail=true;Set("MzEspMemoryBaseline",0L);Set("MzEspMemoryNextCollect",0f);Run("MzEspMemoryStep",1200000000L,2040f);COW.GcUtil.Fail=false;Check(Get<bool>("MzEspMemoryDisabled"),"collector failure disables optional monitor without escaping render");
-        Set("MzOpen",false);Set("MzOpenAnim",0f);Time.Now=0;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Mizze"),"collector failure preserves untouched lobby launcher");
-        Set("MzEspMemoryDisabled",false);Set("MzEspMemoryNext",0f);
+        Set("MzRendering",true);int projectionReads=Camera.ProjectionCalls;Run("MzRender");Check(Camera.ProjectionCalls==projectionReads,"nested rendering returns without touching game objects");Set("MzRendering",false);
+        Set("MzOpen",false);Set("MzOpenAnim",0f);Time.Now=0;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Mizze"),"unchanged launcher remains visible after long ESP run and scene teardown");
+
     }
     static void EspProfile(string[] args)
     {

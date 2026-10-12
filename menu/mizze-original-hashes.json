@@ -5,7 +5,7 @@
   },
   {
     "name": "GameBindings.cs",
-    "sha256": "1db48c06d0a1f1b635b70b928c1a04f94594922f2b0fd21d0dad18dd12e1f2bc"
+    "sha256": "fbe2d386bc7d8630c0da221b1201157f827fb132ccb416a32c59ff5ddc10d4cf"
   },
   {
     "name": "GuiBindings.cs",
@@ -25,7 +25,7 @@
   },
   {
     "name": "MizzeBatch.cs",
-    "sha256": "b94a67fabe875f17af0239f5ca76557236c3e4903232c68ca8602299ddf7fc5f"
+    "sha256": "ed78e627267b520ac17babd0e0139d9b14b53d372b670cf506513867e1000470"
   },
   {
     "name": "MizzeGameplay.cs",
@@ -37,7 +37,7 @@
   },
   {
     "name": "MizzeRenderer.cs",
-    "sha256": "5319e5bf2cabb01ee50d18fd16f4933953ca1bee1b5408706ee27334689c1377"
+    "sha256": "5e1141588c860cd1de79fde6b40a08c4ea9bb41c09ef7dc99fd43d8d1758bad2"
   },
   {
     "name": "NetworkBindings.cs",
@@ -53,11 +53,11 @@
   },
   {
     "name": "RuntimeApis.cs",
-    "sha256": "3fe81120e5c92775f3d1adc829dc857a8335fd485c8442b76c515bdea25d40c3"
+    "sha256": "96947df8e50cde5fe6d70668557d0897633b28e2699a599e6a6a667d9ccdfb30"
   },
   {
     "name": "RuntimeTest.cs",
-    "sha256": "942f4fbf0c89075213d02de288a90de2d6678a40dc2beedbd114a0a192737ce9"
+    "sha256": "84f28e075430de895ae22a04f1cec4b213b595a76d5c47dfdb0f9fce62e14956"
   },
   {
     "name": "TextBindings.cs",
@@ -78,6 +78,10 @@
   {
     "name": "esp-compatibility-baseline.json",
     "sha256": "a3bb029bd5dd6d0d57f7852f038fb2d1144f601b28a176387606d2413d08514b"
+  },
+  {
+    "name": "esp-compatibility-evidence.json",
+    "sha256": "13691f2ef89e4b6c6f910b209b84a99e3515aa72b84ca22c090030ff3369c795"
   },
   {
     "name": "esp-stability-evidence.json",

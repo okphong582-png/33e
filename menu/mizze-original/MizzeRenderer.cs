@@ -14,10 +14,7 @@ namespace COW.GamePlay
         public static bool[] MzRotated;
         public static bool[] MzSolids;
         public static int MzCommandCount,MzEspWidth,MzEspHeight;
-        public static bool MzBuilding,MzRendering,MzEspMemoryDisabled;
-        public static long MzEspMemoryBaseline,MzEspMemoryLast,MzEspMemoryFreed;
-        public static float MzEspMemoryNext,MzEspMemoryNextCollect;
-        public static int MzEspMemoryCollections;
+        public static bool MzBuilding,MzRendering;
         public static float MzNextEsp,MzEspSampleStarted;
         public static JMAGGLCNGIG MzEspMatch;
         public static Camera MzEspCamera;
@@ -71,30 +68,10 @@ namespace COW.GamePlay
                 if(texts[i]!=null)GUI.Label(rects[i],texts[i],style);else {var texture=textures[i];if(solids[i]&&fallback++>=96)continue;if(texture!=null)GUI.DrawTexture(rects[i],texture);}
             }}finally{GUI.matrix=matrix;GUI.color=tint;}
         }
-        // Game-owned collector, only from the already running GUI/ESP path. No
-        // new startup hook, thread query, background task or per-frame full GC.
-        public static void MzEspMemoryStep(long bytes,float now)
-        {
-            if(bytes<=0||MzEspMemoryDisabled||!MzFinite(now))return;
-            MzEspMemoryLast=bytes;bool first=MzEspMemoryBaseline==0;
-            if(first||bytes<MzEspMemoryBaseline)MzEspMemoryBaseline=bytes;
-            if(now<MzEspMemoryNextCollect||bytes<268435456L)return;
-            if(bytes-MzEspMemoryBaseline<67108864L&&!(first&&bytes>=536870912L))return;
-            MzEspMemoryNextCollect=now+8;
-            try{COW.GcUtil.Collect(ManualGCReason.MemoryUtilCollect);long after=GC.GetTotalMemory(false);MzEspMemoryCollections++;MzEspMemoryFreed=bytes>after?bytes-after:0;MzEspMemoryBaseline=after>0?after:bytes;MzEspMemoryLast=after;
-                if(MzEspMemoryFreed<8388608L)MzEspMemoryNextCollect=now+60;
-            }catch(Exception){MzEspMemoryDisabled=true;}
-        }
-        public static void MzEspMemoryPulse(float now)
-        {
-            if(MzEspMemoryDisabled||now<MzEspMemoryNext)return;MzEspMemoryNext=now+1;
-            try{MzEspMemoryStep(GC.GetTotalMemory(false),now);}catch(Exception){MzEspMemoryDisabled=true;}
-        }
         public static void MzRender()
         {
             if(MzRendering)return;MzRendering=true;
             try{
-                MzEspMemoryPulse(Time.realtimeSinceStartup);
                 var match=COW.GameFacade.CurrentMatch();var camera=Camera.main;
                 if(match==null||camera==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;return;}
                 MzRendererInit();float now=Time.realtimeSinceStartup;

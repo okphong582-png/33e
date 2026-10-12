@@ -94,7 +94,6 @@ namespace SimpleJSON
         public static JSONNode Parse(string json){return new JSONNode(new JavaScriptSerializer().DeserializeObject(json));}
     }
 }
-public enum ManualGCReason {MemoryUtilCollect=13}
 namespace GCommon
 {
     public class SingletonModule<T> where T:class,new() {static T Value=new T();public static T instance {get{return Value;}}}
@@ -102,7 +101,6 @@ namespace GCommon
 }
 namespace COW
 {
-    public static class GcUtil {public static int Calls;public static bool Fail;public static Action DuringCollect;public static void Collect(ManualGCReason reason){if(Fail)throw new Exception("collector failure");Calls++;if(DuringCollect!=null)DuringCollect();GC.Collect();}}
     public class UIModelRole {}
     public static class GameFacade {public static UIModelRole m_modelRole;public static UIModelRole UIModelRole {get{return m_modelRole;}}public static GamePlay.JMAGGLCNGIG Match;public static GamePlay.Player Local;public static GamePlay.JMAGGLCNGIG CurrentMatch(){return Match;}public static GamePlay.Player GetLocalPlayerOrObServer(){return Local;}}
 }
