@@ -1,0 +1,37 @@
+{
+  "scope": "GIF background, font family and glass paint only",
+  "originalSourceCommit": "6b9053afadef350ae9a27e4b5a5d5b55f39f200f",
+  "gif": {
+    "file": "video-ezgif.com-video-to-gif-converter.gif",
+    "sha256": "09e3bb4a1b12a1c2039a7787d1a5d72ff63adb222c218749cffee3270372fae8",
+    "frames": 15,
+    "width": 96,
+    "height": 112,
+    "durationMs": 2500,
+    "gpuBytes": 645120,
+    "decodedRgbaSha256": "b065d70edb35cb59f3f3ff2eafcff93b33aec212ed100ea20753b43a4d6cce48",
+    "paletteColors": 243,
+    "encoding": "Palette indexes with bounded RLE, vertical flip and rounded-corner transparency"
+  },
+  "font": {
+    "preferred": "Helvetica Neue",
+    "fallbacks": [
+      "Avenir Next",
+      "Arial"
+    ]
+  },
+  "unchanged": [
+    "MzEnsure",
+    "OnGUI",
+    "four hooks",
+    "ESP",
+    "aim",
+    "license/key",
+    "movement",
+    "input hit areas",
+    "renderer/batch",
+    "native API/type dependencies"
+  ],
+  "runtimeTests": 1556,
+  "deviceVerified": false
+}

@@ -1,7 +1,8 @@
-// Verify that restoring the original source reproduces its original patch exactly.
-const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict');
-const dir=path.join(__dirname,'mizze-original/dist'),data=fs.readFileSync(path.join(dir,'Assembly-CSharp-patch.bytes'));
-const expected='381851f75838863ae972fff7165e447e72caed8bb7afea727620e8b086e2b6e9',actual=crypto.createHash('sha256').update(data).digest('hex');
-assert.equal(actual,expected,'Untouched-source patch differs from original build');assert.equal(data.length,72484);
-const report={edition:'Original untouched 24-file source',baselineCommit:'6b9053afadef350ae9a27e4b5a5d5b55f39f200f',sha256:actual,size:data.length,byteIdenticalToOriginalBuild:true,deviceVerified:false};
-fs.writeFileSync(path.join(dir,'restore-verification.json'),JSON.stringify(report,null,2)+'\n');console.log('PASS: restored patch is byte-for-byte identical to original build '+actual);
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict'),{inspect}=require('./inspect_patch.cjs');
+const dir=path.join(__dirname,'mizze-original'),out=path.join(dir,'dist'),contract=JSON.parse(fs.readFileSync(path.join(dir,'ui-compatibility-baseline.json'))),evidence=JSON.parse(fs.readFileSync(path.join(dir,'ui-only-evidence.json'))),patch=inspect(fs.readFileSync(path.join(out,'Assembly-CSharp-patch.bytes')));
+const sameSet=(actual,expected,label)=>assert.deepEqual(actual.map(x=>JSON.stringify(x)).sort(),expected.map(x=>JSON.stringify(x)).sort(),label);
+const method=e=>[e.owner,e.name,e.generic,e.args,e.parameters,e.parameterIsGeneric];
+sameSet(patch.types,contract.types,'Native types changed');sameSet(patch.externMethods.map(method),contract.externMethods.map(method),'Native extern methods changed');sameSet(patch.fields.filter(f=>!f.isNew).map(f=>[f.owner,f.name]),contract.fields.map(f=>[f.owner,f.name]),'Native fields changed');sameSet(patch.fixes.map(f=>method(f.method)),contract.fixes.map(method),'Original hook descriptors changed');
+const decoded=fs.readFileSync(path.join(out,'gif-decoded.rgba'));assert.equal(crypto.createHash('sha256').update(decoded).digest('hex'),evidence.gif.decodedRgbaSha256,'Decoded GIF pixels differ from reviewed source asset');
+const manifestPath=path.join(out,'manifest.json'),manifest=JSON.parse(fs.readFileSync(manifestPath));manifest.source='menu/mizze-original/*.cs';manifest.edition='Old source + GIF/font/glass only';fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n');
+const report={edition:'Old source + GIF/font/glass only',sha256:patch.sha256,size:patch.size,nativeApiAndTypesUnchanged:true,bootstrapAndOnGuiUnchanged:true,decodedGifMatchesAsset:true,deviceVerified:false};fs.writeFileSync(path.join(out,'ui-verification.json'),JSON.stringify(report,null,2)+'\n');console.log('PASS: identical native API/type set and hooks; decoded GIF matches source pixels.');

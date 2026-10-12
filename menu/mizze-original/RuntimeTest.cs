@@ -74,8 +74,32 @@ unsafe static class MizzeRuntimeTest
             b.Append("<g transform=\"translate("+Number(d.Matrix.Position.x)+" "+Number(d.Matrix.Position.y)+") rotate("+Number(d.Matrix.Angle)+") scale("+Number(sx)+" "+Number(sy)+")\" opacity=\""+Number(d.Color.a)+"\">");
             if(d.Text!=null){int font=d.FontSize>0?d.FontSize:12;float x=d.Align==TextAnchor.MiddleCenter?r.x+r.width*.5f:r.x,y=d.Align==TextAnchor.UpperLeft?r.y+font:r.y+r.height*.5f+font*.33f;string anchor=d.Align==TextAnchor.MiddleCenter?"middle":"start";var lines=new List<string>();if(d.Wrap){string line="";foreach(string word in d.Text.Split(' ')){if(line.Length>0&&(line.Length+word.Length+1)*font*.54f>r.width){lines.Add(line);line=word;}else line+=(line.Length>0?" ":"")+word;}lines.Add(line);}else lines.Add(d.Text);
                 for(int i=0;i<lines.Count&&i*font*1.2f<r.height;i++)b.Append("<text x=\""+Number(x)+"\" y=\""+Number(y+i*font*1.2f)+"\" text-anchor=\""+anchor+"\" font-family=\"Arial\" font-size=\""+font+"\" fill=\""+c+"\">"+System.Security.SecurityElement.Escape(lines[i])+"</text>");
-            }else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Width>0){var tex=(Texture2D)d.Texture;float radius=(tex.Width*.5f-2)*(r.width/tex.Width),stroke=(tex.Width==32?3:1.5f)*(r.width/tex.Width);b.Append("<circle cx=\""+Number(r.x+r.width*.5f)+"\" cy=\""+Number(r.y+r.height*.5f)+"\" r=\""+Number(radius-stroke*.5f)+"\" fill=\"none\" stroke=\""+c+"\" stroke-width=\""+Number(stroke)+"\"/>");}else b.Append("<rect x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" rx=\""+Number(d.Radius)+"\" fill=\""+c+"\"/>");b.Append("</g>");
+            }else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Width==96){var tex=(Texture2D)d.Texture;using(var bitmap=new System.Drawing.Bitmap(tex.Width,tex.Height)){for(int py=0;py<tex.Height;py++)for(int px=0;px<tex.Width;px++){var pc=tex.Pixels[(tex.Height-1-py)*tex.Width+px];bitmap.SetPixel(px,py,System.Drawing.Color.FromArgb((int)Math.Round(pc.a*255),(int)Math.Round(pc.r*255),(int)Math.Round(pc.g*255),(int)Math.Round(pc.b*255)));}using(var stream=new MemoryStream()){bitmap.Save(stream,System.Drawing.Imaging.ImageFormat.Png);b.Append("<image x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,"+Convert.ToBase64String(stream.ToArray())+"\"/>");}}}else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Width>0){var tex=(Texture2D)d.Texture;float radius=(tex.Width*.5f-2)*(r.width/tex.Width),stroke=(tex.Width==32?3:1.5f)*(r.width/tex.Width);b.Append("<circle cx=\""+Number(r.x+r.width*.5f)+"\" cy=\""+Number(r.y+r.height*.5f)+"\" r=\""+Number(radius-stroke*.5f)+"\" fill=\"none\" stroke=\""+c+"\" stroke-width=\""+Number(stroke)+"\"/>");}else b.Append("<rect x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" rx=\""+Number(d.Radius)+"\" fill=\""+c+"\"/>");b.Append("</g>");
         }b.Append("</svg>");File.WriteAllText(file,b.ToString());
+    }
+    static void UiOnlyGlassChecks(string[] args)
+    {
+        Driver=GameObject.Find("__mizze_driver").Added;COW.GameFacade.Match=null;Set("MzOpen",false);Set("MzOpenAnim",0f);Frame(EventType.Repaint);
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze"),"unchanged old launcher visible before opening glass panel");
+        Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",2);Time.Now=500;int created=Texture2D.Created;
+        for(int i=0;i<16;i++){Time.Now+=.13f;Frame(EventType.Repaint);}
+        var textures=Get<Texture[]>("MzGlassFrames");Check(Get<int>("MzGlassLoaded")==15&&textures.Length==15,"exactly fifteen GIF frames loaded progressively");
+        Check(Get<Color[]>("MzGlassPixels")==null&&Get<Color[]>("MzGlassColors")==null&&Get<string[]>("MzGlassEncoded")==null,"GIF releases decode buffer palette and encoded slots after loading");
+        Check(Texture2D.Created-created<=15,"GIF has fixed texture allocation cap");
+        byte[] rgba=new byte[96*112*4*15];
+        for(int f=0;f<15;f++){var texture=(Texture2D)textures[f];Check(texture.Width==96&&texture.Height==112&&texture.Released,"frame uses bounded nonreadable native texture");
+            for(int y=0;y<112;y++)for(int x=0;x<96;x++){var c=texture.Pixels[(111-y)*96+x];int k=((f*112+y)*96+x)*4;rgba[k]=(byte)Math.Round(c.r*255);rgba[k+1]=(byte)Math.Round(c.g*255);rgba[k+2]=(byte)Math.Round(c.b*255);rgba[k+3]=(byte)Math.Round(c.a*255);}
+        }File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(args[0]),"gif-decoded.rgba"),rgba);
+        Time.Now+=.18f;Frame(EventType.Repaint);var first=GUI.Calls.First(d=>d.Texture is Texture2D&&((Texture2D)d.Texture).Width==96).Texture;Time.Now+=.18f;Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Texture is Texture2D&&((Texture2D)d.Texture).Width==96&&!Object.ReferenceEquals(d.Texture,first)),"real GIF frame changes during panel animation");
+        int uploads=Texture2D.Uploaded;created=Texture2D.Created;for(int i=0;i<240;i++){Time.Now+=1f/60;Frame(EventType.Repaint);}Check(Texture2D.Uploaded==uploads&&Texture2D.Created==created,"loaded background reuses textures without per-frame uploads");
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&GUI.Calls.Any(d=>d.Text=="KHÓA"),"original key/menu controls remain visible over GIF");
+        Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-glass.svg"));
+        Set("MzOpen",false);Set("MzOpenAnim",0f);Frame(EventType.Repaint);float paused=Get<float>("MzGlassClock");for(int i=0;i<60;i++){Time.Now+=.016f;Frame(EventType.Repaint);}Check(Get<float>("MzGlassClock")==paused,"closed menu stops GIF animation");
+        Set("MzGlassLoaded",0);Set("MzGlassFailed",false);Set("MzGlassFrames",null);Set("MzGlassNext",0f);Texture2D.FailUpload=true;Set("MzOpen",true);Set("MzOpenAnim",1f);Frame(EventType.Repaint);Texture2D.FailUpload=false;
+        Check(Get<bool>("MzGlassFailed")&&Texture2D.LastCreated.Destroyed,"failed GIF upload destroys incomplete texture and disables retry");
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&GUI.Calls.Any(d=>d.Text=="KHÓA"),"GIF failure preserves original launcher and menu controls");
+        created=Texture2D.Created;Time.Now+=2;Frame(EventType.Repaint);Check(Texture2D.Created==created,"failed GIF does not repeatedly allocate");
+        Check(Font.Loads==1&&GUIStyle.DefaultFont==GUI.skin.font,"new font family still loads once and restores game font");
     }
     static void ExtendedChecks(string[] args)
     {
@@ -193,6 +217,7 @@ unsafe static class MizzeRuntimeTest
         StabilityChecks(args);
         BatchChecks();
         UiPerformanceChecks();
+        UiOnlyGlassChecks(args);
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading and in-game aim remain unverified.");GC.KeepAlive(Vm);return 0;
     }
 }

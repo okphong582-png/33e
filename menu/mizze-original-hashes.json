@@ -1,13 +1,5 @@
 [
   {
-    "name": "bindings-evidence.json",
-    "sha256": "bfb3851e13af42cd74d2ad5663fc37222b74277f918eeac83f43b18a5712e498"
-  },
-  {
-    "name": "build.cjs",
-    "sha256": "8a68cdb7816647258d2aeb2a40f8dc946dfed3f8fc65e9326ba2866392a3b272"
-  },
-  {
     "name": "CompilerHost.cs",
     "sha256": "59fb0bdbad559fdb8b60d25c6ae2de7d71115db4307d36563f450efccc44a890"
   },
@@ -24,16 +16,12 @@
     "sha256": "deaa8fbb76de230c8fc408220752a4e4df745b76d748b3c85b82f0d899f79ef0"
   },
   {
-    "name": "loader-evidence.json",
-    "sha256": "3285b48bd079ca96a179d6da14de3408d1b56a4b526ee7063ff3d5a3ee4ec746"
-  },
-  {
     "name": "Mizze.cs",
-    "sha256": "cc8df38c295e39169fb2f09db3523f54ce2df928787325511246789fee6e7dd1"
+    "sha256": "63f41c14cec41a12bcf101c034813e203f1471f8e9f135e902117a8b4a379600"
   },
   {
     "name": "MizzeAppearance.cs",
-    "sha256": "ec70402910b3921e7122053ef37670c18649de166ef1a15063eab957b892f5f0"
+    "sha256": "9ba7a8de7e5b7eb5d8692c8d035cf235c55634309142ca59352ce21bc0901535"
   },
   {
     "name": "MizzeBatch.cs",
@@ -52,16 +40,8 @@
     "sha256": "fa906b74e8fd83ce6528c8d64dd414348225a56bd4a4257064aafe9ff01b3044"
   },
   {
-    "name": "native-loader.cjs",
-    "sha256": "9453ed08e2a2e5e486dfe6b337a9d0548fb4e1398bb2b378f7ed2b6917e21e3d"
-  },
-  {
     "name": "NetworkBindings.cs",
     "sha256": "5e32bd0b722fe10a683336ef0460d1a35f5ae63e36339347bd4f5f125ab741ab"
-  },
-  {
-    "name": "package.cjs",
-    "sha256": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967"
   },
   {
     "name": "PhysicsBindings.cs",
@@ -77,11 +57,7 @@
   },
   {
     "name": "RuntimeTest.cs",
-    "sha256": "3762ca1898a7de2949ff230d2d3fdbfa2bd6bea1300817d9a74e997d28169ea3"
-  },
-  {
-    "name": "test.cjs",
-    "sha256": "a33f6d09355a2f543caa331854716bee95ae8245a82ba1aa2e86923467949316"
+    "sha256": "06e78e06e5e0929467ee7aba35b5eb13afbca47b0ff9567d5e54dc2f0c372dc7"
   },
   {
     "name": "TextBindings.cs",
@@ -90,6 +66,38 @@
   {
     "name": "UnityBindings.cs",
     "sha256": "e78343880825c1faccb06af5c7bb33c5e3d139bd583bbcdc2b2bf51dd28e11f9"
+  },
+  {
+    "name": "bindings-evidence.json",
+    "sha256": "bfb3851e13af42cd74d2ad5663fc37222b74277f918eeac83f43b18a5712e498"
+  },
+  {
+    "name": "build.cjs",
+    "sha256": "8a68cdb7816647258d2aeb2a40f8dc946dfed3f8fc65e9326ba2866392a3b272"
+  },
+  {
+    "name": "loader-evidence.json",
+    "sha256": "3285b48bd079ca96a179d6da14de3408d1b56a4b526ee7063ff3d5a3ee4ec746"
+  },
+  {
+    "name": "native-loader.cjs",
+    "sha256": "9453ed08e2a2e5e486dfe6b337a9d0548fb4e1398bb2b378f7ed2b6917e21e3d"
+  },
+  {
+    "name": "package.cjs",
+    "sha256": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967"
+  },
+  {
+    "name": "test.cjs",
+    "sha256": "dc9d55931babc07fb87f0e681a2a7292f50c1fe9e7c0cbb4c530cdc35a0853d0"
+  },
+  {
+    "name": "ui-compatibility-baseline.json",
+    "sha256": "8d1e29289e498f28fc4a03badd98bb78356da4f8af595a1ce21418f22b0778b3"
+  },
+  {
+    "name": "ui-only-evidence.json",
+    "sha256": "7ad3b935b8bf78c550aa18c78b568319947c77e1fec8e98e226779df735ecf8e"
   },
   {
     "name": "verify-declarations.cjs",
