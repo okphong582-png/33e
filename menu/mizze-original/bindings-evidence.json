@@ -1436,6 +1436,67 @@
     "declaration": "public void SetAimRotation(Quaternion FMLGGLAFNEC, bool KDCHOPMDKKE) { }"
   },
   {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "method": "get_FireIntervalScale",
+    "parameters": [],
+    "declaration": "public float get_FireIntervalScale() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "method": "set_FireIntervalScale",
+    "parameters": [
+      "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void set_FireIntervalScale(float BOKHFCBMCAB) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "method": "get_Attributes",
+    "parameters": [],
+    "declaration": "public PlayerAttributes get_Attributes() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "method": "GetSpeedByType",
+    "parameters": [
+      "PIOEKCEKPNI, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public float GetSpeedByType(PIOEKCEKPNI DKDIDIBLJMK) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Convert",
+    "method": "FromBase64String",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static byte[] FromBase64String(string s) { }"
+  },
+  {
+    "assembly": "UnityEngine.ImageConversionModule",
+    "owner": "UnityEngine.ImageConversion",
+    "method": "LoadImage",
+    "parameters": [
+      "UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static bool LoadImage(Texture2D tex, byte[] data, bool markNonReadable) { }"
+  },
+  {
+    "assembly": "mscorlib",
+    "owner": "System.Exception",
+    "method": ".ctor",
+    "parameters": [
+      "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public void .ctor(string message) { }"
+  },
+  {
     "assembly": "mscorlib",
     "owner": "System.String",
     "method": "Concat",
@@ -1588,6 +1649,12 @@
     "owner": "UnityEngine.Vector2",
     "field": "y",
     "declaration": "public float y; // 0x14"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.PlayerAttributes",
+    "field": "ForceSetRunAndDashSpeed",
+    "declaration": "public float ForceSetRunAndDashSpeed; // 0x3C8"
   },
   {
     "assembly": "UnityEngine.CoreModule",

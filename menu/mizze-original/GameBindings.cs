@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 [assembly: System.Reflection.AssemblyVersion("0.86.0.518")]
+public enum PIOEKCEKPNI {Run=0}
 namespace GCommon
 {
     public class SingletonModule<T> where T:class {public static T instance {get {return null;}}}
@@ -37,8 +38,10 @@ namespace COW.GamePlay
         public Vector3 HPCOJHGFEEG,DOJDNHCGFGK,HLDECMJFKJK,EKPLMDDKOGB,ONMKMEGMHOL;
         public bool DKPDBLLJEAA,EFMBNPNFGHM,CEOKOILBODN,CLOLKHNMNEK;
     }
+    public class PlayerAttributes:Component {public float ForceSetRunAndDashSpeed;public float FireIntervalScale {get{return 1;}set{}}public float GetSpeedByType(PIOEKCEKPNI type){return 0;}}
     public class Player : Component
     {
+        public PlayerAttributes Attributes {get{return null;}}
         public CGKJLKPMGDJ FDMIEDDNCEC;
         public bool IsInStealth(){return false;}
         public bool IsReallyInStealth(){bool result=IsInStealth();SceneEditBoxSelectTool.MzEnsure();return result;}

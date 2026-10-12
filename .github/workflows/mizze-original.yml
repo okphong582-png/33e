@@ -1,4 +1,4 @@
-name: Build Original Source
+name: Build Old Source Menu
 on:
   workflow_dispatch:
   push:
@@ -24,20 +24,20 @@ jobs:
           persist-credentials: false
       - name: Prepare interpreter
         run: node menu/prepare-runtime-test.cjs .ifix-runtime
-      - name: Verify untouched original files
+      - name: Verify reviewed old-source snapshot
         run: node menu/verify-mizze-original.cjs
-      - name: Compile original source unchanged
+      - name: Compile edited old source
         run: node menu/mizze-original/build.cjs .ifix-runtime
       - name: Package using original serializer
         run: node menu/mizze-original/package.cjs
-      - name: Run original bytecode tests
+      - name: Run final bytecode tests
         run: node menu/mizze-original/test.cjs
-      - name: Verify source still unchanged
+      - name: Verify build does not modify source
         run: node menu/verify-mizze-original.cjs
-      - name: Upload untouched source build
+      - name: Upload old-source glass build
         uses: actions/upload-artifact@v4
         with:
-          name: Mizze-Original-Source-Unchanged
+          name: Mizze-OldSource-Gloss
           path: |
             menu/mizze-original/dist/Assembly-CSharp-patch.bytes
             menu/mizze-original/dist/SHA256SUMS.txt

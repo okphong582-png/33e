@@ -74,7 +74,7 @@ unsafe static class MizzeRuntimeTest
             b.Append("<g transform=\"translate("+Number(d.Matrix.Position.x)+" "+Number(d.Matrix.Position.y)+") rotate("+Number(d.Matrix.Angle)+") scale("+Number(sx)+" "+Number(sy)+")\" opacity=\""+Number(d.Color.a)+"\">");
             if(d.Text!=null){int font=d.FontSize>0?d.FontSize:12;float x=d.Align==TextAnchor.MiddleCenter?r.x+r.width*.5f:r.x,y=d.Align==TextAnchor.UpperLeft?r.y+font:r.y+r.height*.5f+font*.33f;string anchor=d.Align==TextAnchor.MiddleCenter?"middle":"start";var lines=new List<string>();if(d.Wrap){string line="";foreach(string word in d.Text.Split(' ')){if(line.Length>0&&(line.Length+word.Length+1)*font*.54f>r.width){lines.Add(line);line=word;}else line+=(line.Length>0?" ":"")+word;}lines.Add(line);}else lines.Add(d.Text);
                 for(int i=0;i<lines.Count&&i*font*1.2f<r.height;i++)b.Append("<text x=\""+Number(x)+"\" y=\""+Number(y+i*font*1.2f)+"\" text-anchor=\""+anchor+"\" font-family=\"Arial\" font-size=\""+font+"\" fill=\""+c+"\">"+System.Security.SecurityElement.Escape(lines[i])+"</text>");
-            }else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Width>0){var tex=(Texture2D)d.Texture;float radius=(tex.Width*.5f-2)*(r.width/tex.Width),stroke=(tex.Width==32?3:1.5f)*(r.width/tex.Width);b.Append("<circle cx=\""+Number(r.x+r.width*.5f)+"\" cy=\""+Number(r.y+r.height*.5f)+"\" r=\""+Number(radius-stroke*.5f)+"\" fill=\"none\" stroke=\""+c+"\" stroke-width=\""+Number(stroke)+"\"/>");}else b.Append("<rect x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" rx=\""+Number(d.Radius)+"\" fill=\""+c+"\"/>");b.Append("</g>");
+            }else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Png!=null){b.Append("<image x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,"+Convert.ToBase64String(((Texture2D)d.Texture).Png)+"\"/>");}else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Width>0){var tex=(Texture2D)d.Texture;float radius=(tex.Width*.5f-2)*(r.width/tex.Width),stroke=(tex.Width==32?3:1.5f)*(r.width/tex.Width);b.Append("<circle cx=\""+Number(r.x+r.width*.5f)+"\" cy=\""+Number(r.y+r.height*.5f)+"\" r=\""+Number(radius-stroke*.5f)+"\" fill=\"none\" stroke=\""+c+"\" stroke-width=\""+Number(stroke)+"\"/>");}else b.Append("<rect x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" rx=\""+Number(d.Radius)+"\" fill=\""+c+"\"/>");b.Append("</g>");
         }b.Append("</svg>");File.WriteAllText(file,b.ToString());
     }
     static void ExtendedChecks(string[] args)
@@ -149,6 +149,44 @@ unsafe static class MizzeRuntimeTest
         Set("MzOpen",false);for(int i=0;i<120;i++)Frame(EventType.Repaint);Check(Get<float>("MzOpenAnim")==0,"close animation settles exactly to zero");var animation=Get<float[]>("MzSwitchAnim");float before=animation[0];Get<bool[]>("MzSwitch")[0]=!Get<bool[]>("MzSwitch")[0];Frame(EventType.Repaint);Check(animation[0]==before,"fully closed panel skips hidden toggle animation updates");
         Check(Get<bool>("MzUiPaint"),"draw gating restored after pointer events");
     }
+
+    static void OldSourceGlossChecks(string[] args)
+    {
+        License(Record(Get<string>("MzDeviceHash")));Set("MzKeyHash","");Set("MzRequest",null);
+        COW.GameFacade.Match=new JMAGGLCNGIG();var player=Enemy(0);player.Local=true;player.Attributes=new PlayerAttributes();COW.GameFacade.Local=player;
+        var s=Get<bool[]>("MzSwitch");Array.Clear(s,0,s.Length);s[15]=true;s[16]=true;Set("MzRunLevel",1);Set("MzFireLevel",1);
+        Time.Now=1;Set("MzExtrasNext",0f);Run("MzExtrasPoll");
+        Check(player.Attributes.ForceSetRunAndDashSpeed==7.5f&&player.Attributes.FireIntervalScale==.5f,"new toggles write real native speed/fire attributes");
+        for(int i=0;i<100;i++){Time.Now+=.11f;Run("MzExtrasPoll");}
+        Check(player.Attributes.ForceSetRunAndDashSpeed==7.5f&&player.Attributes.FireIntervalScale==.5f,"repeated polls do not compound multipliers");
+        Set("MzRunLevel",2);Set("MzFireLevel",2);Time.Now+=.11f;Run("MzExtrasPoll");
+        Check(player.Attributes.ForceSetRunAndDashSpeed==10&&Math.Abs(player.Attributes.FireIntervalScale-1f/3)<.0001,"levels update from captured base values");
+        s[15]=false;Time.Now+=.11f;Run("MzExtrasPoll");Check(player.Attributes.ForceSetRunAndDashSpeed==0&&player.Attributes.FireIntervalScale<.34f,"run restores independently of rapid fire");
+        player.Attributes.FireIntervalScale=.8f;Run("MzExtrasRestore");Check(player.Attributes.FireIntervalScale==.8f,"restoration preserves intervening native changes");
+        s[15]=true;Time.Now+=.11f;Run("MzExtrasPoll");var first=player.Attributes;player.Attributes=new PlayerAttributes {BaseRun=6};
+        Time.Now+=.11f;Run("MzExtrasPoll");Check(first.ForceSetRunAndDashSpeed==0&&first.FireIntervalScale==.8f&&player.Attributes.ForceSetRunAndDashSpeed==12,"player attribute replacement restores old owner and captures new base");
+        player.HP=0;Time.Now+=.11f;Run("MzExtrasPoll");Check(player.Attributes.ForceSetRunAndDashSpeed==0&&player.Attributes.FireIntervalScale==1,"death restores both overrides");
+        player.HP=100;Time.Now+=.11f;Run("MzExtrasPoll");License(Record(Get<string>("MzDeviceHash"),false));Run("MzExtrasPoll");
+        Check(player.Attributes.ForceSetRunAndDashSpeed==0&&player.Attributes.FireIntervalScale==1,"key revocation restores speed and fire");
+        License(Record(Get<string>("MzDeviceHash")));s[15]=false;s[16]=false;
+        Set("MzOpen",true);Set("MzOpenAnim",1f);Set("MzTab",4);Set("MzTabAnim",4f);Set("MzUiPaint",true);Set("MzPanelX",120f);Set("MzPanelY",16f);
+        Frame(EventType.Repaint);Check(GUI.Calls.Any(d=>d.Text=="Chạy nhanh")&&GUI.Calls.Any(d=>d.Text=="Bắn nhanh"),"new speed tab renders Vietnamese controls");
+        Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-speed.svg"));
+        Set("MzBackgroundNextLoad",0f);int loaded=Get<int>("MzBackgroundLoaded");
+        for(int i=0;i<30;i++){Time.Now+=.05f;Frame(EventType.Repaint);}
+        Check(Get<int>("MzBackgroundLoaded")==15&&Get<string[]>("MzBackgroundEncoded")==null,"GIF loads at most 15 frames and releases encoded data");
+        var frames=Get<Texture2D[]>("MzBackgroundFrames");Check(frames.All(f=>f.Width==192&&f.Height==222&&f.Released),"small GIF frames uploaded non-readable");
+        int count=ImageConversion.Loads;for(int i=0;i<100;i++){Time.Now+=.02f;Frame(EventType.Repaint);}
+        Check(ImageConversion.Loads==count,"animated repaints reuse uploaded textures without decoding");
+        Set("MzOpen",false);for(int i=0;i<80;i++){Time.Now+=.02f;Frame(EventType.Repaint);}
+        float clock=Get<float>("MzBackgroundClock");Time.Now+=5;Frame(EventType.Repaint);Check(Get<float>("MzBackgroundClock")==clock,"closed menu pauses GIF clock");
+        Set("MzOpen",true);Set("MzBackgroundLoaded",0);Set("MzBackgroundFrames",null);Set("MzBackgroundNextLoad",0f);ImageConversion.Fail=true;Time.Now+=.1f;Frame(EventType.Repaint);
+        Check(Get<bool>("MzBackgroundFailed")&&GUI.Calls.Any(d=>d.Text=="Mizze"),"image decode failure preserves the old launcher and glass panel");
+        int failed=ImageConversion.Loads;Time.Now+=1;Frame(EventType.Repaint);Check(ImageConversion.Loads==failed,"failed GIF does not enter a repeated allocation loop");
+        ImageConversion.Fail=false;Set("MzBackgroundFrames",frames);Set("MzBackgroundLoaded",15);Set("MzBackgroundFailed",false);
+        Set("MzTab",0);Set("MzTabAnim",0f);Set("MzOpenAnim",1f);Frame(EventType.Repaint);Snapshot(Path.Combine(Path.GetDirectoryName(args[0]),"menu-glass.svg"));
+    }
+
     static int Main(string[] args)
     {
         foreach(var line in File.ReadAllLines(args[1])){var a=line.Split('\t');Methods.Add(a[2],int.Parse(a[0]));}Vm=Load(args[0]);
@@ -193,6 +231,7 @@ unsafe static class MizzeRuntimeTest
         StabilityChecks(args);
         BatchChecks();
         UiPerformanceChecks();
+        OldSourceGlossChecks(args);
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading and in-game aim remain unverified.");GC.KeepAlive(Vm);return 0;
     }
 }

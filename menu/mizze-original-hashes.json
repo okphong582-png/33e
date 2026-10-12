@@ -1,47 +1,51 @@
 [
   {
-    "name": "bindings-evidence.json",
-    "sha256": "bfb3851e13af42cd74d2ad5663fc37222b74277f918eeac83f43b18a5712e498"
-  },
-  {
-    "name": "build.cjs",
-    "sha256": "8a68cdb7816647258d2aeb2a40f8dc946dfed3f8fc65e9326ba2866392a3b272"
-  },
-  {
     "name": "CompilerHost.cs",
     "sha256": "59fb0bdbad559fdb8b60d25c6ae2de7d71115db4307d36563f450efccc44a890"
   },
   {
     "name": "GameBindings.cs",
-    "sha256": "fbe2d386bc7d8630c0da221b1201157f827fb132ccb416a32c59ff5ddc10d4cf"
+    "sha256": "2a3a3254af678d40926efa290e8ba67e9c372bd40dedc2318bb9c50c14aa988c"
   },
   {
     "name": "GuiBindings.cs",
     "sha256": "d5d8482d195b48f9a932ea7b05c3abb02bdc662dd0a6978cfbef3a0cacd336de"
   },
   {
+    "name": "ImageBindings.cs",
+    "sha256": "c1725c5aec8fdc2d04da9e91c46c26caf939b0683a1cceb6efd6888d86763ffb"
+  },
+  {
     "name": "JsonBindings.cs",
     "sha256": "deaa8fbb76de230c8fc408220752a4e4df745b76d748b3c85b82f0d899f79ef0"
   },
   {
-    "name": "loader-evidence.json",
-    "sha256": "3285b48bd079ca96a179d6da14de3408d1b56a4b526ee7063ff3d5a3ee4ec746"
-  },
-  {
     "name": "Mizze.cs",
-    "sha256": "cc8df38c295e39169fb2f09db3523f54ce2df928787325511246789fee6e7dd1"
+    "sha256": "786dfd45ddf33e36af8ba50cb4c8bc9d0e7ddbb12e46fd6430acd2deb5d7bdd1"
   },
   {
     "name": "MizzeAppearance.cs",
     "sha256": "ec70402910b3921e7122053ef37670c18649de166ef1a15063eab957b892f5f0"
   },
   {
+    "name": "MizzeBackgroundData.cs",
+    "sha256": "8d917d895ded0fa3a0d8f05cafd013f9fefc5c1ef442dace2f1801bec8d339ed"
+  },
+  {
     "name": "MizzeBatch.cs",
     "sha256": "3355f558727b1476e8b781a007d182b0b92f7f6040320774d6634bfd2385cb68"
   },
   {
+    "name": "MizzeExtras.cs",
+    "sha256": "6e828653bc65b0a3f7b5134cd25faa788998fe4665139c54c90704512a6cd6dd"
+  },
+  {
     "name": "MizzeGameplay.cs",
     "sha256": "1075b82f714ecbec34e99014caf7aa2c5b78d0cf4edbd8ab464273170fe1e8a4"
+  },
+  {
+    "name": "MizzeGlass.cs",
+    "sha256": "773ea65c656f821be4ab5c882f4f343246ba811b744f4d9196ee38db3ebad199"
   },
   {
     "name": "MizzeLicense.cs",
@@ -52,16 +56,8 @@
     "sha256": "fa906b74e8fd83ce6528c8d64dd414348225a56bd4a4257064aafe9ff01b3044"
   },
   {
-    "name": "native-loader.cjs",
-    "sha256": "9453ed08e2a2e5e486dfe6b337a9d0548fb4e1398bb2b378f7ed2b6917e21e3d"
-  },
-  {
     "name": "NetworkBindings.cs",
     "sha256": "5e32bd0b722fe10a683336ef0460d1a35f5ae63e36339347bd4f5f125ab741ab"
-  },
-  {
-    "name": "package.cjs",
-    "sha256": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967"
   },
   {
     "name": "PhysicsBindings.cs",
@@ -69,19 +65,15 @@
   },
   {
     "name": "README.md",
-    "sha256": "839e697cc87650eb36d04aeba3affb9f0bcff56e9c8b82e118e0a3823a7dca5d"
+    "sha256": "32b91f3f4d46158e4d3535ac109a3c9b8a13b2e79c3b2f52832fc3bf26e919f7"
   },
   {
     "name": "RuntimeApis.cs",
-    "sha256": "318dd4c39aba404a4e9f9c5912b08f441c68529cde6fa13c3192301c161fbf96"
+    "sha256": "e33d4823a04a6ecd1c7bb9e59fb8cff80ec4b1355894e6108e34d9d784ef7681"
   },
   {
     "name": "RuntimeTest.cs",
-    "sha256": "3762ca1898a7de2949ff230d2d3fdbfa2bd6bea1300817d9a74e997d28169ea3"
-  },
-  {
-    "name": "test.cjs",
-    "sha256": "a33f6d09355a2f543caa331854716bee95ae8245a82ba1aa2e86923467949316"
+    "sha256": "f4a754039bec26f8ac84f19a8a95e0cf4218db333c6de3ce1e322c0900126f73"
   },
   {
     "name": "TextBindings.cs",
@@ -90,6 +82,42 @@
   {
     "name": "UnityBindings.cs",
     "sha256": "e78343880825c1faccb06af5c7bb33c5e3d139bd583bbcdc2b2bf51dd28e11f9"
+  },
+  {
+    "name": "assets/background.json",
+    "sha256": "82ee5506ba1f8e4676c65cbcb72ee8db7531797d669dd80b0b8d5e27c3c2a20c"
+  },
+  {
+    "name": "assets/video-ezgif.com-video-to-gif-converter.gif",
+    "sha256": "09e3bb4a1b12a1c2039a7787d1a5d72ff63adb222c218749cffee3270372fae8"
+  },
+  {
+    "name": "bindings-evidence.json",
+    "sha256": "966c63e8a2586ea84f199b148a4206e5fbc21a575d2c766e048c18010966fe16"
+  },
+  {
+    "name": "build.cjs",
+    "sha256": "255f7da9ef2aeb3e00fd47ce61c8f8076f4cc1960131908c49fdccfdab473f53"
+  },
+  {
+    "name": "loader-evidence.json",
+    "sha256": "3285b48bd079ca96a179d6da14de3408d1b56a4b526ee7063ff3d5a3ee4ec746"
+  },
+  {
+    "name": "native-loader.cjs",
+    "sha256": "9453ed08e2a2e5e486dfe6b337a9d0548fb4e1398bb2b378f7ed2b6917e21e3d"
+  },
+  {
+    "name": "package.cjs",
+    "sha256": "8aab52b5dc1aa4419e136408061ba65dbb0c1eb8950eeb4be87655d98ab285d5"
+  },
+  {
+    "name": "speed-native-evidence.json",
+    "sha256": "90247874d83eb7cdb086a8912a9e3917a041b519767457be007fb5d8a7acfa2c"
+  },
+  {
+    "name": "test.cjs",
+    "sha256": "a33f6d09355a2f543caa331854716bee95ae8245a82ba1aa2e86923467949316"
   },
   {
     "name": "verify-declarations.cjs",

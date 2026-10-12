@@ -1,0 +1,98 @@
+[
+  {
+    "name": "bindings-evidence.json",
+    "sha256": "bfb3851e13af42cd74d2ad5663fc37222b74277f918eeac83f43b18a5712e498"
+  },
+  {
+    "name": "build.cjs",
+    "sha256": "8a68cdb7816647258d2aeb2a40f8dc946dfed3f8fc65e9326ba2866392a3b272"
+  },
+  {
+    "name": "CompilerHost.cs",
+    "sha256": "59fb0bdbad559fdb8b60d25c6ae2de7d71115db4307d36563f450efccc44a890"
+  },
+  {
+    "name": "GameBindings.cs",
+    "sha256": "fbe2d386bc7d8630c0da221b1201157f827fb132ccb416a32c59ff5ddc10d4cf"
+  },
+  {
+    "name": "GuiBindings.cs",
+    "sha256": "d5d8482d195b48f9a932ea7b05c3abb02bdc662dd0a6978cfbef3a0cacd336de"
+  },
+  {
+    "name": "JsonBindings.cs",
+    "sha256": "deaa8fbb76de230c8fc408220752a4e4df745b76d748b3c85b82f0d899f79ef0"
+  },
+  {
+    "name": "loader-evidence.json",
+    "sha256": "3285b48bd079ca96a179d6da14de3408d1b56a4b526ee7063ff3d5a3ee4ec746"
+  },
+  {
+    "name": "Mizze.cs",
+    "sha256": "cc8df38c295e39169fb2f09db3523f54ce2df928787325511246789fee6e7dd1"
+  },
+  {
+    "name": "MizzeAppearance.cs",
+    "sha256": "ec70402910b3921e7122053ef37670c18649de166ef1a15063eab957b892f5f0"
+  },
+  {
+    "name": "MizzeBatch.cs",
+    "sha256": "3355f558727b1476e8b781a007d182b0b92f7f6040320774d6634bfd2385cb68"
+  },
+  {
+    "name": "MizzeGameplay.cs",
+    "sha256": "1075b82f714ecbec34e99014caf7aa2c5b78d0cf4edbd8ab464273170fe1e8a4"
+  },
+  {
+    "name": "MizzeLicense.cs",
+    "sha256": "e60b9163cfce818c99208afe49fc66ff4aaa00acb5a2db734851e2e77949739e"
+  },
+  {
+    "name": "MizzeRenderer.cs",
+    "sha256": "fa906b74e8fd83ce6528c8d64dd414348225a56bd4a4257064aafe9ff01b3044"
+  },
+  {
+    "name": "native-loader.cjs",
+    "sha256": "9453ed08e2a2e5e486dfe6b337a9d0548fb4e1398bb2b378f7ed2b6917e21e3d"
+  },
+  {
+    "name": "NetworkBindings.cs",
+    "sha256": "5e32bd0b722fe10a683336ef0460d1a35f5ae63e36339347bd4f5f125ab741ab"
+  },
+  {
+    "name": "package.cjs",
+    "sha256": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967"
+  },
+  {
+    "name": "PhysicsBindings.cs",
+    "sha256": "2ea8d3966579fb8be0713d08397b9a76d7fbaff7efb3872f4cd969184dcbc7dd"
+  },
+  {
+    "name": "README.md",
+    "sha256": "839e697cc87650eb36d04aeba3affb9f0bcff56e9c8b82e118e0a3823a7dca5d"
+  },
+  {
+    "name": "RuntimeApis.cs",
+    "sha256": "318dd4c39aba404a4e9f9c5912b08f441c68529cde6fa13c3192301c161fbf96"
+  },
+  {
+    "name": "RuntimeTest.cs",
+    "sha256": "3762ca1898a7de2949ff230d2d3fdbfa2bd6bea1300817d9a74e997d28169ea3"
+  },
+  {
+    "name": "test.cjs",
+    "sha256": "a33f6d09355a2f543caa331854716bee95ae8245a82ba1aa2e86923467949316"
+  },
+  {
+    "name": "TextBindings.cs",
+    "sha256": "ea5389ee08549f5777a33ceb842145701d30cddcf87de74dc6158d6b6161aebc"
+  },
+  {
+    "name": "UnityBindings.cs",
+    "sha256": "e78343880825c1faccb06af5c7bb33c5e3d139bd583bbcdc2b2bf51dd28e11f9"
+  },
+  {
+    "name": "verify-declarations.cjs",
+    "sha256": "7511890a0516e1320611258d5df2fd7b57abd5157d5a9d5af22b953bda9b2a42"
+  }
+]
