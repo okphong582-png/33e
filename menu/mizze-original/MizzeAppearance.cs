@@ -41,13 +41,13 @@ namespace COW.GamePlay
         public static void MzTitle(float x,float y,float w,string text)
         {
             if(!MzUiPaint)return;
-            if(MzTitleStyle==null){var style=new GUIStyle();style.fontSize=25;style.wordWrap=false;style.alignment=TextAnchor.MiddleLeft;style.normal.textColor=new Color(1,1,1,1);MzTitleStyle=style;}MzApplyUiTint();GUI.Label(new Rect(x,y,w,32),text,MzTitleStyle);
+            if(MzTitleStyle==null){var style=new GUIStyle();style.fontSize=25;style.wordWrap=false;style.alignment=TextAnchor.MiddleLeft;style.normal.textColor=new Color(1,1,1,1);MzTitleStyle=style;}GUI.Label(new Rect(x,y,w,32),text,MzTitleStyle);
         }
         public static void MzSmall(float x,float y,float w,string text)
         {
             if(!MzUiPaint)return;
             if(MzSmallStyle==null){var style=new GUIStyle();style.fontSize=16;style.wordWrap=false;style.alignment=TextAnchor.MiddleLeft;style.normal.textColor=new Color(1,1,1,1);MzSmallStyle=style;}
-            MzApplyUiTint();GUI.Label(new Rect(x,y,w,22),text,MzSmallStyle);
+            GUI.Label(new Rect(x,y,w,22),text,MzSmallStyle);
         }
         public static void MzColorSlider(int channel,float x,float y,string label)
         {
@@ -62,9 +62,9 @@ namespace COW.GamePlay
         public static void MzColorPanel(float x,float y)
         {
             for(int i=0;i<3;i++){MzTint(MzColorTarget==i?.13f:.07f,MzColorTarget==i?.22f:.075f,MzColorTarget==i?.24f:.09f,MzOpenAnim);MzFill(x+i*120,y,114,34,11);MzTint(.92f,.97f,1,MzOpenAnim);MzCenter(x+i*120,y,114,34,i==0?"Màu ESP":i==1?"Màu FOV":"Máu");if(MzTap(x+i*120,y,114,34))MzColorTarget=i;}
-            Color selected=MzSelectedColor();MzTint(.065f,.07f,.09f,MzOpenAnim);MzFill(x,y+44,354,40,12);MzTint(selected.r,selected.g,selected.b,MzOpenAnim);MzFill(x+10,y+52,24,24,8);MzSmall(x+46,y+53,296,"#"+MzColorHex(selected)+"   •   Màu đã chọn");
+            Color selected=MzSelectedColor();MzTint(.065f,.07f,.09f,MzOpenAnim);MzFill(x,y+44,354,40,12);GUI.color=new Color(selected.r,selected.g,selected.b,MzOpenAnim);MzFill(x+10,y+52,24,24,8);MzSmall(x+46,y+53,296,"#"+MzColorHex(selected)+"   •   Màu đã chọn");
             for(int i=0;i<18;i++){float px=x+(i%6)*60,py=y+94+(i/6)*39;Color c=MzPalette[i];bool active=Math.Abs(selected.r-c.r)<.006f&&Math.Abs(selected.g-c.g)<.006f&&Math.Abs(selected.b-c.b)<.006f;
-                if(active){MzTint(1,1,1,MzOpenAnim);MzFill(px-2-MzMotion,py-2-MzMotion,56+2*MzMotion,35+2*MzMotion,10);}MzTint(c.r,c.g,c.b,MzOpenAnim);MzFill(px,py,52,31,8);if(MzTap(px,py,52,31))MzSetColor(c,true);
+                if(active){MzTint(1,1,1,MzOpenAnim);MzFill(px-2-MzMotion,py-2-MzMotion,56+2*MzMotion,35+2*MzMotion,10);}GUI.color=new Color(c.r,c.g,c.b,MzOpenAnim);MzFill(px,py,52,31,8);if(MzTap(px,py,52,31))MzSetColor(c,true);
             }
             MzColorSlider(0,x,y+221,"Đỏ");MzColorSlider(1,x,y+254,"Lục");MzColorSlider(2,x,y+287,"Lam");
         }

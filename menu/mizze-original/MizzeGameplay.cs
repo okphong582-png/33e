@@ -23,31 +23,19 @@ namespace COW.GamePlay
         }
         public static void MzBox3D(Camera cam,Vector3 root,Vector3 head)
         {
-            float half=Mathf.Clamp((head.y-root.y)*.22f,.15f,1),left=root.x-half,right=root.x+half,near=root.z-half,far=root.z+half;
-            Vector2 a,b,c,d,e,f,g,h;
-            // Eight unique corners, instead of 24 projections (two per edge).
-            if(!MzProject(cam,new Vector3(left,root.y,near),out a)||!MzProject(cam,new Vector3(right,root.y,near),out b)||
-               !MzProject(cam,new Vector3(right,root.y,far),out c)||!MzProject(cam,new Vector3(left,root.y,far),out d)||
-               !MzProject(cam,new Vector3(left,head.y,near),out e)||!MzProject(cam,new Vector3(right,head.y,near),out f)||
-               !MzProject(cam,new Vector3(right,head.y,far),out g)||!MzProject(cam,new Vector3(left,head.y,far),out h))return;
-            MzLine(a.x,a.y,b.x,b.y,1.5f);MzLine(b.x,b.y,c.x,c.y,1.5f);MzLine(c.x,c.y,d.x,d.y,1.5f);MzLine(d.x,d.y,a.x,a.y,1.5f);
-            MzLine(e.x,e.y,f.x,f.y,1.5f);MzLine(f.x,f.y,g.x,g.y,1.5f);MzLine(g.x,g.y,h.x,h.y,1.5f);MzLine(h.x,h.y,e.x,e.y,1.5f);
-            MzLine(a.x,a.y,e.x,e.y,1.5f);MzLine(b.x,b.y,f.x,f.y,1.5f);MzLine(c.x,c.y,g.x,g.y,1.5f);MzLine(d.x,d.y,h.x,h.y,1.5f);
+            float half=Mathf.Clamp((head.y-root.y)*.22f,.15f,1);Vector3 a=new Vector3(root.x-half,root.y,root.z-half),b=new Vector3(root.x+half,root.y,root.z-half),c=new Vector3(root.x+half,root.y,root.z+half),d=new Vector3(root.x-half,root.y,root.z+half),up=new Vector3(0,head.y-root.y,0);
+            MzWorldLine(cam,a,b,1.5f);MzWorldLine(cam,b,c,1.5f);MzWorldLine(cam,c,d,1.5f);MzWorldLine(cam,d,a,1.5f);MzWorldLine(cam,a+up,b+up,1.5f);MzWorldLine(cam,b+up,c+up,1.5f);MzWorldLine(cam,c+up,d+up,1.5f);MzWorldLine(cam,d+up,a+up,1.5f);MzWorldLine(cam,a,a+up,1.5f);MzWorldLine(cam,b,b+up,1.5f);MzWorldLine(cam,c,c+up,1.5f);MzWorldLine(cam,d,d+up,1.5f);
         }
-        public static bool MzBonePoint(Camera cam,Transform bone,out Vector2 point)
-        {point=new Vector2();return bone!=null&&MzProject(cam,bone.position,out point);}
-        public static void MzScreenBone(bool first,Vector2 a,bool second,Vector2 b)
-        {if(first&&second)MzLine(a.x,a.y,b.x,b.y,1.5f);}
         public static void MzSampleEsp()
         {
-            MzDrawingEsp=true;MzDrawBudget=512;int shown=0;
+            MzDrawingEsp=true;MzDrawBudget=512;
             try {
                 var cam=Camera.main;var match=COW.GameFacade.CurrentMatch();if(cam==null||match==null)return;
                 var cameraTransform=cam.transform;if(cameraTransform==null)return;Vector3 cameraPosition=cameraTransform.position;if(!MzPoint(cameraPosition))return;
-                if(!MzSwitch[0])return;var players=match.ILPNGCMEFFI();if(players==null)return;int count=players.Count;if(count>128)count=128;
+                if(!MzSwitch[0])return;var players=match.ILPNGCMEFFI();if(players==null)return;int count=players.Count;if(count>128)count=128;int shown=0;
                 for(int i=0;i<count&&shown<(MzBatchReady?16:3)&&MzCommandCount+40<=512;i++){
-                    if(i>0&&Time.realtimeSinceStartup-MzEspSampleStarted>.008f)break;
-                    int before=MzCommandCount,beforeQuad=MzQuadCount;
+                    if(i>0&&Time.realtimeSinceStartup-MzEspSampleStarted>.012f)break;
+                    int before=MzCommandCount;
                     // The native roster can shrink during a scene/round change. No transform is retained across frames.
                     try {
                         if(i>=players.Count)break;var p=players[i] as Player;if(p==null||p.IsLocalPlayer()||p.IsLocalTeammate(false)||p.IsLocalTeammate(true))continue;
@@ -56,29 +44,16 @@ namespace COW.GamePlay
                         Vector3 root=rootTransform.position,head=headTransform.position;if(!MzPoint(root)||!MzPoint(head))continue;float distance=Vector3.Distance(root,cameraPosition);if(!MzFinite(distance)||distance>MzRange)continue;
                         Vector2 feet,top;if(!MzProject(cam,root,out feet)||!MzProject(cam,head,out top))continue;
                         float h=feet.y-top.y,w=h*.5f,x=(feet.x+top.x)*.5f-w*.5f,y=top.y;if(!MzFinite(h)||h<=4||h>Screen.height*2||x+w<0||x>Screen.width||y+h<0||y>Screen.height)continue;shown++;
-                        MzPaintColor=MzEspColor;if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
-                        if(MzSwitch[4]){string name=MzCachedName(p,shown-1);if(name!=null)MzText(x-22,y-25,w+150,name);}
-                        if(MzSwitch[6])MzText(x,y+h+4,w+80,MzDistanceLabels[(int)Mathf.Clamp(distance,0,500)]);
-                        if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);MzPaintColor=MzHealthColor;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
-                        MzPaintColor=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
-                        if(MzSwitch[9]){
-                            Vector2 axis;MzTint(1,.3f,.3f,1);if(MzProject(cam,new Vector3(root.x+.65f,root.y,root.z),out axis))MzLine(feet.x,feet.y,axis.x,axis.y,1.5f);
-                            MzTint(.3f,1,.3f,1);if(MzProject(cam,new Vector3(root.x,root.y+.65f,root.z),out axis))MzLine(feet.x,feet.y,axis.x,axis.y,1.5f);
-                            MzTint(.3f,.5f,1,1);if(MzProject(cam,new Vector3(root.x,root.y,root.z+.65f),out axis))MzLine(feet.x,feet.y,axis.x,axis.y,1.5f);
-                        }
-                        if(MzSwitch[7]){
-                            MzPaintColor=MzEspColor;Vector2 neck,armL,armR,handL,handR,legL,legR,footL,footR;
-                            bool n=MzBonePoint(cam,p.NeckBone,out neck),al=MzBonePoint(cam,p.ArmBoneLeft,out armL),ar=MzBonePoint(cam,p.ArmBoneRight,out armR),
-                                 hl=MzBonePoint(cam,p.HandBoneLeft,out handL),hr=MzBonePoint(cam,p.HandBoneRight,out handR),
-                                 ll=MzBonePoint(cam,p.LegBoneLeft,out legL),lr=MzBonePoint(cam,p.LegBoneRight,out legR),
-                                 fl=MzBonePoint(cam,p.FootBoneLeft,out footL),fr=MzBonePoint(cam,p.FootBoneRight,out footR);
-                            MzScreenBone(true,top,n,neck);MzScreenBone(n,neck,true,feet);MzScreenBone(n,neck,al,armL);MzScreenBone(al,armL,hl,handL);
-                            MzScreenBone(n,neck,ar,armR);MzScreenBone(ar,armR,hr,handR);MzScreenBone(true,feet,ll,legL);MzScreenBone(ll,legL,fl,footL);
-                            MzScreenBone(true,feet,lr,legR);MzScreenBone(lr,legR,fr,footR);
-                        }
-                    }catch(Exception){MzTrimCommands(before);MzQuadCount=beforeQuad;}
+                        GUI.color=MzEspColor;if(MzSwitch[1]){if(MzSwitch[3])MzBox3D(cam,root,head);else MzBox(x,y,w,h);}
+                        if(MzSwitch[4]){string name=p.NickName;if(name!=null){if(name.Length>24)name=name.Substring(0,24);MzText(x-22,y-25,w+150,name);}}
+                        if(MzSwitch[6])MzText(x,y+h+4,w+80,((int)distance).ToString()+" m");
+                        if(MzSwitch[5]){int max=p.MaxHP;float ratio=max>0?Mathf.Clamp((float)hp/max,0,1):0;MzTint(.02f,.04f,.06f,.9f);MzFill(x-7,y,4,h,0);GUI.color=MzHealthColor;MzFill(x-7,y+h*(1-ratio),4,h*ratio,0);}
+                        GUI.color=MzEspColor;if(MzSwitch[8])MzCircle(top.x,top.y,Mathf.Clamp(h*.025f,3,8),1.5f);if(MzSwitch[10])MzLine(Screen.width*.5f,MzLineOrigin==0?Screen.height-8:MzLineOrigin==1?Screen.height*.5f:8,feet.x,feet.y,1);
+                        if(MzSwitch[9]){MzTint(1,.3f,.3f,1);MzWorldLine(cam,root,root+new Vector3(.65f,0,0),1.5f);MzTint(.3f,1,.3f,1);MzWorldLine(cam,root,root+new Vector3(0,.65f,0),1.5f);MzTint(.3f,.5f,1,1);MzWorldLine(cam,root,root+new Vector3(0,0,.65f),1.5f);}
+                        if(MzSwitch[7]){GUI.color=MzEspColor;Transform neck=p.NeckBone,armL=p.ArmBoneLeft,armR=p.ArmBoneRight,legL=p.LegBoneLeft,legR=p.LegBoneRight;MzBone(cam,headTransform,neck);MzBone(cam,neck,rootTransform);MzBone(cam,neck,armL);MzBone(cam,armL,p.HandBoneLeft);MzBone(cam,neck,armR);MzBone(cam,armR,p.HandBoneRight);MzBone(cam,rootTransform,legL);MzBone(cam,legL,p.FootBoneLeft);MzBone(cam,rootTransform,legR);MzBone(cam,legR,p.FootBoneRight);}
+                    }catch(Exception){MzTrimCommands(before);}
                 }
-            }catch(Exception){}finally{MzEspShown=shown;MzTrimLabels(MzSwitch[4]?shown:0);MzDrawingEsp=false;}
+            }catch(Exception){}finally{MzDrawingEsp=false;}
         }
         public static Player MzPickTarget()
         {
@@ -106,7 +81,7 @@ namespace COW.GamePlay
         public static void MzSilent(Player local,CGKJLKPMGDJ result)
         {
             try {
-                MzMemoryPulse();if(local==null||!local.IsLocalPlayer())return;MzRestoreSilent();if(!MzInitialized||!MzAuthorized()||!MzSwitch[12]||result==null||local.CurHP<=0||!local.IsFiring())return;var target=MzPickTarget();if(target==null||target.HeadCollider==null)return;
+                if(local==null||!local.IsLocalPlayer())return;MzRestoreSilent();if(!MzInitialized||!MzAuthorized()||!MzSwitch[12]||result==null||local.CurHP<=0||!local.IsFiring())return;var target=MzPickTarget();if(target==null||target.HeadCollider==null)return;
                 Vector3 point=target.GetHeadTF().position,origin=local.AimStartPostion,delta=point-origin;if(!MzPoint(point)||!MzPoint(origin)||Vector3.Distance(new Vector3(),delta)<=.01f)return;Vector3 direction=Vector3.Normalize(delta);if(!MzPoint(direction))return;
                 MzChangedAim=result;MzAimOwner=local;MzAppliedObject=target.gameObject;MzAppliedCollider=target.HeadCollider;MzOldAimObject=result.JHAINOBIFMA;MzOldAimCollider=result.JINDNOFABKB;MzOldHpc=result.HPCOJHGFEEG;MzOldDoj=result.DOJDNHCGFGK;MzOldDirection=result.HLDECMJFKJK;MzOldOrigin=result.EKPLMDDKOGB;MzOldOnm=result.ONMKMEGMHOL;MzOldDkp=result.DKPDBLLJEAA;MzOldEfm=result.EFMBNPNFGHM;MzOldCeo=result.CEOKOILBODN;MzOldClo=result.CLOLKHNMNEK;MzAppliedPoint=point;MzAppliedOrigin=origin;MzAppliedDirection=direction;
                 result.JHAINOBIFMA=target.gameObject;result.JINDNOFABKB=target.HeadCollider;result.HPCOJHGFEEG=point;result.DOJDNHCGFGK=point;result.HLDECMJFKJK=direction;result.EKPLMDDKOGB=origin;result.ONMKMEGMHOL=origin;result.DKPDBLLJEAA=true;result.EFMBNPNFGHM=false;result.CEOKOILBODN=false;result.CLOLKHNMNEK=false;
