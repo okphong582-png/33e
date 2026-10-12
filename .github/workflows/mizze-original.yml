@@ -1,0 +1,49 @@
+name: Build Original Source
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'menu/mizze-original/**'
+      - '.github/workflows/mizze-original.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Checkout pinned Tencent InjectFix
+        uses: actions/checkout@v4
+        with:
+          repository: Tencent/InjectFix
+          ref: 5ba42eb8f63fe37134a3c78690f97d8425e13588
+          path: .ifix-runtime
+          persist-credentials: false
+      - name: Prepare interpreter
+        run: node menu/prepare-runtime-test.cjs .ifix-runtime
+      - name: Verify untouched original files
+        run: node menu/verify-mizze-original.cjs
+      - name: Compile original source unchanged
+        run: node menu/mizze-original/build.cjs .ifix-runtime
+      - name: Package using original serializer
+        run: node menu/mizze-original/package.cjs
+      - name: Run original bytecode tests
+        run: node menu/mizze-original/test.cjs
+      - name: Verify source still unchanged
+        run: node menu/verify-mizze-original.cjs
+      - name: Upload untouched source build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-Original-Source-Unchanged
+          path: |
+            menu/mizze-original/dist/Assembly-CSharp-patch.bytes
+            menu/mizze-original/dist/SHA256SUMS.txt
+            menu/mizze-original/dist/manifest.json
+            menu/mizze-original/dist/methods.tsv
+            menu/mizze-original/dist/*.svg
+            menu/mizze-original/README.md
+            menu/mizze-original-hashes.json
+          if-no-files-found: error

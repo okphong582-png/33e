@@ -1,0 +1,28 @@
+{
+  "gate": {
+    "a": 84394976,
+    "name": "COW.GameConfig.get_TestCodePatch"
+  },
+  "originalFirst16": "f44fbea9fd7b01a9fd430091337f0390",
+  "calls": [
+    {
+      "address": 84480972,
+      "owner": {
+        "a": 84480652,
+        "name": ".<>c__DisplayClass50_0.<StartLauncher>b__0"
+      }
+    }
+  ],
+  "originalFrameworkSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "fieldOffsets": {
+    "localConfig": "0x130",
+    "testCodePatch": "0x3FC"
+  },
+  "instructionPatch": {
+    "rva": "0x507c3e0",
+    "old": "f44fbea9fd7b01a9",
+    "next": "20008052c0035fd6",
+    "assembly": "mov w0, #1; ret"
+  },
+  "deviceVerified": false
+}
