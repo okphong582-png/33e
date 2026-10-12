@@ -121,5 +121,6 @@
     "UnityEngine.Rect.get_y",
     "UnityEngine.Rect.get_width",
     "UnityEngine.Rect.get_height"
-  ]
+  ],
+  "nativeFieldAdded": "UnityEngine.Color.a (verified declaration; reused quad-color alpha)"
 }
