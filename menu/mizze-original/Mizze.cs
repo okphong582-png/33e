@@ -29,8 +29,10 @@ namespace COW.GamePlay
         {
             try {
                 if(!MzInitialized){MzUiPaint=true;MzSliderTitles=new string[2];MzSliderText=new string[2];MzSliderValues=new int[2];MzSwitch=new bool[17];MzSwitchAnim=new float[17];MzSwitch[0]=true;MzSwitch[1]=true;MzSwitch[2]=false;MzSwitch[4]=true;MzSwitch[5]=true;MzSwitch[6]=true;MzSwitch[13]=true;MzFov=150;MzRange=150;MzBubbleX=24;MzBubbleY=96;MzPanelX=120;MzPanelY=16;MzRunLevel=1;MzFireLevel=1;MzInitialized=true;MzAppearanceInit();try{MzLicenseInit();}catch(Exception){MzLicenseMessage="Lỗi khởi tạo khóa. Thử nhập lại";}}
-                MzMemoryPulse();if(MzDriver!=null)return;var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;
+                if(MzDriver==null){var g=GameObject.Find("__mizze_driver");if(g==null)g=new GameObject("__mizze_driver");if(g.GetComponent(typeof(SceneEditBoxSelectTool))==null)g.AddComponent(typeof(SceneEditBoxSelectTool));UnityEngine.Object.DontDestroyOnLoad(g);MzDriver=g;}
             }catch(Exception){}
+            // Optional diagnostics run only after the original driver creation path.
+            try{if(MzDriver!=null)MzMemoryPulse();}catch(Exception){}
         }
         public static bool MzFinite(float f){return !Single.IsNaN(f)&&!Single.IsInfinity(f);}
         public static bool MzPoint(Vector3 p){return MzFinite(p.x)&&MzFinite(p.y)&&MzFinite(p.z);}
@@ -121,17 +123,19 @@ namespace COW.GamePlay
 
         }
         public static void MzRestoreGui(Font font,bool changed,Color color,Color contentColor,Matrix4x4 matrix)
-        {try{if(changed)GUIStyle.SetDefaultFont(font);GUI.color=color;GUI.contentColor=contentColor;GUI.matrix=matrix;}catch(Exception){}}
+        {try{if(changed)GUIStyle.SetDefaultFont(font);}catch(Exception){}try{GUI.color=color;}catch(Exception){}try{GUI.contentColor=contentColor;}catch(Exception){}try{GUI.matrix=matrix;}catch(Exception){}}
         public void OnGUI()
         {
             if(this==null||Event.current==null)return;var type=Event.current.type;if(type!=EventType.Repaint&&type!=EventType.MouseDown&&type!=EventType.MouseDrag&&type!=EventType.MouseUp)return;
-            if(gameObject==null||gameObject.name!="__mizze_driver"||MzGuiActive)return;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;Font oldFont=null;bool fontChanged=false;
+            if(gameObject==null||gameObject.name!="__mizze_driver")return;bool previousPaint=MzUiPaint;MzUiPaint=type==EventType.Repaint;var color=GUI.color;var contentColor=GUI.contentColor;var matrix=GUI.matrix;Font oldFont=null;bool fontChanged=false;
             try {
-                MzUiIsWhite=false;MzUiColorDirty=true;MzGuiActive=true;if(MzGuiThread==0)MzGuiThread=System.Threading.Thread.CurrentThread.ManagedThreadId;GUI.matrix=Matrix4x4.identity;MzLayout();MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);MzLicensePoll();MzFontInit();if(MzFont!=null){oldFont=GUI.skin.font;GUIStyle.SetDefaultFont(MzFont);fontChanged=true;}}
-                if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}if(MzAuthorized()){if(!MzMemoryPaused){MzRender();MzRunAim();}else MzRestoreSilent();MzExtrasPoll();}else {MzRestoreSilent();MzExtrasRestore();if(MzCommandCount>0||MzQuadCount>0)MzClearCommands();MzClearLabels();MzEspMatch=null;MzEspCamera=null;}}
-                if(MzUiPaint){MzUiIsWhite=false;MzUiColorDirty=true;if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f)MzPanel();
+                MzUiIsWhite=false;MzUiColorDirty=true;MzGuiActive=true;GUI.matrix=Matrix4x4.identity;MzLayout();MzDrag();if(MzUiPaint){GUI.contentColor=new Color(1,1,1,1);try{MzLicensePoll();}catch(Exception){}try{MzFontInit();if(MzFont!=null){oldFont=GUI.skin.font;fontChanged=true;GUIStyle.SetDefaultFont(MzFont);}}catch(Exception){MzFont=null;}}
+                if(Event.current.type==EventType.Repaint){MzMotion=(Mathf.Sin(Time.realtimeSinceStartup*2.4f)+1)*.5f;float t=Mathf.Clamp(Time.unscaledDeltaTime*14,0,1);MzOpenAnim=MzTween(MzOpenAnim,MzOpen?1:0,t);if(MzOpen||MzOpenAnim>.02f){MzTabAnim=MzTween(MzTabAnim,MzTab,t);for(int i=0;i<MzSwitch.Length;i++)MzSwitchAnim[i]=MzTween(MzSwitchAnim[i],MzSwitch[i]?1:0,t);}try{if(MzAuthorized()){if(!MzMemoryPaused){MzRender();MzRunAim();}else MzRestoreSilent();MzExtrasPoll();}else {MzRestoreSilent();MzExtrasRestore();if(MzCommandCount>0||MzQuadCount>0)MzClearCommands();MzClearLabels();MzEspMatch=null;MzEspCamera=null;}}catch(Exception){MzBuilding=false;MzDrawingEsp=false;}}
+                if(MzUiPaint){MzUiIsWhite=false;MzUiColorDirty=true;if(MzUiMatrixScale!=MzScale){MzUiMatrix=Matrix4x4.TRS(new Vector3(),Quaternion.Euler(0,0,0),new Vector3(MzScale,MzScale,1));MzUiMatrixScale=MzScale;}GUI.matrix=MzUiMatrix;}if(MzOpen||MzOpenAnim>.02f){try{MzPanel();}catch(Exception){}}
                 if(!MzUiPaint)return;
                 float pulse=1+Mathf.Sin(Time.realtimeSinceStartup*2.4f)*.015f;MzTint(0,0,0,.6f);MzFill(MzBubbleX+3,MzBubbleY+5,80,80,40);MzTint(.22f,.84f,.64f,1);MzFill(MzBubbleX+40-40*pulse,MzBubbleY+40-40*pulse,80*pulse,80*pulse,40*pulse);MzTint(.025f,.025f,.03f,1);MzFill(MzBubbleX+3,MzBubbleY+3,74,74,37);MzTint(.54f,1,.83f,1);MzCenter(MzBubbleX,MzBubbleY,80,80,"Mizze");
+                // Nothing needed to display or tap the menu depends on thread APIs.
+                MzMemoryAttachGui();
             }catch(Exception){}finally{MzRestoreGui(oldFont,fontChanged,color,contentColor,matrix);MzUiPaint=previousPaint;MzGuiActive=false;}
         }
     }

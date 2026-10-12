@@ -1,4 +1,4 @@
-# Mizze — bản source cũ, nền GIF kính
+# Mizze — sửa mất nút/menu trên nhánh source cũ
 
 Bản này phát triển trực tiếp từ 24 file source cũ ở commit 6b9053afadef350ae9a27e4b5a5d5b55f39f200f.
 Không dùng kiến trúc R2–R9 hoặc thay đổi thư mục menu/mizze, menu/mizze-oldbase.
@@ -23,6 +23,17 @@ node menu/mizze-original/test.cjs
 
 mizze-original-baseline-hashes.json giữ dấu vân tay bản cũ nguyên trạng.
 mizze-original-hashes.json kiểm tra chính xác phiên bản hiện tại.
+
+## Sửa mất giao diện
+
+- Khởi tạo __mizze_driver theo trình tự cũ trước mọi bước đo RAM.
+- Bỏ đọc mã luồng khỏi đầu OnGUI. Chỉ gắn bộ đo sau khi đã vẽ nút, có catch riêng và chờ 30 giây trước khi thử lại nếu lỗi.
+- Cờ đang vẽ dùng để bảo vệ việc thu gom RAM, không dùng để chặn callback GUI cũ.
+- Lỗi font, nền GIF, xử lý khóa hoặc tính năng phụ không bỏ qua toàn bộ phần vẽ nút. Lỗi GIF dừng nạp/vẽ nền, các nút vẫn hoạt động.
+- Khôi phục font, màu và ma trận độc lập để lỗi font không làm sót trạng thái màu/ma trận của game.
+- Đã tái hiện trên bytecode 775fe13: giả lập lỗi CurrentThread làm mất nút ở sảnh. Bản sửa qua cùng bài kiểm tra cùng các lỗi font/GIF/đo heap và tình huống trong trận.
+- Chưa có log lỗi native hay kiểm chứng trên iPhone; đây là lỗi tái hiện được trong kiểm tra, chưa khẳng định nguyên nhân duy nhất trên thiết bị.
+- Nếu không lấy được mã luồng, bộ thu gom RAM bổ sung tạm không chạy; nút/menu vẫn độc lập với bước đó.
 
 ## ESP và bộ nhớ
 

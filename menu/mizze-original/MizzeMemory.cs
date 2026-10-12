@@ -7,7 +7,12 @@ namespace COW.GamePlay
         public static bool MzGuiActive,MzMemoryBusy,MzMemoryPaused,MzMemoryTrimmed;
         public static int MzGuiThread,MzMemoryCollections,MzMemoryFaults,MzMemoryPressure;
         public static long MzMemoryBaseline,MzMemoryLast,MzMemoryPeak,MzMemoryBefore,MzMemoryAfter,MzMemoryFreed;
-        public static float MzMemoryNext,MzMemoryNextCollect;
+        public static float MzMemoryNext,MzMemoryNextCollect,MzGuiThreadRetry;
+        public static void MzMemoryAttachGui()
+        {
+            if(MzGuiThread!=0)return;
+            try{float now=Time.realtimeSinceStartup;if(now<MzGuiThreadRetry)return;MzGuiThreadRetry=now+30;MzGuiThread=System.Threading.Thread.CurrentThread.ManagedThreadId;}catch(Exception){MzMemoryFaults++;}
+        }
         public static void MzMemoryTrim()
         {
             if(MzRects!=null)MzClearCommands();MzClearLabels();MzRestoreSilent();

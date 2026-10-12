@@ -36,10 +36,10 @@ jobs:
         run: node menu/mizze-original/test.cjs profile
       - name: Verify build does not modify source
         run: node menu/verify-mizze-original.cjs
-      - name: Upload old-source ESP/RAM build
+      - name: Upload old-source menu recovery build
         uses: actions/upload-artifact@v4
         with:
-          name: Mizze-OldSource-ESP-RAM
+          name: Mizze-OldSource-Menu-Recovery
           path: |
             menu/mizze-original/dist/Assembly-CSharp-patch.bytes
             menu/mizze-original/dist/SHA256SUMS.txt
@@ -48,6 +48,7 @@ jobs:
             menu/mizze-original/dist/*.svg
             menu/mizze-original/dist/allocation-profile.json
             menu/mizze-original/memory-allocation-evidence.json
+            menu/mizze-original/visibility-evidence.json
             menu/mizze-original/README.md
             menu/mizze-original-hashes.json
           if-no-files-found: error

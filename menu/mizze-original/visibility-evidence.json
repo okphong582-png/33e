@@ -1,0 +1,18 @@
+{
+  "baselineCommit": "775fe13e23d6cd1fd4d1e4ea7b15f54e0e0f9616",
+  "baselinePatchSha256": "f73920b201a3486426acbcf8f7374b983042fd0676493e325f398b1ec66ac231",
+  "reproduction": {
+    "environment": "Pinned Tencent IFix VM; offline Unity/game doubles",
+    "fault": "System.Threading.Thread.CurrentThread throws InvalidOperationException",
+    "before": "FAIL: thread lookup failure must not hide lobby launcher",
+    "after": "Launcher and menu controls remain visible in lobby and match"
+  },
+  "checks": 1527,
+  "additionalFaults": [
+    "font setter throws",
+    "GIF native draw throws",
+    "stale GUI diagnostics flag",
+    "managed heap sample throws"
+  ],
+  "limitations": "No iPhone verification or native crash stack; device root cause is unconfirmed."
+}

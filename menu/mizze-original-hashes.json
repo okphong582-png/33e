@@ -21,7 +21,7 @@
   },
   {
     "name": "Mizze.cs",
-    "sha256": "49b32ce5fb934bbf06b794804ab9c4defea0abb8a1f4b5d709c164fdd9af7c85"
+    "sha256": "40e66d05edc9cda73577e3d477aee4fa9e86dd6b631895d9641449ab409b1aff"
   },
   {
     "name": "MizzeAppearance.cs",
@@ -49,7 +49,7 @@
   },
   {
     "name": "MizzeGlass.cs",
-    "sha256": "3d2b4dbd1fdc92c545af52e65da70816c30d2435aa3746a687b746cdcfc8d82e"
+    "sha256": "50f237294fa51c96e7ddd9cef4d06a362aece2a527c677574fd0ca30893943de"
   },
   {
     "name": "MizzeLicense.cs",
@@ -57,7 +57,7 @@
   },
   {
     "name": "MizzeMemory.cs",
-    "sha256": "f70f1151e63f7d5d90b8ecf973ecb9bb84e62605c8ac1e33f7ca4792fb2a4bc1"
+    "sha256": "b0d679978a3b909d77dd30b6fc39f1d190c76fde83f84ddf36df8c9a69a8ec2e"
   },
   {
     "name": "MizzeRenderer.cs",
@@ -73,15 +73,15 @@
   },
   {
     "name": "README.md",
-    "sha256": "24bdbeded0a29c576e121716779fcdfab84d62cbae5a52247a11f6ac4f690f54"
+    "sha256": "1505efeb27c935245ddc693d7adca842d78af064a7a517fcf2ce0958c2a920f5"
   },
   {
     "name": "RuntimeApis.cs",
-    "sha256": "e561a87981e791469bddd1454d8244aa7aa5c23ac2f98f36727afc5411bc52e3"
+    "sha256": "c26f9301cc2a531d83ce13933813d4666f322106f5301391c148ee37a80d50ed"
   },
   {
     "name": "RuntimeTest.cs",
-    "sha256": "adaff2d9523a9e829791d3a2da964afac174cbe3b212d2f3cc8b60fc337f8a23"
+    "sha256": "8b83be0fa7b1330d266c4b60d0dd269abd024251349b78222232ccfffb3e3c18"
   },
   {
     "name": "TextBindings.cs",
@@ -125,7 +125,7 @@
   },
   {
     "name": "package.cjs",
-    "sha256": "f1f04cfb63d5a585e721884927c6bad311cd20eaa3248c87e580f5796498f9a2"
+    "sha256": "af2f3dc9b1518442390d6e5fd45e190dac109d414275c1195734516dc0eb2009"
   },
   {
     "name": "speed-native-evidence.json",
@@ -138,5 +138,9 @@
   {
     "name": "verify-declarations.cjs",
     "sha256": "7511890a0516e1320611258d5df2fd7b57abd5157d5a9d5af22b953bda9b2a42"
+  },
+  {
+    "name": "visibility-evidence.json",
+    "sha256": "d6497e1bbe95ba9e8b263d7fd45e41dce380ef04fe951de552e5aa317cb2adc2"
   }
 ]

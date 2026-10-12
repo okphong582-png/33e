@@ -11,7 +11,7 @@ namespace COW.GamePlay
         public static float MzBackgroundClock,MzBackgroundLast,MzBackgroundNextLoad;
         public static void MzBackground(float x,float y)
         {
-            if(!MzUiPaint)return;
+            if(!MzUiPaint||MzBackgroundFailed)return;
             float now=Time.realtimeSinceStartup;
             if(MzOpen){
                 if(MzBackgroundLast>0){float elapsed=now-MzBackgroundLast;if(elapsed>=0&&elapsed<.2f)MzBackgroundClock+=elapsed;}
@@ -43,7 +43,7 @@ namespace COW.GamePlay
             MzTint(0,0,0,.13f*MzOpenAnim);MzFill(x-3,y+3,388,448,27);
             MzTint(.82f,.88f,1,.18f*MzOpenAnim);MzFill(x-1,y-1,384,442,25);
             MzTint(.025f,.025f,.03f,.85f*MzOpenAnim);MzFill(x,y,382,440,24);
-            MzBackground(x,y);
+            try{MzBackground(x,y);}catch(Exception){MzBackgroundFailed=true;}
             MzTint(.018f,.022f,.032f,.56f*MzOpenAnim);MzFill(x,y,382,440,24);
             MzTint(.90f,.95f,1,.06f*MzOpenAnim);MzFill(x+2,y+2,378,65,23);
             MzTint(1,1,1,.21f*MzOpenAnim);MzFill(x+25,y+1,332,1,0);

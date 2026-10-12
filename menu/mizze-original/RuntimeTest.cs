@@ -19,6 +19,7 @@ unsafe static class MizzeRuntimeTest
     static Type Resolve(string full)
     {
         if(full.Split(',')[0]=="System.GC")return typeof(ControlledGc);
+        if(full.Split(',')[0]=="System.Threading.Thread")return typeof(ControlledThread);
         return Type.GetType(full,a=>a.Name=="mscorlib"?typeof(object).Assembly:typeof(MizzeRuntimeTest).Assembly,(a,n,c)=>a.GetType(n,true,c),true);
     }
     static MethodBase ReadMethod(BinaryReader r,Type[] types)
@@ -77,6 +78,32 @@ unsafe static class MizzeRuntimeTest
                 for(int i=0;i<lines.Count&&i*font*1.2f<r.height;i++)b.Append("<text x=\""+Number(x)+"\" y=\""+Number(y+i*font*1.2f)+"\" text-anchor=\""+anchor+"\" font-family=\"Arial\" font-size=\""+font+"\" fill=\""+c+"\">"+System.Security.SecurityElement.Escape(lines[i])+"</text>");
             }else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Png!=null){b.Append("<image x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,"+Convert.ToBase64String(((Texture2D)d.Texture).Png)+"\"/>");}else if(d.Texture is Texture2D&&((Texture2D)d.Texture).Width>0){var tex=(Texture2D)d.Texture;float radius=(tex.Width*.5f-2)*(r.width/tex.Width),stroke=(tex.Width==32?3:1.5f)*(r.width/tex.Width);b.Append("<circle cx=\""+Number(r.x+r.width*.5f)+"\" cy=\""+Number(r.y+r.height*.5f)+"\" r=\""+Number(radius-stroke*.5f)+"\" fill=\"none\" stroke=\""+c+"\" stroke-width=\""+Number(stroke)+"\"/>");}else b.Append("<rect x=\""+Number(r.x)+"\" y=\""+Number(r.y)+"\" width=\""+Number(r.width)+"\" height=\""+Number(r.height)+"\" rx=\""+Number(d.Radius)+"\" fill=\""+c+"\"/>");b.Append("</g>");
         }b.Append("</svg>");File.WriteAllText(file,b.ToString());
+    }
+    static void VisibilityFailureChecks()
+    {
+        Set("MzDriver",null);GameObject.World.Clear();Set("MzGuiThread",0);Set("MzGuiThreadRetry",0f);ControlledThread.Fail=true;Run("MzEnsure");Driver=GameObject.Find("__mizze_driver").Added;
+        Check(Driver!=null,"original bootstrap still creates driver without thread lookup");
+        COW.GameFacade.Match=null;Set("MzOpen",false);Set("MzOpenAnim",0f);Frame(EventType.Repaint);
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze"),"thread lookup failure must not hide lobby launcher");
+        Set("MzOpen",true);Set("MzTab",2);Frame(EventType.Repaint);
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&GUI.Calls.Any(d=>d.Text=="Khóa"),"thread lookup failure must not hide menu controls");
+        Check(!Get<bool>("MzGuiActive"),"failed optional thread lookup releases GUI marker");
+        int faults=Get<int>("MzMemoryFaults");Frame(EventType.Repaint);
+        Check(Get<int>("MzMemoryFaults")==faults,"failed thread lookup uses bounded retry instead of failing every repaint");
+        Set("MzGuiActive",true);Frame(EventType.Repaint);
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&!Get<bool>("MzGuiActive"),"stale diagnostics marker cannot lock out original GUI callback");
+        Set("MzFont",new Font {Name="optional"});GUIStyle.FailSetFont=true;Frame(EventType.Repaint);GUIStyle.FailSetFont=false;
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&GUI.Calls.Any(d=>d.Text=="Khóa"),"optional font failure preserves launcher and controls");
+        Set("MzMemoryPaused",false);Set("MzBackgroundFailed",false);Set("MzBackgroundNextLoad",0f);GUI.FailBackgroundDraw=true;Frame(EventType.Repaint);GUI.FailBackgroundDraw=false;
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&GUI.Calls.Any(d=>d.Text=="Khóa"),"GIF texture draw failure preserves launcher and panel controls");
+        Check(Get<bool>("MzBackgroundFailed"),"failed GIF stops loading further frames");
+        COW.GameFacade.Match=new JMAGGLCNGIG();COW.GameFacade.Match.Players.Add(Enemy());Frame(EventType.Repaint);
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze")&&GUI.Calls.Any(d=>d.Text=="Khóa"),"menu remains visible in a match after optional failures");
+        ControlledThread.Fail=false;Set("MzGuiThread",0);Time.Now+=31;Frame(EventType.Repaint);
+        Check(Get<int>("MzGuiThread")>0,"memory diagnostics recover independently of menu");
+        Set("MzMemoryNext",0f);Set("MzDriver",null);GameObject.World.Clear();ControlledGc.Fail=true;Run("MzEnsure");Driver=GameObject.Find("__mizze_driver").Added;ControlledGc.Fail=false;
+        Check(Driver!=null,"heap-sampling failure cannot prevent original driver creation");Frame(EventType.Repaint);
+        Check(GUI.Calls.Any(d=>d.Text=="Mizze"),"launcher remains visible after failed heap diagnostics");
     }
     static void ExtendedChecks(string[] args)
     {
@@ -290,6 +317,7 @@ unsafe static class MizzeRuntimeTest
         UiPerformanceChecks();
         OldSourceGlossChecks(args);
         EspMemoryChecks();
+        VisibilityFailureChecks();
         Console.WriteLine("PASS: "+Checks+" checks; final IFix bytecode executed by pinned Tencent VM. Lobby, drag, animations, ESP geometry/filtering, head aim/fire/FOV, silent record/restore, key binding/expiry/races. Unity/game/network are offline doubles; iPhone loading and in-game aim remain unverified.");GC.KeepAlive(Vm);return 0;
     }
 }
