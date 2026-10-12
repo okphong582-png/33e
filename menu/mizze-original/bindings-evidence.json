@@ -935,6 +935,24 @@
     "declaration": "public static float Lerp(float a, float b, float t) { }"
   },
   {
+    "assembly": "mscorlib",
+    "owner": "System.GC",
+    "method": "GetTotalMemory",
+    "parameters": [
+      "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    ],
+    "declaration": "public static long GetTotalMemory(bool forceFullCollection) { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GcUtil",
+    "method": "Collect",
+    "parameters": [
+      "ManualGCReason, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static void Collect(ManualGCReason reason) { }"
+  },
+  {
     "assembly": "UnityEngine.CoreModule",
     "owner": "UnityEngine.Shader",
     "method": "Find",
@@ -1103,34 +1121,6 @@
     "declaration": "public static Matrix4x4 TRS(Vector3 pos, Quaternion q, Vector3 s) { }"
   },
   {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Rect",
-    "method": "get_x",
-    "parameters": [],
-    "declaration": "public float get_x() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Rect",
-    "method": "get_y",
-    "parameters": [],
-    "declaration": "public float get_y() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Rect",
-    "method": "get_width",
-    "parameters": [],
-    "declaration": "public float get_width() { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Rect",
-    "method": "get_height",
-    "parameters": [],
-    "declaration": "public float get_height() { }"
-  },
-  {
     "assembly": "UnityEngine.IMGUIModule",
     "owner": "UnityEngine.GUI",
     "method": "DrawTexture",
@@ -1139,16 +1129,6 @@
       "UnityEngine.Texture, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
     ],
     "declaration": "public static void DrawTexture(Rect position, Texture image) { }"
-  },
-  {
-    "assembly": "UnityEngine.CoreModule",
-    "owner": "UnityEngine.Vector3",
-    "method": "op_Addition",
-    "parameters": [
-      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
-    ],
-    "declaration": "public static Vector3 op_Addition(Vector3 a, Vector3 b) { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -1259,6 +1239,16 @@
     "declaration": "public static void DrawTexture(Rect position, Texture image, ScaleMode scaleMode, bool alphaBlend, float imageAspect, Color color, float borderWidth, float borderRadius) { }"
   },
   {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Vector3",
+    "method": "op_Addition",
+    "parameters": [
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    ],
+    "declaration": "public static Vector3 op_Addition(Vector3 a, Vector3 b) { }"
+  },
+  {
     "assembly": "Assembly-CSharp",
     "owner": "COW.GamePlay.Player",
     "method": "get_NeckBone",
@@ -1275,30 +1265,16 @@
   {
     "assembly": "Assembly-CSharp",
     "owner": "COW.GamePlay.Player",
-    "method": "get_ArmBoneRight",
-    "parameters": [],
-    "declaration": "public Transform get_ArmBoneRight() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_LegBoneLeft",
-    "parameters": [],
-    "declaration": "public Transform get_LegBoneLeft() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
-    "method": "get_LegBoneRight",
-    "parameters": [],
-    "declaration": "public Transform get_LegBoneRight() { }"
-  },
-  {
-    "assembly": "Assembly-CSharp",
-    "owner": "COW.GamePlay.Player",
     "method": "get_HandBoneLeft",
     "parameters": [],
     "declaration": "public Transform get_HandBoneLeft() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "method": "get_ArmBoneRight",
+    "parameters": [],
+    "declaration": "public Transform get_ArmBoneRight() { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -1310,9 +1286,23 @@
   {
     "assembly": "Assembly-CSharp",
     "owner": "COW.GamePlay.Player",
+    "method": "get_LegBoneLeft",
+    "parameters": [],
+    "declaration": "public Transform get_LegBoneLeft() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
     "method": "get_FootBoneLeft",
     "parameters": [],
     "declaration": "public Transform get_FootBoneLeft() { }"
+  },
+  {
+    "assembly": "Assembly-CSharp",
+    "owner": "COW.GamePlay.Player",
+    "method": "get_LegBoneRight",
+    "parameters": [],
+    "declaration": "public Transform get_LegBoneRight() { }"
   },
   {
     "assembly": "Assembly-CSharp",
@@ -1606,5 +1596,11 @@
     "owner": "UnityEngine.Color",
     "field": "b",
     "declaration": "public float b; // 0x18"
+  },
+  {
+    "assembly": "UnityEngine.CoreModule",
+    "owner": "UnityEngine.Color",
+    "field": "a",
+    "declaration": "public float a; // 0x1C"
   }
 ]

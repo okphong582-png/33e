@@ -1,4 +1,4 @@
-name: Build Old Source UI Only
+name: Build Old Source ESP Stability
 on:
   workflow_dispatch:
   push:
@@ -24,27 +24,30 @@ jobs:
           persist-credentials: false
       - name: Prepare interpreter
         run: node menu/prepare-runtime-test.cjs .ifix-runtime
-      - name: Verify UI-only scope and reviewed sources
+      - name: Verify ESP-only changes and preserved menu
         run: node menu/verify-mizze-original.cjs
-      - name: Compile old source with UI changes
+      - name: Compile old source with ESP stability fixes
         run: node menu/mizze-original/build.cjs .ifix-runtime
       - name: Package using original serializer
         run: node menu/mizze-original/package.cjs
-      - name: Run old-source bytecode and UI tests
+      - name: Run final bytecode and ten-minute ESP soak
         run: node menu/mizze-original/test.cjs
       - name: Verify native compatibility and GIF pixels
         run: node menu/verify-mizze-original-build.cjs
       - name: Verify build leaves reviewed source unchanged
         run: node menu/verify-mizze-original.cjs
-      - name: Upload old-source UI-only build
+      - name: Upload old-source ESP stability build
         uses: actions/upload-artifact@v4
         with:
-          name: Mizze-OldSource-Glass-Only
+          name: Mizze-OldSource-ESP-Stability
           path: |
             menu/mizze-original/dist/Assembly-CSharp-patch.bytes
             menu/mizze-original/dist/SHA256SUMS.txt
             menu/mizze-original/dist/manifest.json
             menu/mizze-original/dist/ui-verification.json
+            menu/mizze-original/dist/esp-soak.json
+            menu/mizze-original/dist/esp-profile.json
+            menu/mizze-original/esp-stability-evidence.json
             menu/mizze-original/dist/methods.tsv
             menu/mizze-original/dist/*.svg
             menu/mizze-original/ui-only-evidence.json

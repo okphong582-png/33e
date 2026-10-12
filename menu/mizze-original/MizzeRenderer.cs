@@ -14,7 +14,10 @@ namespace COW.GamePlay
         public static bool[] MzRotated;
         public static bool[] MzSolids;
         public static int MzCommandCount,MzEspWidth,MzEspHeight;
-        public static bool MzBuilding;
+        public static bool MzBuilding,MzRendering,MzEspMemoryDisabled;
+        public static long MzEspMemoryBaseline,MzEspMemoryLast,MzEspMemoryFreed;
+        public static float MzEspMemoryNext,MzEspMemoryNextCollect;
+        public static int MzEspMemoryCollections;
         public static float MzNextEsp,MzEspSampleStarted;
         public static JMAGGLCNGIG MzEspMatch;
         public static Camera MzEspCamera;
@@ -49,26 +52,49 @@ namespace COW.GamePlay
         }
         public static void MzTrimCommands(int count)
         {
-            for(int i=count;i<MzCommandCount;i++){MzTexts[i]=null;MzTextures[i]=null;}MzCommandCount=count;if(MzQuadCounts!=null)MzQuadCount=MzQuadCounts[count];MzBatchDirty=true;
+            for(int i=count;i<MzCommandCount;i++){MzTexts[i]=null;MzTextures[i]=null;}MzCommandCount=count;MzBatchDirty=true;
         }
         public static void MzCommand(Rect rect,Matrix4x4 matrix,bool rotated,string text,Texture texture)
         {
-            if(MzCommandCount>=512)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=GUI.color;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;MzSolids[i]=text==null&&System.Object.ReferenceEquals(texture,MzWhite);if(MzQuadCounts!=null)MzQuadCounts[MzCommandCount]=MzQuadCount;
+            if(MzCommandCount>=512)return;int i=MzCommandCount++;MzRects[i]=rect;MzColors[i]=GUI.color;MzMatrices[i]=matrix;MzRotated[i]=rotated;MzTexts[i]=text;MzTextures[i]=texture;MzSolids[i]=text==null&&System.Object.ReferenceEquals(texture,MzWhite);
         }
         public static void MzDrawCommands()
         {
             var matrix=GUI.matrix;var tint=GUI.color;bool previous=false;var identity=Matrix4x4.identity;
             var rects=MzRects;var colors=MzColors;var matrices=MzMatrices;var turns=MzRotated;var texts=MzTexts;var textures=MzTextures;var solids=MzSolids;int count=MzCommandCount;bool batched=MzDrawBatch();int fallback=0;
-            if(!batched&&MzQuadCount>96){MzNextEsp=0;return;}
+            // A failed mesh cannot replay stale duplicate geometry. Rebuild the bounded
+            // GUI fallback on the next sample instead, without allocating twice.
+            if(!batched&&MzQuadCount>0){MzNextEsp=0;return;}
             try{MzStyles();var style=MzLabelStyle;for(int i=0;i<count;i++){
                 if(batched&&solids[i])continue;
                 bool rotated=turns[i];if(rotated||previous)GUI.matrix=rotated?matrices[i]:identity;previous=rotated;GUI.color=colors[i];
                 if(texts[i]!=null)GUI.Label(rects[i],texts[i],style);else {var texture=textures[i];if(solids[i]&&fallback++>=96)continue;if(texture!=null)GUI.DrawTexture(rects[i],texture);}
             }}finally{GUI.matrix=matrix;GUI.color=tint;}
         }
+        // Game-owned collector, only from the already running GUI/ESP path. No
+        // new startup hook, thread query, background task or per-frame full GC.
+        public static void MzEspMemoryStep(long bytes,float now)
+        {
+            if(bytes<=0||MzEspMemoryDisabled||!MzFinite(now))return;
+            MzEspMemoryLast=bytes;bool first=MzEspMemoryBaseline==0;
+            if(first||bytes<MzEspMemoryBaseline)MzEspMemoryBaseline=bytes;
+            if(now<MzEspMemoryNextCollect||bytes<268435456L)return;
+            if(bytes-MzEspMemoryBaseline<67108864L&&!(first&&bytes>=536870912L))return;
+            MzEspMemoryNextCollect=now+8;
+            try{COW.GcUtil.Collect(ManualGCReason.MemoryUtilCollect);long after=GC.GetTotalMemory(false);MzEspMemoryCollections++;MzEspMemoryFreed=bytes>after?bytes-after:0;MzEspMemoryBaseline=after>0?after:bytes;MzEspMemoryLast=after;
+                if(MzEspMemoryFreed<8388608L)MzEspMemoryNextCollect=now+60;
+            }catch(Exception){MzEspMemoryDisabled=true;}
+        }
+        public static void MzEspMemoryPulse(float now)
+        {
+            if(MzEspMemoryDisabled||now<MzEspMemoryNext)return;MzEspMemoryNext=now+1;
+            try{MzEspMemoryStep(GC.GetTotalMemory(false),now);}catch(Exception){MzEspMemoryDisabled=true;}
+        }
         public static void MzRender()
         {
+            if(MzRendering)return;MzRendering=true;
             try{
+                MzEspMemoryPulse(Time.realtimeSinceStartup);
                 var match=COW.GameFacade.CurrentMatch();var camera=Camera.main;
                 if(match==null||camera==null){if(MzRects!=null)MzClearCommands();MzEspMatch=null;MzEspCamera=null;MzNextEsp=0;return;}
                 MzRendererInit();float now=Time.realtimeSinceStartup;
@@ -76,7 +102,7 @@ namespace COW.GamePlay
                 if(changed){MzClearCommands();MzNextEsp=0;MzEspMatch=match;MzEspCamera=camera;MzEspWidth=Screen.width;MzEspHeight=Screen.height;}
                 if(MzSwitch[0]){
                     if(now>=MzNextEsp){MzClearCommands();MzBuilding=true;MzEspSampleStarted=now;
-                        try{MzSampleEsp();}finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(cost>.025f?.12f:.075f);}
+                        try{MzSampleEsp();}finally{MzBuilding=false;float cost=Time.realtimeSinceStartup-now;MzNextEsp=Time.realtimeSinceStartup+(cost>.025f?.12f:cost>.012f?.075f:.06f);}
                     }
                     MzDrawCommands();
                 }else MzClearCommands();
@@ -84,6 +110,7 @@ namespace COW.GamePlay
                 // per-enemy segment budget and scales equally on both axes.
                 if(MzSwitch[13]){GUI.color=MzFovColor;MzCircle(Screen.width*.5f,Screen.height*.5f,MzEffectiveFov(),1.5f);}
             }catch(Exception){MzBuilding=false;MzDrawingEsp=false;if(MzRects!=null)MzClearCommands();MzNextEsp=Time.realtimeSinceStartup+.25f;}
+            finally{MzRendering=false;}
         }
     }
 }

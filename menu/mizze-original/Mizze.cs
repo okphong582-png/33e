@@ -37,7 +37,7 @@ namespace COW.GamePlay
         public static void MzFill(float x,float y,float w,float h,float radius)
         {
             if(!MzFinite(x)||!MzFinite(y)||!MzFinite(w)||!MzFinite(h)||w<=0||h<=0)return;
-            if(MzBuilding){MzQuad(new Vector3(x,y,0),new Vector3(x+w,y,0),new Vector3(x+w,y+h,0),new Vector3(x,y+h,0));MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,MzWhite);return;}
+            if(MzBuilding){if(MzBatchReady){MzQuad(new Vector3(x,y,0),new Vector3(x+w,y,0),new Vector3(x+w,y+h,0),new Vector3(x,y+h,0));return;}MzCommand(new Rect(x,y,w,h),Matrix4x4.identity,false,null,MzWhite);return;}
             if(!MzUiPaint)return;
             if(MzUiWhite==null)MzUiWhite=Texture2D.whiteTexture;
             // Rounded DrawTexture uses its explicit color.
@@ -59,22 +59,22 @@ namespace COW.GamePlay
             if(!MzFinite(ax)||!MzFinite(ay)||!MzFinite(bx)||!MzFinite(by)||!MzFinite(width)||width<=0)return;
             if((ax<0&&bx<0)||(ax>Screen.width&&bx>Screen.width)||(ay<0&&by<0)||(ay>Screen.height&&by>Screen.height))return;
             float dx=bx-ax,dy=by-ay,length=Mathf.Sqrt(dx*dx+dy*dy);if(!MzFinite(length)||length<.5f||length>Screen.width*3)return;
+            if(MzBuilding&&MzBatchReady){
+                if(dy==0||dx==0){float x=dy==0?(ax<bx?ax:bx)-width*.5f:ax-width*.5f,y=dy==0?ay-width*.5f:(ay<by?ay:by)-width*.5f,w=dy==0?length+width:width,h=dy==0?width:length+width;MzQuad(new Vector3(x,y,0),new Vector3(x+w,y,0),new Vector3(x+w,y+h,0),new Vector3(x,y+h,0));return;}
+                float ux=dx/length,uy=dy/length,half=width*.5f,sx=ax-ux*half,sy=ay-uy*half,ex=bx+ux*half,ey=by+uy*half,nx=-uy*half,ny=ux*half;MzQuad(new Vector3(sx-nx,sy-ny,0),new Vector3(ex-nx,ey-ny,0),new Vector3(ex+nx,ey+ny,0),new Vector3(sx+nx,sy+ny,0));return;}
             Rect rect;Matrix4x4 lineMatrix=Matrix4x4.identity;bool rotated=false;
             // Axis-aligned edges need no matrix calls. Extend both ends by half the
             // stroke so every shared endpoint overlaps instead of leaving a seam.
             if(dy==0)rect=new Rect((ax<bx?ax:bx)-width*.5f,ay-width*.5f,length+width,width);
             else if(dx==0)rect=new Rect(ax-width*.5f,(ay<by?ay:by)-width*.5f,width,length+width);
             else {rotated=true;lineMatrix=Matrix4x4.TRS(new Vector3(ax,ay,0),Quaternion.Euler(0,0,Mathf.Atan2(dy,dx)*57.29578f),new Vector3(1,1,1));rect=new Rect(-width*.5f,-width*.5f,length+width,width);}
-            if(MzBuilding){
-                if(rotated){float ux=dx/length,uy=dy/length,half=width*.5f,sx=ax-ux*half,sy=ay-uy*half,ex=bx+ux*half,ey=by+uy*half,nx=-uy*half,ny=ux*half;MzQuad(new Vector3(sx-nx,sy-ny,0),new Vector3(ex-nx,ey-ny,0),new Vector3(ex+nx,ey+ny,0),new Vector3(sx+nx,sy+ny,0));}
-                else MzQuad(new Vector3(rect.x,rect.y,0),new Vector3(rect.x+rect.width,rect.y,0),new Vector3(rect.x+rect.width,rect.y+rect.height,0),new Vector3(rect.x,rect.y+rect.height,0));
-                MzCommand(rect,lineMatrix,rotated,null,MzWhite);return;}
+            if(MzBuilding){MzCommand(rect,lineMatrix,rotated,null,MzWhite);return;}
             var old=GUI.matrix;try{if(rotated)GUI.matrix=lineMatrix;GUI.DrawTexture(rect,Texture2D.whiteTexture);}finally{if(rotated)GUI.matrix=old;}
         }
         public static void MzCircle(float cx,float cy,float radius,float width)
         {
             if(!MzFinite(cx)||!MzFinite(cy)||!MzFinite(radius)||radius<=0||radius>Screen.width)return;
-            MzRendererInit();var texture=radius<=12?MzHeadRing:MzRing;float correction=radius<=12?16f/14f:128f/126f;float extent=radius*correction;var rect=new Rect(cx-extent,cy-extent,extent*2,extent*2);
+            if(MzRing==null||MzHeadRing==null)MzRendererInit();var texture=radius<=12?MzHeadRing:MzRing;float correction=radius<=12?16f/14f:128f/126f;float extent=radius*correction;var rect=new Rect(cx-extent,cy-extent,extent*2,extent*2);
             if(MzBuilding){MzCommand(rect,Matrix4x4.identity,false,null,texture);return;}GUI.DrawTexture(rect,texture);
         }
         public static void MzLayout()

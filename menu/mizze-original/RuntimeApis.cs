@@ -49,7 +49,7 @@ namespace UnityEngine
     public class Material:Object {public static bool FailPass;public static int Created;public Dictionary<string,int> Values=new Dictionary<string,int>();public Material(Shader s){Created++;}public void SetInt(string n,int v){Values[n]=v;}public bool SetPass(int p){return !FailPass;}}
     public class Mesh:Object {public static int Created,Uploads;public Vector3[] Vertices;public Color[] Colors;public int[] Indices;public Mesh(){Created++;}public void MarkDynamic(){}public void Clear(){Vertices=null;Colors=null;Indices=null;}public void SetVertices(Vector3[] a,int start,int length){Uploads++;Vertices=new Vector3[length];Array.Copy(a,start,Vertices,0,length);}public void SetColors(Color[] a,int start,int length){Colors=new Color[length];Array.Copy(a,start,Colors,0,length);}public void SetTriangles(int[] a,int start,int length,int submesh,bool bounds,int baseVertex){Indices=new int[length];Array.Copy(a,start,Indices,0,length);}}
     public static class GL {public static int Depth;public static void PushMatrix(){Depth++;}public static void PopMatrix(){Depth--;}public static void LoadPixelMatrix(float l,float r,float b,float t){}}
-    public static class Graphics {public static int Draws;public static bool FailDraw;public static void DrawMeshNow(Mesh mesh,Matrix4x4 matrix){if(FailDraw)throw new Exception("GPU draw failure");Draws++;var a=mesh.Vertices;for(int i=0;i<a.Length;i+=4){var first=a[i];var next=a[i+1];var last=a[i+3];float dx=next.x-first.x,dy=next.y-first.y,width=(float)Math.Sqrt(dx*dx+dy*dy),hx=last.x-first.x,hy=last.y-first.y,height=(float)Math.Sqrt(hx*hx+hy*hy);bool axis=dy==0&&hx==0;GUI.Calls.Add(new Draw {MeshQuad=true,Rect=axis?new Rect(first.x,first.y,width,height):new Rect(0,0,width,height),Color=mesh.Colors[i],Texture=Texture2D.TestWhite,Matrix=axis?Matrix4x4.identity:Matrix4x4.TRS(first,Quaternion.Euler(0,0,(float)(Math.Atan2(dy,dx)*180/Math.PI)),new Vector3(1,1,1))});}}}
+    public static class Graphics {public static int Draws;public static bool FailDraw;public static void DrawMeshNow(Mesh mesh,Matrix4x4 matrix){if(FailDraw)throw new Exception("GPU draw failure");Draws++;if(!GUI.Record)return;var a=mesh.Vertices;for(int i=0;i<a.Length;i+=4){var first=a[i];var next=a[i+1];var last=a[i+3];float dx=next.x-first.x,dy=next.y-first.y,width=(float)Math.Sqrt(dx*dx+dy*dy),hx=last.x-first.x,hy=last.y-first.y,height=(float)Math.Sqrt(hx*hx+hy*hy);bool axis=dy==0&&hx==0;GUI.Calls.Add(new Draw {MeshQuad=true,Rect=axis?new Rect(first.x,first.y,width,height):new Rect(0,0,width,height),Color=mesh.Colors[i],Texture=Texture2D.TestWhite,Matrix=axis?Matrix4x4.identity:Matrix4x4.TRS(first,Quaternion.Euler(0,0,(float)(Math.Atan2(dy,dx)*180/Math.PI)),new Vector3(1,1,1))});}}}
     public class Texture:Object {public FilterMode filterMode {get;set;}public TextureWrapMode wrapMode {get;set;}}public class Texture2D:Texture {public static int Created,Uploaded,WhiteReads;public static bool FailUpload;public static Texture2D LastCreated;static Texture2D White=new Texture2D();public int Width,Height;public Color[] Pixels;public bool Released;public Texture2D(){}public Texture2D(int w,int h,TextureFormat f,bool mip){Width=w;Height=h;Created++;LastCreated=this;}public void SetPixels(Color[] p){if(FailUpload)throw new Exception("upload failure");Pixels=(Color[])p.Clone();Uploaded++;}public void Apply(bool mip,bool release){Released=release;}public static Texture2D TestWhite {get{return White;}}public static Texture2D whiteTexture {get{WhiteReads++;return White;}}}
     public enum EventType {MouseDown=0,MouseUp=1,MouseMove=2,MouseDrag=3,Repaint=7,Used=12}public enum ScaleMode {StretchToFill=0}
     public class Event {public static Event current {get;set;}public EventType type {get;set;}public Vector2 mousePosition {get;set;}public void Use(){type=EventType.Used;}}
@@ -61,12 +61,13 @@ namespace UnityEngine
     public class Draw {public bool MeshQuad;public Texture Texture;public Rect Rect;public Matrix4x4 Matrix;public Color Color;public float Radius;public string Text;public int FontSize;public TextAnchor Align;public bool Wrap;}
     public static class GUI
     {
+        public static bool Record=true;
         static GUISkin Skin=new GUISkin {font=new Font {Name="game-original"}};public static GUISkin skin {get{return Skin;}set{Skin=value;}}
         static Matrix4x4 Matrix;public static int MatrixWrites,NativeTextures;public static Matrix4x4 matrix {get{return Matrix;}set{Matrix=value;MatrixWrites++;}}public static Color color {get;set;}public static Color contentColor {get;set;}public static List<Draw> Calls=new List<Draw>();
-        public static void Label(Rect r,string s){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Text=s});}
-        public static void Label(Rect r,string s,GUIStyle style){Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
-        public static void DrawTexture(Rect r,Texture t){NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
-        public static void DrawTexture(Rect r,Texture t,ScaleMode m,bool a,float aspect,Color c,float b,float radius){Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=c,Radius=radius});}
+        public static void Label(Rect r,string s){if(!Record)return;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Text=s});}
+        public static void Label(Rect r,string s,GUIStyle style){if(!Record)return;Color c=style.normal.textColor;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=new Color(color.r*contentColor.r*c.r,color.g*contentColor.g*c.g,color.b*contentColor.b*c.b,color.a*contentColor.a*c.a),Text=s,FontSize=style.fontSize,Align=style.alignment,Wrap=style.wordWrap});}
+        public static void DrawTexture(Rect r,Texture t){if(!Record)return;NativeTextures++;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=color,Texture=t});}
+        public static void DrawTexture(Rect r,Texture t,ScaleMode m,bool a,float aspect,Color c,float b,float radius){if(!Record)return;Calls.Add(new Draw {Rect=r,Matrix=matrix,Color=c,Radius=radius});}
     }
 }
 namespace UnityEngine.Networking
@@ -93,6 +94,7 @@ namespace SimpleJSON
         public static JSONNode Parse(string json){return new JSONNode(new JavaScriptSerializer().DeserializeObject(json));}
     }
 }
+public enum ManualGCReason {MemoryUtilCollect=13}
 namespace GCommon
 {
     public class SingletonModule<T> where T:class,new() {static T Value=new T();public static T instance {get{return Value;}}}
@@ -100,6 +102,7 @@ namespace GCommon
 }
 namespace COW
 {
+    public static class GcUtil {public static int Calls;public static bool Fail;public static Action DuringCollect;public static void Collect(ManualGCReason reason){if(Fail)throw new Exception("collector failure");Calls++;if(DuringCollect!=null)DuringCollect();GC.Collect();}}
     public class UIModelRole {}
     public static class GameFacade {public static UIModelRole m_modelRole;public static UIModelRole UIModelRole {get{return m_modelRole;}}public static GamePlay.JMAGGLCNGIG Match;public static GamePlay.Player Local;public static GamePlay.JMAGGLCNGIG CurrentMatch(){return Match;}public static GamePlay.Player GetLocalPlayerOrObServer(){return Local;}}
 }

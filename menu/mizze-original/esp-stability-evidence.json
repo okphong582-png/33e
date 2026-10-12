@@ -1,0 +1,125 @@
+{
+  "scope": "ESP allocation, projection reuse, per-enemy rollback and thresholded game collector",
+  "baselineCommit": "283fc399cc1dabaf2c0e92dcf2bbb4411c282d79",
+  "unchanged": [
+    "original startup and four hooks",
+    "OnGUI",
+    "menu paint/font/GIF",
+    "aim",
+    "license/key",
+    "movement/input"
+  ],
+  "memoryPolicy": {
+    "checkSeconds": 1,
+    "totalHeapMinimumBytes": 268435456,
+    "growthTriggerBytes": 67108864,
+    "firstCheckLargeHeapBytes": 536870912,
+    "minimumCollectionIntervalSeconds": 8,
+    "ineffectiveCollectionBackoffSeconds": 60,
+    "onFailure": "Disable optional collector guard; continue original UI and bounded ESP"
+  },
+  "nativeMethodsAdded": [
+    {
+      "owner": "System.GC",
+      "method": "GetTotalMemory",
+      "declarationDump": "FF-dumper-th_1.132.1/Assembly/mscorlib.dll.cs"
+    },
+    {
+      "owner": "COW.GcUtil",
+      "method": "Collect",
+      "reason": "ManualGCReason.MemoryUtilCollect = 13",
+      "declarationDump": "FF-dumper-th_1.132.1/Assembly/Assembly-CSharp.dll.cs"
+    }
+  ],
+  "checks": 1595,
+  "soak": {
+    "simulatedSeconds": 600,
+    "frames": 36000,
+    "retainedDeltaBytes": 52768,
+    "nativeTexturesAdded": 0,
+    "nativeMeshesAdded": 0,
+    "deviceVerified": false
+  },
+  "comparison": [
+    {
+      "scenario": "two-enemies",
+      "before": {
+        "scenario": "two-enemies",
+        "frames": 1200,
+        "simulatedSeconds": 20,
+        "allocatedBytes": 24970368,
+        "bytesPerSecond": 1248518,
+        "retainedDelta": 40,
+        "wallMs": 207,
+        "projections": 960
+      },
+      "after": {
+        "scenario": "two-enemies",
+        "frames": 1200,
+        "simulatedSeconds": 20,
+        "allocatedBytes": 24363400,
+        "bytesPerSecond": 1218170,
+        "retainedDelta": 40,
+        "wallMs": 192,
+        "projections": 1200
+      },
+      "allocationReductionPercent": 2.43
+    },
+    {
+      "scenario": "sixteen-enemies",
+      "before": {
+        "scenario": "sixteen-enemies",
+        "frames": 1200,
+        "simulatedSeconds": 20,
+        "allocatedBytes": 154924464,
+        "bytesPerSecond": 7746223,
+        "retainedDelta": 40,
+        "wallMs": 1280,
+        "projections": 7680
+      },
+      "after": {
+        "scenario": "sixteen-enemies",
+        "frames": 1200,
+        "simulatedSeconds": 20,
+        "allocatedBytes": 151027792,
+        "bytesPerSecond": 7551389,
+        "retainedDelta": 40,
+        "wallMs": 1130,
+        "projections": 9600
+      },
+      "allocationReductionPercent": 2.52
+    },
+    {
+      "scenario": "all-esp",
+      "before": {
+        "scenario": "all-esp",
+        "frames": 1200,
+        "simulatedSeconds": 20,
+        "allocatedBytes": 1059324264,
+        "bytesPerSecond": 52966213,
+        "retainedDelta": 40,
+        "wallMs": 7585,
+        "projections": 199680
+      },
+      "after": {
+        "scenario": "all-esp",
+        "frames": 1200,
+        "simulatedSeconds": 20,
+        "allocatedBytes": 781281160,
+        "bytesPerSecond": 39064058,
+        "retainedDelta": 40,
+        "wallMs": 5849,
+        "projections": 120000
+      },
+      "allocationReductionPercent": 26.25
+    }
+  ],
+  "measurementLimits": "Pinned Tencent VM with offline Unity/game/network doubles and reflection invokers; allocation and timing are relative desktop measurements, not iPhone memory/FPS. Soak advances 600 seconds of virtual time, not 600 wall-clock seconds.",
+  "deviceVerified": false,
+  "unusedNativeDependenciesRemoved": [
+    "UnityEngine.Rect.get_x",
+    "UnityEngine.Rect.get_y",
+    "UnityEngine.Rect.get_width",
+    "UnityEngine.Rect.get_height"
+  ]
+}

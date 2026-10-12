@@ -5,7 +5,7 @@
   },
   {
     "name": "GameBindings.cs",
-    "sha256": "fbe2d386bc7d8630c0da221b1201157f827fb132ccb416a32c59ff5ddc10d4cf"
+    "sha256": "1db48c06d0a1f1b635b70b928c1a04f94594922f2b0fd21d0dad18dd12e1f2bc"
   },
   {
     "name": "GuiBindings.cs",
@@ -17,7 +17,7 @@
   },
   {
     "name": "Mizze.cs",
-    "sha256": "63f41c14cec41a12bcf101c034813e203f1471f8e9f135e902117a8b4a379600"
+    "sha256": "e4d88e83cdc2321f95dd12b91060cfbd8b2734d0498e2efa9a67fbf164cfcb82"
   },
   {
     "name": "MizzeAppearance.cs",
@@ -25,11 +25,11 @@
   },
   {
     "name": "MizzeBatch.cs",
-    "sha256": "3355f558727b1476e8b781a007d182b0b92f7f6040320774d6634bfd2385cb68"
+    "sha256": "b94a67fabe875f17af0239f5ca76557236c3e4903232c68ca8602299ddf7fc5f"
   },
   {
     "name": "MizzeGameplay.cs",
-    "sha256": "1075b82f714ecbec34e99014caf7aa2c5b78d0cf4edbd8ab464273170fe1e8a4"
+    "sha256": "c5b468404c9aa8c5297cc228a20bf917cfbc92d6ff81a0d9f7b04902be0e3914"
   },
   {
     "name": "MizzeLicense.cs",
@@ -37,7 +37,7 @@
   },
   {
     "name": "MizzeRenderer.cs",
-    "sha256": "fa906b74e8fd83ce6528c8d64dd414348225a56bd4a4257064aafe9ff01b3044"
+    "sha256": "5319e5bf2cabb01ee50d18fd16f4933953ca1bee1b5408706ee27334689c1377"
   },
   {
     "name": "NetworkBindings.cs",
@@ -53,11 +53,11 @@
   },
   {
     "name": "RuntimeApis.cs",
-    "sha256": "318dd4c39aba404a4e9f9c5912b08f441c68529cde6fa13c3192301c161fbf96"
+    "sha256": "3fe81120e5c92775f3d1adc829dc857a8335fd485c8442b76c515bdea25d40c3"
   },
   {
     "name": "RuntimeTest.cs",
-    "sha256": "06e78e06e5e0929467ee7aba35b5eb13afbca47b0ff9567d5e54dc2f0c372dc7"
+    "sha256": "942f4fbf0c89075213d02de288a90de2d6678a40dc2beedbd114a0a192737ce9"
   },
   {
     "name": "TextBindings.cs",
@@ -69,11 +69,19 @@
   },
   {
     "name": "bindings-evidence.json",
-    "sha256": "bfb3851e13af42cd74d2ad5663fc37222b74277f918eeac83f43b18a5712e498"
+    "sha256": "8d8f3afb21d61a964ad7047b6fcd5e33312a53af7bfc8053ca44c245225c2eff"
   },
   {
     "name": "build.cjs",
     "sha256": "8a68cdb7816647258d2aeb2a40f8dc946dfed3f8fc65e9326ba2866392a3b272"
+  },
+  {
+    "name": "esp-compatibility-baseline.json",
+    "sha256": "a3bb029bd5dd6d0d57f7852f038fb2d1144f601b28a176387606d2413d08514b"
+  },
+  {
+    "name": "esp-stability-evidence.json",
+    "sha256": "1b80409ef8e4dd161d99b61af5916cccc74a98700f0211eaefcec7c728a37f44"
   },
   {
     "name": "loader-evidence.json",
@@ -89,7 +97,7 @@
   },
   {
     "name": "test.cjs",
-    "sha256": "dc9d55931babc07fb87f0e681a2a7292f50c1fe9e7c0cbb4c530cdc35a0853d0"
+    "sha256": "7874e1a977ccaaa76890484097550f120d9537633428f29fbdefb636d29d0f9c"
   },
   {
     "name": "ui-compatibility-baseline.json",

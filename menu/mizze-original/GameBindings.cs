@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 [assembly: System.Reflection.AssemblyVersion("0.86.0.518")]
+public enum ManualGCReason {MemoryUtilCollect=13}
 namespace GCommon
 {
     public class SingletonModule<T> where T:class {public static T instance {get {return null;}}}
@@ -10,6 +11,7 @@ namespace GCommon
 }
 namespace COW
 {
+    public static class GcUtil {public static void Collect(ManualGCReason reason){}}
     public class UIModelRole {}
     public static partial class GameFacade
     {
