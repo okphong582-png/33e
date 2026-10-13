@@ -295,7 +295,7 @@
       input[type=range] { accent-color: #17171c; }
     </style>
   </head>
-  <body>
+  <body data-game="%%OVERLAY_GAME%%">
     <section id="menu" aria-label="Menu Mod">
       <header id="header">
         <div>
@@ -423,6 +423,7 @@
       var screenMap = document.getElementById("screenMap");
       var fabDot = document.getElementById("fabDot");
       var state = {
+        game: overlayGame,
         espEnabled: false,
         hackMapEnabled: false,
         showsLine: false,
