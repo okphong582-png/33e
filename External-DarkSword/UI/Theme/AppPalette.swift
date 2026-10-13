@@ -13,7 +13,7 @@ struct AppPalette {
     var background: Color {
         isDark
             ? Color(red: 0.035, green: 0.04, blue: 0.048)
-            : Color(red: 0.94, green: 0.95, blue: 0.96)
+            : .white
     }
 
     var primaryText: Color {
@@ -45,6 +45,6 @@ struct AppPalette {
     }
 
     var accent: Color {
-        Color(red: 0.24, green: 0.9, blue: 0.46)
+        isDark ? .white : Color(red: 0.08, green: 0.09, blue: 0.12)
     }
 }

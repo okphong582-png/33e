@@ -1,4 +1,5 @@
 #import "FreeFireManager.h"
+#import "../../License/LicenseSession.h"
 #import "../../Overlay/RemoteWebViewOverlay.h"
 #import "../../../App/Support/helper.h"
 #include "FreeFireReader.h"
@@ -197,6 +198,7 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
             [self.overlay setupBaseOverlay];
         }
         if(!self.overlay.isOverlayReady) {self.statusMessage=@"Free Fire: đang tạo menu nổi";return;}
+        if(![LicenseSession shared].authorized) { [self emptyFrame];return; }
         if(!self.isESPEnabled) { [self emptyFrame];self.statusMessage=@"Free Fire: ESP đã tắt";return; }
         if(!self.base) {
             if(now<self.nextSetup)return;

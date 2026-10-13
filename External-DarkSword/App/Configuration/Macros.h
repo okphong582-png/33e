@@ -22,7 +22,7 @@ static inline os_log_t GetLogger(void) {
     static dispatch_once_t onceToken;
 
     dispatch_once(&onceToken, ^{
-      logger = os_log_create("com.letiendat.external-darksword",
+      logger = os_log_create("com.dts.mizze.external",
                              "External-DarkSword");
     });
 

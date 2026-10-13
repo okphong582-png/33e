@@ -1,4 +1,4 @@
-name: Build External DarkSword FF ESP
+name: Build Mizze FF ESP
 on:
   push:
     branches: ["codex/external-darksword-ff-esp"]
@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: mizze-ff-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: macos-15
@@ -22,6 +25,15 @@ jobs:
         run: |
           node tests/run-freefire.cjs
           node tests/freefire_menu_test.cjs
+      - name: Verify real license engine lease, binding, revocation and network behavior
+        working-directory: External-DarkSword
+        run: |
+          clang++ -std=c++17 -Wall -Wextra -Werror tests/license_session_policy_test.cpp -o /tmp/mizze-license-policy
+          /tmp/mizze-license-policy
+          clang++ -std=c++17 -Wall -Wextra -Werror tests/license_event_stream_test.cpp -o /tmp/mizze-license-events
+          /tmp/mizze-license-events
+          clang++ -std=c++17 -fobjc-arc -Wno-deprecated-declarations -framework Foundation -framework Security tests/license_restore_test.mm Features/License/LicenseSession.mm -o /tmp/mizze-license-network
+          /tmp/mizze-license-network
       - name: Checkout pinned Theos
         uses: actions/checkout@v4
         with:
@@ -40,16 +52,16 @@ jobs:
           make -C External-DarkSword clean package PACKAGE_FORMAT=none FINALPACKAGE=1 FOR_RELEASE=1
       - name: Verify app package and export TIPA
         run: |
-          python3 External-DarkSword/tests/verify_app.py External-DarkSword/packages/External-DarkSword.ipa
-          cp External-DarkSword/packages/External-DarkSword.ipa External-DarkSword/packages/External-DarkSword.tipa
+          python3 External-DarkSword/tests/verify_app.py External-DarkSword/packages/Mizze.ipa
+          cp External-DarkSword/packages/Mizze.ipa External-DarkSword/packages/Mizze.tipa
           cd External-DarkSword/packages
-          shasum -a 256 External-DarkSword.ipa External-DarkSword.tipa > SHA256SUMS.txt
+          shasum -a 256 Mizze.ipa Mizze.tipa > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: External-DarkSword-FF-ESP
+          name: Mizze-FF-ESP
           if-no-files-found: error
           path: |
-            External-DarkSword/packages/External-DarkSword.ipa
-            External-DarkSword/packages/External-DarkSword.tipa
+            External-DarkSword/packages/Mizze.ipa
+            External-DarkSword/packages/Mizze.tipa
             External-DarkSword/packages/SHA256SUMS.txt
             External-DarkSword/README-FF-ESP.md

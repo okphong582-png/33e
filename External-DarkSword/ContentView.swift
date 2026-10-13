@@ -10,11 +10,10 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var manager: DarkSwordManager
     @State private var isShowingGames = false
-    @AppStorage("ui.prefersDarkTheme") private var prefersDarkTheme = true
     @AppStorage("ui.prefersVietnamese") private var prefersVietnamese = true
 
     private var palette: AppPalette {
-        AppPalette(isDark: prefersDarkTheme)
+        AppPalette(isDark: false)
     }
 
     private var language: AppLanguage {
@@ -63,16 +62,6 @@ struct ContentView: View {
                     }
 
                     Button {
-                        prefersDarkTheme.toggle()
-                    } label: {
-                        Image(
-                            systemName: prefersDarkTheme
-                                ? "sun.max.fill" : "moon.fill"
-                        )
-                    }
-                    .accessibilityLabel(AppStrings.themeAccessibility(language))
-
-                    Button {
                         prefersVietnamese.toggle()
                     } label: {
                         Text(AppStrings.languageToggleCode(language))
@@ -101,7 +90,7 @@ struct ContentView: View {
             }
         }
         .tint(palette.accent)
-        .preferredColorScheme(prefersDarkTheme ? .dark : .light)
+        .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.2), value: isShowingGames)
     }
 }

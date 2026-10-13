@@ -1,5 +1,5 @@
 TARGET = iphone:clang:latest:17.0
-INSTALL_TARGET_PROCESSES = External-DarkSword
+INSTALL_TARGET_PROCESSES = Mizze
 ARCHS = arm64e
 DEBUG = 0
 FINALPACKAGE = 1
@@ -8,13 +8,15 @@ _THEOS_OBJ_FILE_TAG = arm64e
 
 include $(THEOS)/makefiles/common.mk
 
-APPLICATION_NAME_REAL = External-DarkSword
-APPLICATION_NAME = External_DarkSword
+APPLICATION_NAME_REAL = Mizze
+APPLICATION_NAME = Mizze
 
-$(APPLICATION_NAME)_BUNDLE_NAME = External-DarkSword
+$(APPLICATION_NAME)_BUNDLE_NAME = Mizze
 $(APPLICATION_NAME)_FILES = \
 	AppImageCatalog.swift \
 	ContentView.swift \
+	UI/Screens/MizzeLicenseScreen.swift \
+	Features/License/LicenseSession.mm \
 	UI/Localization/AppStrings.swift \
 	UI/Theme/AppPalette.swift \
 	UI/Components/SharedUI.swift \
@@ -49,6 +51,7 @@ $(APPLICATION_NAME)_LIBRARIES = xpf grabkernel2
 $(APPLICATION_NAME)_CFLAGS = -fobjc-arc -Wno-error=deprecated-declarations -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-but-set-variable -Wno-error=unused-const-variable -Wno-error=incompatible-pointer-types -ICore -ICore/TaskRop -ICore/pe -ICore/headers -ICore/headers/choma
 Features/Games/AoV/AoVManager.mm_CFLAGS = -std=c++17
 Features/Games/FreeFire/FreeFireManager.mm_CFLAGS = -std=c++17
+Features/License/LicenseSession.mm_CFLAGS = -std=c++17
 $(APPLICATION_NAME)_SWIFTFLAGS = -import-objc-header $(THEOS_PROJECT_DIR)/External-DarkSword-Bridging-Header.h
 $(APPLICATION_NAME)_LDFLAGS = -L$(THEOS_PROJECT_DIR)/Resources/Frameworks -Wl,-rpath,@executable_path/Frameworks
 $(APPLICATION_NAME)_CODESIGN_FLAGS = -S$(THEOS_PROJECT_DIR)/External-DarkSword.entitlements

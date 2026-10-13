@@ -13,8 +13,8 @@ enum AppLanguage: Equatable {
 }
 
 enum AppStrings {
-    static let appTitle = "External DarkSword"
-    static let developerCredit = "Develop by Le Tien Dat"
+    static let appTitle = "Mizze"
+    static let developerCredit = "Mizze"
     static let bundleIdentifier = "Bundle ID"
     static let ios = "iOS"
     static let kernelBase = "Kernel base"
@@ -60,8 +60,8 @@ enum AppStrings {
     static func exploitAction(_ language: AppLanguage) -> String {
         text(
             language,
-            vietnamese: "Tấn công thiết bị",
-            english: "Exploit DarkSword"
+            vietnamese: "Khởi tạo Mizze",
+            english: "Start Mizze"
         )
     }
 
@@ -111,7 +111,7 @@ enum AppStrings {
         case .idle:
             return "Đang chờ"
         case .running:
-            return "Đang tấn công"
+            return "Đang khởi tạo"
         case .ready:
             return "Sẵn sàng"
         case .failed:

@@ -2,10 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+	<key>CFBundleName</key>
+	<string>Mizze</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mod DarkSword</string>
+	<string>Mizze</string>
 	<key>CFBundleExecutable</key>
-	<string>External_DarkSword</string>
+	<string>Mizze</string>
 	<key>CFBundleIcons</key>
 	<dict>
 		<key>CFBundlePrimaryIcon</key>
@@ -38,7 +42,7 @@
 		</dict>
 	</dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.letiendat.External-DarkSword</string>
+	<string>com.dts.mizze.external</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>

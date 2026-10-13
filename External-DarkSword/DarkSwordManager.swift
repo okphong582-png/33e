@@ -610,6 +610,13 @@ final class DarkSwordManager: ObservableObject {
             let connected = instance != nil && error.isEmpty
 
             DispatchQueue.main.async {
+                if connected && !LicenseSession.shared().authorized {
+                    self.isBusy = false
+                    self.isOpeningAoV = false
+                    self.remoteError = "Phiên key Mizze đã hết hạn."
+                    if let instance { self.workerQueue.async { _ = instance.destroy() } }
+                    return
+                }
                 let isAoVProcess =
                     process
                     == self.aovProcess.trimmingCharacters(
@@ -1170,6 +1177,7 @@ final class DarkSwordManager: ObservableObject {
 
     @discardableResult
     private func applyOverlayOption(key: String, value: Any) -> Bool {
+        guard LicenseSession.shared().authorized else { return false }
         if selectedGame == .freeFire {
             guard ["ffESPEnabled", "espEnabled", "esp"].contains(key),
                   let enabled = boolValue(value), enabled != freeFireESPEnabled else { return false }
@@ -1260,6 +1268,20 @@ final class DarkSwordManager: ObservableObject {
         if let value = value as? NSNumber { return value.doubleValue }
         if let value = value as? String { return Double(value) }
         return nil
+    }
+
+    func lockForLicenseExpiry() {
+        freeFireESPEnabled = false
+        aovESPEnabled = false
+        aovHackMapEnabled = false
+        stopGameLoops()
+        if !isBusy { disconnectRemoteCall() }
+    }
+
+    func restoreLicensedSession() {
+        guard LicenseSession.shared().authorized, remoteConnected else { return }
+        if selectedGame == .freeFire { freeFireManager?.runLoop() }
+        else { aovManager?.runLoop() }
     }
 
     private func broadcastOverlayState() {
@@ -1527,6 +1549,7 @@ final class DarkSwordManager: ObservableObject {
     }
 
     private func allowSupportedAction(_ actionName: String) -> Bool {
+        guard LicenseSession.shared().authorized else { remoteError = "Vui lòng nhập key Mizze hợp lệ."; return false }
         supportStatus = DarkSwordSupportStatus.current()
         guard supportStatus.isSupported else {
             remoteError = supportStatus.reason
@@ -1539,7 +1562,7 @@ final class DarkSwordManager: ObservableObject {
     private func allowToolingAction(_ actionName: String) -> Bool {
         guard isExploitReady else {
             let message =
-                "Initialize DarkSword successfully before using tools."
+                "Khởi tạo Mizze thành công trước khi dùng chức năng."
             remoteError = message
             appendLog("\(actionName) blocked: \(message)")
             return false
@@ -1552,7 +1575,7 @@ final class DarkSwordManager: ObservableObject {
         DispatchQueue.main.async {
             let trimmed = line.trimmingCharacters(in: .newlines)
             guard !trimmed.isEmpty else { return }
-            logSwift("[DarkSword] \(trimmed)")
+            logSwift("[Mizze] \(trimmed)")
             if self.logText.isEmpty {
                 self.logText = trimmed
             } else {

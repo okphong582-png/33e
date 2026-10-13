@@ -8,12 +8,12 @@
 import SwiftUI
 
 @main
-struct External_DarkSwordApp: App {
+struct MizzeApp: App {
     @StateObject private var manager = DarkSwordManager()
 
     var body: some Scene {
         WindowGroup {
-            ContentView(manager: manager)
+            MizzeRootView(manager: manager)
         }
     }
 }

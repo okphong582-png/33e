@@ -47,7 +47,7 @@ struct PrimaryActionButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(.black)
+            .foregroundColor(.white)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(palette.accent)

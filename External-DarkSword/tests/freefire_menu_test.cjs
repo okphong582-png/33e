@@ -10,9 +10,9 @@ const document={querySelector:s=>selectors[s],querySelectorAll:s=>s==='.switch[d
 const body=script.slice(script.indexOf('      function renderState() {'),script.indexOf('      function renderLayout() {'));
 const context={state:{game:'freefire',espEnabled:true},document};vm.createContext(context);vm.runInContext(body,context);
 cameraTab.classList.add('active');context.renderState();
-assert.equal(title.textContent,'Free Fire');assert.equal(switches[0].closest().style.display,'');for(const b of switches.slice(1))assert.equal(b.closest().style.display,'none');
+assert.equal(title.textContent,'Mizze');assert.equal(switches[0].closest().style.display,'');for(const b of switches.slice(1))assert.equal(b.closest().style.display,'none');
 assert.equal(cameraTab.style.display,'none');assert.equal(cameraPanel.style.display,'none');assert(espPanel.classList.contains('active'));assert.equal(espTitle.textContent,'ESP Box');
-context.state={game:'aov',espEnabled:false,showsLine:true};context.renderState();assert.equal(title.textContent,'Menu Mod');assert.equal(cameraTab.style.display,'');for(const b of switches)assert.equal(b.closest().style.display,'');
+context.state={game:'aov',espEnabled:false,showsLine:true};context.renderState();assert.equal(title.textContent,'Mizze');assert.equal(cameraTab.style.display,'');for(const b of switches)assert.equal(b.closest().style.display,'');
 assert.match(script,/game: state\.game \|\| "aov"/);
 assert.match(script,/message\.game = overlayGame/);
 const apply=script.slice(script.indexOf('      function applyPayload(raw) {'),script.indexOf('      function connect() {'));
