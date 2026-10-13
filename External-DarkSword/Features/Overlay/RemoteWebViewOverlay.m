@@ -391,6 +391,7 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
     if ([self.gameIdentifier isEqualToString:@"freefire"]) {
         // FF is landscape. Avoid remote_getCGRect's private CAMetalDrawable
         // register-spill helper entirely, including orientation/viewport events.
+        if (!isfinite(self.localScreenSize.width) || !isfinite(self.localScreenSize.height)) return NO;
         CGFloat width = MAX(self.localScreenSize.width, self.localScreenSize.height);
         CGFloat height = MIN(self.localScreenSize.width, self.localScreenSize.height);
         if (!isfinite(width) || !isfinite(height) || width < 1 || height < 1 || width > 8192 || height > 8192)
