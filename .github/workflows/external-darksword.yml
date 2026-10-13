@@ -1,0 +1,55 @@
+name: Build External DarkSword FF ESP
+on:
+  push:
+    branches: ["codex/external-darksword-ff-esp"]
+    paths: ["External-DarkSword/**", ".github/workflows/external-darksword.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      THEOS: ${{ github.workspace }}/.theos-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test bounded FF reader and game-specific menu routing
+        working-directory: External-DarkSword
+        run: |
+          node tests/run-freefire.cjs
+          node tests/freefire_menu_test.cjs
+      - name: Checkout pinned Theos
+        uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          ref: 304e0799973e8145f32e4ca2de6c747a84b758ce
+          submodules: recursive
+          path: .theos-ci
+          persist-credentials: false
+      - name: Install build tools
+        run: brew install make ldid
+      - name: Build app with Xcode SDK and Theos
+        run: |
+          export PATH="$(brew --prefix make)/libexec/gnubin:$PATH"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          make -C External-DarkSword clean package PACKAGE_FORMAT=none FINALPACKAGE=1 FOR_RELEASE=1
+      - name: Verify app package and export TIPA
+        run: |
+          python3 External-DarkSword/tests/verify_app.py External-DarkSword/packages/External-DarkSword.ipa
+          cp External-DarkSword/packages/External-DarkSword.ipa External-DarkSword/packages/External-DarkSword.tipa
+          cd External-DarkSword/packages
+          shasum -a 256 External-DarkSword.ipa External-DarkSword.tipa > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: External-DarkSword-FF-ESP
+          if-no-files-found: error
+          path: |
+            External-DarkSword/packages/External-DarkSword.ipa
+            External-DarkSword/packages/External-DarkSword.tipa
+            External-DarkSword/packages/SHA256SUMS.txt
+            External-DarkSword/README-FF-ESP.md
