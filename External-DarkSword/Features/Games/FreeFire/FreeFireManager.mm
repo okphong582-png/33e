@@ -1,6 +1,7 @@
 #import "FreeFireManager.h"
 #import "../../License/LicenseSession.h"
 #import "../../Overlay/RemoteWebViewOverlay.h"
+#import "../../Diagnostics/MizzeStartupDiagnostics.h"
 #import "../../../App/Support/helper.h"
 #include "FreeFireReader.h"
 #include <dlfcn.h>
@@ -165,6 +166,7 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
 @property(nonatomic,assign) BOOL profileSupported;
 @property(nonatomic,assign) NSTimeInterval nextSetup;
 @property(nonatomic,assign) BOOL sentEmpty;
+@property(nonatomic,assign) BOOL setupAttempted;
 @end
 
 @implementation FreeFireManager
@@ -179,6 +181,7 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
 }
 - (void)runLoop {
     if(self.running)return;
+    if(!self.overlay.isOverlayReady)self.setupAttempted=NO;
     self.running=YES;
     self.timer=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,self.queue);
     dispatch_source_set_timer(self.timer,DISPATCH_TIME_NOW,NSEC_PER_SEC/20,NSEC_PER_MSEC*5);
@@ -192,12 +195,17 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
 - (void)updateFrame {
     @autoreleasepool {
         if(!self.running)return;
+        if(![LicenseSession shared].authorized) { [self emptyFrame];return; }
         NSTimeInterval now=NSDate.timeIntervalSinceReferenceDate;
-        if(!self.overlay.isOverlayReady && now>=self.nextSetup) {
-            self.nextSetup=now+2;
-            [self.overlay setupBaseOverlay];
+        if(!self.overlay.isOverlayReady && !self.setupAttempted) {
+            self.setupAttempted=YES;
+            BOOL ready=[self.overlay setupBaseOverlay];
+            if(!ready)MizzeRecordStage(@"ff.overlay.failed",self.overlay.setupError);
         }
-        if(!self.overlay.isOverlayReady) {self.statusMessage=@"Free Fire: đang tạo menu nổi";return;}
+        if(!self.overlay.isOverlayReady) {
+            self.statusMessage=self.overlay.setupError.length?self.overlay.setupError:@"Free Fire: chưa tạo được menu; hãy xem nhật ký khởi tạo";
+            return;
+        }
         if(![LicenseSession shared].authorized) { [self emptyFrame];return; }
         if(!self.isESPEnabled) { [self emptyFrame];self.statusMessage=@"Free Fire: ESP đã tắt";return; }
         if(!self.base) {
@@ -230,7 +238,7 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
     self.running=NO;
     if(self.timer) {dispatch_source_cancel(self.timer);self.timer=nil;}
     // Drain this reader before its RemoteCall can be destroyed or switched.
-    dispatch_sync(self.queue,^{[self.overlay clearTargets];});
+    dispatch_sync(self.queue,^{[self.overlay tearDown];});
 }
 - (void)clearOverlayTargets {dispatch_async(self.queue,^{[self emptyFrame];});}
 - (void)setOverlayMenuVisible:(BOOL)visible {dispatch_async(self.queue,^{if(self.running)[self.overlay setOverlayMenuVisible:visible];});}

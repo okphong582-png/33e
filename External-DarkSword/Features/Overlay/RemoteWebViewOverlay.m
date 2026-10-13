@@ -9,6 +9,8 @@
 #import "../../App/Configuration/Config.h"
 #import "../../App/Configuration/Macros.h"
 #import "OverlayWebSocketServer.h"
+#import "../Diagnostics/MizzeStartupDiagnostics.h"
+#include <math.h>
 
 extern uint64_t remote_getClass(RemoteCall *process, const char *name);
 extern uint64_t remote_sel(RemoteCall *process, const char *name);
@@ -47,6 +49,8 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
 @property(nonatomic, assign) BOOL hasCustomFloatButtonPosition;
 @property(nonatomic, assign) CGFloat floatButtonXRatio;
 @property(nonatomic, assign) CGFloat floatButtonYRatio;
+@property(nonatomic, assign) CGSize localScreenSize;
+@property(nonatomic, copy, readwrite) NSString *setupError;
 
 @end
 
@@ -59,6 +63,8 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
     if (self) {
         _remoteCall = remoteCall;
         _gameIdentifier = @"aov";
+        _localScreenSize = UIScreen.mainScreen.bounds.size;
+        _setupError = @"";
         _window = 0;
         _parentView = 0;
         _webView = 0;
@@ -108,7 +114,41 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
 
 #pragma mark - Find UIWindow
 
+- (RemoteObjectRef)visibleWindowInArray:(RemoteObjectRef)windows {
+    if (!windows) return 0;
+    NSUInteger count = (NSUInteger)[self call:windows selector:"count"];
+    if (count > 64) return 0;
+    RemoteObjectRef fallback = 0;
+    for (NSUInteger i = 0; i < count; i++) {
+        RemoteObjectRef candidate = [self call:windows selector:"objectAtIndex:" argument:i];
+        if (!candidate || [self call:candidate selector:"isHidden"]) continue;
+        if ([self call:candidate selector:"isKeyWindow"]) return candidate;
+        if (!fallback) fallback = candidate;
+    }
+    return fallback;
+}
+
+- (BOOL)findFreeFireWindow {
+    RemoteObjectRef application = [self call:[self getClass:"UIApplication"] selector:"sharedApplication"];
+    if (!application) return NO;
+    // Unity can still host its window through the application delegate.
+    RemoteObjectRef window = [self call:application selector:"keyWindow"];
+    if (window && ![self call:window selector:"isHidden"]) { self.window = window; return YES; }
+    RemoteObjectRef scenes = [self call:[self call:application selector:"connectedScenes"] selector:"allObjects"];
+    NSUInteger count = (NSUInteger)[self call:scenes selector:"count"];
+    if (count <= 64) for (NSUInteger i = 0; i < count; i++) {
+        RemoteObjectRef scene = [self call:scenes selector:"objectAtIndex:" argument:i];
+        if (![self call:scene selector:"respondsToSelector:" argument:[self getSelector:"windows"]]) continue;
+        window = [self visibleWindowInArray:[self call:scene selector:"windows"]];
+        if (window) { self.window = window; return YES; }
+    }
+    window = [self visibleWindowInArray:[self call:application selector:"windows"]];
+    self.window = window;
+    return window != 0;
+}
+
 - (BOOL)findTargetWindow {
+    if ([self.gameIdentifier isEqualToString:@"freefire"]) return [self findFreeFireWindow];
     LOG(@"[RemoteWebViewOverlay] Finding target UIWindow...");
 
     RemoteObjectRef uiApplicationClass = [self getClass:"UIApplication"];
@@ -289,69 +329,76 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
     [self setView:view boolValue:NO selector:"setOpaque:"];
 }
 
+- (void)releaseRemoteObject:(RemoteObjectRef)object {
+    if (object) remote_msg_on_main_thread(self.remoteCall, object, [self getSelector:"release"], NULL, NULL, 0);
+}
+
+- (void)disposeRemoteWebView:(RemoteObjectRef)view {
+    if (!view) return;
+    remote_msg_on_main_thread(self.remoteCall, view, [self getSelector:"stopLoading"], NULL, NULL, 0);
+    remote_msg_on_main_thread(self.remoteCall, view, [self getSelector:"removeFromSuperview"], NULL, NULL, 0);
+    [self releaseRemoteObject:view];
+}
+
 - (RemoteObjectRef)createWebViewWithResource:(NSString *)resourceName
                                        frame:(CGRect)frame
                                  interactive:(BOOL)interactive
                                       hidden:(BOOL)hidden
                              autoresizesView:(BOOL)autoresizesView {
+    NSString *html = [self loadOverlayHTMLResource:resourceName];
+    if (!html || !isfinite(frame.size.width) || !isfinite(frame.size.height) ||
+        frame.size.width < 1 || frame.size.height < 1 || frame.size.width > 8192 || frame.size.height > 8192)
+        return 0;
     RemoteObjectRef configClass = [self getClass:"WKWebViewConfiguration"];
     RemoteObjectRef webViewClass = [self getClass:"WKWebView"];
-    if (!configClass || !webViewClass)
-        return 0;
+    uint64_t initSelector = [self getSelector:"initWithFrame:configuration:"];
+    uint64_t loadSelector = [self getSelector:"loadHTMLString:baseURL:"];
+    uint64_t addSubviewSelector = [self getSelector:"addSubview:"];
+    if (!configClass || !webViewClass || !initSelector || !loadSelector || !addSubviewSelector || !self.parentView) return 0;
 
-    RemoteObjectRef config = [self call:configClass selector:"alloc"];
-    config = config ? [self call:config selector:"init"] : 0;
-    if (!config)
-        return 0;
-
-    RemoteObjectRef view = [self call:webViewClass selector:"alloc"];
-    if (!view)
-        return 0;
-
+    RemoteObjectRef config = remote_msg_on_main_thread(self.remoteCall, configClass, [self getSelector:"alloc"], NULL, NULL, 0);
+    config = config ? remote_msg_on_main_thread(self.remoteCall, config, [self getSelector:"init"], NULL, NULL, 0) : 0;
+    if (!config) return 0;
+    RemoteObjectRef view = remote_msg_on_main_thread(self.remoteCall, webViewClass, [self getSelector:"alloc"], NULL, NULL, 0);
+    if (!view) { [self releaseRemoteObject:config]; return 0; }
     const void *initParams[] = {&frame, &config};
     size_t initSizes[] = {sizeof(frame), sizeof(config)};
-    view = remote_msg_on_main_thread(
-        self.remoteCall, view,
-        [self getSelector:"initWithFrame:configuration:"], initParams,
-        initSizes, 2);
-    if (!view)
-        return 0;
+    view = remote_msg_on_main_thread(self.remoteCall, view, initSelector, initParams, initSizes, 2);
+    [self releaseRemoteObject:config];
+    if (!view) return 0;
 
     [self makeWebViewTransparent:view];
-    [self setView:view
-        boolValue:interactive
-         selector:"setUserInteractionEnabled:"];
+    [self setView:view boolValue:interactive selector:"setUserInteractionEnabled:"];
     [self setView:view boolValue:hidden selector:"setHidden:"];
-    if (autoresizesView)
-        [self setAutoresizingForView:view];
-
-    NSString *html = [self loadOverlayHTMLResource:resourceName];
-    if (!html)
-        return 0;
-
-    RemoteObjectRef remoteHTML =
-        remote_NSString(self.remoteCall, html.UTF8String);
-    uint64_t loadSelector = [self getSelector:"loadHTMLString:baseURL:"];
-    if (!remoteHTML || !loadSelector)
-        return 0;
-
+    if (autoresizesView) [self setAutoresizingForView:view];
+    RemoteObjectRef remoteHTML = remote_NSString(self.remoteCall, html.UTF8String);
+    if (!remoteHTML) { [self disposeRemoteWebView:view]; return 0; }
     uint64_t nilBaseURL = 0;
     const void *loadParams[] = {&remoteHTML, &nilBaseURL};
     size_t loadSizes[] = {sizeof(remoteHTML), sizeof(nilBaseURL)};
-    remote_msg_on_main_thread(self.remoteCall, view, loadSelector, loadParams,
-                              loadSizes, 2);
-
-    uint64_t addSubviewSelector = [self getSelector:"addSubview:"];
-    if (!addSubviewSelector)
-        return 0;
+    RemoteObjectRef navigation = remote_msg_on_main_thread(self.remoteCall, view, loadSelector, loadParams, loadSizes, 2);
+    // remote_NSString returns a retained CFString; WebKit copies the HTML.
+    [self releaseRemoteObject:remoteHTML];
+    if (!navigation) { [self disposeRemoteWebView:view]; return 0; }
     const void *addParams[] = {&view};
     size_t addSizes[] = {sizeof(view)};
-    remote_msg_on_main_thread(self.remoteCall, self.parentView,
-                              addSubviewSelector, addParams, addSizes, 1);
+    remote_msg_on_main_thread(self.remoteCall, self.parentView, addSubviewSelector, addParams, addSizes, 1);
+    if ([self call:view selector:"superview"] != self.parentView) { [self disposeRemoteWebView:view]; return 0; }
     return view;
 }
 
 - (BOOL)refreshWindowBounds {
+    if ([self.gameIdentifier isEqualToString:@"freefire"]) {
+        // FF is landscape. Avoid remote_getCGRect's private CAMetalDrawable
+        // register-spill helper entirely, including orientation/viewport events.
+        CGFloat width = MAX(self.localScreenSize.width, self.localScreenSize.height);
+        CGFloat height = MIN(self.localScreenSize.width, self.localScreenSize.height);
+        if (!isfinite(width) || !isfinite(height) || width < 1 || height < 1 || width > 8192 || height > 8192)
+            return NO;
+        self.cachedScreenWidth = width;
+        self.cachedScreenHeight = height;
+        return YES;
+    }
     uint64_t selector = [self getSelector:"bounds"];
     if (!selector || !self.window)
         return NO;
@@ -410,9 +457,68 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
 
 #pragma mark - Setup base overlay
 
+- (void)tearDown {
+    [self clearTargets];
+    self.isOverlayReady = NO;
+    self.menuVisible = NO;
+    // These handles are only the three views created by this controller.
+    // Release the alloc/init ownership after detaching; never touch host views.
+    RemoteObjectRef views[] = {self.floatButtonWebView, self.menuWebView, self.webView};
+    self.floatButtonWebView = self.menuWebView = self.webView = 0;
+    for (NSUInteger i=0;i<3;i++) {
+        if (!views[i]) continue;
+        [self disposeRemoteWebView:views[i]];
+    }
+}
+
+- (BOOL)setupFreeFireOverlay {
+    self.setupError = @"";
+    MizzeRecordStage(@"ff.overlay.begin", @"One bounded setup transaction");
+    if (![self findTargetWindow] || ![self findParentView]) {
+        self.setupError = @"Chưa tìm thấy cửa sổ Free Fire sẵn sàng.";
+        return NO;
+    }
+    if (![self refreshWindowBounds]) {
+        self.setupError = @"Kích thước màn hình chưa hợp lệ.";
+        return NO;
+    }
+    if (![self getClass:"WKWebView"] || ![self getClass:"WKWebViewConfiguration"]) {
+        self.setupError = @"Free Fire chưa có WebKit để tạo menu.";
+        return NO;
+    }
+    if (![[OverlayWebSocketServer sharedServer] start]) {
+        self.setupError = @"Không khởi tạo được kết nối menu.";
+        return NO;
+    }
+    CGRect full = CGRectMake(0,0,self.cachedScreenWidth,self.cachedScreenHeight);
+    MizzeRecordStage(@"ff.overlay.canvas", @"Creating one canvas WebView");
+    self.webView = [self createWebViewWithResource:@"overlay_esp" frame:full interactive:NO hidden:NO autoresizesView:YES];
+    if (self.webView) {
+        MizzeRecordStage(@"ff.overlay.menu", @"Creating one hidden menu WebView");
+        self.menuWebView = [self createWebViewWithResource:@"overlay_menu" frame:full interactive:YES hidden:YES autoresizesView:YES];
+    }
+    if (self.menuWebView) {
+        MizzeRecordStage(@"ff.overlay.button", @"Creating floating button");
+        self.floatButtonWebView = [self createWebViewWithResource:@"overlay_fab" frame:[self floatButtonFrame] interactive:YES hidden:NO autoresizesView:NO];
+    }
+    if (!self.webView || !self.menuWebView || !self.floatButtonWebView) {
+        self.setupError = @"Tạo menu chưa hoàn tất. Đã dừng, không tự tạo lặp.";
+        [self tearDown];
+        MizzeRecordStage(@"ff.overlay.rollback", self.setupError);
+        return NO;
+    }
+    self.isOverlayReady = YES;
+    [self broadcastOverlayLayout];
+    MizzeRecordStage(@"ff.overlay.ready", @"Canvas/menu/button created; device display still needs verification");
+    return YES;
+}
+
 - (BOOL)setupBaseOverlay {
     if (self.isOverlayReady && self.webView) {
         return YES;
+    }
+    if ([self.gameIdentifier isEqualToString:@"freefire"]) {
+        return [self setupFreeFireOverlay];
     }
 
     LOG(@"[RemoteWebViewOverlay] Setting up base overlay...");
@@ -766,6 +872,7 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
     if (!self.isOverlayReady || !self.webView)
         return NO;
 
+    if ([self.gameIdentifier isEqualToString:@"freefire"]) return [self updateOverlayTargets:@[]];
     [[OverlayWebSocketServer sharedServer] broadcastText:@"[]"];
     LOG(@"[RemoteWebViewOverlay] Targets cleared");
     return YES;

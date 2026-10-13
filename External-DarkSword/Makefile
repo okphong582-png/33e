@@ -17,6 +17,7 @@ $(APPLICATION_NAME)_FILES = \
 	ContentView.swift \
 	UI/Screens/MizzeLicenseScreen.swift \
 	Features/License/LicenseSession.mm \
+	Features/Diagnostics/MizzeStartupDiagnostics.m \
 	UI/Localization/AppStrings.swift \
 	UI/Theme/AppPalette.swift \
 	UI/Components/SharedUI.swift \

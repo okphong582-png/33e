@@ -21,9 +21,11 @@ typedef uint64_t RemoteObjectRef;
 @property(nonatomic, assign, readonly) CGFloat cachedScreenHeight;
 @property(nonatomic, assign, readonly) BOOL isOverlayReady;
 @property(nonatomic, copy) NSString *gameIdentifier;
+@property(nonatomic, copy, readonly) NSString *setupError;
 
 - (instancetype)initWithRemoteCall:(RemoteCall *)remoteCall;
 - (BOOL)setupBaseOverlay;
+- (void)tearDown;
 - (BOOL)updateOverlayTargets:(NSArray<NSDictionary *> *)targets;
 - (BOOL)clearTargets;
 - (void)setOverlayMenuVisible:(BOOL)visible;

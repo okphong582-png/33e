@@ -34,6 +34,7 @@ jobs:
           /tmp/mizze-license-events
           clang++ -std=c++17 -fobjc-arc -Wno-deprecated-declarations -framework Foundation -framework Security tests/license_restore_test.mm Features/License/LicenseSession.mm -o /tmp/mizze-license-network
           /tmp/mizze-license-network
+          node tests/run-overlay-startup.cjs
       - name: Checkout pinned Theos
         uses: actions/checkout@v4
         with:

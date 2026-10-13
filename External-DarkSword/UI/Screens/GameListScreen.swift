@@ -7,6 +7,7 @@
 
 import Combine
 import SwiftUI
+import UIKit
 
 struct GameListScreen: View {
     @ObservedObject var manager: DarkSwordManager
@@ -14,6 +15,7 @@ struct GameListScreen: View {
     let language: AppLanguage
     @State private var isShowingLaunchAlert = false
     @State private var launchAlertMessage = ""
+    @State private var diagnosticsCopied = false
     @State private var isWaitingForGameActionResult = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common)
@@ -66,6 +68,15 @@ struct GameListScreen: View {
                         .foregroundColor(palette.primaryText)
                         .padding(.horizontal, 24)
                 }
+
+                Button {
+                    UIPasteboard.general.string = MizzeStartupReport()
+                    diagnosticsCopied = true
+                } label: {
+                    Label(diagnosticsCopied ? "Đã sao chép nhật ký" : "Sao chép nhật ký khởi tạo", systemImage: "doc.on.doc")
+                        .font(.footnote)
+                }
+                .padding(.horizontal, 24)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(

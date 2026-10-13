@@ -12,3 +12,4 @@
 #import "Features/Games/FreeFire/FreeFireManager.h"
 
 #import "Features/License/LicenseSession.h"
+#import "Features/Diagnostics/MizzeStartupDiagnostics.h"

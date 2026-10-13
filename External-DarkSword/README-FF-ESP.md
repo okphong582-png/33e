@@ -25,9 +25,15 @@ Khi chuyển game, dừng reader trước khi hủy RemoteCall. State, target, l
 
 ## Kiểm tra và build
 
+Nhánh FF lấy kích thước landscape từ màn hình app, không gọi helper CGRect dùng class riêng của iOS. Mỗi kết nối chỉ thử tạo overlay một lần; lỗi giữa chừng sẽ tháo và giải phóng các view đã tạo, HTML và configuration tạm. Ngắt kết nối dọn ba view trước khi hủy RemoteCall. Có fallback cửa sổ Unity dùng UIApplication.windows và kiểm tra scene hỗ trợ windows trước khi gọi.
+
+Trong màn hình chọn game, **Sao chép nhật ký khởi tạo** lấy log của app Mizze (không phải Documents của game). Các mốc connection.begin/ready và ff.overlay.canvas/menu/button/ready giúp phân biệt lỗi kết nối với lỗi tạo overlay. File giới hạn khoảng 64 KB, không ghi key. Đây là sửa lỗi đã tìm thấy trong source; chưa xác nhận nguyên nhân văng thực tế khi chưa có stack iOS hoặc thử thiết bị.
+
 ~~~sh
 node tests/run-freefire.cjs
 node tests/freefire_menu_test.cjs
+# macOS: chạy implementation overlay thật với remote runtime giả
+node tests/run-overlay-startup.cjs
 ~~~
 
 Test C++ dùng compiler qua biến `CXX`; Windows mặc định compiler Windhawk đang có trên máy này, Linux/macOS mặc định `c++`. Tests dùng bộ nhớ giả để kiểm tra logic đọc, không đọc game đang chạy.

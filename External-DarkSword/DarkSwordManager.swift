@@ -602,12 +602,14 @@ final class DarkSwordManager: ObservableObject {
                 )
             }
 
+            MizzeRecordStage("connection.begin", process)
             let instance = RemoteCall(
                 process: process,
                 useMigFilterBypass: mig
             )
             let error = RemoteCall.lastInitError() ?? ""
             let connected = instance != nil && error.isEmpty
+            MizzeRecordStage(connected ? "connection.ready" : "connection.failed", process)
 
             DispatchQueue.main.async {
                 if connected && !LicenseSession.shared().authorized {
@@ -634,6 +636,7 @@ final class DarkSwordManager: ObservableObject {
                 if connected {
                     if let instance, process == "FreeFire", self.selectedGame == .freeFire {
                         let manager = FreeFireManager(remoteCall: instance)
+                        MizzeRecordStage("ff.reader.created", "ESP starts only when enabled")
                         self.freeFireManager = manager
                         manager.isESPEnabled = self.freeFireESPEnabled
                         self.isOpeningAoV = false
@@ -842,6 +845,7 @@ final class DarkSwordManager: ObservableObject {
 
     func openGameAndConnect(_ game: GameTarget) {
         guard !isBusy else { return }
+        MizzeRecordStage("game.selected", game.rawValue)
         selectedGame = game
         openSelectedGameAndConnect()
     }
@@ -922,7 +926,9 @@ final class DarkSwordManager: ObservableObject {
             "Opening \(selectedGameBundleIdentifier), then connecting to \(process) in 3 seconds..."
         )
 
+        MizzeRecordStage("game.launch.begin", selectedGameBundleIdentifier)
         guard launchApplication(bundleIdentifier: selectedGameBundleIdentifier) else {
+            MizzeRecordStage("game.launch.failed", selectedGameBundleIdentifier)
             isBusy = false
             isOpeningAoV = false
             aovStatus = "Launch failed"
@@ -933,6 +939,7 @@ final class DarkSwordManager: ObservableObject {
             return
         }
 
+        MizzeRecordStage("game.launch.ready", selectedGameBundleIdentifier)
         if !shouldConnectAfterLaunch {
             isBusy = false
             isOpeningAoV = false
