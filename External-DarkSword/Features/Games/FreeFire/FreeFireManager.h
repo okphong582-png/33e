@@ -8,6 +8,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(atomic, copy, readonly) NSString *statusMessage;
 - (instancetype)initWithRemoteCall:(RemoteCall *)remoteCall;
 - (void)runLoop;
+- (void)startOverlay;
 - (void)stopLoop;
 - (void)clearOverlayTargets;
 - (void)setOverlayMenuVisible:(BOOL)visible;

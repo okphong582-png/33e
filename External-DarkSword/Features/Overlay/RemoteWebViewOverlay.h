@@ -22,6 +22,7 @@ typedef uint64_t RemoteObjectRef;
 @property(nonatomic, assign, readonly) BOOL isOverlayReady;
 @property(nonatomic, copy) NSString *gameIdentifier;
 @property(nonatomic, copy, readonly) NSString *setupError;
+@property(nonatomic, assign, readonly) BOOL setupCanRetry;
 
 - (instancetype)initWithRemoteCall:(RemoteCall *)remoteCall;
 - (BOOL)setupBaseOverlay;

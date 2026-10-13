@@ -25,7 +25,9 @@ Khi chuyển game, dừng reader trước khi hủy RemoteCall. State, target, l
 
 ## Kiểm tra và build
 
-Nhánh FF lấy kích thước landscape từ màn hình app, không gọi helper CGRect dùng class riêng của iOS. Mỗi kết nối chỉ thử tạo overlay một lần; lỗi giữa chừng sẽ tháo và giải phóng các view đã tạo, HTML và configuration tạm. Ngắt kết nối dọn ba view trước khi hủy RemoteCall. Có fallback cửa sổ Unity dùng UIApplication.windows và kiểm tra scene hỗ trợ windows trước khi gọi.
+Chọn tab **Free Fire → Start** để mở game/kết nối và tạo nút Mizze ở sảnh. Nút và menu không phụ thuộc UnityFramework, profile ESP hoặc trạng thái trận. Nếu cửa sổ chưa sẵn sàng, chờ tối đa 15 lần, mỗi giây một lần; lỗi tạo view dừng và dọn phần đã tạo. WebKit được nạp một lần nếu game chưa nạp framework này. Lớp vẽ ESP chỉ tạo khi có dữ liệu địch đầu tiên; tạo lớp ESP lỗi vẫn giữ nút và menu.
+
+Nhánh FF lấy kích thước landscape từ màn hình app, không gọi helper CGRect dùng class riêng của iOS. Ngắt kết nối dọn các view trước khi hủy RemoteCall. Có fallback cửa sổ Unity dùng UIApplication.windows và kiểm tra scene hỗ trợ windows trước khi gọi. Bấm Start khi đã kết nối sẽ làm mới layout hoặc bắt đầu lại thời gian chờ cửa sổ, không tạo thêm menu khi đã sẵn sàng.
 
 Trong màn hình chọn game, **Sao chép nhật ký khởi tạo** lấy log của app Mizze (không phải Documents của game). Các mốc connection.begin/ready và ff.overlay.canvas/menu/button/ready giúp phân biệt lỗi kết nối với lỗi tạo overlay. File giới hạn khoảng 64 KB, không ghi key. Đây là sửa lỗi đã tìm thấy trong source; chưa xác nhận nguyên nhân văng thực tế khi chưa có stack iOS hoặc thử thiết bị.
 

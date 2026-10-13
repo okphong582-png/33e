@@ -17,6 +17,7 @@ struct GameListScreen: View {
     @State private var launchAlertMessage = ""
     @State private var diagnosticsCopied = false
     @State private var isWaitingForGameActionResult = false
+    @State private var displayedGame: GameTarget = .aov
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common)
         .autoconnect()
@@ -41,28 +42,47 @@ struct GameListScreen: View {
                     .padding(.horizontal, 22)
                 }
 
-                ForEach(GameTarget.allCases) { target in
+                Picker("Game", selection: $displayedGame) {
+                    ForEach(GameTarget.allCases) { target in
+                        Text(target.name).tag(target)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .disabled(manager.isBusy)
+                .padding(.horizontal, 22)
+
+                GameCard(
+                    game: manager.gameStatus(for: displayedGame),
+                    statusText: displayedGame == manager.selectedGame
+                        ? AppStrings.gameCellStatus(manager.aovGameCellStatus, language: language) : nil,
+                    isBusy: manager.isBusy && displayedGame == manager.selectedGame,
+                    palette: palette
+                )
+                .padding(.horizontal, 18)
+
                     Button {
                         isWaitingForGameActionResult = true
-                        manager.openGameAndConnect(target)
+                        manager.openGameAndConnect(displayedGame)
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                             showLaunchErrorIfNeeded()
                         }
                     } label: {
-                        GameCard(
-                            game: manager.gameStatus(for: target),
-                            statusText: target == manager.selectedGame
-                                ? AppStrings.gameCellStatus(manager.aovGameCellStatus, language: language) : nil,
-                            isBusy: manager.isBusy && target == manager.selectedGame,
-                            palette: palette
-                        )
+                        Label(manager.isBusy ? "Đang khởi động…" : "Start", systemImage: "play.fill")
+                            .font(.system(size: 17, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .foregroundColor(.white)
+                            .background(palette.accent, in: RoundedRectangle(cornerRadius: 14))
                     }
                     .buttonStyle(.plain)
                     .disabled(manager.isBusy)
                     .padding(.horizontal, 18)
-                }
 
-                if manager.selectedGame == .freeFire {
+                if displayedGame == .freeFire {
+                    Text("Start mở nút Mizze ở sảnh. Nhấn nút nổi để mở menu.")
+                        .font(.footnote)
+                        .foregroundColor(palette.secondaryText)
+                        .padding(.horizontal, 24)
                     Toggle(AppStrings.text(language, vietnamese: "ESP — khung địch", english: "ESP — enemy boxes"), isOn: $manager.freeFireESPEnabled)
                         .tint(palette.accent)
                         .foregroundColor(palette.primaryText)
@@ -101,6 +121,7 @@ struct GameListScreen: View {
             }
         }
         .scrollIndicators(.visible)
+        .onAppear { displayedGame = manager.selectedGame }
         .alert(
             AppStrings.gameLaunchFailureTitle(language),
             isPresented: $isShowingLaunchAlert

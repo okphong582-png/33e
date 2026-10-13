@@ -166,13 +166,15 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
 @property(nonatomic,assign) BOOL profileSupported;
 @property(nonatomic,assign) NSTimeInterval nextSetup;
 @property(nonatomic,assign) BOOL sentEmpty;
-@property(nonatomic,assign) BOOL setupAttempted;
 @end
 
-@implementation FreeFireManager
+#include "OverlayStartupSchedule.h"
+@implementation FreeFireManager {
+    MizzeOverlayStartup::Schedule _startup;
+}
 - (instancetype)initWithRemoteCall:(RemoteCall *)remoteCall {
     if((self=[super init])) {
-        _remoteCall=remoteCall;_isESPEnabled=NO;_statusMessage=@"Free Fire: đang chờ trận";
+        _remoteCall=remoteCall;_isESPEnabled=NO;_statusMessage=@"Free Fire: đang mở nút Mizze…";
         _queue=dispatch_queue_create("external.darksword.ff.esp",DISPATCH_QUEUE_SERIAL);
         _overlay=[[RemoteWebViewOverlay alloc] initWithRemoteCall:remoteCall];
         _overlay.gameIdentifier=@"freefire";
@@ -181,7 +183,7 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
 }
 - (void)runLoop {
     if(self.running)return;
-    if(!self.overlay.isOverlayReady)self.setupAttempted=NO;
+    if(!self.overlay.isOverlayReady)_startup.reset();
     self.running=YES;
     self.timer=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,self.queue);
     dispatch_source_set_timer(self.timer,DISPATCH_TIME_NOW,NSEC_PER_SEC/20,NSEC_PER_MSEC*5);
@@ -192,14 +194,22 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
 - (void)emptyFrame {
     if(!self.sentEmpty) { [self.overlay clearTargets];self.sentEmpty=YES; }
 }
+- (void)startOverlay {
+    [self runLoop];
+    dispatch_async(self.queue,^{
+        if(!self.running)return;
+        if(!self.overlay.isOverlayReady)self->_startup.reset();
+        else [self.overlay refreshOverlayLayout];
+    });
+}
 - (void)updateFrame {
     @autoreleasepool {
         if(!self.running)return;
         if(![LicenseSession shared].authorized) { [self emptyFrame];return; }
         NSTimeInterval now=NSDate.timeIntervalSinceReferenceDate;
-        if(!self.overlay.isOverlayReady && !self.setupAttempted) {
-            self.setupAttempted=YES;
+        if(!self.overlay.isOverlayReady && _startup.begin(now)) {
             BOOL ready=[self.overlay setupBaseOverlay];
+            _startup.finish(ready,self.overlay.setupCanRetry);
             if(!ready)MizzeRecordStage(@"ff.overlay.failed",self.overlay.setupError);
         }
         if(!self.overlay.isOverlayReady) {
@@ -230,8 +240,8 @@ static uint64_t FindUnityFramework(RemoteCall *remoteCall) {
                 @"boxX":@(t.x),@"boxY":@(t.y),@"boxW":@(t.w),@"boxH":@(t.h),
                 @"drawLine":@NO,@"drawName":@NO,@"drawHealth":@NO,@"drawDistance":@NO}];
         }
-        [self.overlay updateOverlayTargets:targets];self.sentEmpty=frame.count==0;
-        self.statusMessage=[NSString stringWithFormat:@"Free Fire: ESP • %lu địch",(unsigned long)frame.count];
+        BOOL published=[self.overlay updateOverlayTargets:targets];self.sentEmpty=frame.count==0;
+        self.statusMessage=published?[NSString stringWithFormat:@"Free Fire: ESP • %lu địch",(unsigned long)frame.count]:@"Free Fire: chưa tạo được lớp ESP; menu vẫn sẵn sàng";
     }
 }
 - (void)stopLoop {

@@ -941,6 +941,7 @@ final class DarkSwordManager: ObservableObject {
 
         MizzeRecordStage("game.launch.ready", selectedGameBundleIdentifier)
         if !shouldConnectAfterLaunch {
+            if selectedGame == .freeFire { freeFireManager?.startOverlay() }
             isBusy = false
             isOpeningAoV = false
             aovStatus = "Connected to \(process)"

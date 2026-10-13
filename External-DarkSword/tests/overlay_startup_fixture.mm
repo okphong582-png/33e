@@ -42,6 +42,8 @@ void MizzeRecordStage(NSString *stage,NSString *detail) {(void)stage;(void)detai
 static int nextID=100,viewAttempt=0,failAt=0,rectCalls=0,offMainUIKit=0;
 static std::string failPhase;
 static bool mockHasKeyWindow=true,legacyWindow=true,webKit=true,unknownScene=false,hugeScenes=false;
+static bool canLoadWebKit=true,hostWindowReady=true;
+static int frameworkLoads=0;
 static std::map<uint64_t,std::string> live;
 static std::map<uint64_t,uint64_t> parents;
 static uint64_t allocate(const char *kind) {uint64_t id=nextID++;live[id]=kind;return id;}
@@ -51,19 +53,22 @@ uint64_t remote_getClass(RemoteCall *,const char *name) {
  if(!strcmp(name,"WKWebViewConfiguration"))return webKit?2:0;
  if(!strcmp(name,"WKWebView"))return webKit?3:0;
  if(!strcmp(name,"UIColor"))return 4;
+ if(!strcmp(name,"NSBundle"))return 5;
  return 0;
 }
 uint64_t remote_sel(RemoteCall *,const char *name) {return (uint64_t)sel_registerName(name);}
 static uint64_t message(uint64_t receiver,uint64_t selector,uint64_t argument,bool main) {
  const char *s=sel_getName((SEL)selector);
  if(!strcmp(s,"sharedApplication"))return 10;
- if(!strcmp(s,"keyWindow"))return mockHasKeyWindow?20:0;
+ if(!strcmp(s,"bundleWithPath:"))return 50;
+ if(!strcmp(s,"load")){assert(main);frameworkLoads++;webKit=canLoadWebKit;return webKit;}
+ if(!strcmp(s,"keyWindow"))return mockHasKeyWindow&&hostWindowReady?20:0;
  if(!strcmp(s,"connectedScenes"))return 11;
  if(!strcmp(s,"allObjects"))return 12;
  if(!strcmp(s,"count"))return receiver==12?(hugeScenes?1000:1):1;
  if(!strcmp(s,"objectAtIndex:"))return receiver==12?13:20;
  if(!strcmp(s,"respondsToSelector:"))return !unknownScene;
- if(!strcmp(s,"windows")) {assert(receiver!=13||!unknownScene);return receiver==10?(legacyWindow?14:0):(legacyWindow?0:14);}
+ if(!strcmp(s,"windows")) {assert(receiver!=13||!unknownScene);if(!hostWindowReady)return 0;return receiver==10?(legacyWindow?14:0):(legacyWindow?0:14);}
  if(!strcmp(s,"isHidden"))return 0;
  if(!strcmp(s,"isKeyWindow"))return 1;
  if(!strcmp(s,"clearColor"))return 30;
@@ -101,16 +106,19 @@ static void reset(void) {
  assert(live.empty());parents.clear();payloads=[NSMutableArray new];
  nextID=100;viewAttempt=failAt=rectCalls=offMainUIKit=0;failPhase="";
  mockHasKeyWindow=legacyWindow=webKit=true;unknownScene=hugeScenes=serverFail=false;
+ canLoadWebKit=hostWindowReady=true;frameworkLoads=0;
  screen=CGRectMake(0,0,390,844);
 }
 static TestOverlay *overlay(void) {TestOverlay *o=[[TestOverlay alloc]initWithRemoteCall:[RemoteCall new]];o.gameIdentifier=@"freefire";return o;}
 static void success(TestOverlay *o) {
- assert([o setupBaseOverlay]);assert(o.isOverlayReady);assert(viewAttempt==3);
+ assert([o setupBaseOverlay]);assert(o.isOverlayReady);assert(viewAttempt==2);
  assert(o.cachedScreenWidth==844&&o.cachedScreenHeight==390);
- assert(live.size()==3);for(auto &entry:live)assert(entry.second=="view");
- assert([o setupBaseOverlay]);assert(viewAttempt==3);
+ assert(live.size()==2);for(auto &entry:live)assert(entry.second=="view");
+ assert([o setupBaseOverlay]);assert(viewAttempt==2);
+ assert([o updateOverlayTargets:@[]]);assert(viewAttempt==2);
  [o refreshOverlayLayout];[o setOverlayFloatButtonPositionX:.2 y:.8];[o toggleOverlayMenu];
  assert(rectCalls==0&&offMainUIKit==0);
+ assert([o updateOverlayTargets:@[@{}]]);assert(viewAttempt==3&&live.size()==3);
  [o tearDown];assert(!o.isOverlayReady);assert(live.empty());assert(parents.empty());
  NSDictionary *last=payloads.lastObject;assert([last[@"game"]isEqual:@"freefire"]);assert([last[@"targets"]count]==0);
  [o tearDown];assert(live.empty());
@@ -120,16 +128,25 @@ int main(void) {@autoreleasepool {
  reset();mockHasKeyWindow=false;unknownScene=true;success(overlay());
  reset();mockHasKeyWindow=legacyWindow=false;success(overlay());
  reset();mockHasKeyWindow=false;hugeScenes=true;success(overlay());
- for(const char *phase:{"alloc","init","html","load","attach"})for(int stage=1;stage<=3;stage++){
+ for(const char *phase:{"alloc","init","html","load","attach"})for(int stage=1;stage<=2;stage++){
    reset();failPhase=phase;failAt=stage;TestOverlay *o=overlay();
    assert(![o setupBaseOverlay]);assert(!o.isOverlayReady);assert(o.setupError.length);
    assert(live.empty()&&parents.empty());[o tearDown];assert(live.empty());
  }
- for(NSString *resource in @[@"overlay_esp",@"overlay_menu",@"overlay_fab"]){
+ for(NSString *resource in @[@"overlay_menu",@"overlay_fab"]){
    reset();TestOverlay *o=overlay();o.missingResource=resource;assert(![o setupBaseOverlay]);assert(live.empty()&&parents.empty());
  }
- reset();webKit=false;assert(![overlay()setupBaseOverlay]);assert(viewAttempt==0);
+ reset();webKit=false;success(overlay());assert(frameworkLoads==1);
+ reset();webKit=canLoadWebKit=false;TestOverlay *unavailable=overlay();assert(![unavailable setupBaseOverlay]);assert(![unavailable setupBaseOverlay]);assert(viewAttempt==0&&frameworkLoads==1&&live.empty());assert(!unavailable.setupCanRetry);
+ reset();hostWindowReady=false;TestOverlay *waiting=overlay();assert(![waiting setupBaseOverlay]);assert(waiting.setupCanRetry&&viewAttempt==0);hostWindowReady=true;success(waiting);
+ for(const char *phase:{"alloc","init","html","load","attach"}){
+   reset();TestOverlay *o=overlay();assert([o setupBaseOverlay]);failAt=3;failPhase=phase;
+   assert(![o updateOverlayTargets:@[@{}]]);assert(o.isOverlayReady&&live.size()==2);
+   for(int i=0;i<20;i++)assert(![o updateOverlayTargets:@[@{}]]);
+   assert(viewAttempt==3);[o toggleOverlayMenu];[o tearDown];assert(live.empty()&&parents.empty());
+ }
+ reset();TestOverlay *noCanvas=overlay();noCanvas.missingResource=@"overlay_esp";assert([noCanvas setupBaseOverlay]);assert(![noCanvas updateOverlayTargets:@[@{}]]);assert(noCanvas.isOverlayReady);[noCanvas tearDown];assert(live.empty());
  reset();serverFail=true;assert(![overlay()setupBaseOverlay]);assert(viewAttempt==0);
  for(CGFloat width:{CGFloat(NAN),CGFloat(INFINITY),CGFloat(0),CGFloat(9000)}){reset();screen=CGRectMake(0,0,width,390);assert(![overlay()setupBaseOverlay]);assert(viewAttempt==0);}
- NSLog(@"PASS production overlay: success, legacy/scene windows, invalid bounds, missing WebKit/HTML/server, 15 staged failures, ownership rollback, scoped clear, no FF CGRect helper, main-thread construction.");
+ NSLog(@"PASS production overlay: lobby button/menu without ESP, delayed windows, one WebKit load, lazy canvas failures preserve menu, rollback, scoped clear and main-thread construction.");
  }return 0;}

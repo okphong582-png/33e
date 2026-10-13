@@ -51,6 +51,9 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
 @property(nonatomic, assign) CGFloat floatButtonYRatio;
 @property(nonatomic, assign) CGSize localScreenSize;
 @property(nonatomic, copy, readwrite) NSString *setupError;
+@property(nonatomic, assign, readwrite) BOOL setupCanRetry;
+@property(nonatomic, assign) BOOL attemptedWebKitLoad;
+@property(nonatomic, assign) BOOL attemptedESPView;
 
 @end
 
@@ -462,6 +465,7 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
     [self clearTargets];
     self.isOverlayReady = NO;
     self.menuVisible = NO;
+    self.attemptedESPView = NO;
     // These handles are only the three views created by this controller.
     // Release the alloc/init ownership after detaching; never touch host views.
     RemoteObjectRef views[] = {self.floatButtonWebView, self.menuWebView, self.webView};
@@ -472,19 +476,37 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
     }
 }
 
+- (BOOL)ensureFreeFireWebKit {
+    if ([self getClass:"WKWebView"] && [self getClass:"WKWebViewConfiguration"]) return YES;
+    if (self.attemptedWebKitLoad) return NO;
+    self.attemptedWebKitLoad = YES;
+    MizzeRecordStage(@"ff.overlay.webkit", @"Loading system WebKit once before creating views");
+    RemoteObjectRef bundleClass = [self getClass:"NSBundle"];
+    if (!bundleClass) return NO;
+    RemoteObjectRef path = remote_NSString(self.remoteCall, "/System/Library/Frameworks/WebKit.framework");
+    if (!path) return NO;
+    RemoteObjectRef bundle = [self call:bundleClass selector:"bundleWithPath:" argument:path];
+    [self releaseRemoteObject:path];
+    if (!bundle) return NO;
+    remote_msg_on_main_thread(self.remoteCall, bundle, [self getSelector:"load"], NULL, NULL, 0);
+    return [self getClass:"WKWebView"] && [self getClass:"WKWebViewConfiguration"];
+}
+
 - (BOOL)setupFreeFireOverlay {
     self.setupError = @"";
+    self.setupCanRetry = NO;
     MizzeRecordStage(@"ff.overlay.begin", @"One bounded setup transaction");
     if (![self findTargetWindow] || ![self findParentView]) {
         self.setupError = @"Chưa tìm thấy cửa sổ Free Fire sẵn sàng.";
+        self.setupCanRetry = YES;
         return NO;
     }
     if (![self refreshWindowBounds]) {
         self.setupError = @"Kích thước màn hình chưa hợp lệ.";
         return NO;
     }
-    if (![self getClass:"WKWebView"] || ![self getClass:"WKWebViewConfiguration"]) {
-        self.setupError = @"Free Fire chưa có WebKit để tạo menu.";
+    if (![self ensureFreeFireWebKit]) {
+        self.setupError = @"Không nạp được WebKit để tạo menu Free Fire.";
         return NO;
     }
     if (![[OverlayWebSocketServer sharedServer] start]) {
@@ -492,17 +514,13 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
         return NO;
     }
     CGRect full = CGRectMake(0,0,self.cachedScreenWidth,self.cachedScreenHeight);
-    MizzeRecordStage(@"ff.overlay.canvas", @"Creating one canvas WebView");
-    self.webView = [self createWebViewWithResource:@"overlay_esp" frame:full interactive:NO hidden:NO autoresizesView:YES];
-    if (self.webView) {
+    MizzeRecordStage(@"ff.overlay.button", @"Creating floating button before ESP data");
+    self.floatButtonWebView = [self createWebViewWithResource:@"overlay_fab" frame:[self floatButtonFrame] interactive:YES hidden:NO autoresizesView:NO];
+    if (self.floatButtonWebView) {
         MizzeRecordStage(@"ff.overlay.menu", @"Creating one hidden menu WebView");
         self.menuWebView = [self createWebViewWithResource:@"overlay_menu" frame:full interactive:YES hidden:YES autoresizesView:YES];
     }
-    if (self.menuWebView) {
-        MizzeRecordStage(@"ff.overlay.button", @"Creating floating button");
-        self.floatButtonWebView = [self createWebViewWithResource:@"overlay_fab" frame:[self floatButtonFrame] interactive:YES hidden:NO autoresizesView:NO];
-    }
-    if (!self.webView || !self.menuWebView || !self.floatButtonWebView) {
+    if (!self.menuWebView || !self.floatButtonWebView) {
         self.setupError = @"Tạo menu chưa hoàn tất. Đã dừng, không tự tạo lặp.";
         [self tearDown];
         MizzeRecordStage(@"ff.overlay.rollback", self.setupError);
@@ -510,12 +528,12 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
     }
     self.isOverlayReady = YES;
     [self broadcastOverlayLayout];
-    MizzeRecordStage(@"ff.overlay.ready", @"Canvas/menu/button created; device display still needs verification");
+    MizzeRecordStage(@"ff.overlay.ready", @"Button/menu created independently of match, Unity profile and ESP");
     return YES;
 }
 
 - (BOOL)setupBaseOverlay {
-    if (self.isOverlayReady && self.webView) {
+    if (self.isOverlayReady && (self.webView || [self.gameIdentifier isEqualToString:@"freefire"])) {
         return YES;
     }
     if ([self.gameIdentifier isEqualToString:@"freefire"]) {
@@ -790,9 +808,20 @@ static CGFloat OverlayClamp(CGFloat value, CGFloat lower, CGFloat upper) {
 #pragma mark - Update overlay targets
 
 - (BOOL)updateOverlayTargets:(NSArray<NSDictionary *> *)targets {
-    if (!self.isOverlayReady || !self.webView) {
-        return NO;
+    if (!self.isOverlayReady) return NO;
+    if ([self.gameIdentifier isEqualToString:@"freefire"] && !self.webView) {
+        if (!targets.count) return YES;
+        if (self.attemptedESPView) return NO;
+        self.attemptedESPView = YES;
+        MizzeRecordStage(@"ff.overlay.canvas", @"First valid enemy frame; creating ESP canvas once");
+        CGRect frame = CGRectMake(0,0,self.cachedScreenWidth,self.cachedScreenHeight);
+        self.webView = [self createWebViewWithResource:@"overlay_esp" frame:frame interactive:NO hidden:NO autoresizesView:YES];
+        if (!self.webView) {
+            MizzeRecordStage(@"ff.overlay.canvas.failed", @"ESP canvas failed; floating button/menu retained");
+            return NO;
+        }
     }
+    if (!self.webView) return NO;
 
     NSMutableArray<NSDictionary *> *jsonTargets =
         [NSMutableArray arrayWithCapacity:targets.count];
