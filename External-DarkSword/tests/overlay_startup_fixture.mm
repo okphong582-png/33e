@@ -41,7 +41,7 @@ static bool serverFail=false;
 void MizzeRecordStage(NSString *stage,NSString *detail) {(void)stage;(void)detail;}
 static int nextID=100,viewAttempt=0,failAt=0,rectCalls=0,offMainUIKit=0;
 static std::string failPhase;
-static bool keyWindow=true,legacyWindow=true,webKit=true,unknownScene=false,hugeScenes=false;
+static bool mockHasKeyWindow=true,legacyWindow=true,webKit=true,unknownScene=false,hugeScenes=false;
 static std::map<uint64_t,std::string> live;
 static std::map<uint64_t,uint64_t> parents;
 static uint64_t allocate(const char *kind) {uint64_t id=nextID++;live[id]=kind;return id;}
@@ -57,7 +57,7 @@ uint64_t remote_sel(RemoteCall *,const char *name) {return (uint64_t)sel_registe
 static uint64_t message(uint64_t receiver,uint64_t selector,uint64_t argument,bool main) {
  const char *s=sel_getName((SEL)selector);
  if(!strcmp(s,"sharedApplication"))return 10;
- if(!strcmp(s,"keyWindow"))return keyWindow?20:0;
+ if(!strcmp(s,"keyWindow"))return mockHasKeyWindow?20:0;
  if(!strcmp(s,"connectedScenes"))return 11;
  if(!strcmp(s,"allObjects"))return 12;
  if(!strcmp(s,"count"))return receiver==12?(hugeScenes?1000:1):1;
@@ -100,7 +100,7 @@ CGRect remote_getCGRect(RemoteCall *,uint64_t,uint64_t) {rectCalls++;return CGRe
 static void reset(void) {
  assert(live.empty());parents.clear();payloads=[NSMutableArray new];
  nextID=100;viewAttempt=failAt=rectCalls=offMainUIKit=0;failPhase="";
- keyWindow=legacyWindow=webKit=true;unknownScene=hugeScenes=serverFail=false;
+ mockHasKeyWindow=legacyWindow=webKit=true;unknownScene=hugeScenes=serverFail=false;
  screen=CGRectMake(0,0,390,844);
 }
 static TestOverlay *overlay(void) {TestOverlay *o=[[TestOverlay alloc]initWithRemoteCall:[RemoteCall new]];o.gameIdentifier=@"freefire";return o;}
@@ -117,9 +117,9 @@ static void success(TestOverlay *o) {
 }
 int main(void) {@autoreleasepool {
  reset();success(overlay());
- reset();keyWindow=false;unknownScene=true;success(overlay());
- reset();keyWindow=legacyWindow=false;success(overlay());
- reset();keyWindow=false;hugeScenes=true;success(overlay());
+ reset();mockHasKeyWindow=false;unknownScene=true;success(overlay());
+ reset();mockHasKeyWindow=legacyWindow=false;success(overlay());
+ reset();mockHasKeyWindow=false;hugeScenes=true;success(overlay());
  for(const char *phase:{"alloc","init","html","load","attach"})for(int stage=1;stage<=3;stage++){
    reset();failPhase=phase;failAt=stage;TestOverlay *o=overlay();
    assert(![o setupBaseOverlay]);assert(!o.isOverlayReady);assert(o.setupError.length);
