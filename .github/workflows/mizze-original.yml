@@ -56,3 +56,9 @@ jobs:
             menu/mizze-original/reference-loader-evidence.json
             menu/mizze-original-hashes.json
           if-no-files-found: error
+      - name: Upload single-file Documents patch without JSON companion
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-Bytes-Only
+          path: menu/mizze-original/dist/Assembly-CSharp-patch.bytes
+          if-no-files-found: error
