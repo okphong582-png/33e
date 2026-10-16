@@ -1,9 +1,17 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict'),{inspect}=require('./inspect_patch.cjs');
 const dir=path.join(__dirname,'mizze-original'),out=path.join(dir,'dist'),contract=JSON.parse(fs.readFileSync(path.join(dir,'ui-compatibility-baseline.json'))),evidence=JSON.parse(fs.readFileSync(path.join(dir,'ui-only-evidence.json'))),patch=inspect(fs.readFileSync(path.join(out,'Assembly-CSharp-patch.bytes')));
+const loader=JSON.parse(fs.readFileSync(path.join(dir,'reference-loader-evidence.json')));
+const bytes=fs.readFileSync(path.join(out,'Assembly-CSharp-patch.bytes'));
+assert.equal(patch.fixTableFlag,1,'Use the supplied game native position-index lookup');
+assert.equal(patch.sha256,loader.afterSha256,'Unexpected bytecode change outside the reviewed packaging fix');
+const restored=Buffer.from(bytes),change=loader.changes[0];
+assert.equal(loader.changes.length,1);assert.equal(restored[change.offset],change.after);
+restored[change.offset]=change.before;
+assert.equal(crypto.createHash('sha256').update(restored).digest('hex'),loader.beforeSha256,'Original source payload must differ by exactly the hook lookup byte');
 const sameSet=(actual,expected,label)=>assert.deepEqual(actual.map(x=>JSON.stringify(x)).sort(),expected.map(x=>JSON.stringify(x)).sort(),label);
 const method=e=>[e.owner,e.name,e.generic,e.args,e.parameters,e.parameterIsGeneric];
 sameSet(patch.types,contract.types,'Native types changed');const unusedRectGetter=e=>e.owner.split(',')[0]==='UnityEngine.Rect'&&['get_x','get_y','get_width','get_height'].includes(e.name);
 sameSet(patch.externMethods.map(method),contract.externMethods.filter(e=>!unusedRectGetter(e)).map(method),'New or changed native extern dependency');sameSet(patch.fields.filter(f=>!f.isNew).map(f=>[f.owner,f.name]),contract.fields.map(f=>[f.owner,f.name]),'Native fields changed');sameSet(patch.fixes.map(f=>method(f.method)),contract.fixes.map(method),'Original hook descriptors changed');
 const decoded=fs.readFileSync(path.join(out,'gif-decoded.rgba'));assert.equal(crypto.createHash('sha256').update(decoded).digest('hex'),evidence.gif.decodedRgbaSha256,'Decoded GIF pixels differ from reviewed source asset');
-const manifestPath=path.join(out,'manifest.json'),manifest=JSON.parse(fs.readFileSync(manifestPath));manifest.source='menu/mizze-original/*.cs';manifest.edition='Old source glass + compatible ESP';fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n');
+const manifestPath=path.join(out,'manifest.json'),manifest=JSON.parse(fs.readFileSync(manifestPath));manifest.source='menu/mizze-original/*.cs';manifest.edition='Old source + reference native hook lookup';manifest.fixTableFlag=1;manifest.hookLookup='GCommon.IL2CPPOptimize.GetPositionIndex';manifest.localConfigBypassed=false;fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n');
 const report={edition:'Old source glass + compatible ESP',sha256:patch.sha256,size:patch.size,nativeTypesAndFieldsUnchanged:true,noNewNativeMethods:true,unusedRectGettersRemoved:4,bootstrapAndOnGuiUnchanged:true,decodedGifMatchesAsset:true,deviceVerified:false};fs.writeFileSync(path.join(out,'ui-verification.json'),JSON.stringify(report,null,2)+'\n');console.log('PASS: no new native dependency; original types, fields, hooks and GIF pixels preserved.');

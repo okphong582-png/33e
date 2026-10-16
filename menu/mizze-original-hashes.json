@@ -49,7 +49,7 @@
   },
   {
     "name": "README.md",
-    "sha256": "839e697cc87650eb36d04aeba3affb9f0bcff56e9c8b82e118e0a3823a7dca5d"
+    "sha256": "fd6cfd6adb01d0a400848037cf2cc69e900aaf4b06e1e0440de8c7d488a59606"
   },
   {
     "name": "RuntimeApis.cs",
@@ -57,7 +57,7 @@
   },
   {
     "name": "RuntimeTest.cs",
-    "sha256": "84f28e075430de895ae22a04f1cec4b213b595a76d5c47dfdb0f9fce62e14956"
+    "sha256": "58a927161b2bba573c4d99237c4f7b312f64c2200f0b7bcdd7f5396d0c64ae67"
   },
   {
     "name": "TextBindings.cs",
@@ -97,7 +97,7 @@
   },
   {
     "name": "package.cjs",
-    "sha256": "5ad8ef923d8e187e80da11c915cc589c44a6258d5e7f8bc52ed6d7b4c6b85967"
+    "sha256": "c83d2be18877694f742619bc5630b5ff13afa1fe46bb4aa8714b4285b2d78c06"
   },
   {
     "name": "test.cjs",

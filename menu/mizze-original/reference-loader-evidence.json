@@ -1,0 +1,44 @@
+{
+  "reference": "Assembly-CSharp-patch.bytes",
+  "referenceSha256": "d42edd548e3fc03aead603d07aa33231462c9b5aadf1440336628466d5ea22be",
+  "beforeSha256": "5cc4e3440eb178296049c1a0e10cf0c98f36ec047da80f83e7a2ff8d0f773128",
+  "afterSha256": "a9867443321159b28294241f1b40eac800c0a69d6d3a3926f1a4c246e4d23ed7",
+  "size": 295109,
+  "changes": [
+    {
+      "offset": 294979,
+      "before": 0,
+      "after": 1
+    }
+  ],
+  "unchanged": [
+    "all instructions",
+    "all game C# source",
+    "GUI/GIF/fonts",
+    "key logic",
+    "ESP/aim",
+    "driver bootstrap",
+    "native dependencies"
+  ],
+  "flagMeaning": "1=GetPositionIndex callback; 0=IFix.IDMAP reflection",
+  "localConfigBypassed": false,
+  "deviceVerified": false,
+  "frameworkSha256": "ca84eb7b8e0273f337243f914839104bbce037efb6695c5ed314f992ca903ef8",
+  "nativeAnchors": {
+    "0x50913cc": "05acff97",
+    "0x50913d0": "e0000036",
+    "0x50913e4": "413c6b94",
+    "0x6b60610": "32698694",
+    "0x6b60638": "39207c94",
+    "0x6b606cc": "9c147c94",
+    "0x6b5fa2c": "430ad714",
+    "0x8768494": "09855da9",
+    "0x876849c": "20013fd6",
+    "0x876854c": "e87340b9",
+    "0x8768550": "08010036",
+    "0x8768568": "00013fd6",
+    "0x8768588": "dff7ff97",
+    "0xa122344": "000840f9",
+    "0xa122364": "001940b9"
+  }
+}

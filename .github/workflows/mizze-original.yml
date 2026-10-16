@@ -28,7 +28,7 @@ jobs:
         run: node menu/verify-mizze-original.cjs
       - name: Compile old source with ESP stability fixes
         run: node menu/mizze-original/build.cjs .ifix-runtime
-      - name: Package using original serializer
+      - name: Package with verified game-native hook lookup
         run: node menu/mizze-original/package.cjs
       - name: Run final bytecode and ten-minute ESP soak
         run: node menu/mizze-original/test.cjs
@@ -52,5 +52,7 @@ jobs:
             menu/mizze-original/dist/*.svg
             menu/mizze-original/ui-only-evidence.json
             menu/mizze-original/README.md
+            menu/mizze-original/REFERENCE-LOADER.md
+            menu/mizze-original/reference-loader-evidence.json
             menu/mizze-original-hashes.json
           if-no-files-found: error

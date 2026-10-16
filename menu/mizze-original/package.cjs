@@ -11,7 +11,7 @@ if(p.closures.length||p.statics.length||p.newClasses.length)throw Error('Unexpec
 const magic=Buffer.alloc(8);magic.writeBigUInt64LE(0x66a319b20db4a2cbn);parts.push(magic);s(p.bridge);list(p.types,s);
 list(p.methods,m=>{list(m.instructions,x=>{i(x.code);i(x.operand);});list(m.handlers,h=>h.forEach(i));});
 list(p.externMethods,method);list(p.strings,s);list(p.fields,f=>{bit(f.isNew);t(f.owner);s(f.name);if(f.isNew){t(f.type);i(f.method);}});
-i(0);i(0);s(p.wrappers);s(p.assembly);bit(false);list(p.fixes,f=>{method(f.method);i(f.id);});i(0);
+i(0);i(0);s(p.wrappers);s(p.assembly);bit(true);list(p.fixes,f=>{method(f.method);i(f.id);});i(0);
 const bytes=Buffer.concat(parts),result=inspect(bytes),out=path.join(dir,'dist');fs.mkdirSync(out,{recursive:true});
 fs.writeFileSync(path.join(out,'Assembly-CSharp-patch.bytes'),bytes);fs.writeFileSync(path.join(out,'SHA256SUMS.txt'),result.sha256+'  Assembly-CSharp-patch.bytes\n');
 fs.copyFileSync(path.join(dir,'build/methods.tsv'),path.join(out,'methods.tsv'));

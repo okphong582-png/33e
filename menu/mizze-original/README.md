@@ -1,3 +1,5 @@
+> Cập nhật 16/10/2026: bản source cũ giữ nguyên giao diện và chức năng; bộ đóng gói chuyển sang ánh xạ hook native giống file ESP mới được cung cấp. Xem REFERENCE-LOADER.md. Thay đổi này không tự bật loader Documents và chưa được thử trên iPhone.
+
 # Mizze — C# IFix menu cho Free Fire TH iOS
 
 Nguồn C# riêng biên dịch bằng Tencent InjectFix, không sao chép bytecode từ menu tham khảo. Mục tiêu là bản TH iOS **1.132.1**, Assembly-CSharp 0.86.0.518. File xuất: `Assembly-CSharp-patch.bytes` trong artifact **Mizze-Assembly-CSharp-patch** của workflow `Build CSharp IFix Menu`.
