@@ -1,0 +1,30 @@
+name: Build Free Fire dylib no key
+on:
+  push:
+    branches: [codex/ff-dylib-no-key]
+    paths:
+      - 'dylib source no key/**'
+      - '.github/workflows/ff-dylib-no-key.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dylib:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source has no authentication dependency
+        run: python3 tools/verify_ff_no_key_source.py
+      - name: Setup Theos and iOS toolchain
+        uses: Randomblock1/theos-action@v1
+      - name: Build Free Fire dylib only
+        working-directory: 'dylib source no key'
+        run: make clean package FINALPACKAGE=1 FOR_RELEASE=1
+      - name: Verify ARM64 dylib and absence of authentication code
+        run: python3 tools/verify_ff_no_key_source.py --binary 'dylib source no key/packages/libsubsystem.dylib'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreeFire-dylib-no-key
+          path: 'dylib source no key/packages/libsubsystem.dylib'
+          if-no-files-found: error
