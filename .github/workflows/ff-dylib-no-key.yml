@@ -19,8 +19,11 @@ jobs:
       - name: Setup Theos and iOS toolchain
         uses: Randomblock1/theos-action@v1
       - name: Build Free Fire dylib only
-        working-directory: 'dylib source no key'
-        run: make clean package FINALPACKAGE=1 FOR_RELEASE=1
+        run: |
+          cp -a 'dylib source no key' /tmp/ff-dylib-no-key
+          make -C /tmp/ff-dylib-no-key clean package FINALPACKAGE=1 FOR_RELEASE=1
+          mkdir -p 'dylib source no key/packages'
+          cp /tmp/ff-dylib-no-key/packages/libsubsystem.dylib 'dylib source no key/packages/'
       - name: Verify ARM64 dylib and absence of authentication code
         run: python3 tools/verify_ff_no_key_source.py --binary 'dylib source no key/packages/libsubsystem.dylib'
       - uses: actions/upload-artifact@v4
