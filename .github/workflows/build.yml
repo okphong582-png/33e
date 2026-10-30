@@ -2,7 +2,7 @@ name: Build Mizze Dylib, TIPA and Aimlag
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "**" ]
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
