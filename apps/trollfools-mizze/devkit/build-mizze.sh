@@ -21,6 +21,18 @@ for localized in "$APP"/*.lproj/InfoPlist.strings; do
   fi
 done
 chmod +x "$APP/TrollFools"
+# Xcode signing/copy phases may rewrite Mach-O helper signatures. Restore the
+# original distributed tools, and do not run bundle-wide signing afterwards.
+python3 - "$APP" <<'PY'
+import hashlib,json,pathlib,shutil,sys
+app=pathlib.Path(sys.argv[1]);source=pathlib.Path('TrollFools')
+known=json.loads(pathlib.Path('devkit/upstream-tools-sha256.json').read_text())
+for name,digest in known['files'].items():
+    data=(source/name).read_bytes()
+    assert hashlib.sha256(data).hexdigest()==digest,'Source helper changed: '+name
+    shutil.copy2(source/name,app/name)
+PY
+
 for name in chown cp cp-15 ct_bypass insert_dylib mkdir mv mv-15 rm install_name_tool optool ldid; do
   test -f "$APP/$name"; chmod +x "$APP/$name"
 done

@@ -12,3 +12,11 @@ with zipfile.ZipFile(app/'MizzePayload.zip') as z:
 report={'payload':identity,'allInjectorToolsPresent':True,'helpersChecked':len(tools),'helperLibrariesChecked':len(libraries),'payloadHashMatchesSignedPlist':True,'deviceTested':False}
 pathlib.Path('build/package-verification.json').write_text(json.dumps(report,indent=2))
 print(json.dumps(report))
+
+known=json.loads(pathlib.Path('devkit/upstream-tools-sha256.json').read_text())
+for name,digest in known['files'].items():
+    assert hashlib.sha256((app/name).read_bytes()).hexdigest()==digest,'Packaged helper was modified: '+name
+report['originalHelperHashesPreserved']=True
+report['originalHelpersVerified']=len(known['files'])
+pathlib.Path('build/package-verification.json').write_text(json.dumps(report,indent=2))
+print('Original helper signatures/bytes preserved for all '+str(len(known['files']))+' assets')

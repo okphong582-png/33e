@@ -1,0 +1,23 @@
+{
+  "source": "https://github.com/Lessica/TrollFools/releases/download/v4.4-257/TrollFools_4.4-257.tipa",
+  "ipaSha256": "226ed42d93a48766a0bddd2362a27f0ec5042d84c6f6a3ffa95942d7a0653fb3",
+  "files": {
+    "chown": "85dc5e8dcde7fa287a8cb5e5d6d74e4ceb21aa3797369a69fc9e4c335f0c0c26",
+    "cp": "50470e7d64773c818067363792493a4c26289a5b6a4bd00410a6f4e4c4183891",
+    "cp-15": "1e79cf39624123eb8016fd67f8e93a9cb6b57e4e40b4892ebf1dcd2383ac824f",
+    "ct_bypass": "0679958ee82e1fdb38fdea6493f9821ffbdc1a5832da599614589b20d7653d34",
+    "insert_dylib": "2e5bb36f5abb13056fbfa5344f11d3134e65a113821dc59357f72c4e18bccaea",
+    "install_name_tool": "4d9cc62e468426d5f206c2f3c7c622ae29ca3b289c86d9d6fa8f7fdb2ba6c493",
+    "ldid": "af96dfe7932718eaacdb74a6f3ab44f624163682e7c9a6782a5dc4f5857500e6",
+    "mkdir": "290c443393f074726900ab468d8add2d945c0229ca4d2abbed1ac04733a92fa9",
+    "mv": "bd27057252429450bd64f4550693fd179893e9bbbba15405eb96f33eced90732",
+    "mv-15": "cf3af8e9a47d9acd1ad4041d922629daea45695649876cb1fd9d6ba0286a5f65",
+    "optool": "e4145a99c8e342c8f14eb8467479a56bda62f342ab71e9a1d517b99a2a91c96d",
+    "rm": "b9f9fadda339d4c21328c5a599ba2429335d060845c5da3f5f71b1b9c2f74572",
+    "libcrypto.3.dylib": "d9c0b632a993c6481d81b972bbd21cd8556df1d23a43b4a630f5cfb1363b29ba",
+    "libintl.8.dylib": "7734362a3d68d1e64b9e9c0bbc21d699b5d9d5a0b2065f502440e9011988a582",
+    "libiosexec.1.dylib": "5196bd7789600c74764043811dbd6e16f53a9c1eb1389a56e25180363621bfc9",
+    "libxar.1.dylib": "9e98f15d731d9d55b0c5a86e7cab822c1d0f6fa39356942b88d74ea518222691",
+    "CydiaSubstrate.framework.zip": "014c9bf1c910574e4bc113d1fe11d35fa22bb3609b3bceee2592f21002e18321"
+  }
+}
