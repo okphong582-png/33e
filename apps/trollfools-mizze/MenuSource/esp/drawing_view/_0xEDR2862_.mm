@@ -30,36 +30,14 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
-#include "WorldAxes.h"
-
-void RenderXYZAxes(ESPGeometryBuffers *buffers, const Vector3 &origin,
-                   const float *matrix, float width, float height) {
-    if ((!isLine && !isXYZAxes) || !buffers || !ValidPosition(origin)) return;
-    const auto triad=WorldAxes::Project({origin.x,origin.y,origin.z},matrix,width,height);
-    if (!triad.valid) return;
-    if (buffers->snaplinePath) {
-        const auto point=triad.axes[0].from;
-        AddLine(buffers->snaplinePath,CGPointMake(width*.5,height*.08),CGPointMake(point.x,point.y),width,height);
-        buffers->snaplineDirty=true;
-    }
-    if (!isXYZAxes) return;
-    CGMutablePathRef paths[]={buffers->axisXPath,buffers->axisYPath,buffers->axisZPath};
-    bool *dirty[]={&buffers->axisXDirty,&buffers->axisYDirty,&buffers->axisZDirty};
-    for (int i=0;i<3;++i) {
-        const auto &axis=triad.axes[i];
-        if (!paths[i] || !axis.valid) continue;
-        const CGPoint a=CGPointMake(axis.from.x,axis.from.y),b=CGPointMake(axis.to.x,axis.to.y);
-        AddLine(paths[i],a,b,width,height);
-        const double dx=b.x-a.x,dy=b.y-a.y,len=std::hypot(dx,dy);
-        if (len>8) {
-            const double ux=dx/len,uy=dy/len;
-            AddLine(paths[i],b,CGPointMake(b.x-ux*4+uy*2,b.y-uy*4-ux*2),width,height);
-            AddLine(paths[i],b,CGPointMake(b.x-ux*4-uy*2,b.y-uy*4+ux*2),width,height);
-        } else if (len<2) {
-            CGPathAddEllipseInRect(paths[i],nullptr,CGRectMake(b.x-1.2,b.y-1.2,2.4,2.4));
-        }
-        *dirty[i]=true;
-    }
+void RenderESPSnapline(ESPGeometryBuffers *buffers, const Vector3 &origin,
+                       const float *matrix, float width, float height) {
+    if (!isLine || !buffers || !buffers->snaplinePath || !matrix || !ValidPosition(origin)) return;
+    const Vector3 point=WorldToScreenLayer(origin,const_cast<float *>(matrix),width,height,width,height);
+    if (!ValidPosition(point) || point.z<=0.001f) return;
+    AddLine(buffers->snaplinePath,CGPointMake(width*.5,height*.08),
+            CGPointMake(point.x,point.y),width,height);
+    buffers->snaplineDirty=true;
 }
 
 static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,

@@ -61,7 +61,6 @@ bool isHealth     = YES;
 bool isName       = YES;
 bool isDis        = YES;
 bool isLine       = NO;
-bool isXYZAxes    = NO;
 bool isHeadRedDot = NO;
 bool isBox3D = NO;
 bool isCleanESP = YES;
@@ -111,7 +110,6 @@ void ESPSyncFromPrefs(void) {
     isName       = espEnabled && ESPPrefsBool(KH_NS("Name"),       YES);
     isDis        = espEnabled && ESPPrefsBool(KH_NS("Dis"),        YES);
     isLine       = espEnabled && ESPPrefsBool(KH_NS("Line"), YES);
-    isXYZAxes = espEnabled && ESPPrefsBool(@"XYZAxes", NO);
     isHeadRedDot = espEnabled && ESPPrefsBool(KH_NS("HeadRedDot"), NO);
     isBox3D = ESPPrefsBool(@"Box3D", NO);
     isCleanESP = !isBox3D && ESPPrefsBool(@"CleanESP", YES);
@@ -168,7 +166,7 @@ void ESPSyncFromPrefs(void) {
     ++gRenderPrefsRevision;
 
     // ESP Count logic
-    if (isLine || isXYZAxes || isBox || isHealth || isBone) {
+    if (isLine || isBox || isHealth || isBone) {
         isCount = YES;
     } else {
         isCount = NO;
@@ -252,11 +250,6 @@ static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
     }
     if (isBox || isHeadRedDot) b.boxKnockPath = CGPathCreateMutable();
     if (isLine) b.snaplinePath = CGPathCreateMutable();
-    if (isXYZAxes) {
-        b.axisZPath = CGPathCreateMutable();
-        b.axisYPath = CGPathCreateMutable();
-        b.axisXPath = CGPathCreateMutable();
-    }
     if (isHealth) {
         b.hpBackgroundPath = CGPathCreateMutable();
         b.hpFillPath = CGPathCreateMutable();
@@ -890,8 +883,8 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
             }
         }
 
-        if ((isLine || isXYZAxes) && distance <= gESPMaxDistance)
-            RenderXYZAxes(buffers, getPositionExt(getHead(pawn)), matrix, vw, vh);
+        if (isLine && distance <= gESPMaxDistance)
+            RenderESPSnapline(buffers, getPositionExt(getHead(pawn)), matrix, vw, vh);
         if ((visible || knocked) && distance <= gESPMaxDistance) {
             const bool bot = get_IsBot(pawn);
             if (bot) ++stats.botCount;
