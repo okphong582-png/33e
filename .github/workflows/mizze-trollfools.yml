@@ -1,0 +1,43 @@
+name: Mizze Toggle App
+on:
+  push:
+    branches: [codex/mizze-trollfools-toggle]
+    paths:
+      - apps/trollfools-mizze/**
+      - .github/workflows/mizze-trollfools.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mizze-toggle-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Install signing helper
+        run: brew install ldid
+      - name: Build and test Mizze app
+        working-directory: apps/trollfools-mizze
+        run: bash devkit/build-mizze.sh
+      - name: Upload device build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-Toggle-TrollStore
+          if-no-files-found: error
+          path: |
+            apps/trollfools-mizze/build/Mizze-Toggle.tipa
+            apps/trollfools-mizze/build/Mizze-Toggle.ipa
+            apps/trollfools-mizze/build/Mizze-Toggle.sha256
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-Toggle-Diagnostics
+          path: |
+            apps/trollfools-mizze/build/*.log
