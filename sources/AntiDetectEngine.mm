@@ -45,15 +45,23 @@ static inline void AD_rebind(const char *name, void *replacement, void **replace
     rebind_symbols(&r, 1);
 }
 
-// DarkSword kernel API (from LaraMemoryReader)
-extern "C" {
-    // Weak: DarkSword (kernel r/w) only exists on a jailbroken/tfp0 build.
-    // On a sideloaded IPA these resolve to NULL and Layer 12 no-ops.
-    BOOL ds_is_ready(void) __attribute__((weak));
-    uint64_t ds_kread64(uint64_t addr) __attribute__((weak));
-    uint32_t ds_kread32(uint64_t addr) __attribute__((weak));
-    void ds_kwrite32(uint64_t addr, uint32_t val) __attribute__((weak));
-    void ds_kwrite64(uint64_t addr, uint64_t val) __attribute__((weak));
+// DarkSword kernel API (from LaraMemoryReader) — resolved at RUNTIME via dlsym
+// so there is NO static link dependency. On a sideloaded IPA (no DarkSword)
+// these stay NULL and Layer 12 cleanly no-ops; on a tfp0 build they bind.
+typedef BOOL     (*ds_is_ready_f)(void);
+typedef uint64_t (*ds_kread64_f)(uint64_t);
+typedef uint32_t (*ds_kread32_f)(uint64_t);
+typedef void     (*ds_kwrite32_f)(uint64_t, uint32_t);
+typedef void     (*ds_kwrite64_f)(uint64_t, uint64_t);
+
+static ds_is_ready_f g_ds_is_ready = nullptr;
+static ds_kread32_f  g_ds_kread32  = nullptr;
+static ds_kwrite32_f g_ds_kwrite32 = nullptr;
+
+static void resolve_darksword(void) {
+    if (!g_ds_is_ready) g_ds_is_ready = (ds_is_ready_f)dlsym(RTLD_DEFAULT, "ds_is_ready");
+    if (!g_ds_kread32)  g_ds_kread32  = (ds_kread32_f)dlsym(RTLD_DEFAULT, "ds_kread32");
+    if (!g_ds_kwrite32) g_ds_kwrite32 = (ds_kwrite32_f)dlsym(RTLD_DEFAULT, "ds_kwrite32");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -423,7 +431,7 @@ static uint64_t find_proc_csflags_addr(void) {
     // Walk kernel proc linked list from current_proc() via DarkSword
     // This is a simplified derivation; production code should pattern-scan
     // kern_return_t info with KERN_PROC to locate the proc pointer
-    if (!ds_is_ready || !ds_is_ready()) return 0;
+    if (!g_ds_is_ready || !g_ds_is_ready()) return 0;
 
     // Read our own task's proc pointer from task_t → bsd_info
     mach_port_t self_task = mach_task_self();
@@ -442,18 +450,19 @@ static uint64_t find_proc_csflags_addr(void) {
 
 static void Layer12_CSPatch_Init(void) {
     // DarkSword kernel r/w only exists on a jailbroken/tfp0 build.
-    // On a sideloaded IPA these weak symbols are NULL — skip cleanly.
-    if (!ds_is_ready || !ds_kread32 || !ds_kwrite32) return;
-    if (!ds_is_ready()) return;
+    // On a sideloaded IPA dlsym returns NULL — skip cleanly.
+    resolve_darksword();
+    if (!g_ds_is_ready || !g_ds_kread32 || !g_ds_kwrite32) return;
+    if (!g_ds_is_ready()) return;
 
     uint64_t csflags_addr = find_proc_csflags_addr();
     if (!csflags_addr) return;
 
-    uint32_t flags = ds_kread32(csflags_addr);
+    uint32_t flags = g_ds_kread32(csflags_addr);
     // Set valid + signed, clear kill/hard/restrict/debugged
     flags |=  (CS_VALID | CS_SIGNED | CS_GET_TASK_ALLOW);
     flags &= ~(CS_HARD | CS_KILL | CS_RESTRICT | CS_DEBUGGED);
-    ds_kwrite32(csflags_addr, flags);
+    g_ds_kwrite32(csflags_addr, flags);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
