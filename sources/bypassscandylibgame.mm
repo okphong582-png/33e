@@ -36,6 +36,12 @@
 #include "obfuscation/AntiREProtection.h"
 #include "AntiDetectEngine.h"    // Layers 8–16: hash spoof, FS hide, VM hide, anti-Frida, CS patch, net scrub, JB hide, anti-ban noise, scan timing
 
+// XorString may be unavailable in this build config — fall back to plain
+// literals so marker strings still resolve as const char*.
+#ifndef XorString
+#define XorString(s) (s)
+#endif
+
 // ── Marker strings encrypted at compile time ──────────────────────────────
 // None of these appear as plaintext in the final binary.
 #define DYLIB_MARK_A   XorString("libsubsystem")
@@ -48,8 +54,8 @@
 #define PROC_NAME_MAX  XorString("FreeFireMAX")
 
 // ── Globals ────────────────────────────────────────────────────────────────
-static _Atomic(BOOL) gScanWindowActive = NO;  // true during suspected scan
-static _Atomic(BOOL) gFreezeFeatures   = NO;  // freeze all hooks during scan
+static volatile BOOL gScanWindowActive = NO;  // true during suspected scan
+static volatile BOOL gFreezeFeatures   = NO;  // freeze all hooks during scan
 static dispatch_queue_t gBypassQueue    = nil;
 static pthread_rwlock_t gDyldLock       = PTHREAD_RWLOCK_INITIALIZER;
 
@@ -314,26 +320,27 @@ KH_INLINE static void Install() {
 namespace BypassLayer6 {
 
 // Detection heuristic: if sysctl is called >4x in <200ms it's a scan probe
-static _Atomic(uint32_t) gSysctlCallCount = 0;
-static _Atomic(uint64_t) gFirstSysctlTs   = 0;
+static volatile uint32_t gSysctlCallCount = 0;
+static volatile uint64_t gFirstSysctlTs   = 0;
 
 KH_INLINE static void RecordSysctlCall() {
     uint64_t now = (uint64_t)(NSProcessInfo.processInfo.systemUptime * 1000.0);
     uint64_t first = 0;
-    if (atomic_compare_exchange_strong(&gFirstSysctlTs, &first, now)) {
-        atomic_store(&gSysctlCallCount, 1);
+    if (__atomic_compare_exchange_n(&gFirstSysctlTs, &first, now, false,
+                                    __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
+        __atomic_store_n(&gSysctlCallCount, 1, __ATOMIC_SEQ_CST);
         return;
     }
-    uint32_t count = atomic_fetch_add(&gSysctlCallCount, 1) + 1;
-    if (now - atomic_load(&gFirstSysctlTs) < 200 && count >= 4) {
-        if (!atomic_exchange(&gScanWindowActive, YES)) {
-            atomic_store(&gFreezeFeatures, YES);
+    uint32_t count = __atomic_fetch_add(&gSysctlCallCount, 1, __ATOMIC_SEQ_CST) + 1;
+    if (now - __atomic_load_n(&gFirstSysctlTs, __ATOMIC_SEQ_CST) < 200 && count >= 4) {
+        if (!__atomic_exchange_n(&gScanWindowActive, YES, __ATOMIC_SEQ_CST)) {
+            __atomic_store_n(&gFreezeFeatures, YES, __ATOMIC_SEQ_CST);
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC),
                            gBypassQueue, ^{
-                atomic_store(&gFreezeFeatures, NO);
-                atomic_store(&gScanWindowActive, NO);
-                atomic_store(&gSysctlCallCount, 0);
-                atomic_store(&gFirstSysctlTs, 0);
+                __atomic_store_n(&gFreezeFeatures, NO, __ATOMIC_SEQ_CST);
+                __atomic_store_n(&gScanWindowActive, NO, __ATOMIC_SEQ_CST);
+                __atomic_store_n(&gSysctlCallCount, 0, __ATOMIC_SEQ_CST);
+                __atomic_store_n(&gFirstSysctlTs, 0, __ATOMIC_SEQ_CST);
             });
         }
     }
@@ -383,7 +390,7 @@ KH_INLINE static void RecordSysctlCall() {
 
 /// Returns YES if features should be suspended (scan window active)
 BOOL BypassScanIsFreezing(void) {
-    return atomic_load(&gFreezeFeatures);
+    return __atomic_load_n(&gFreezeFeatures, __ATOMIC_SEQ_CST);
 }
 
 /// Called from the overlay setup once a game window is found

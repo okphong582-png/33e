@@ -21,6 +21,7 @@
 #import <dirent.h>
 #import <sys/stat.h>
 #import <sys/param.h>
+#import <sys/sysctl.h>
 #import <mach/mach.h>
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
@@ -599,8 +600,8 @@ static float gaussian_noise(float mean, float stddev) {
     static float z1 = 0; static bool use_z1 = false;
     if (use_z1) { use_z1 = false; return z1 * stddev + mean; }
     float u1, u2;
-    do { u1 = (float)arc4random() / UINT32_MAX; } while (u1 <= 1e-7f);
-    u2 = (float)arc4random() / UINT32_MAX;
+    do { u1 = (float)arc4random() / 4294967296.0f; } while (u1 <= 1e-7f);
+    u2 = (float)arc4random() / 4294967296.0f;
     float z0 = sqrtf(-2.0f * logf(u1)) * cosf(2.0f * M_PI * u2);
     z1 = sqrtf(-2.0f * logf(u1)) * sinf(2.0f * M_PI * u2);
     use_z1 = true;
@@ -608,7 +609,7 @@ static float gaussian_noise(float mean, float stddev) {
 }
 
 // State for suppression window
-static _Atomic(uint64_t) g_suppress_until_ms = 0;
+static volatile uint64_t g_suppress_until_ms = 0;
 
 static uint64_t now_ms(void) {
     return (uint64_t)(CACurrentMediaTime() * 1000.0);
@@ -626,7 +627,7 @@ static void maybe_schedule_suppression(void) {
     // 30% chance of triggering a suppression window
     if (arc4random_uniform(10) < 3) {
         uint64_t suppress_dur = arc4random_uniform(25000) + 15000; // 15-40s
-        atomic_store(&g_suppress_until_ms, now + suppress_dur);
+        __atomic_store_n(&g_suppress_until_ms, now + suppress_dur, __ATOMIC_SEQ_CST);
     }
 }
 
@@ -649,7 +650,7 @@ BOOL AntiDetect_ShouldSuppressThisFrame(void) {
     if (BypassScanIsFreezing()) return YES;
 
     // During our own anti-ban suppression window: suppress
-    if (now_ms() < atomic_load(&g_suppress_until_ms)) return YES;
+    if (now_ms() < __atomic_load_n(&g_suppress_until_ms, __ATOMIC_SEQ_CST)) return YES;
 
     return NO;
 }
@@ -679,7 +680,7 @@ NSTimeInterval AntiDetect_ESPRefreshInterval(void) {
 // randomized "cool-down" after unfreeze before re-enabling features.
 // This prevents exact timing correlation between probe windows and feature gaps.
 
-static _Atomic(uint64_t) g_cooldown_until_ms = 0;
+static volatile uint64_t g_cooldown_until_ms = 0;
 
 static void scan_timing_observer(void) {
     static BOOL was_freezing = NO;
@@ -687,14 +688,14 @@ static void scan_timing_observer(void) {
     if (was_freezing && !is_freezing) {
         // Just came out of a scan window — add randomized cooldown 500ms–2s
         uint64_t extra = arc4random_uniform(1500) + 500;
-        atomic_store(&g_cooldown_until_ms, now_ms() + extra);
+        __atomic_store_n(&g_cooldown_until_ms, now_ms() + extra, __ATOMIC_SEQ_CST);
     }
     was_freezing = is_freezing;
 }
 
 BOOL AntiDetect_IsInCooldown(void) {
     scan_timing_observer();
-    return now_ms() < atomic_load(&g_cooldown_until_ms);
+    return now_ms() < __atomic_load_n(&g_cooldown_until_ms, __ATOMIC_SEQ_CST);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
