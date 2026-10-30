@@ -9,16 +9,19 @@ xcodebuild -project TrollFools.xcodeproj -scheme TrollFools -configuration Relea
   -sdk iphoneos -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO \
   CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tee build/xcodebuild.log
 APP="build/DerivedData/Build/Products/Release-iphoneos/TrollFools.app"
-test -f "$APP/Mizze.dylib"
+test -f "$APP/MizzePayload.zip"
 test -f "$APP/TrollFools"
 chmod +x "$APP/TrollFools"
 for name in chown cp cp-15 ct_bypass insert_dylib mkdir mv mv-15 rm; do
   test -f "$APP/$name"; chmod +x "$APP/$name"
 done
 python3 - "$APP" <<'PY'
-import hashlib,pathlib,plistlib,sys
+import hashlib,pathlib,plistlib,sys,zipfile
 app=pathlib.Path(sys.argv[1])
-assert hashlib.sha256((app/'Mizze.dylib').read_bytes()).hexdigest()=='8aae828d9c254747b30f924d4d484a18065907c5000941f6725a5f1bc64a8380'
+assert hashlib.sha256((app/'MizzePayload.zip').read_bytes()).hexdigest()=='f53124a0e6a3f282d04220c14d3511ab755efb21ef1acd4a0a27efbe4f0e5188'
+with zipfile.ZipFile(app/'MizzePayload.zip') as packed:
+    assert packed.namelist()==['Mizze.dylib']
+    assert hashlib.sha256(packed.read('Mizze.dylib')).hexdigest()=='8aae828d9c254747b30f924d4d484a18065907c5000941f6725a5f1bc64a8380'
 assert plistlib.loads((app/'Info.plist').read_bytes())['CFBundleDisplayName']=='Mizze'
 print('Bundled payload SHA256 and app display name verified')
 PY

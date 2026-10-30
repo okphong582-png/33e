@@ -4,7 +4,7 @@ import UIKit
 
 final class MizzeGameBackend: MizzeToggleBackend {
     static let targetID = "com.dts.freefireth"
-    static let payloadHash = "8aae828d9c254747b30f924d4d484a18065907c5000941f6725a5f1bc64a8380"
+    static let payloadHash = "f53124a0e6a3f282d04220c14d3511ab755efb21ef1acd4a0a27efbe4f0e5188"
 
     private func checkedInjector() throws -> InjectorV3 {
         guard let proxy = LSApplicationProxy(forIdentifier: Self.targetID),
@@ -33,7 +33,7 @@ final class MizzeGameBackend: MizzeToggleBackend {
 
     func enable() throws {
         // Inspect the bundled resource before any target-game modification.
-        guard let payload = Bundle.main.url(forResource: "Mizze", withExtension: "dylib")
+        guard let payload = Bundle.main.url(forResource: "MizzePayload", withExtension: "zip")
         else { throw MizzeToggleError.missingPayload }
         let bytes = try Data(contentsOf: payload)
         let hash = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()

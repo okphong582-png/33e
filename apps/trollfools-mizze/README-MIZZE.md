@@ -16,3 +16,5 @@ bash devkit/build-mizze.sh
 Đầu ra `build/Mizze-Toggle.tipa` dành cho môi trường TrollStore tương thích, không phải IPA ký phân phối App Store. Việc đổi giao diện không cấp thêm quyền iOS hoặc mở rộng các phiên bản iOS TrollFools hỗ trợ. Chưa thử tiêm/gỡ trên iPhone thật; kiểm thử coordinator dùng backend giả, build CI kiểm tra nguồn và tài nguyên đi kèm.
 
 Nguồn gốc: TrollFools-main.zip người dùng cung cấp. Bộ helper thiếu trong ZIP được lấy nguyên bản từ release công khai chính thức Lessica/TrollFools v4.4-257; xem UPSTREAM-TOOLS.json. Giữ nguyên bản quyền và LICENSE của dự án gốc. Không thêm cơ chế che giấu dylib hay qua mặt quét.
+
+Payload được chứa trong MizzePayload.zip để bước ký app/TrollStore không sửa chữ ký của file tài nguyên. App kiểm tra SHA256 gói ZIP trước khi gọi engine giải nén và tiêm; dylib trong game vẫn là Mizze.dylib thông thường.
