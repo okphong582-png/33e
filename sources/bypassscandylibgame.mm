@@ -34,6 +34,7 @@
 #include "KabraxHide.h"          // KH_INLINE, compile-time obfuscation helpers
 #include "XorString.h"           // XorString() compile-time string encryption
 #include "obfuscation/AntiREProtection.h"
+#include "bypassscandylibgame.h" // own header — gives public funcs C linkage (fixes name-mangling link error)
 #include "AntiDetectEngine.h"    // Layers 8–16: hash spoof, FS hide, VM hide, anti-Frida, CS patch, net scrub, JB hide, anti-ban noise, scan timing
 
 // XorString may be unavailable in this build config — fall back to plain
@@ -353,6 +354,10 @@ KH_INLINE static void RecordSysctlCall() {
 // No visible button. Activated by 3-finger long-press ≥ 0.65s.
 // The menu view itself uses UIView secureView to block screenshot capture.
 // ──────────────────────────────────────────────────────────────────────────
+
+// Public notification name (declared extern "C" in the header).
+NSNotificationName const kBypassToggleMenuNotification = @"com.iosviet.bypass.togglemenu";
+
 @interface BPGestureMenuInstaller : NSObject
 + (void)installOnWindow:(UIWindow *)window;
 @end

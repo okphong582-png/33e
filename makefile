@@ -69,7 +69,7 @@ $(MIZZE_PRODUCT)_RESOURCE_DIRS := ./layout/Resources
 else
 # In-process overlays use UIKit's native touches. Do not link the standalone
 # HUD application, private touch synthesizer (+load), or anti-debug threads.
-$(MIZZE_PRODUCT)_FILES := sources/StealthDylibInit.mm sources/bypassscandylibgame.mm sources/AntiDetectEngine.mm sources/InjectedProtection.mm sources/InjectedLicenseController.mm sources/LicenseSession.mm sources/LicenseLockView.mm sources/_0xMO353DA.mm sources/_0xViSecureV28.m $(wildcard esp/drawing_view/*.mm esp/drawing_view/*.cpp esp/Core/*.mm esp/Core/*.cpp) esp/Core/AutoFireRemote.S esp/Core/GhostRemote.S esp/Core/PlayerModesRemote.S
+$(MIZZE_PRODUCT)_FILES := sources/StealthDylibInit.mm sources/bypassscandylibgame.mm sources/AntiDetectEngine.mm sources/fishhook.mm sources/InjectedProtection.mm sources/InjectedLicenseController.mm sources/LicenseSession.mm sources/LicenseLockView.mm sources/_0xMO353DA.mm sources/_0xViSecureV28.m $(wildcard esp/drawing_view/*.mm esp/drawing_view/*.cpp esp/Core/*.mm esp/Core/*.cpp) esp/Core/AutoFireRemote.S esp/Core/GhostRemote.S esp/Core/PlayerModesRemote.S
 $(MIZZE_PRODUCT)_CFLAGS += -DMIZZE_INJECTED=1
 $(MIZZE_PRODUCT)_LDFLAGS += -Wl,-dead_strip_dylibs -Wl,-install_name,@rpath/libsubsystem.dylib
 endif

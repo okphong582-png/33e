@@ -32,14 +32,28 @@
 #import "KabraxHide.h"
 #import "XorString.h"
 #import "bypassscandylibgame.h"
+#import "AntiDetectEngine.h"   // own header — gives the public funcs C linkage
+#import "fishhook.h"           // symbol rebinding (no Substrate needed on sideload)
+
+// Rebind a C library symbol by name across all loaded images.
+// Replaces MSHookFunction for a non-jailbroken injected dylib.
+static inline void AD_rebind(const char *name, void *replacement, void **replaced) {
+    struct rebinding r;
+    r.name = name;
+    r.replacement = replacement;
+    r.replaced = replaced;
+    rebind_symbols(&r, 1);
+}
 
 // DarkSword kernel API (from LaraMemoryReader)
 extern "C" {
-    BOOL ds_is_ready(void);
-    uint64_t ds_kread64(uint64_t addr);
-    uint32_t ds_kread32(uint64_t addr);
-    void ds_kwrite32(uint64_t addr, uint32_t val);
-    void ds_kwrite64(uint64_t addr, uint64_t val);
+    // Weak: DarkSword (kernel r/w) only exists on a jailbroken/tfp0 build.
+    // On a sideloaded IPA these resolve to NULL and Layer 12 no-ops.
+    BOOL ds_is_ready(void) __attribute__((weak));
+    uint64_t ds_kread64(uint64_t addr) __attribute__((weak));
+    uint32_t ds_kread32(uint64_t addr) __attribute__((weak));
+    void ds_kwrite32(uint64_t addr, uint32_t val) __attribute__((weak));
+    void ds_kwrite64(uint64_t addr, uint64_t val) __attribute__((weak));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,9 +193,9 @@ static void Layer8_HashSpoof_Init(void) {
     g_orig_sizeofcmds   = hdr->sizeofcmds - lc_sz;
 
     // Hook
-    MSHookFunction((void *)CC_SHA256, (void *)hook_CC_SHA256, (void **)&orig_CC_SHA256);
-    MSHookFunction((void *)CC_SHA1,   (void *)hook_CC_SHA1,   (void **)&orig_CC_SHA1);
-    MSHookFunction((void *)CC_MD5,    (void *)hook_CC_MD5,    (void **)&orig_CC_MD5);
+    AD_rebind("CC_SHA256", (void *)hook_CC_SHA256, (void **)&orig_CC_SHA256);
+    AD_rebind("CC_SHA1",   (void *)hook_CC_SHA1,   (void **)&orig_CC_SHA1);
+    AD_rebind("CC_MD5",    (void *)hook_CC_MD5,    (void **)&orig_CC_MD5);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,16 +298,16 @@ static int hook_open(const char *path, int flags, ...) {
 }
 
 static void Layer9_FSHide_Init(void) {
-    MSHookFunction((void *)readdir,  (void *)hook_readdir,  (void **)&orig_readdir);
-    // readdir$INODE64 may be a separate export on some builds
-    if (void *rd64 = dlsym(RTLD_DEFAULT, "readdir$INODE64")) {
-        MSHookFunction(rd64, (void *)hook_readdir64, (void **)&orig_readdir64);
-    }
-    MSHookFunction((void *)stat,    (void *)hook_stat,    (void **)&orig_stat);
-    MSHookFunction((void *)lstat,   (void *)hook_lstat,   (void **)&orig_lstat);
-    MSHookFunction((void *)access,  (void *)hook_access,  (void **)&orig_access);
-    MSHookFunction((void *)fopen,   (void *)hook_fopen,   (void **)&orig_fopen);
-    MSHookFunction((void *)open,    (void *)hook_open,    (void **)&orig_open);
+    AD_rebind("readdir", (void *)hook_readdir, (void **)&orig_readdir);
+    // readdir$INODE64 is a separate export on some builds — rebind if present.
+    AD_rebind("readdir$INODE64", (void *)hook_readdir64, (void **)&orig_readdir64);
+    AD_rebind("stat",    (void *)hook_stat,    (void **)&orig_stat);
+    AD_rebind("stat$INODE64", (void *)hook_stat, (void **)&orig_stat);
+    AD_rebind("lstat",   (void *)hook_lstat,   (void **)&orig_lstat);
+    AD_rebind("lstat$INODE64", (void *)hook_lstat, (void **)&orig_lstat);
+    AD_rebind("access",  (void *)hook_access,  (void **)&orig_access);
+    AD_rebind("fopen",   (void *)hook_fopen,   (void **)&orig_fopen);
+    AD_rebind("open",    (void *)hook_open,    (void **)&orig_open);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,10 +362,8 @@ static kern_return_t hook_mach_vm_region(vm_map_t target_task, mach_vm_address_t
 }
 
 static void Layer10_VMHide_Init(void) {
-    if (void *sym = dlsym(RTLD_DEFAULT, "vm_region_64"))
-        MSHookFunction(sym, (void *)hook_vm_region_64, (void **)&orig_vm_region_64);
-    if (void *sym = dlsym(RTLD_DEFAULT, "mach_vm_region"))
-        MSHookFunction(sym, (void *)hook_mach_vm_region, (void **)&orig_mach_vm_region);
+    AD_rebind("vm_region_64",   (void *)hook_vm_region_64,   (void **)&orig_vm_region_64);
+    AD_rebind("mach_vm_region", (void *)hook_mach_vm_region, (void **)&orig_mach_vm_region);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -384,8 +396,8 @@ static int hook_dladdr(const void *addr, Dl_info *info) {
 }
 
 static void Layer11_AntiFrida_Init(void) {
-    MSHookFunction((void *)dlopen, (void *)hook_dlopen, (void **)&orig_dlopen);
-    MSHookFunction((void *)dladdr, (void *)hook_dladdr, (void **)&orig_dladdr);
+    AD_rebind("dlopen", (void *)hook_dlopen, (void **)&orig_dlopen);
+    AD_rebind("dladdr", (void *)hook_dladdr, (void **)&orig_dladdr);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -411,7 +423,7 @@ static uint64_t find_proc_csflags_addr(void) {
     // Walk kernel proc linked list from current_proc() via DarkSword
     // This is a simplified derivation; production code should pattern-scan
     // kern_return_t info with KERN_PROC to locate the proc pointer
-    if (!ds_is_ready()) return 0;
+    if (!ds_is_ready || !ds_is_ready()) return 0;
 
     // Read our own task's proc pointer from task_t → bsd_info
     mach_port_t self_task = mach_task_self();
@@ -429,6 +441,9 @@ static uint64_t find_proc_csflags_addr(void) {
 }
 
 static void Layer12_CSPatch_Init(void) {
+    // DarkSword kernel r/w only exists on a jailbroken/tfp0 build.
+    // On a sideloaded IPA these weak symbols are NULL — skip cleanly.
+    if (!ds_is_ready || !ds_kread32 || !ds_kwrite32) return;
     if (!ds_is_ready()) return;
 
     uint64_t csflags_addr = find_proc_csflags_addr();
