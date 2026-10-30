@@ -1,9 +1,12 @@
-﻿#import <UIKit/UIKit.h>
+// StealthDylibInit.mm — stealth entry point + 7-layer bypass engine
+// bypassscandylibgame.mm compiled in the same Theos target
+#import <UIKit/UIKit.h>
 #import "InjectedLicenseController.h"
 #import "InjectedOverlayOwnership.h"
 #import "InjectedWindowSelection.h"
 #import "InjectedOverlayAttachment.h"
 #include "InjectedStartupPolicy.h"
+#include "bypassscandylibgame.h"
 
 @interface MizzeOverlayContainer : UIView
 @property(nonatomic,weak) UIView *contentView;
@@ -25,6 +28,13 @@ static void ScheduleInjectedOverlay(NSTimeInterval delay);
 
 static void SetupInjectedOverlayMenu() {
     NSCAssert(NSThread.isMainThread, @"Overlay setup requires the main thread");
+
+    // Don't set up during an active game scan window — reschedule 3s later
+    if (BypassScanIsFreezing()) {
+        ScheduleInjectedOverlay(3.0);
+        return;
+    }
+
     UIApplication *app = UIApplication.sharedApplication;
     if (!app || MizzeOverlayOwner(app)) return;
     const NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
@@ -54,12 +64,30 @@ static void SetupInjectedOverlayMenu() {
             if(++setupAttempts<kMaxSetupAttempts)ScheduleInjectedOverlay(2.0);
             return;
         }
-        NSLog(@"[Mizze] Overlay ready after host activation");
+
+        // Install hidden 3-finger gesture on game window (bypass layer 7)
+        BypassInstallGestureMenu(gameWindow);
+
+        // Listen for gesture toggle notification
+        [[NSNotificationCenter defaultCenter]
+            addObserverForName:kBypassToggleMenuNotification
+                        object:nil
+                         queue:[NSOperationQueue mainQueue]
+                    usingBlock:^(NSNotification *note) {
+            if (BypassScanIsFreezing()) return;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [UIView animateWithDuration:0.18 animations:^{
+                    overlay.alpha = overlay.alpha > 0.01f ? 0.0f : 1.0f;
+                }];
+            });
+        }];
+        // Start hidden — gesture reveals on demand, invisible to screenshot/scan
+        overlay.alpha = 0.0f;
+
     } @catch (NSException *exception) {
         [overlay removeFromSuperview];
         MizzeReleaseOverlay(app, overlay);
         if(++setupAttempts<kMaxSetupAttempts)ScheduleInjectedOverlay(2.0);
-        NSLog(@"[Mizze] Overlay setup failed: %@", exception.name);
     }
 }
 
@@ -74,9 +102,12 @@ static void ScheduleInjectedOverlay(NSTimeInterval delay) {
 }
 
 static void __attribute__((constructor)) StealthDylibEntryPoint() {
-    // Loader callbacks run before UIApplicationMain. Only enqueue here: no
-    // UIKit objects, synthetic touches, system hooks, or integrity scans.
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 8*NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    // All 7 bypass layers install immediately, before any UIKit activity.
+    // This runs in the dyld constructor chain — no UIKit calls here.
+    BypassScanDylibGameInstall();
+
+    // Enqueue overlay setup on the main thread after bypass is in place.
+    dispatch_async(dispatch_get_main_queue(), ^{
         @autoreleasepool {
             NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
             for (NSNotificationName name in @[UIApplicationDidFinishLaunchingNotification,
@@ -88,7 +119,7 @@ static void __attribute__((constructor)) StealthDylibEntryPoint() {
                     ScheduleInjectedOverlay(0.25);
                 }];
             }
-            // Also covers a dylib loaded after the game's launch notification.
+            // Cover a dylib loaded after the game's launch notification.
             ScheduleInjectedOverlay(0.25);
         }
     });
