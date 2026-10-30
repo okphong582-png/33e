@@ -12,7 +12,23 @@ concurrency:
   group: mizze-toggle-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  menu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Theos and iOS SDK
+        uses: Randomblock1/theos-action@v1
+      - name: Build reference-style menu dylib
+        working-directory: apps/trollfools-mizze
+        run: bash devkit/build-menu.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-Reference-Menu
+          if-no-files-found: error
+          path: apps/trollfools-mizze/build-menu/*
   build:
+    needs: menu
     runs-on: macos-15
     timeout-minutes: 35
     steps:
@@ -22,6 +38,10 @@ jobs:
           xcode-version: latest-stable
       - name: Install signing helper
         run: brew install ldid
+      - uses: actions/download-artifact@v4
+        with:
+          name: Mizze-Reference-Menu
+          path: apps/trollfools-mizze/build-menu
       - name: Build and test Mizze app
         working-directory: apps/trollfools-mizze
         run: bash devkit/build-mizze.sh
@@ -34,6 +54,7 @@ jobs:
             apps/trollfools-mizze/build/Mizze-Toggle.tipa
             apps/trollfools-mizze/build/Mizze-Toggle.ipa
             apps/trollfools-mizze/build/Mizze-Toggle.sha256
+            apps/trollfools-mizze/build/package-verification.json
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4

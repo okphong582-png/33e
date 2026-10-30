@@ -56,6 +56,21 @@ final class FakeBackend: MizzeToggleBackend {
         let persisted = FakeBackend(); persisted.state = MizzeInjectionSnapshot(mizzeLoaded: false, injectedCount: 0, persistedCount: 2)
         _ = try MizzeToggleCoordinator(backend: persisted).toggle()
         check(!persisted.state.canRemove, "OFF also clears saved plugins")
-        print("PASS: \(checks) real Swift coordinator assertions; no device injection during tests")
+        let root = URL(fileURLWithPath: "/game/Game"),
+            framework = URL(fileURLWithPath: "/game/Frameworks/Unity.framework/Unity"),
+            payload = URL(fileURLWithPath: "/game/Frameworks/Mizze.dylib")
+        var live: [URL: [URL]] = [root: [framework], framework: [payload], payload: []]
+        let linked = try MizzeLiveLinks.contains(from: root, target: payload) { live[$0] ?? [] }
+        check(linked, "live framework injection is detected even when the original executable backup has no link")
+        live[framework] = []
+        let unlinkedFile = try MizzeLiveLinks.contains(from: root, target: payload) { live[$0] ?? [] }
+        check(!unlinkedFile, "a leftover payload file must not be reported as linked")
+        live[framework] = [root]
+        let cycle = try MizzeLiveLinks.contains(from: root, target: payload) { live[$0] ?? [] }
+        check(!cycle, "dependency cycles terminate")
+        live[framework] = [root, payload]
+        let cycleWithPayload = try MizzeLiveLinks.contains(from: root, target: payload) { live[$0] ?? [] }
+        check(cycleWithPayload, "a cycle does not hide a reachable live payload")
+        print("PASS: \(checks) Swift coordinator/live-graph assertions; no device injection during tests")
     }
 }

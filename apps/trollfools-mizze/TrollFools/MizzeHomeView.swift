@@ -4,7 +4,6 @@ import UIKit
 
 final class MizzeGameBackend: MizzeToggleBackend {
     static let targetID = "com.dts.freefireth"
-    static let payloadHash = "f53124a0e6a3f282d04220c14d3511ab755efb21ef1acd4a0a27efbe4f0e5188"
 
     private func checkedInjector() throws -> InjectorV3 {
         guard let proxy = LSApplicationProxy(forIdentifier: Self.targetID),
@@ -25,8 +24,7 @@ final class MizzeGameBackend: MizzeToggleBackend {
         let file = injector.bundleURL.appendingPathComponent("Frameworks/Mizze.dylib")
         var linked = false
         if FileManager.default.fileExists(atPath: file.path) {
-            linked = try injector.linkedDylibsRecursivelyOfMachO(injector.executableURL)
-                .contains { $0.standardizedFileURL == file.standardizedFileURL }
+            linked = try injector.hasLiveLink(to: file)
         }
         return MizzeInjectionSnapshot(mizzeLoaded: linked, injectedCount: injected.count, persistedCount: persisted.count)
     }
@@ -37,7 +35,9 @@ final class MizzeGameBackend: MizzeToggleBackend {
         else { throw MizzeToggleError.missingPayload }
         let bytes = try Data(contentsOf: payload)
         let hash = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-        guard hash == Self.payloadHash else { throw MizzeToggleError.invalidPayload }
+        guard let expected = Bundle.main.object(forInfoDictionaryKey: "MizzePayloadSHA256") as? String,
+              expected.count == 64, hash == expected
+        else { throw MizzeToggleError.invalidPayload }
         let injector = try checkedInjector()
         try injector.inject([payload], shouldPersist: false)
     }

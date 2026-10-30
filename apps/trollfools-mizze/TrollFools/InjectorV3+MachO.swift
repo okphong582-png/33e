@@ -10,6 +10,14 @@ import MachOKit
 import OrderedCollections
 
 extension InjectorV3 {
+    func hasLiveLink(to target: URL) throws -> Bool {
+        try MizzeLiveLinks.contains(from: executableURL, target: target) { file in
+            // Do not use linkedDylibsRecursivelyOfMachO here: it intentionally
+            // reads pre-injection backups when selecting an injection target.
+            try loadedDylibsOfMachO(file).compactMap { resolveLoadCommand($0) }
+        }
+    }
+
     func isMachO(_ target: URL) -> Bool {
         if (try? MachOKit.loadFromFile(url: target)) != nil {
             true

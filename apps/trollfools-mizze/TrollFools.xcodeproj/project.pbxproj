@@ -123,6 +123,7 @@
 		E20000000000000000000002 /* MizzeToggleState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000002 /* MizzeToggleState.swift */; };
 		E20000000000000000000003 /* MizzePayload.zip in Resources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000003 /* MizzePayload.zip */; };
 		E20000000000000000000004 /* MizzeLogo.jpg in Resources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000004 /* MizzeLogo.jpg */; };
+		E20000000000000000000006 /* MizzeToggleState.swift in CLI Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000002 /* MizzeToggleState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -642,6 +643,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E20000000000000000000006 /* MizzeToggleState.swift in CLI Sources */,
 				614C0C532D7C2E98007E9184 /* Execute.swift in Sources */,
 				614C0C542D7C2E98007E9184 /* InjectorV3+MachO.swift in Sources */,
 				614C0C552D7C2E98007E9184 /* InjectorV3+Metadata.swift in Sources */,

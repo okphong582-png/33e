@@ -1,5 +1,22 @@
 import Foundation
 
+enum MizzeLiveLinks {
+    /// Follow current on-disk images. An existing payload file by itself is
+    /// insufficient; it must be reachable from the live executable graph.
+    static func contains(from root: URL, target: URL,
+                         linkedFiles: (URL) throws -> [URL]) throws -> Bool {
+        let wanted = target.standardizedFileURL
+        var pending = [root.standardizedFileURL], visited = Set<URL>()
+        while let file = pending.popLast() {
+            if !visited.insert(file).inserted { continue }
+            if file == wanted { return true }
+            if visited.count > 1024 { throw CocoaError(.fileReadTooLarge) }
+            pending.append(contentsOf: try linkedFiles(file).map { $0.standardizedFileURL })
+        }
+        return false
+    }
+}
+
 struct MizzeInjectionSnapshot {
     let mizzeLoaded: Bool
     let injectedCount: Int
