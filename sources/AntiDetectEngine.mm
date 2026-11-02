@@ -22,6 +22,8 @@
 #import <sys/stat.h>
 #import <sys/param.h>
 #import <sys/sysctl.h>
+#import <sys/mount.h>   // statfs (Layer 17)
+#import <netdb.h>       // getaddrinfo (Layer 17)
 #import <mach/mach.h>
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
@@ -723,6 +725,108 @@ BOOL AntiDetect_IsInCooldown(void) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Layer 17: IL2CPP / modern-libc filesystem variants + telemetry DNS guard
+// ─────────────────────────────────────────────────────────────────────────────
+// Unity IL2CPP's System.IO and modern libc paths use the *at() syscalls plus
+// statfs / scandir / realpath / getattrlist rather than the classic stat/open.
+// An anti-cheat scanning through C# therefore slips past Layer 9 unless we also
+// rebind these. A conservative getaddrinfo guard blocks resolution of pure
+// detection-beacon hosts (NEVER game / login / CDN hosts — keep the list tight).
+
+// fstatat — stat relative to a directory fd (modern + IL2CPP System.IO)
+typedef int (*fstatat_f)(int, const char *, struct stat *, int);
+static fstatat_f orig_fstatat = nullptr;
+static int hook_fstatat(int fd, const char *path, struct stat *buf, int flag) {
+    if (should_hide_path(path)) { errno = ENOENT; return -1; }
+    return orig_fstatat(fd, path, buf, flag);
+}
+
+// faccessat
+typedef int (*faccessat_f)(int, const char *, int, int);
+static faccessat_f orig_faccessat = nullptr;
+static int hook_faccessat(int fd, const char *path, int mode, int flag) {
+    if (should_hide_path(path)) { errno = ENOENT; return -1; }
+    return orig_faccessat(fd, path, mode, flag);
+}
+
+// statfs — JB detection frequently inspects mount flags
+typedef int (*statfs_f)(const char *, struct statfs *);
+static statfs_f orig_statfs = nullptr;
+static int hook_statfs(const char *path, struct statfs *buf) {
+    if (should_hide_path(path)) { errno = ENOENT; return -1; }
+    return orig_statfs(path, buf);
+}
+
+// realpath — resolves symlinks (common JB probe)
+typedef char *(*realpath_f)(const char *, char *);
+static realpath_f orig_realpath = nullptr;
+static char *hook_realpath(const char *path, char *resolved) {
+    if (should_hide_path(path)) { errno = ENOENT; return nullptr; }
+    return orig_realpath(path, resolved);
+}
+
+// getattrlist — iOS attribute probe
+typedef int (*getattrlist_f)(const char *, void *, void *, size_t, unsigned long);
+static getattrlist_f orig_getattrlist = nullptr;
+static int hook_getattrlist(const char *path, void *al, void *ab, size_t absz, unsigned long opt) {
+    if (should_hide_path(path)) { errno = ENOENT; return -1; }
+    return orig_getattrlist(path, al, ab, absz, opt);
+}
+
+// scandir — directory enumeration alternative to readdir; strip hidden entries
+typedef int (*scandir_f)(const char *, struct dirent ***,
+                         int (*)(const struct dirent *),
+                         int (*)(const struct dirent **, const struct dirent **));
+static scandir_f orig_scandir = nullptr;
+static int hook_scandir(const char *dir, struct dirent ***namelist,
+                        int (*filter)(const struct dirent *),
+                        int (*compar)(const struct dirent **, const struct dirent **)) {
+    int n = orig_scandir(dir, namelist, filter, compar);
+    if (n <= 0 || !namelist || !*namelist) return n;
+    int w = 0;
+    for (int i = 0; i < n; i++) {
+        struct dirent *e = (*namelist)[i];
+        if (e && should_hide_dirent(e->d_name)) { free(e); continue; }
+        (*namelist)[w++] = e;
+    }
+    return w;  // shrunk count; freed entries are gone from the list
+}
+
+// Telemetry DNS guard — keep TIGHT. Only pure detection-beacon host substrings,
+// never game / login / CDN / DataDome challenge hosts (blocking those kills
+// connectivity). Add Penny's verified telemetry host here once you capture it.
+static const char *k_block_hosts[] = {
+    "frida", "objection",   // tooling beacons; never a real game host
+    // "telemetry.penny...",   // <- add verified Penny beacon host here
+    nullptr
+};
+typedef int (*getaddrinfo_f)(const char *, const char *, const struct addrinfo *, struct addrinfo **);
+static getaddrinfo_f orig_getaddrinfo = nullptr;
+static int hook_getaddrinfo(const char *host, const char *serv,
+                            const struct addrinfo *hints, struct addrinfo **res) {
+    if (host) {
+        for (int i = 0; k_block_hosts[i]; i++) {
+            if (strstr(host, k_block_hosts[i])) return EAI_NONAME;
+        }
+    }
+    return orig_getaddrinfo(host, serv, hints, res);
+}
+
+static void Layer17_IL2CPPHide_Init(void) {
+    AD_rebind("fstatat",          (void *)hook_fstatat,     (void **)&orig_fstatat);
+    AD_rebind("fstatat$INODE64",  (void *)hook_fstatat,     (void **)&orig_fstatat);
+    AD_rebind("faccessat",        (void *)hook_faccessat,   (void **)&orig_faccessat);
+    AD_rebind("statfs",           (void *)hook_statfs,      (void **)&orig_statfs);
+    AD_rebind("statfs$INODE64",   (void *)hook_statfs,      (void **)&orig_statfs);
+    AD_rebind("realpath",         (void *)hook_realpath,    (void **)&orig_realpath);
+    AD_rebind("realpath$DARWIN_EXTSN", (void *)hook_realpath,(void **)&orig_realpath);
+    AD_rebind("getattrlist",      (void *)hook_getattrlist, (void **)&orig_getattrlist);
+    AD_rebind("scandir",          (void *)hook_scandir,     (void **)&orig_scandir);
+    AD_rebind("scandir$INODE64",  (void *)hook_scandir,     (void **)&orig_scandir);
+    AD_rebind("getaddrinfo",      (void *)hook_getaddrinfo, (void **)&orig_getaddrinfo);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Public entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -737,6 +841,7 @@ void AntiDetectInstall(void) {
     Layer12_CSPatch_Init();   // no-op if DarkSword not ready yet
     Layer13_NetworkScrub_Init();
     Layer14_JBHide_Init();
+    Layer17_IL2CPPHide_Init();   // IL2CPP/modern FS variants + telemetry DNS guard
     // Layers 15/16 are stateless — no init needed, called per-frame
 
     // Re-apply CS patch after DarkSword initializes (may be delayed)
