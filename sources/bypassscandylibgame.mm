@@ -417,7 +417,10 @@ void BypassScanDylibGameInstall(void) {
             BypassLayer1::Install();    // ptrace hook
             BypassLayer2::Install();    // sysctl hook
             BypassLayer3::Install();    // dyld image scrub
-            BypassLayer4::Install();    // LC_LOAD_DYLIB spoof
+            // BypassLayer4::Install(); // DISABLED — LC_LOAD_DYLIB spoof assumes
+            //   the old inject method (added LC). With slot injection the dylib
+            //   loads via the existing Mizze.dylib weak command, so there is no
+            //   name to spoof; the vm_protect+strncpy write crashed launch.
         });
 
         // Receipt spoof needs main queue + file system
@@ -427,7 +430,7 @@ void BypassScanDylibGameInstall(void) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC),
                        gBypassQueue, ^{
             BypassLayer3::ScrubDyldImageList();
-            BypassLayer4::SpoofLoadCommand();
+            // BypassLayer4::SpoofLoadCommand(); // DISABLED (see above)
         });
 
         // Layers 8–16: hash spoof, FS hide, VM hide, anti-Frida, CS patch,

@@ -834,7 +834,11 @@ void AntiDetectInstall(void) {
     // Must run after BypassScanDylibGameInstall() so dyld image list is clean
     init_dylib_range();
 
-    Layer8_HashSpoof_Init();
+    // Layer8_HashSpoof_Init();  // DISABLED — assumes the old inject method that
+    //   added one LC_LOAD_DYLIB (g_orig_ncmds = ncmds-1). With slot injection the
+    //   main binary is UNCHANGED, so those offsets are wrong and the vm_protect
+    //   RWX + header write (W^X violation on iOS) crashed the game at launch.
+    //   Not needed anyway: the binary isn't modified, so its hash already matches.
     Layer9_FSHide_Init();
     Layer10_VMHide_Init();
     Layer11_AntiFrida_Init();
