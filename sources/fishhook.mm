@@ -93,7 +93,22 @@ static void perform_rebinding_with_section(struct rebindings_entry *rebindings,
   vm_prot_t oldProtection = VM_PROT_READ;
   if (isDataConst) {
     oldProtection = get_protection(indirect_symbol_bindings);
-    mprotect(indirect_symbol_bindings, section->size, PROT_READ | PROT_WRITE);
+    // On modern iOS (arm64e, shared-cache dylibs) plain mprotect on __DATA_CONST
+    // fails, and the later write then faults (KERN_PROTECTION_FAILURE) — this was
+    // the launch crash. vm_protect with VM_PROT_COPY forces copy-on-write and
+    // succeeds where mprotect cannot. If it STILL fails, skip this section rather
+    // than writing to a read-only page.
+    kern_return_t _kr = vm_protect(mach_task_self(),
+                                   (vm_address_t)indirect_symbol_bindings,
+                                   section->size, 0,
+                                   VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
+    if (_kr != KERN_SUCCESS) {
+      _kr = vm_protect(mach_task_self(), (vm_address_t)indirect_symbol_bindings,
+                       section->size, 0, VM_PROT_READ | VM_PROT_WRITE);
+      if (_kr != KERN_SUCCESS) {
+        return;  // cannot make writable — do NOT write, avoid the crash
+      }
+    }
   }
   for (uint i = 0; i < section->size / sizeof(void *); i++) {
     uint32_t symtab_index = indirect_symbol_indices[i];
@@ -122,23 +137,28 @@ static void perform_rebinding_with_section(struct rebindings_entry *rebindings,
   symbol_loop:;
   }
   if (isDataConst) {
-    int protection = 0;
-    if (oldProtection & VM_PROT_READ) {
-      protection |= PROT_READ;
-    }
-    if (oldProtection & VM_PROT_WRITE) {
-      protection |= PROT_WRITE;
-    }
-    if (oldProtection & VM_PROT_EXECUTE) {
-      protection |= PROT_EXEC;
-    }
-    mprotect(indirect_symbol_bindings, section->size, protection);
+    // Restore the original protection via vm_protect (matches the writable
+    // change above; mprotect may not undo a COPY mapping cleanly).
+    vm_protect(mach_task_self(), (vm_address_t)indirect_symbol_bindings,
+               section->size, 0, oldProtection);
   }
 }
+
+#ifndef MH_DYLIB_IN_CACHE
+#define MH_DYLIB_IN_CACHE 0x80000000
+#endif
 
 static void rebind_symbols_for_image(struct rebindings_entry *rebindings,
                                      const struct mach_header *header,
                                      intptr_t slide) {
+  // Skip dylibs that live in the dyld shared cache (all system libraries).
+  // Their __DATA_CONST cannot be made writable on modern iOS, and we only need
+  // to rebind the app's own images (main binary, UnityFramework, our dylib) —
+  // that is where the game's detection code calls these symbols from.
+  if (header->flags & MH_DYLIB_IN_CACHE) {
+    return;
+  }
+
   Dl_info info;
   if (dladdr(header, &info) == 0) {
     return;
