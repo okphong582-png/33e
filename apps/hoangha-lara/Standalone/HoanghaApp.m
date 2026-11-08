@@ -1,4 +1,6 @@
 #import <UIKit/UIKit.h>
+#import <AVFAudio/AVFAudio.h>
+#import <unistd.h>
 #import <sys/sysctl.h>
 #import "darksword.h"
 #import "offsets.h"
@@ -19,6 +21,8 @@
 @property(nonatomic) BOOL offsetsReady;
 @property(nonatomic) BOOL kernelAttempted;
 @property(nonatomic, strong) NSURL *journalURL;
+@property(atomic) BOOL floatingRunning;
+@property(nonatomic, strong) AVAudioPlayer *keepAlivePlayer;
 @end
 
 static __weak HoanghaViewController *HHScreen;
@@ -62,7 +66,7 @@ static void HHLog(const char *message) {
     self.title = @"Hoangha";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
-                       [NSString stringWithFormat:@"Hoangha-v1.3-%@.log", NSUUID.UUID.UUIDString]];
+                       [NSString stringWithFormat:@"Hoangha-v1.4-%@.log", NSUUID.UUID.UUIDString]];
     [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
@@ -76,7 +80,7 @@ static void HHLog(const char *message) {
     title.accessibilityTraits |= UIAccessibilityTraitHeader;
 
     self.statusLabel = [UILabel new];
-    self.statusLabel.text = @"Nhấn Start để hiện chữ lớn giữa màn hình.";
+    self.statusLabel.text = @"Nhấn Start để hiện nút logo. Kéo để di chuyển, chạm để mở menu.";
     self.statusLabel.numberOfLines = 0;
     self.statusLabel.textAlignment = NSTextAlignmentCenter;
     self.statusLabel.textColor = UIColor.secondaryLabelColor;
@@ -250,43 +254,104 @@ static void HHLog(const char *message) {
     [self presentViewController:share animated:YES completion:nil];
 }
 
+- (void)startKeepAlive {
+    NSError *error = nil;
+    AVAudioSession *audio = AVAudioSession.sharedInstance;
+    if (![audio setCategory:AVAudioSessionCategoryPlayback mode:AVAudioSessionModeDefault
+                   options:AVAudioSessionCategoryOptionMixWithOthers error:&error] ||
+        ![audio setActive:YES error:&error]) {
+        [self appendLog:[@"Không bật được chế độ nền: " stringByAppendingString:error.localizedDescription ?: @""]];
+        return;
+    }
+    uint32_t sampleRate=8000, samples=8000, dataBytes=samples*2, riffSize=36+dataBytes;
+    uint32_t fmtSize=16, byteRate=sampleRate*2;
+    uint16_t format=1, channels=1, alignment=2, bits=16;
+    NSMutableData *wav=[NSMutableData data];
+    [wav appendBytes:"RIFF" length:4]; [wav appendBytes:&riffSize length:4];
+    [wav appendBytes:"WAVEfmt " length:8]; [wav appendBytes:&fmtSize length:4];
+    [wav appendBytes:&format length:2]; [wav appendBytes:&channels length:2];
+    [wav appendBytes:&sampleRate length:4]; [wav appendBytes:&byteRate length:4];
+    [wav appendBytes:&alignment length:2]; [wav appendBytes:&bits length:2];
+    [wav appendBytes:"data" length:4]; [wav appendBytes:&dataBytes length:4];
+    [wav appendData:[NSData dataWithBytesNoCopy:calloc(1,dataBytes) length:dataBytes freeWhenDone:YES]];
+    self.keepAlivePlayer=[[AVAudioPlayer alloc] initWithData:wav error:&error];
+    self.keepAlivePlayer.numberOfLoops=-1;
+    self.keepAlivePlayer.volume=0;
+    [self.keepAlivePlayer prepareToPlay];
+    if (![self.keepAlivePlayer play]) [self appendLog:@"Chế độ nền chưa chạy; nút có thể ngừng phản hồi khi app bị treo nền."];
+}
+
 - (void)performOverlay:(BOOL)show {
-    if (self.busy) return;
-    self.busy = YES;
-    self.startButton.enabled = NO;
-    self.stopButton.enabled = NO;
+    if (!show && self.floatingRunning) {
+        self.floatingRunning=NO;
+        self.busy=YES;
+        self.startButton.enabled=NO;
+        self.stopButton.enabled=NO;
+        [self.spinner startAnimating];
+        [self setStatus:@"Đang tắt nút nổi và đóng phiên…"];
+        return;
+    }
+    if (self.busy || self.floatingRunning) return;
+    self.busy=YES;
+    self.startButton.enabled=NO;
+    self.stopButton.enabled=NO;
     [self.spinner startAnimating];
+    [self startKeepAlive];
     dispatch_async(self.operationQueue, ^{
         @autoreleasepool {
             if ([self prepareRuntime]) {
                 [self setStatus:@"Đang kết nối SpringBoard…"];
-                RemoteCall *session = [[RemoteCall alloc] initWithProcess:@"SpringBoard" useMigFilterBypass:NO];
+                RemoteCall *session=[[RemoteCall alloc] initWithProcess:@"SpringBoard" useMigFilterBypass:NO];
                 if (!session) {
                     [self setStatus:[RemoteCall lastInitError] ?: @"Không mở được phiên SpringBoard."];
                 } else {
-                    [self setStatus:show ? @"Đã kết nối SpringBoard; đang tạo chữ qua NSInvocation…" : @"Đang ẩn chữ qua NSInvocation…"];
-                    BOOL success = show ? hoangha_overlay_show(session) : hoangha_overlay_hide(session);
-                    NSString *error = hoangha_overlay_last_error();
-                    // The static label is retained by SpringBoard; it needs no app-side update loop.
-                    [self setStatus:@"Đang đóng phiên RemoteCall…"];
-                    int cleanup = [session destroyRemoteCall];
-                    if (success) {
-                        [self setStatus:show ? @"Đã hiện hoangha ở giữa màn hình. Bạn có thể về Home." : @"Đã ẩn chữ hoangha."];
-                    } else {
-                        [self setStatus:error.length ? error : @"SpringBoard chưa hoàn tất yêu cầu."];
+                    NSURL *url=[NSBundle.mainBundle URLForResource:@"bubble-logo" withExtension:@"png"];
+                    NSData *logo=url ? [NSData dataWithContentsOfURL:url] : nil;
+                    [self setStatus:@"Đang tạo nút logo và menu nhỏ…"];
+                    BOOL success=show ? hoangha_floating_start(session,logo) : hoangha_overlay_hide(session);
+                    if (show && success) {
+                        self.floatingRunning=YES;
+                        [self setStatus:@"Đã hiện nút logo. Kéo để di chuyển, chạm để mở menu."];
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            self.busy=NO;
+                            self.startButton.enabled=NO;
+                            self.stopButton.enabled=YES;
+                            [self.spinner stopAnimating];
+                        });
+                        while (self.floatingRunning) {
+                            @autoreleasepool {
+                                if (!hoangha_floating_tick(session)) {
+                                    self.floatingRunning=NO;
+                                    success=NO;
+                                    break;
+                                }
+                            }
+                            usleep(50000);
+                        }
                     }
-                    if (cleanup != 0) [self appendLog:@"Phiên RemoteCall chưa dọn xong; xem log Lara."];
+                    NSString *error=hoangha_overlay_last_error();
+                    if (!hoangha_floating_stop(session)) success=NO;
+                    [self setStatus:@"Đang đóng phiên RemoteCall…"];
+                    [session destroyRemoteCall];
+                    if (success) [self setStatus:@"Đã tắt nút nổi và menu."];
+                    else [self setStatus:error.length ? error : @"Phiên nút nổi chưa hoạt động. Xem Log để kiểm tra."];
                 }
             }
             dispatch_async(dispatch_get_main_queue(), ^{
-                self.busy = NO;
-                self.startButton.enabled = YES;
-                self.stopButton.enabled = YES;
+                self.floatingRunning=NO;
+                self.busy=NO;
+                self.startButton.enabled=YES;
+                self.stopButton.enabled=YES;
                 [self.spinner stopAnimating];
+                [self.keepAlivePlayer stop];
+                self.keepAlivePlayer=nil;
+                [AVAudioSession.sharedInstance setActive:NO
+                    withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
             });
         }
     });
 }
+
 @end
 
 @interface HoanghaAppDelegate : UIResponder <UIApplicationDelegate>

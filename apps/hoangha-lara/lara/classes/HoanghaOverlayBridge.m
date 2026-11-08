@@ -3,6 +3,7 @@
 #import <objc/runtime.h>
 #import <stdlib.h>
 #import <math.h>
+#import <string.h>
 
 static NSString *HHLastError = @"";
 static const NSInteger HHLabelTag = 0x484F414E;
@@ -278,3 +279,5 @@ bool hoangha_overlay_hide(RemoteCall *session) {
         return success && session.lastError.length == 0;
     }
 }
+
+#include "HoanghaFloatingBridge.inc"
