@@ -9,9 +9,10 @@ static struct {
     uint64_t app, scene, roots, bubble, menu, pan, flags, espSwitch, statusLabel, canvas, shape, rectangles;
     NSInteger orientation;
     CGSize fixedScreen;
-    BOOL espEnabled;
+    BOOL espEnabled, canvasVisible;
+    CGRect previousRectangles[32];NSUInteger previousCount;
     uint64_t perform, invoke, setArgument, getReturn;
-    HHFastCall panState, translation, move;
+    HHFastCall panState, translation, move, menuHidden, espState, bubbleBounds, menuBounds;
     CGSize screen;
     CGPoint position, dragBase;
     BOOL dragging, menuVisible, active;
@@ -71,6 +72,16 @@ static BOOL HHRunCall(RemoteCall *s, HHFastCall call, void *result) {
         return !s.lastError.length && [s remoteRead:call.scratch to:result size:call.length];
     }
     return YES;
+}
+
+static BOOL HHMenuHidden(RemoteCall *s,BOOL hidden){
+    if(![s remote_write:HHFloating.menuHidden.scratch+64 from:&hidden size:sizeof(hidden)])return NO;
+    remote_msg(s,HHFloating.menuHidden.invocation,HHFloating.setArgument,HHFloating.menuHidden.scratch+64,2,0,0);
+    return HHRunCall(s,HHFloating.menuHidden,NULL);
+}
+static BOOL HHCachedBounds(RemoteCall *s,HHFastCall call,CGSize expected){
+    CGRect bounds=CGRectZero;if(!HHRunCall(s,call,&bounds))return NO;
+    return isfinite(bounds.size.width)&&isfinite(bounds.size.height)&&fabs(bounds.size.width-expected.width)<2&&fabs(bounds.size.height-expected.height)<2;
 }
 
 static CGPoint HHPhysicalPoint(CGPoint logical) {
@@ -288,7 +299,12 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHFloating.translation = HHPrepareCall(s, HHFloating.pan, "translationInView:", &nilView, sizeof(nilView));
     CGPoint bubbleCenter = CGPointMake(HHFloating.position.x+29,HHFloating.position.y+29);
     HHFloating.move = HHPrepareCall(s, HHFloating.bubble, "setCenter:", &bubbleCenter, sizeof(bubbleCenter));
-    if (!HHFloating.panState.invocation || !HHFloating.translation.invocation || !HHFloating.move.invocation) return false;
+    BOOL hidden=YES;
+    HHFloating.menuHidden=HHPrepareCall(s,HHFloating.menu,"setHidden:",&hidden,sizeof(hidden));
+    HHFloating.espState=HHPrepareCall(s,HHFloating.espSwitch,"isOn",NULL,0);
+    HHFloating.bubbleBounds=HHPrepareCall(s,HHFloating.bubble,"bounds",NULL,0);
+    HHFloating.menuBounds=HHPrepareCall(s,HHFloating.menu,"bounds",NULL,0);
+    if (!HHFloating.panState.invocation || !HHFloating.translation.invocation || !HHFloating.move.invocation||!HHFloating.menuHidden.invocation||!HHFloating.espState.invocation||!HHFloating.bubbleBounds.invocation||!HHFloating.menuBounds.invocation) return false;
     HHSend(s, HHFloating.menu, "setHidden:", 1, 0);
     HHSend(s, HHFloating.bubble, "setHidden:", 0, 0);
     HHFloating.active = !s.lastError.length && HHSmallWindowIsBounded(s, HHFloating.bubble, CGSizeMake(58,58));
@@ -298,9 +314,9 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
 bool hoangha_floating_tick(RemoteCall *s) {
     if (!HHFloating.active || s.lastError.length) return false;
     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
-    if (now-HHFloating.lastMetrics>1.0) {
+    if (now-HHFloating.lastMetrics>5.0) {
         HHFloating.lastMetrics=now;
-        if (!HHSmallWindowIsBounded(s,HHFloating.bubble,CGSizeMake(58,58))) return false;
+        if (!HHCachedBounds(s,HHFloating.bubbleBounds,CGSizeMake(58,58))) {HHSend(s,HHFloating.bubble,"setHidden:",1,0);return false;}
 
     }
     uint8_t flags[4];
@@ -309,16 +325,16 @@ bool hoangha_floating_tick(RemoteCall *s) {
         uint8_t clear=1;
         if (![s remote_write:HHFloating.flags+i from:&clear size:1]) return false;
     }
-    if(flags[3]==0)HHFloating.espEnabled=HHSend(s,HHFloating.espSwitch,"isOn",0,0)!=0;
+    if(flags[3]==0){BOOL enabled=NO;if(!HHRunCall(s,HHFloating.espState,&enabled))return false;HHFloating.espEnabled=enabled;}
     if (flags[0]==0) {
         HHFloating.menuVisible = !HHFloating.menuVisible;
-        HHSend(s, HHFloating.menu, "setHidden:", !HHFloating.menuVisible, 0);
-        if (HHFloating.menuVisible && !HHSmallWindowIsBounded(s, HHFloating.menu,
-            CGSizeMake(MIN(280,HHFloating.screen.width-24),180))) return false;
+        if(!HHMenuHidden(s,!HHFloating.menuVisible))return false;
+        if (HHFloating.menuVisible && !HHCachedBounds(s, HHFloating.menuBounds,
+            CGSizeMake(MIN(280,HHFloating.screen.width-24),180))) {HHMenuHidden(s,YES);return false;}
     }
     if (flags[1]==0) {
         HHFloating.menuVisible=NO;
-        HHSend(s, HHFloating.menu, "setHidden:", 1, 0);
+        if(!HHMenuHidden(s,YES))return false;
     }
     if (flags[2]==0 || HHFloating.dragging) {
         uint64_t state=0; CGPoint translation=CGPointZero;
@@ -342,8 +358,8 @@ bool hoangha_floating_stop(RemoteCall *s) {
     if (!HHFloating.app) return false;
     HHRemoveOld(s, HHBubbleKey); HHRemoveOld(s, HHMenuKey);HHRemoveOld(s,HHCanvasKey);
     if(HHFloating.rectangles&&!s.lastError.length)RemoteArbCall(s,free,HHFloating.rectangles);
-    HHFastCall calls[3]={HHFloating.panState,HHFloating.translation,HHFloating.move};
-    for (NSUInteger i=0;i<3;i++) if (calls[i].scratch && !s.lastError.length) RemoteArbCall(s, free, calls[i].scratch);
+    HHFastCall calls[]={HHFloating.panState,HHFloating.translation,HHFloating.move,HHFloating.menuHidden,HHFloating.espState,HHFloating.bubbleBounds,HHFloating.menuBounds};
+    for (NSUInteger i=0;i<sizeof(calls)/sizeof(calls[0]);i++) if (calls[i].scratch && !s.lastError.length) RemoteArbCall(s, free, calls[i].scratch);
     HHAssociate(s, HHRootsKey, 0);
     BOOL okay=!s.lastError.length;
     memset(&HHFloating,0,sizeof(HHFloating));

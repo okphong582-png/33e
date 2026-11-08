@@ -18,7 +18,7 @@ void hoangha_floating_layout(RemoteCall *s,CGSize size,NSInteger orientation){
  HHPlaceWindow(s,HHFloating.bubble,(CGRect){HHFloating.position,{58,58}});
  CGFloat width=MIN(280,size.width-24);
  HHPlaceWindow(s,HHFloating.menu,CGRectMake((size.width-width)/2,(size.height-180)/2,width,180));
- if(HHFloating.canvas){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,size});}
+ if(HHFloating.canvas){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,size});}
 }
 BOOL hoangha_floating_esp_enabled(void){return HHFloating.active&&HHFloating.espEnabled;}
 CGSize hoangha_floating_size(void){return HHFloating.screen;}
@@ -33,7 +33,8 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
   if(!isfinite(r.origin.x)||!isfinite(r.origin.y)||!isfinite(r.size.width)||!isfinite(r.size.height)||r.size.width<1||r.size.height<1||r.size.width>HHFloating.screen.width*2||r.size.height>HHFloating.screen.height*2)continue;
   rectangles[count++]=r;if(count==32)break;
  }
- if(!count){if(HHFloating.canvas){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);}return !s.lastError.length;}
+ if(!count){if(HHFloating.canvasVisible){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;}return !s.lastError.length;}
+ if(HHFloating.canvasVisible&&HHFloating.previousCount==count&&!memcmp(rectangles,HHFloating.previousRectangles,count*sizeof(CGRect)))return YES;
  if(!HHFloating.canvas){
   uint64_t root=0;
   HHFloating.canvas=HHCreateSmallWindow(s,(CGRect){CGPointZero,HHFloating.screen},&root);
@@ -58,5 +59,7 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
  RemoteArbCall(s,CGPathAddRects,path,0,HHFloating.rectangles,count);
  HHSend(s,HHFloating.shape,"setPath:",path,0);
  if(!s.lastError.length)RemoteArbCall(s,CGPathRelease,path);
- HHSend(s,HHFloating.canvas,"setHidden:",0,0);return !s.lastError.length;
+ if(!HHFloating.canvasVisible)HHSend(s,HHFloating.canvas,"setHidden:",0,0);
+ if(!s.lastError.length){HHFloating.canvasVisible=YES;HHFloating.previousCount=count;memcpy(HHFloating.previousRectangles,rectangles,count*sizeof(CGRect));}
+ return !s.lastError.length;
 }

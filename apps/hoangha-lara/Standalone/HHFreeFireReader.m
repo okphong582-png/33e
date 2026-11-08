@@ -34,6 +34,7 @@ static bool HHGameRead(void *context,uint64_t address,void *buffer,size_t size){
 @property(nonatomic) uint64_t base,process;
 @property(nonatomic) CFAbsoluteTime retryAt;
 @property(nonatomic) BOOL profileChecked,profileSupported;
+@property(nonatomic) BOOL connectionAttempted;
 @end
 @implementation HHFreeFireReader
 - (instancetype)init{if((self=[super init]))_status=@"Đang chờ FF TH";return self;}
@@ -41,10 +42,12 @@ static bool HHGameRead(void *context,uint64_t address,void *buffer,size_t size){
  CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();if(now<self.retryAt)return self.session!=nil;
  self.retryAt=now+2;
  uint64_t process=proc_find_by_name("FreeFire");
- if(self.session&&(!process||process!=self.process||self.session.lastError.length)){[self disconnect];self.retryAt=now+3;return NO;}
+ if(self.session&&(!process||process!=self.process||self.session.lastError.length)){[self disconnect];self.connectionAttempted=YES;self.status=@"Phiên game đã dừng; tắt/bật ESP để thử lại";self.retryAt=now+3;return NO;}
  if(!process){self.status=@"Mở FF TH để kết nối";return NO;}
  if(!self.session){
+  if(self.connectionAttempted){self.status=@"Kết nối lỗi; tắt/bật ESP để thử lại";return NO;}
   if(!ds_is_ready()){self.status=@"Phiên Lara chưa sẵn sàng";return NO;}
+  self.connectionAttempted=YES;
   self.session=[[RemoteCall alloc] initWithProcess:@"FreeFire" useMigFilterBypass:NO];
   if(!self.session){self.status=[RemoteCall lastInitError]?:@"Chưa kết nối được FF TH";self.retryAt=now+5;return NO;}
   self.process=process;self.status=@"Đã kết nối FF TH";
@@ -64,6 +67,6 @@ static bool HHGameRead(void *context,uint64_t address,void *buffer,size_t size){
 }
 - (void)disconnect{
  RemoteCall *session=self.session;self.session=nil;
- if(session)[session destroyRemoteCall];self.base=0;self.process=0;self.profileChecked=NO;self.profileSupported=NO;self.status=@"Đang chờ FF TH";
+ if(session)[session destroyRemoteCall];self.base=0;self.process=0;self.profileChecked=NO;self.profileSupported=NO;self.connectionAttempted=NO;self.status=@"Đang chờ FF TH";
 }
 @end

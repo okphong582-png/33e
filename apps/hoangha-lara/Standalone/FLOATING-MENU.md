@@ -39,3 +39,28 @@ Usage: Bắt đầu → open FF TH → tap the floating logo → enable ESP Box 
 match. If the UUID does not match, use the exact supported game build/profile;
 there is no automatic reuse of offsets for a different version. Dừng hides all
 windows and ends both sessions.
+
+## 1.5.1 — startup and UI scheduling fix
+
+The supplied FreeFire crash log records CODESIGNING / Invalid Page in
+libsystem_kernel __getpid during launch (about 3.5 seconds after launch).
+The image UUID matches the FF TH 1.132.1 reader. This is not evidence of a
+bad box coordinate or an unsupported game UUID, and the exact protection/PAC
+failure is not diagnosed solely by that stack.
+
+Version 1.5 incorrectly opened a game RemoteCall session even with ESP disabled.
+1.5.1 creates no game reader/session or geometry calls until ESP is explicitly
+enabled. Disabling ESP clears the canvas and disconnects that reader. Failed
+connections are not continuously recreated; toggle off/on to start a new attempt.
+
+The default menu loop polls shared flags at 10 Hz. Interactive calls for menu
+visibility and control state reuse prepared invocations. Bounds checks run once
+per five seconds, box sampling at 5 Hz and active-game geometry at 0.5 Hz. An
+empty/unchanged canvas does not issue repeated visibility/path writes.
+
+The fix removes the demonstrated automatic game-connection path during Start.
+It does not repair the underlying RemoteCall / Invalid Page fault when ESP is
+explicitly enabled. Physical-device confirmation of Start/menu stability and
+further investigation of enabled ESP are still required. Kernel and RemoteCall
+implementations are unchanged. The scheduler tests prove disabled ESP executes
+zero game work in the app loop; they do not execute a protected iOS process.

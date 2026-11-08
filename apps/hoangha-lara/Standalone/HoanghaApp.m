@@ -7,6 +7,7 @@
 #import "utils.h"
 #import "HoanghaOverlayBridge.h"
 #import "HHFreeFireReader.h"
+#import "HHGameSchedule.h"
 #import <CommonCrypto/CommonDigest.h>
 #import "xpf.h"
 
@@ -67,7 +68,7 @@ static void HHLog(const char *message) {
     self.title = @"Hoangha";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
-                       [NSString stringWithFormat:@"Hoangha-v1.5-%@.log", NSUUID.UUID.UUIDString]];
+                       [NSString stringWithFormat:@"Hoangha-v1.5.1-%@.log", NSUUID.UUID.UUIDString]];
     [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
@@ -319,28 +320,37 @@ static void HHLog(const char *message) {
                             self.stopButton.enabled=YES;
                             [self.spinner stopAnimating];
                         });
-                        HHFreeFireReader *reader=[HHFreeFireReader new];
-                        CFAbsoluteTime lastSample=0,lastGeometry=0;BOOL gameVisible=NO;
+                        HHFreeFireReader *reader=nil;
+                        HHGameSchedule schedule={0};BOOL gameVisible=NO;
                         NSString *lastStatus=nil;
                         while (self.floatingRunning) {
                             @autoreleasepool {
                                 if (!hoangha_floating_tick(session)) {self.floatingRunning=NO;success=NO;break;}
-                                CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
-                                if(now-lastSample>=0.1){
-                                    lastSample=now;[reader connectIfNeeded];
-                                    if(now-lastGeometry>=0.5){
-                                        lastGeometry=now;CGSize size=CGSizeZero;NSInteger orientation=0;
+                                BOOL enabled=hoangha_floating_esp_enabled();
+                                HHGameWork work=hh_game_work(&schedule,enabled,CFAbsoluteTimeGetCurrent());
+                                if(work.disconnect){
+                                    hoangha_floating_boxes(session,@[]);
+                                    [reader disconnect];reader=nil;gameVisible=NO;
+                                    [self setStatus:@"ESP đã tắt; đã đóng kết nối game"];
+                                }
+                                if(work.changed&&enabled){
+                                    [self setStatus:@"Bạn đã bật ESP; bắt đầu kết nối FF TH"];
+                                    reader=[HHFreeFireReader new];
+                                }
+                                if(work.sample){
+                                    [reader connectIfNeeded];
+                                    if(work.geometry){
+                                        CGSize size=CGSizeZero;NSInteger orientation=0;
                                         gameVisible=reader.session&&hoangha_game_geometry(reader.session,&size,&orientation);
                                         if(gameVisible)hoangha_floating_layout(session,size,orientation);
                                     }
-                                    BOOL enabled=hoangha_floating_esp_enabled();
-                                    NSArray *boxes=enabled&&gameVisible?[reader boxesForSize:hoangha_floating_size()]:@[];
+                                    NSArray *boxes=gameVisible?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     if(!hoangha_floating_boxes(session,boxes)){success=NO;self.floatingRunning=NO;break;}
-                                    NSString *status=enabled?reader.status:@"ESP Box đang tắt";
-                                    if(![lastStatus isEqualToString:status]){hoangha_floating_status(session,status);[self setStatus:status];lastStatus=status;}
                                 }
+                                NSString *status=enabled?reader.status:@"ESP Box đang tắt · chưa kết nối game";
+                                if(![lastStatus isEqualToString:status]){hoangha_floating_status(session,status);[self setStatus:status];lastStatus=status;}
                             }
-                            usleep(50000);
+                            usleep(100000);
                         }
                         [reader disconnect];
                     }
