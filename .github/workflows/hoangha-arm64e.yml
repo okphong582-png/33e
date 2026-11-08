@@ -1,0 +1,32 @@
+name: Hoangha arm64e
+
+on:
+  push:
+    branches: ['codex/hoangha-arm64e-20261108212650']
+    paths:
+      - 'apps/hoangha-lara/**'
+      - '.github/workflows/hoangha-arm64e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    defaults:
+      run:
+        working-directory: apps/hoangha-lara
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with Apple arm64e ABI
+        run: bash Standalone/build-macos.sh
+      - name: Upload IPA and build report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hoangha-arm64e
+          path: |
+            apps/hoangha-lara/exports/Hoangha-arm64e-*/Hoangha-Lara-arm64e.ipa
+            apps/hoangha-lara/exports/Hoangha-arm64e-*/architecture.json
+            apps/hoangha-lara/exports/Hoangha-arm64e-*/build.log
