@@ -6,7 +6,10 @@ typedef struct {
 } HHFastCall;
 
 static struct {
-    uint64_t app, scene, roots, bubble, menu, pan, flags;
+    uint64_t app, scene, roots, bubble, menu, pan, flags, espSwitch, statusLabel, canvas, shape, rectangles;
+    NSInteger orientation;
+    CGSize fixedScreen;
+    BOOL espEnabled;
     uint64_t perform, invoke, setArgument, getReturn;
     HHFastCall panState, translation, move;
     CGSize screen;
@@ -18,6 +21,7 @@ static struct {
 static const char *HHBubbleKey = "hoanghaFloatingBubble_v14";
 static const char *HHMenuKey = "hoanghaFloatingMenu_v14";
 static const char *HHRootsKey = "hoanghaFloatingRoots_v14";
+static const char *HHCanvasKey = "hoanghaESPBoxCanvas_v15";
 
 static void HHAssociate(RemoteCall *s, const char *key, uint64_t value) {
     RemoteArbCall(s, objc_setAssociatedObject, HHFloating.app, remote_sel(s, key),
@@ -69,11 +73,22 @@ static BOOL HHRunCall(RemoteCall *s, HHFastCall call, void *result) {
     return YES;
 }
 
+static CGPoint HHPhysicalPoint(CGPoint logical) {
+    HHPoint p=hh_overlay_point((HHPoint){logical.x,logical.y},(HHSize){HHFloating.fixedScreen.width,HHFloating.fixedScreen.height},(int)HHFloating.orientation);
+    return CGPointMake(p.x,p.y);
+}
+static void HHPlaceWindow(RemoteCall *s,uint64_t window,CGRect logical) {
+    CGRect bounds=(CGRect){CGPointZero,logical.size};CGPoint center=HHPhysicalPoint(CGPointMake(CGRectGetMidX(logical),CGRectGetMidY(logical)));
+    CGAffineTransform transform=CGAffineTransformMakeRotation(hh_overlay_angle((int)HHFloating.orientation));
+    HHInvoke(s,window,"setBounds:",&bounds,sizeof(bounds),NULL,0,NULL,0);
+    HHInvoke(s,window,"setCenter:",&center,sizeof(center),NULL,0,NULL,0);
+    HHInvoke(s,window,"setTransform:",&transform,sizeof(transform),NULL,0,NULL,0);
+}
 static BOOL HHMoveBubble(RemoteCall *s, CGPoint position) {
     position.x = MIN(MAX(4, position.x), MAX(4, HHFloating.screen.width - 62));
     position.y = MIN(MAX(4, position.y), MAX(4, HHFloating.screen.height - 62));
-    CGRect frame = (CGRect){position, {58, 58}};
-    if (![s remote_write:HHFloating.move.scratch + 64 from:&frame size:sizeof(frame)]) return NO;
+    CGPoint center=HHPhysicalPoint(CGPointMake(position.x+29,position.y+29));
+    if (![s remote_write:HHFloating.move.scratch + 64 from:&center size:sizeof(center)]) return NO;
     remote_msg(s, HHFloating.move.invocation, HHFloating.setArgument,
                HHFloating.move.scratch + 64, 2, 0, 0);
     if (!HHRunCall(s, HHFloating.move, NULL)) return NO;
@@ -82,7 +97,7 @@ static BOOL HHMoveBubble(RemoteCall *s, CGPoint position) {
 }
 
 static BOOL HHSmallWindowIsBounded(RemoteCall *s, uint64_t window, CGSize expected) {
-    CGRect frame = HHGetRect(s, window, "frame");
+    CGRect frame = HHGetRect(s, window, "bounds");
     BOOL okay = isfinite(frame.size.width) && isfinite(frame.size.height) &&
                 fabs(frame.size.width - expected.width) < 2 &&
                 fabs(frame.size.height - expected.height) < 2;
@@ -132,7 +147,7 @@ static uint64_t HHEventAction(RemoteCall *s, uint64_t data, NSUInteger index) {
     return written ? action : 0;
 }
 
-static BOOL HHButtonAction(RemoteCall *s, uint64_t button, uint64_t action) {
+static BOOL HHControlAction(RemoteCall *s, uint64_t button, uint64_t action, uint64_t event) {
     if (!button || !action) return NO;
     // UIKit calls NSInvocation.invoke in its own process when the control fires.
     uint64_t selector = remote_sel(s, "addTarget:action:forControlEvents:");
@@ -141,7 +156,7 @@ static BOOL HHButtonAction(RemoteCall *s, uint64_t button, uint64_t action) {
     uint64_t invocation = HHRawSend(s, remote_getClass(s, "NSInvocation"),
         "invocationWithMethodSignature:", signature, 0);
     uint64_t scratch = RemoteArbCall(s, malloc, 24);
-    uint64_t args[3] = {action, HHFloating.invoke, UIControlEventTouchUpInside};
+    uint64_t args[3] = {action, HHFloating.invoke, event};
     if (!invocation || !scratch || ![s remote_write:scratch from:args size:sizeof(args)]) return NO;
     HHRawSend(s, invocation, "setTarget:", button, 0);
     HHRawSend(s, invocation, "setSelector:", selector, 0);
@@ -152,6 +167,7 @@ static BOOL HHButtonAction(RemoteCall *s, uint64_t button, uint64_t action) {
     return !s.lastError.length;
 }
 
+static BOOL HHButtonAction(RemoteCall *s,uint64_t button,uint64_t action){return HHControlAction(s,button,action,UIControlEventTouchUpInside);}
 static uint64_t HHLogo(RemoteCall *s, NSData *logo) {
     uint64_t buffer = RemoteArbCall(s, malloc, logo.length);
     if (!buffer || ![s remote_write:buffer from:logo.bytes size:logo.length]) return 0;
@@ -172,7 +188,7 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHFloating.app = HHApplication(s);
     HHFloating.scene = HHWindowScene(s, HHFloating.app);
     if (!HHFloating.app || !HHFloating.scene) return false;
-    HHRemoveOld(s, HHBubbleKey); HHRemoveOld(s, HHMenuKey); HHAssociate(s, HHRootsKey, 0);
+    HHRemoveOld(s, HHBubbleKey); HHRemoveOld(s, HHMenuKey);HHRemoveOld(s,HHCanvasKey); HHAssociate(s, HHRootsKey, 0);
     HHFloating.roots = HHSend(s, remote_getClass(s, "NSMutableArray"), "new", 0, 0);
     HHAssociate(s, HHRootsKey, HHFloating.roots);
     HHSend(s, HHFloating.roots, "release", 0, 0);
@@ -181,7 +197,9 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHFloating.setArgument = remote_sel(s, "setArgument:atIndex:");
     HHFloating.getReturn = remote_sel(s, "getReturnValue:");
     uint64_t screen = HHSend(s, remote_getClass(s, "UIScreen"), "mainScreen", 0, 0);
-    HHFloating.screen = HHGetRect(s, screen, "bounds").size;
+    uint64_t fixed=HHSend(s,screen,"fixedCoordinateSpace",0,0);
+    HHFloating.fixedScreen=HHGetRect(s,fixed?:screen,"bounds").size;
+    HHFloating.screen=HHFloating.fixedScreen;HHFloating.orientation=1;
     if (HHFloating.screen.width < 100 || HHFloating.screen.height < 100) return false;
     HHFloating.position = CGPointMake(12, HHFloating.screen.height * 0.35);
     uint64_t content = 0;
@@ -206,12 +224,12 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s, button, "setAccessibilityLabel:", remote_NSString(s, "Mizze — mở menu"), 0);
 
     uint64_t data = HHSend(s, remote_getClass(s, "NSMutableData"), "alloc", 0, 0);
-    data = HHSend(s, data, "initWithLength:", 3, 0);
+    data = HHSend(s, data, "initWithLength:", 4, 0);
     HHKeep(s, data);
     HHFloating.flags = HHSend(s, data, "mutableBytes", 0, 0);
-    const uint8_t clear[3] = {1, 1, 1};
-    if (!HHFloating.flags || ![s remote_write:HHFloating.flags from:clear size:3]) return false;
-    uint64_t tap = HHEventAction(s, data, 0), close = HHEventAction(s, data, 1), drag = HHEventAction(s, data, 2);
+    const uint8_t clear[4] = {1, 1, 1, 1};
+    if (!HHFloating.flags || ![s remote_write:HHFloating.flags from:clear size:4]) return false;
+    uint64_t tap = HHEventAction(s, data, 0), close = HHEventAction(s, data, 1), drag = HHEventAction(s, data, 2), esp=HHEventAction(s,data,3);
     if (!HHButtonAction(s, button, tap)) return false;
     HHFloating.pan = HHSend(s, remote_getClass(s, "UIPanGestureRecognizer"), "alloc", 0, 0);
     HHFloating.pan = HHSend(s, HHFloating.pan, "initWithTarget:action:", drag, HHFloating.invoke);
@@ -237,13 +255,24 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s, title, "setFont:", HHFont(s, 20), 0);
     HHSend(s, title, "setTextColor:", HHSend(s, colors, "labelColor", 0, 0), 0);
     HHSend(s, panelRoot, "addSubview:", title, 0); HHSend(s, title, "release", 0, 0);
-    uint64_t text = HHSend(s, remote_getClass(s, "UILabel"), "new", 0, 0);
-    HHSetRect(s, text, CGRectMake(12, 65, panel.width-24, 68));
-    HHSend(s, text, "setText:", remote_NSString(s, "hoangha"), 0);
-    HHSend(s, text, "setTextAlignment:", NSTextAlignmentCenter, 0);
-    HHSend(s, text, "setFont:", HHFont(s, 44), 0);
-    HHSend(s, text, "setTextColor:", HHSend(s, colors, "labelColor", 0, 0), 0);
-    HHSend(s, panelRoot, "addSubview:", text, 0); HHSend(s, text, "release", 0, 0);
+    uint64_t text=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
+    HHSetRect(s,text,CGRectMake(18,64,panel.width-102,32));
+    HHSend(s,text,"setText:",remote_NSString(s,"ESP Box"),0);HHSend(s,text,"setFont:",HHFont(s,18),0);
+    HHSend(s,text,"setTextColor:",HHSend(s,colors,"labelColor",0,0),0);
+    HHSend(s,panelRoot,"addSubview:",text,0);HHSend(s,text,"release",0,0);
+    HHFloating.espSwitch=HHSend(s,remote_getClass(s,"UISwitch"),"new",0,0);
+    HHSetRect(s,HHFloating.espSwitch,CGRectMake(panel.width-72,64,51,31));
+    HHSend(s,HHFloating.espSwitch,"setOn:animated:",0,0);
+    HHSend(s,HHFloating.espSwitch,"setAccessibilityLabel:",remote_NSString(s,"ESP Box"),0);
+    HHSend(s,panelRoot,"addSubview:",HHFloating.espSwitch,0);
+    if(!HHControlAction(s,HHFloating.espSwitch,esp,UIControlEventValueChanged))return false;
+    HHSend(s,HHFloating.espSwitch,"release",0,0);
+    HHFloating.statusLabel=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
+    HHSetRect(s,HHFloating.statusLabel,CGRectMake(18,110,panel.width-36,54));
+    HHSend(s,HHFloating.statusLabel,"setText:",remote_NSString(s,"ESP Box đang tắt"),0);
+    HHSend(s,HHFloating.statusLabel,"setNumberOfLines:",3,0);HHSend(s,HHFloating.statusLabel,"setFont:",HHFont(s,12),0);
+    HHSend(s,HHFloating.statusLabel,"setTextColor:",HHSend(s,colors,"secondaryLabelColor",0,0),0);
+    HHSend(s,panelRoot,"addSubview:",HHFloating.statusLabel,0);HHSend(s,HHFloating.statusLabel,"release",0,0);
     uint64_t closeButton = HHSend(s, remote_getClass(s, "UIButton"), "new", 0, 0);
     HHSetRect(s, closeButton, CGRectMake(panel.width-52, 8, 44, 44));
     HHSend(s, closeButton, "setTitle:forState:", remote_NSString(s, "×"), 0);
@@ -254,11 +283,11 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s, closeButton, "release", 0, 0);
     HHSend(s, data, "release", 0, 0);
 
-    uint64_t nilView = 0;
+    uint64_t nilView = HHFloating.bubble;
     HHFloating.panState = HHPrepareCall(s, HHFloating.pan, "state", NULL, 0);
     HHFloating.translation = HHPrepareCall(s, HHFloating.pan, "translationInView:", &nilView, sizeof(nilView));
-    CGRect bubbleFrame = (CGRect){HHFloating.position, {58,58}};
-    HHFloating.move = HHPrepareCall(s, HHFloating.bubble, "setFrame:", &bubbleFrame, sizeof(bubbleFrame));
+    CGPoint bubbleCenter = CGPointMake(HHFloating.position.x+29,HHFloating.position.y+29);
+    HHFloating.move = HHPrepareCall(s, HHFloating.bubble, "setCenter:", &bubbleCenter, sizeof(bubbleCenter));
     if (!HHFloating.panState.invocation || !HHFloating.translation.invocation || !HHFloating.move.invocation) return false;
     HHSend(s, HHFloating.menu, "setHidden:", 1, 0);
     HHSend(s, HHFloating.bubble, "setHidden:", 0, 0);
@@ -272,25 +301,15 @@ bool hoangha_floating_tick(RemoteCall *s) {
     if (now-HHFloating.lastMetrics>1.0) {
         HHFloating.lastMetrics=now;
         if (!HHSmallWindowIsBounded(s,HHFloating.bubble,CGSizeMake(58,58))) return false;
-        uint64_t coordinates=HHSend(s,HHFloating.scene,"coordinateSpace",0,0);
-        CGRect bounds=coordinates ? HHGetRect(s,coordinates,"bounds") : CGRectZero;
-        if (isfinite(bounds.size.width) && isfinite(bounds.size.height) &&
-            bounds.size.width>=100 && bounds.size.height>=100 &&
-            bounds.size.width<=10000 && bounds.size.height<=10000 &&
-            !CGSizeEqualToSize(bounds.size,HHFloating.screen)) {
-            HHFloating.screen=bounds.size;
-            if (!HHMoveBubble(s,HHFloating.position)) return false;
-            CGFloat width=MIN(280,HHFloating.screen.width-24);
-            HHSetRect(s,HHFloating.menu,CGRectMake((bounds.size.width-width)/2,
-                (bounds.size.height-180)/2,width,180));
-        }
+
     }
-    uint8_t flags[3];
-    if (![s remoteRead:HHFloating.flags to:flags size:3]) return false;
-    for (NSUInteger i=0;i<3;i++) if (flags[i]==0) {
+    uint8_t flags[4];
+    if (![s remoteRead:HHFloating.flags to:flags size:4]) return false;
+    for (NSUInteger i=0;i<4;i++) if (flags[i]==0) {
         uint8_t clear=1;
         if (![s remote_write:HHFloating.flags+i from:&clear size:1]) return false;
     }
+    if(flags[3]==0)HHFloating.espEnabled=HHSend(s,HHFloating.espSwitch,"isOn",0,0)!=0;
     if (flags[0]==0) {
         HHFloating.menuVisible = !HHFloating.menuVisible;
         HHSend(s, HHFloating.menu, "setHidden:", !HHFloating.menuVisible, 0);
@@ -321,7 +340,8 @@ bool hoangha_floating_stop(RemoteCall *s) {
     if (!s || s.lastError.length) return false;
     if (!HHFloating.app) HHFloating.app=HHApplication(s);
     if (!HHFloating.app) return false;
-    HHRemoveOld(s, HHBubbleKey); HHRemoveOld(s, HHMenuKey);
+    HHRemoveOld(s, HHBubbleKey); HHRemoveOld(s, HHMenuKey);HHRemoveOld(s,HHCanvasKey);
+    if(HHFloating.rectangles&&!s.lastError.length)RemoteArbCall(s,free,HHFloating.rectangles);
     HHFastCall calls[3]={HHFloating.panState,HHFloating.translation,HHFloating.move};
     for (NSUInteger i=0;i<3;i++) if (calls[i].scratch && !s.lastError.length) RemoteArbCall(s, free, calls[i].scratch);
     HHAssociate(s, HHRootsKey, 0);
@@ -329,3 +349,5 @@ bool hoangha_floating_stop(RemoteCall *s) {
     memset(&HHFloating,0,sizeof(HHFloating));
     return okay;
 }
+
+#include "HoanghaESPBoxBridge.inc"

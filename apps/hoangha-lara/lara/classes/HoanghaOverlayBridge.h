@@ -11,4 +11,12 @@ bool hoangha_floating_start(RemoteCall *session, NSData *logo);
 bool hoangha_floating_tick(RemoteCall *session);
 bool hoangha_floating_stop(RemoteCall *session);
 
+
+BOOL hoangha_game_geometry(RemoteCall *session, CGSize *size, NSInteger *orientation);
+void hoangha_floating_layout(RemoteCall *session, CGSize size, NSInteger orientation);
+BOOL hoangha_floating_esp_enabled(void);
+CGSize hoangha_floating_size(void);
+BOOL hoangha_floating_boxes(RemoteCall *session, NSArray<NSValue *> *boxes);
+void hoangha_floating_status(RemoteCall *session, NSString *status);
+
 NS_ASSUME_NONNULL_END

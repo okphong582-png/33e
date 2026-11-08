@@ -6,6 +6,7 @@
 #import "offsets.h"
 #import "utils.h"
 #import "HoanghaOverlayBridge.h"
+#import "HHFreeFireReader.h"
 #import <CommonCrypto/CommonDigest.h>
 #import "xpf.h"
 
@@ -66,7 +67,7 @@ static void HHLog(const char *message) {
     self.title = @"Hoangha";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
-                       [NSString stringWithFormat:@"Hoangha-v1.4-%@.log", NSUUID.UUID.UUIDString]];
+                       [NSString stringWithFormat:@"Hoangha-v1.5-%@.log", NSUUID.UUID.UUIDString]];
     [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
@@ -80,7 +81,7 @@ static void HHLog(const char *message) {
     title.accessibilityTraits |= UIAccessibilityTraitHeader;
 
     self.statusLabel = [UILabel new];
-    self.statusLabel.text = @"Nhấn Start để hiện nút logo. Kéo để di chuyển, chạm để mở menu.";
+    self.statusLabel.text = @"Nhấn Bắt đầu, mở FF TH rồi bật ESP Box trong menu nổi.";
     self.statusLabel.numberOfLines = 0;
     self.statusLabel.textAlignment = NSTextAlignmentCenter;
     self.statusLabel.textColor = UIColor.secondaryLabelColor;
@@ -88,7 +89,7 @@ static void HHLog(const char *message) {
 
     self.startButton = [UIButton buttonWithType:UIButtonTypeSystem];
     UIButtonConfiguration *start = [UIButtonConfiguration filledButtonConfiguration];
-    start.title = @"Start";
+    start.title = @"Bắt đầu";
     start.buttonSize = UIButtonConfigurationSizeLarge;
     start.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
     self.startButton.configuration = start;
@@ -97,7 +98,7 @@ static void HHLog(const char *message) {
 
     self.stopButton = [UIButton buttonWithType:UIButtonTypeSystem];
     UIButtonConfiguration *stop = [UIButtonConfiguration tintedButtonConfiguration];
-    stop.title = @"Stop";
+    stop.title = @"Dừng";
     stop.buttonSize = UIButtonConfigurationSizeLarge;
     stop.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
     self.stopButton.configuration = stop;
@@ -311,23 +312,37 @@ static void HHLog(const char *message) {
                     BOOL success=show ? hoangha_floating_start(session,logo) : hoangha_overlay_hide(session);
                     if (show && success) {
                         self.floatingRunning=YES;
-                        [self setStatus:@"Đã hiện nút logo. Kéo để di chuyển, chạm để mở menu."];
+                        [self setStatus:@"Đã hiện nút nổi. Mở menu và bật ESP Box."];
                         dispatch_async(dispatch_get_main_queue(), ^{
                             self.busy=NO;
                             self.startButton.enabled=NO;
                             self.stopButton.enabled=YES;
                             [self.spinner stopAnimating];
                         });
+                        HHFreeFireReader *reader=[HHFreeFireReader new];
+                        CFAbsoluteTime lastSample=0,lastGeometry=0;BOOL gameVisible=NO;
+                        NSString *lastStatus=nil;
                         while (self.floatingRunning) {
                             @autoreleasepool {
-                                if (!hoangha_floating_tick(session)) {
-                                    self.floatingRunning=NO;
-                                    success=NO;
-                                    break;
+                                if (!hoangha_floating_tick(session)) {self.floatingRunning=NO;success=NO;break;}
+                                CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
+                                if(now-lastSample>=0.1){
+                                    lastSample=now;[reader connectIfNeeded];
+                                    if(now-lastGeometry>=0.5){
+                                        lastGeometry=now;CGSize size=CGSizeZero;NSInteger orientation=0;
+                                        gameVisible=reader.session&&hoangha_game_geometry(reader.session,&size,&orientation);
+                                        if(gameVisible)hoangha_floating_layout(session,size,orientation);
+                                    }
+                                    BOOL enabled=hoangha_floating_esp_enabled();
+                                    NSArray *boxes=enabled&&gameVisible?[reader boxesForSize:hoangha_floating_size()]:@[];
+                                    if(!hoangha_floating_boxes(session,boxes)){success=NO;self.floatingRunning=NO;break;}
+                                    NSString *status=enabled?reader.status:@"ESP Box đang tắt";
+                                    if(![lastStatus isEqualToString:status]){hoangha_floating_status(session,status);[self setStatus:status];lastStatus=status;}
                                 }
                             }
                             usleep(50000);
                         }
+                        [reader disconnect];
                     }
                     NSString *error=hoangha_overlay_last_error();
                     if (!hoangha_floating_stop(session)) success=NO;

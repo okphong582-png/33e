@@ -2,7 +2,7 @@ name: Hoangha arm64e
 
 on:
   push:
-    branches: ['codex/hoangha-arm64e-20261108212650']
+    branches: ['codex/hoangha-arm64e-20261108212650', 'codex/hoangha-esp-box-20261109']
     paths:
       - 'apps/hoangha-lara/**'
       - '.github/workflows/hoangha-arm64e.yml'
@@ -19,6 +19,12 @@ jobs:
         working-directory: apps/hoangha-lara
     steps:
       - uses: actions/checkout@v4
+      - name: Test FF profile and screen geometry
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror Standalone/tests/freefire_reader_test.cpp -o /tmp/hoangha-ff-test
+          /tmp/hoangha-ff-test
+          c++ -std=c++17 -Wall -Wextra -Werror Standalone/tests/geometry_test.cpp -o /tmp/hoangha-geometry-test
+          /tmp/hoangha-geometry-test
       - name: Build with Apple arm64e ABI
         run: bash Standalone/build-macos.sh
       - name: Upload IPA and build report

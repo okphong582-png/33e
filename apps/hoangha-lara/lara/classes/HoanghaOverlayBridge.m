@@ -1,5 +1,7 @@
 #import "HoanghaOverlayBridge.h"
 #import <UIKit/UIKit.h>
+#import <QuartzCore/QuartzCore.h>
+#import "../../Standalone/HHOverlayGeometry.h"
 #import <objc/runtime.h>
 #import <stdlib.h>
 #import <math.h>

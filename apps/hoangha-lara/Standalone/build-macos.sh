@@ -21,7 +21,7 @@ FLAGS=(-arch arm64e -isysroot "$SDK" -miphoneos-version-min=16.0
 for directory in lara lara/classes lara/headers lara/kexploit lara/kexploit/TaskRop lara/kexploit/pe lara/lib/choma; do
     FLAGS+=(-I "$ROOT/$directory")
 done
-SOURCES=(Standalone/HoanghaApp.m lara/classes/HoanghaOverlayBridge.m
+SOURCES=(Standalone/HoanghaApp.m Standalone/HHFreeFireReader.m lara/classes/HoanghaOverlayBridge.m
          lara/kexploit/darksword.m lara/kexploit/offsets.m
          lara/kexploit/utils.m lara/kexploit/persistence.m)
 for name in RemoteCall exc pac thread vm findcachedataoff; do
@@ -38,6 +38,9 @@ for source in "${SOURCES[@]}"; do
     xcrun --sdk iphoneos clang "${FLAGS[@]}" -c "$ROOT/$source" -o "$object"
     OBJECTS+=("$object")
 done
+xcrun --sdk iphoneos clang++ -arch arm64e -isysroot "$SDK" -miphoneos-version-min=16.0 -std=c++17 -O1 \
+    -include "$ROOT/Standalone/RequirePAC.h" -c "$ROOT/Standalone/HHFFProfile.cpp" -o "$BUILD_DIR/objects/HHFFProfile.o"
+OBJECTS+=("$BUILD_DIR/objects/HHFFProfile.o")
 xcrun --sdk iphoneos clang -arch arm64e -isysroot "$SDK" -miphoneos-version-min=16.0 \
     "${OBJECTS[@]}" -L "$ROOT/lara/lib" -lxpf -lgrabkernel2 -lobjc -lc++ -lz \
     -framework UIKit -framework Foundation -framework CoreFoundation \
@@ -56,13 +59,13 @@ info = {
     'CFBundleDisplayName': 'Hoangha', 'CFBundleName': 'Hoangha',
     'CFBundleExecutable': 'Hoangha', 'CFBundleIdentifier': 'com.hoangha.lara',
     'CFBundlePackageType': 'APPL', 'CFBundleInfoDictionaryVersion': '6.0',
-    'CFBundleShortVersionString': '1.4', 'CFBundleVersion': '5',
+    'CFBundleShortVersionString': '1.5', 'CFBundleVersion': '6',
     'CFBundleSupportedPlatforms': ['iPhoneOS'], 'MinimumOSVersion': '16.0',
     'LSRequiresIPhoneOS': True, 'UIDeviceFamily': [1, 2],
     'UIRequiredDeviceCapabilities': ['arm64'], 'UIFileSharingEnabled': True,
     'LSSupportsOpeningDocumentsInPlace': True, 'UILaunchScreen': {}, 'UIBackgroundModes': ['audio'],
-    'UISupportedInterfaceOrientations': ['UIInterfaceOrientationPortrait'],
-    'UISupportedInterfaceOrientations~ipad': ['UIInterfaceOrientationPortrait'],
+    'UISupportedInterfaceOrientations': ['UIInterfaceOrientationPortrait', 'UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight'],
+    'UISupportedInterfaceOrientations~ipad': ['UIInterfaceOrientationPortrait', 'UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight'],
 }
 (app / 'Info.plist').write_bytes(plistlib.dumps(info))
 (app / 'PkgInfo').write_bytes(b'APPL????')
