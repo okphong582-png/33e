@@ -1,0 +1,19 @@
+{
+  "version": "18.5",
+  "build": "22F76",
+  "identities": [
+    {
+      "deviceClass": "d321ap",
+      "variant": "Customer Erase Install (IPSW)",
+      "kernelPath": "kernelcache.release.iphone11",
+      "verifiedDigestAlgorithm": "sha384"
+    },
+    {
+      "deviceClass": "d321ap",
+      "variant": "Customer Upgrade Install (IPSW)",
+      "kernelPath": "kernelcache.release.iphone11",
+      "verifiedDigestAlgorithm": "sha384"
+    }
+  ],
+  "kernelSHA256": "406b5f62fd2357a8365c8b99f8c1d766a38f0dbe405dee94023f835c324c22b3"
+}

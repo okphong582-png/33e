@@ -4,6 +4,8 @@
 #import "offsets.h"
 #import "utils.h"
 #import "HoanghaOverlayBridge.h"
+#import <CommonCrypto/CommonDigest.h>
+#import "xpf.h"
 
 @interface HoanghaViewController : UIViewController
 @property(nonatomic, strong) UIButton *startButton;
@@ -133,8 +135,70 @@ static void HHLog(const char *message) {
     return YES;
 }
 
+- (BOOL)prepareBundledKernelcache {
+    char machine[128] = {0}, build[128] = {0};
+    size_t length = sizeof(machine);
+    sysctlbyname("hw.machine", machine, &length, NULL, 0);
+    length = sizeof(build);
+    sysctlbyname("kern.osversion", build, &length, NULL, 0);
+    if (strcmp(machine, "iPhone11,2") != 0 || strcmp(build, "22F76") != 0) return YES;
+
+    NSURL *bundled = [NSBundle.mainBundle URLForResource:@"kernelcache-iPhone11,2-22F76" withExtension:nil];
+    NSData *data = bundled ? [NSData dataWithContentsOfURL:bundled] : nil;
+    if (!data) {
+        [self setStatus:@"Bản cài thiếu kernelcache đi kèm cho iPhone XS iOS 18.5."];
+        return NO;
+    }
+    unsigned char hash[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(data.bytes, (CC_LONG)data.length, hash);
+    NSMutableString *hex = [NSMutableString string];
+    for (NSUInteger i = 0; i < sizeof(hash); i++) [hex appendFormat:@"%02x", hash[i]];
+    if (![hex isEqualToString:@"406b5f62fd2357a8365c8b99f8c1d766a38f0dbe405dee94023f835c324c22b3"]) {
+        [self setStatus:@"Kernelcache đi kèm không khớp checksum."];
+        return NO;
+    }
+    NSFileManager *fm = NSFileManager.defaultManager;
+    NSURL *documents = [fm URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
+    if (!documents) return NO;
+    NSURL *destination = [documents URLByAppendingPathComponent:@"kernelcache"];
+    NSData *existing = [NSData dataWithContentsOfURL:destination];
+    if ([existing isEqualToData:data]) return YES;
+    NSError *error = nil;
+    if ([fm fileExistsAtPath:destination.path]) {
+        NSURL *backup = [documents URLByAppendingPathComponent:
+                         [@"kernelcache-before-hoangha-" stringByAppendingString:NSUUID.UUID.UUIDString]];
+        if (![fm copyItemAtURL:destination toURL:backup error:&error]) {
+            [self setStatus:[@"Không tạo được backup kernelcache: " stringByAppendingString:error.localizedDescription]];
+            return NO;
+        }
+        NSData *saved = [NSData dataWithContentsOfURL:backup];
+        if (!existing || ![saved isEqualToData:existing]) {
+            [self setStatus:@"Backup kernelcache chưa được kiểm tra thành công."];
+            return NO;
+        }
+    }
+    if (![data writeToURL:destination options:NSDataWritingAtomic error:&error]) {
+        [self setStatus:[@"Không lưu được kernelcache: " stringByAppendingString:error.localizedDescription]];
+        return NO;
+    }
+    [self appendLog:@"Đã chuẩn bị kernelcache Apple: iPhone XS / iOS 18.5 / 22F76."];
+    return YES;
+}
+
 - (BOOL)prepareRuntime {
     if (![self runtimeSupported]) return NO;
+    // Resolve Lara's device data before starting its existing kernel/session code.
+    if (!self.offsetsReady) {
+        [self setStatus:@"Đang chuẩn bị kernelcache trước khi khởi tạo Lara…"];
+        if (![self prepareBundledKernelcache]) return NO;
+        self.offsetsReady = emergencyfixfunctiontobereplacedlateronquestionmark() || dlkcache();
+        if (!self.offsetsReady) {
+            const char *detail = xpf_get_error();
+            if (detail) [self appendLog:[NSString stringWithUTF8String:detail] ?: @""];
+            [self setStatus:@"Chưa đọc được dữ liệu từ kernelcache. Lara chưa được khởi chạy."];
+            return NO;
+        }
+    }
     if (!self.kernelReady || !ds_is_ready()) {
         [self setStatus:@"Đang khởi tạo Lara…"];
         init_offsets();
@@ -145,13 +209,9 @@ static void HHLog(const char *message) {
             return NO;
         }
     }
-    if (!self.offsetsReady) {
-        [self setStatus:@"Đang chuẩn bị dữ liệu thiết bị…"];
-        self.offsetsReady = emergencyfixfunctiontobereplacedlateronquestionmark() || dlkcache();
-        if (!self.offsetsReady) {
-            [self setStatus:@"Chưa lấy được kernelcache. Đặt kernelcache vào Documents của Hoangha rồi thử lại."];
-            return NO;
-        }
+    if (!ds_get_our_proc() || !ds_get_our_task()) {
+        [self setStatus:@"Lara chưa xác định được tiến trình của app; chưa mở phiên SpringBoard."];
+        return NO;
     }
     return YES;
 }

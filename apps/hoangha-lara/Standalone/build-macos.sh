@@ -46,6 +46,7 @@ xcrun --sdk iphoneos clang -arch arm64e -isysroot "$SDK" -miphoneos-version-min=
 
 cp "$ROOT/lara/lib/libxpf.dylib" "$APP/Frameworks/"
 cp "$ROOT/lara/lib/libgrabkernel2.dylib" "$APP/Frameworks/"
+python3 "$ROOT/Standalone/fetch-xs-kernelcache.py" "$APP"
 python3 - "$APP" <<'PY'
 from pathlib import Path
 import plistlib, sys
@@ -54,7 +55,7 @@ info = {
     'CFBundleDisplayName': 'Hoangha', 'CFBundleName': 'Hoangha',
     'CFBundleExecutable': 'Hoangha', 'CFBundleIdentifier': 'com.hoangha.lara',
     'CFBundlePackageType': 'APPL', 'CFBundleInfoDictionaryVersion': '6.0',
-    'CFBundleShortVersionString': '1.1', 'CFBundleVersion': '2',
+    'CFBundleShortVersionString': '1.2', 'CFBundleVersion': '3',
     'CFBundleSupportedPlatforms': ['iPhoneOS'], 'MinimumOSVersion': '16.0',
     'LSRequiresIPhoneOS': True, 'UIDeviceFamily': [1, 2],
     'UIRequiredDeviceCapabilities': ['arm64'], 'UIFileSharingEnabled': True,
