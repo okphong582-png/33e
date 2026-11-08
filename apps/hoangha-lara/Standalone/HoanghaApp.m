@@ -17,6 +17,8 @@
 @property(nonatomic) BOOL busy;
 @property(nonatomic) BOOL kernelReady;
 @property(nonatomic) BOOL offsetsReady;
+@property(nonatomic) BOOL kernelAttempted;
+@property(nonatomic, strong) NSURL *journalURL;
 @end
 
 static __weak HoanghaViewController *HHScreen;
@@ -38,6 +40,16 @@ static void HHLog(const char *message) {
 }
 
 - (void)setStatus:(NSString *)text {
+    @synchronized (self) {
+        NSFileHandle *file = [NSFileHandle fileHandleForWritingAtPath:self.journalURL.path];
+        if (file) {
+            [file seekToEndOfFile];
+            NSString *line = [NSString stringWithFormat:@"%@ %@\n", NSDate.date, text];
+            [file writeData:[line dataUsingEncoding:NSUTF8StringEncoding]];
+            [file synchronizeFile];
+            [file closeFile];
+        }
+    }
     dispatch_async(dispatch_get_main_queue(), ^{ self.statusLabel.text = text; });
     [self appendLog:text];
 }
@@ -48,6 +60,12 @@ static void HHLog(const char *message) {
     self.operationQueue = dispatch_queue_create("com.hoangha.lara.operations", DISPATCH_QUEUE_SERIAL);
     self.view.backgroundColor = UIColor.systemBackgroundColor;
     self.title = @"Hoangha";
+    NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
+    self.journalURL = [documents URLByAppendingPathComponent:
+                       [NSString stringWithFormat:@"Hoangha-v1.3-%@.log", NSUUID.UUID.UUIDString]];
+    [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
+        style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
 
     UILabel *title = [UILabel new];
     title.text = @"hoangha";
@@ -200,6 +218,11 @@ static void HHLog(const char *message) {
         }
     }
     if (!self.kernelReady || !ds_is_ready()) {
+        if (self.kernelAttempted) {
+            [self setStatus:@"Phiên khởi tạo trước chưa thành công. App không chạy lại khởi tạo trong phiên này."];
+            return NO;
+        }
+        self.kernelAttempted = YES;
         [self setStatus:@"Đang khởi tạo Lara…"];
         init_offsets();
         offsets_init();
@@ -219,6 +242,14 @@ static void HHLog(const char *message) {
 - (void)startPressed { [self performOverlay:YES]; }
 - (void)stopPressed { [self performOverlay:NO]; }
 
+- (void)shareLog:(UIBarButtonItem *)sender {
+    if (!self.journalURL) return;
+    UIActivityViewController *share = [[UIActivityViewController alloc]
+        initWithActivityItems:@[self.journalURL] applicationActivities:nil];
+    share.popoverPresentationController.barButtonItem = sender;
+    [self presentViewController:share animated:YES completion:nil];
+}
+
 - (void)performOverlay:(BOOL)show {
     if (self.busy) return;
     self.busy = YES;
@@ -233,9 +264,11 @@ static void HHLog(const char *message) {
                 if (!session) {
                     [self setStatus:[RemoteCall lastInitError] ?: @"Không mở được phiên SpringBoard."];
                 } else {
+                    [self setStatus:show ? @"Đã kết nối SpringBoard; đang tạo chữ qua NSInvocation…" : @"Đang ẩn chữ qua NSInvocation…"];
                     BOOL success = show ? hoangha_overlay_show(session) : hoangha_overlay_hide(session);
                     NSString *error = hoangha_overlay_last_error();
                     // The static label is retained by SpringBoard; it needs no app-side update loop.
+                    [self setStatus:@"Đang đóng phiên RemoteCall…"];
                     int cleanup = [session destroyRemoteCall];
                     if (success) {
                         [self setStatus:show ? @"Đã hiện hoangha ở giữa màn hình. Bạn có thể về Home." : @"Đã ẩn chữ hoangha."];
