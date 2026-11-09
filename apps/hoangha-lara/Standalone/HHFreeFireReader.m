@@ -11,39 +11,74 @@
 enum { HHGamePageLimit = 96, HHGameMapEntryLimit = 4096 };
 
 typedef struct {
+    uint64_t address, local, entryAddress;
+    uint64_t start, end, object, offset, usedAt;
+} HHGamePage;
+
+typedef struct {
     uint64_t map;
-    size_t count;
-    struct vmshmem pages[HHGamePageLimit];
+    uint64_t frame;
+    HHGamePage pages[HHGamePageLimit];
 } HHGameMemory;
 
+static void HHReleaseGamePage(HHGamePage *page) {
+    if (page->local) vm_deallocate(mach_task_self(), (vm_address_t)page->local, PAGE_SIZE);
+    *page = (HHGamePage){0};
+}
+
 static void HHReleaseGamePages(HHGameMemory *memory) {
-    for (size_t i = 0; i < memory->count; ++i) {
-        vm_deallocate(mach_task_self(), (vm_address_t)memory->pages[i].localAddress, PAGE_SIZE);
-    }
-    memory->count = 0;
+    for (size_t i = 0; i < HHGamePageLimit; ++i) HHReleaseGamePage(&memory->pages[i]);
+}
+
+static BOOL HHReadableEntry(const struct vmmapentry *entry, uint64_t address) {
+    return entry->links.start <= address && address < entry->links.end &&
+        !entry->is_sub_map && !entry->vme_kernel_object && entry->vme_object_or_delta &&
+        (entry->protection & VM_PROT_READ);
 }
 
 static uint64_t HHMapGamePage(HHGameMemory *memory, uint64_t address) {
-    for (size_t i = 0; i < memory->count; ++i) {
-        if (memory->pages[i].remoteAddress == address) return memory->pages[i].localAddress;
+    HHGamePage *slot = NULL;
+    for (size_t i = 0; i < HHGamePageLimit; ++i) {
+        HHGamePage *page = &memory->pages[i];
+        if (page->local && page->address == address) {
+            if (page->usedAt == memory->frame) return page->local;
+            struct vmmapentry entry = {0};
+            ds_kreadbuf(page->entryAddress, &entry, sizeof(entry));
+            if (HHReadableEntry(&entry, address) && entry.links.start == page->start &&
+                entry.links.end == page->end && entry.vme_object_value == page->object &&
+                entry.vme_offset == page->offset) {
+                uint64_t previous = ds_kreadptr(page->entryAddress);
+                uint64_t nextOffset = previous == vmmapgetheader(memory->map) ?
+                    off_vm_map_header_links_next : off_vm_map_entry_links_next;
+                if (previous && ds_kreadptr(previous + nextOffset) == page->entryAddress) {
+                    page->usedAt = memory->frame;
+                    return page->local;
+                }
+            }
+            HHReleaseGamePage(page);
+            slot = page;
+            break;
+        }
+        if (!slot || page->usedAt < slot->usedAt) slot = page;
     }
-    if (memory->count == HHGamePageLimit) return 0;
+    if (!slot || slot->usedAt == memory->frame) return 0;
 
     uint64_t entryAddress = vmmapfindentry(memory->map, address);
     if (!entryAddress) return 0;
     struct vmmapentry entry = {0};
     ds_kreadbuf(entryAddress, &entry, sizeof(entry));
-    if (entry.is_sub_map || entry.vme_kernel_object || !entry.vme_object_or_delta ||
-        !(entry.protection & VM_PROT_READ)) return 0;
+    if (!HHReadableEntry(&entry, address)) return 0;
 
     struct vmshmem page = vmmapremotepage(memory->map, address);
     if (page.port) mach_port_deallocate(mach_task_self(), (mach_port_t)page.port);
     if (!page.localAddress) return 0;
-    memory->pages[memory->count++] = page;
+    HHReleaseGamePage(slot);
+    *slot = (HHGamePage){address, page.localAddress, entryAddress, entry.links.start,
+                         entry.links.end, entry.vme_object_value, entry.vme_offset, memory->frame};
     return page.localAddress;
 }
 
-// Cache aliases for one snapshot so a later frame cannot read stale pages.
+// Revalidate a cached page's mapping on first use in each snapshot.
 static bool HHGameRead(void *context, uint64_t address, void *buffer, size_t size) {
     HHGameMemory *memory = context;
     if (address < 0x10000 || size > UINT64_MAX - address || !buffer || !size) return false;
@@ -78,9 +113,11 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     return base;
 }
 
-@interface HHFreeFireReader ()
+@interface HHFreeFireReader () {
+    HHGameMemory _memory;
+}
 @property(nonatomic,copy,readwrite) NSString *status;
-@property(nonatomic) uint64_t base, map;
+@property(nonatomic) uint64_t base;
 @property(nonatomic) pid_t pid;
 @property(nonatomic) CFAbsoluteTime retryAt;
 @end
@@ -102,7 +139,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     self.retryAt = now + 2;
     uint64_t process = proc_find_by_name("FreeFire");
     if (!process || (pid_t)ds_kread32(process + off_proc_p_pid) != pid) {
-        self.map = 0;
+        HHReleaseGamePages(&_memory);
+        _memory.map = 0;
         self.base = 0;
         self.status = @"Chưa khớp phiên FF TH đang mở";
         return NO;
@@ -110,27 +148,29 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 
     uint64_t task = proc_task(process);
     uint64_t map = task ? task_get_vm_map(task) : 0;
-    if (map != self.map) self.base = 0;
-    self.map = map;
+    if (map != _memory.map) {
+        HHReleaseGamePages(&_memory);
+        _memory.map = map;
+        self.base = 0;
+    }
     if (!map) {
         self.status = @"Chưa đọc được bộ nhớ FF TH";
         return NO;
     }
     if (!self.base) {
-        HHGameMemory memory = {.map = map};
-        self.base = HHUnityImage(&memory);
+        ++_memory.frame;
+        self.base = HHUnityImage(&_memory);
         self.status = self.base ? @"Đã nhận FF TH 1.132.1" : @"Chưa tìm thấy Unity 1.132.1";
     }
     return self.base != 0;
 }
 
 - (NSArray<NSValue *> *)boxesForSize:(CGSize)size {
-    if (!self.map || !self.base || (kill(self.pid, 0) != 0 && errno == ESRCH)) return @[];
-    HHGameMemory memory = {.map = self.map};
+    if (!_memory.map || !self.base || (kill(self.pid, 0) != 0 && errno == ESRCH)) return @[];
+    ++_memory.frame;
     HHFFBox boxes[32];
     size_t count = 0;
-    BOOL sampled = hh_ff_snapshot(HHGameRead, &memory, self.base, size.width, size.height, boxes, &count);
-    HHReleaseGamePages(&memory);
+    BOOL sampled = hh_ff_snapshot(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count);
     if (!sampled) {
         self.status = @"Đang chờ trận / dữ liệu hợp lệ";
         return nil;
@@ -145,10 +185,15 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 }
 
 - (void)disconnect {
-    self.map = 0;
+    HHReleaseGamePages(&_memory);
+    _memory.map = 0;
     self.base = 0;
     self.pid = 0;
     self.retryAt = 0;
     self.status = @"Đang chờ FF TH";
+}
+
+- (void)dealloc {
+    HHReleaseGamePages(&_memory);
 }
 @end

@@ -66,10 +66,6 @@ template<class Read> class Reader {
         y=viewport.y+viewport.height*0.5f*(1-(m[1]*v.x+m[5]*v.y+m[9]*v.z+m[13])/w);
         return std::isfinite(x)&&std::isfinite(y);
     }
-    bool projectBone(uint64_t player,uint64_t field,const float *matrix,const Viewport &viewport,float &x,float &y) {
-        Vec3 point;
-        return bone(player,field,point)&&project(point,matrix,viewport,x,y);
-    }
 public:
     explicit Reader(Read r):read(r) {}
     bool supports(uint64_t base) {
@@ -97,6 +93,33 @@ public:
         static_assert(sizeof(Entry)==24,"Dictionary<byte,Player> ABI");
         std::array<Entry,MaxPlayers> roster{};
         if(count&&!read(entries+0x20,roster.data(),size_t(count)*sizeof(Entry)))return false;
+        struct Pose { uint64_t id; Vec3 head,left,right; bool hasLeft,hasRight; };
+        std::array<Pose,MaxPlayers> poses{};
+        size_t poseCount=0;
+        for(int i=0;i<count;i++) {
+            const auto &entry=roster[i];uint64_t player=entry.player;
+            if(entry.hash<0||!valid(player)||player==local)continue;
+            const auto end=poses.begin()+poseCount;
+            if(std::any_of(poses.begin(),end,[player](const Pose &p){return p.id==player;}))continue;
+            uint8_t team;uint16_t health;
+            if(!value(player+0x410,team)||team==myTeam||!hp(player,health)||!health)continue;
+            Pose p{};p.id=player;
+            if(!bone(player,0x6a0,p.head))continue;
+            // Toe getters with the respective ankles as fallbacks.
+            p.hasLeft=bone(player,0x6e8,p.left)||bone(player,0x6d8,p.left);
+            p.hasRight=bone(player,0x6f0,p.right)||bone(player,0x6e0,p.right);
+            if(!p.hasLeft&&!p.hasRight) {
+                if(!bone(player,0x6c8,p.left))continue;
+                p.hasLeft=true;
+            }
+            poses[poseCount++]=p;
+        }
+        uint64_t gameNow,matchNow,localNow,entriesNow,cameraNow,innerNow;int32_t versionNow,countNow;
+        if(!context(base,gameNow,matchNow,localNow)||gameNow!=game||matchNow!=match||localNow!=local||
+           !ptr(controller+0x20,cameraNow)||cameraNow!=camera||!ptr(cameraNow+0x10,innerNow)||innerNow!=inner||
+           !ptr(dict+0x18,entriesNow)||entriesNow!=entries||!value(dict+0x24,versionNow)||versionNow!=version||!value(dict+0x20,countNow)||countNow!=count)return false;
+
+        // Sample the camera after the slower pose reads to reduce lag during turns.
         struct CameraMatrices { std::array<float,16> view,projection; } cameraMatrices;
         std::array<float,16> matrix{};
         Viewport rect;
@@ -113,26 +136,16 @@ public:
         for(float f:projection)if(!std::isfinite(f))return false;
         for(int c=0;c<4;c++)for(int r=0;r<4;r++)for(int k=0;k<4;k++)matrix[c*4+r]+=projection[k*4+r]*view[c*4+k];
         Frame pending{};
-        for(int i=0;i<count&&pending.count<MaxTargets;i++) {
-            const auto &entry=roster[i];uint64_t player=entry.player;
-            if(entry.hash<0||!valid(player)||player==local)continue;
-            bool duplicate=false;for(size_t j=0;j<pending.count;j++)if(pending.targets[j].id==player)duplicate=true;
-            if(duplicate)continue;
-            uint8_t team;uint16_t health;
-            if(!value(player+0x410,team)||team==myTeam||!hp(player,health)||!health)continue;
-            Target t;t.id=player;
+        for(size_t i=0;i<poseCount&&pending.count<MaxTargets;i++) {
+            const Pose &p=poses[i];
+            Target t;t.id=p.id;
             const float *m=matrix.data();
-            if(!projectBone(player,0x6a0,m,viewport,t.headX,t.headY))continue;
+            if(!project(p.head,m,viewport,t.headX,t.headY))continue;
             float leftX=0,leftY=0,rightX=0,rightY=0;
-            // Player's left/right toe getters, with the respective ankles as fallbacks.
-            const bool hasLeft=projectBone(player,0x6e8,m,viewport,leftX,leftY)||
-                               projectBone(player,0x6d8,m,viewport,leftX,leftY);
-            const bool hasRight=projectBone(player,0x6f0,m,viewport,rightX,rightY)||
-                                projectBone(player,0x6e0,m,viewport,rightX,rightY);
-            if(!hasLeft&&!hasRight) {
-                if(!projectBone(player,0x6c8,m,viewport,leftX,leftY))continue;
-                rightX=leftX;rightY=leftY;
-            } else if(!hasRight) {
+            const bool hasLeft=p.hasLeft&&project(p.left,m,viewport,leftX,leftY);
+            const bool hasRight=p.hasRight&&project(p.right,m,viewport,rightX,rightY);
+            if(!hasLeft&&!hasRight)continue;
+            if(!hasRight) {
                 rightX=leftX;rightY=leftY;
             } else if(!hasLeft) {
                 leftX=rightX;leftY=rightY;
@@ -151,10 +164,6 @@ public:
             if(t.w<1||t.h<1)continue;
             pending.targets[pending.count++]=t;
         }
-        uint64_t gameNow,matchNow,localNow,entriesNow,cameraNow,innerNow;int32_t versionNow,countNow;
-        if(!context(base,gameNow,matchNow,localNow)||gameNow!=game||matchNow!=match||localNow!=local||
-           !ptr(controller+0x20,cameraNow)||cameraNow!=camera||!ptr(cameraNow+0x10,innerNow)||innerNow!=inner||
-           !ptr(dict+0x18,entriesNow)||entriesNow!=entries||!value(dict+0x24,versionNow)||versionNow!=version||!value(dict+0x20,countNow)||countNow!=count)return false;
         out=pending;return true;
     }
 };

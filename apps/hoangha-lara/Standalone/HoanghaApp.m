@@ -68,7 +68,7 @@ static void HHLog(const char *message) {
     self.title = @"Hoangha";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
-                       [NSString stringWithFormat:@"Hoangha-v1.5.5-%@.log", NSUUID.UUID.UUIDString]];
+                       [NSString stringWithFormat:@"Hoangha-v1.5.6-%@.log", NSUUID.UUID.UUIDString]];
     [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
@@ -325,9 +325,14 @@ static void HHLog(const char *message) {
                         NSString *lastStatus=nil;
                         NSString *waitingStatus=nil;
                         CFAbsoluteTime lastBoxesAt=0;
+                        CFAbsoluteTime menuAt=0;
                         while (self.floatingRunning) {
                             @autoreleasepool {
-                                if (!hoangha_floating_tick(session)) {self.floatingRunning=NO;success=NO;break;}
+                                CFAbsoluteTime tickNow=CFAbsoluteTimeGetCurrent();
+                                if(tickNow>=menuAt){
+                                    menuAt=tickNow+0.1;
+                                    if(!hoangha_floating_tick(session)){self.floatingRunning=NO;success=NO;break;}
+                                }
                                 BOOL enabled=hoangha_floating_esp_enabled();
                                 HHGameWork work=hh_game_work(&schedule,enabled,CFAbsoluteTimeGetCurrent());
                                 if(work.disconnect){
@@ -342,25 +347,28 @@ static void HHLog(const char *message) {
                                 }
                                 if(work.sample){
                                     if(work.geometry){
+                                        pid_t previousPID=schedule.foregroundPID;
                                         pid_t pid=hoangha_foreground_game(session,&waitingStatus);
                                         hh_game_observe_foreground(&schedule,pid);
+                                        if(previousPID>0&&previousPID!=schedule.foregroundPID)[reader disconnect];
                                     }
                                     BOOL connected=schedule.foregroundPID>0&&[reader connectIfNeededForPID:schedule.foregroundPID];
                                     CFAbsoluteTime sampleStarted=CFAbsoluteTimeGetCurrent();
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
-                                    if(!boxes&&lastBoxesAt>0&&now-lastBoxesAt<0.25){
-                                        schedule.sampleAt=now;
-                                    }else{
+                                    if(boxes||lastBoxesAt<=0||now-lastBoxesAt>=0.10){
                                         lastBoxesAt=boxes.count?sampleStarted:0;
                                         if(!hoangha_floating_boxes(session,boxes?:@[])){success=NO;self.floatingRunning=NO;break;}
                                     }
+                                    hh_game_sample_finished(&schedule,CFAbsoluteTimeGetCurrent());
                                 }
                                 NSString *status=@"ESP Box đang tắt · chưa kết nối game";
                                 if(enabled)status=schedule.foregroundPID>0?reader.status:(waitingStatus?:@"Đang chờ FF TH mở");
                                 if(![lastStatus isEqualToString:status]){hoangha_floating_status(session,status);[self setStatus:status];lastStatus=status;}
                             }
-                            usleep(100000);
+                            CFAbsoluteTime wakeAt=schedule.enabled?MIN(menuAt,schedule.sampleAt):menuAt;
+                            double delay=MAX(0.005,MIN(0.1,wakeAt-CFAbsoluteTimeGetCurrent()));
+                            usleep((useconds_t)(delay*1000000));
                         }
                         [reader disconnect];
                     }

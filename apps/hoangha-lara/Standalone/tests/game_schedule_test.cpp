@@ -12,8 +12,11 @@ int main(){
  hh_game_observe_foreground(&s,456);assert(s.foregroundPID==456);
  hh_game_observe_foreground(&s,0);assert(s.foregroundPID==0);
  hh_game_observe_foreground(&s,456);assert(s.foregroundPID==0);
- for(int i=1;i<=200;i++){auto w=hh_game_work(&s,true,60+i*.05);work+=w.sample;geometry+=w.geometry;}
- assert(work<=50&&geometry<=5);
+ for(int i=1;i<=1000;i++){auto w=hh_game_work(&s,true,60+i*.01);work+=w.sample;geometry+=w.geometry;}
+ assert(work>=140&&work<=166&&geometry<=5);
+ hh_game_sample_finished(&s,70.5);
+ assert(!hh_game_work(&s,true,70.51).sample);
+ assert(hh_game_work(&s,true,70.52).sample);
  auto off=hh_game_work(&s,false,71);assert(off.changed&&off.disconnect&&!off.sample&&!off.geometry);
  assert(s.foregroundPID==0&&s.observedPID==0);
  auto idle=hh_game_work(&s,false,72);assert(!idle.disconnect&&!idle.sample);

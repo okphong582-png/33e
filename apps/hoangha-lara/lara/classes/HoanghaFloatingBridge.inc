@@ -13,7 +13,7 @@ static struct {
     BOOL espEnabled, canvasVisible;
     CGRect previousRectangles[32];NSUInteger previousCount;
     uint64_t perform, invoke, setArgument, getReturn;
-    HHFastCall panState, translation, move, menuHidden, espState, bubbleBounds, menuBounds;
+    HHFastCall panState, translation, move, menuHidden, espState, bubbleBounds, menuBounds, canvasPath;
     CGSize screen;
     CGPoint position, dragBase;
     BOOL dragging, menuVisible, active;
@@ -360,7 +360,7 @@ bool hoangha_floating_stop(RemoteCall *s) {
     if (!HHFloating.app) return false;
     HHRemoveOld(s, HHBubbleKey); HHRemoveOld(s, HHMenuKey);HHRemoveOld(s,HHCanvasKey);
     if(HHFloating.rectangles&&!s.lastError.length)RemoteArbCall(s,free,HHFloating.rectangles);
-    HHFastCall calls[]={HHFloating.panState,HHFloating.translation,HHFloating.move,HHFloating.menuHidden,HHFloating.espState,HHFloating.bubbleBounds,HHFloating.menuBounds};
+    HHFastCall calls[]={HHFloating.panState,HHFloating.translation,HHFloating.move,HHFloating.menuHidden,HHFloating.espState,HHFloating.bubbleBounds,HHFloating.menuBounds,HHFloating.canvasPath};
     for (NSUInteger i=0;i<sizeof(calls)/sizeof(calls[0]);i++) if (calls[i].scratch && !s.lastError.length) RemoteArbCall(s, free, calls[i].scratch);
     HHAssociate(s, HHRootsKey, 0);
     BOOL okay=!s.lastError.length;

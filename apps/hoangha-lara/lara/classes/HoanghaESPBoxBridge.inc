@@ -87,6 +87,12 @@ CGSize hoangha_floating_size(void){return HHFloating.screen;}
 void hoangha_floating_status(RemoteCall *s,NSString *status){
  if(HHFloating.statusLabel&&status.length)HHSend(s,HHFloating.statusLabel,"setText:",remote_NSString(s,status.UTF8String),0);
 }
+static BOOL HHSetCanvasPath(RemoteCall *s,uint64_t path){
+ HHFastCall call=HHFloating.canvasPath;
+ if(!call.invocation||![s remote_write:call.scratch+64 from:&path size:sizeof(path)])return NO;
+ remote_msg(s,call.invocation,HHFloating.setArgument,call.scratch+64,2,0,0);
+ return HHRunCall(s,call,NULL);
+}
 BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
  if(!HHFloating.active||s.lastError.length)return NO;
  CGRect rectangles[32];NSUInteger count=0;
@@ -113,14 +119,18 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
   HHSend(s,HHFloating.shape,"setStrokeColor:",cgColor,0);HHSend(s,HHFloating.shape,"setFillColor:",0,0);
   CGFloat width=1.5;HHInvoke(s,HHFloating.shape,"setLineWidth:",&width,sizeof(width),NULL,0,NULL,0);
   HHSend(s,HHSend(s,root,"layer",0,0),"addSublayer:",HHFloating.shape,0);HHSend(s,HHFloating.shape,"release",0,0);
+  uint64_t emptyPath=0;
+  HHFloating.canvasPath=HHPrepareCall(s,HHFloating.shape,"setPath:",&emptyPath,sizeof(emptyPath));
+  if(!HHFloating.canvasPath.invocation)return NO;
   HHFloating.rectangles=RemoteArbCall(s,malloc,sizeof(rectangles));
   HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,HHFloating.screen});
  }
  if(!HHFloating.rectangles||![s remote_write:HHFloating.rectangles from:rectangles size:count*sizeof(CGRect)])return NO;
  uint64_t path=RemoteArbCall(s,CGPathCreateMutable);if(!path)return NO;
  RemoteArbCall(s,CGPathAddRects,path,0,HHFloating.rectangles,count);
- HHSend(s,HHFloating.shape,"setPath:",path,0);
+ BOOL drawn=HHSetCanvasPath(s,path);
  if(!s.lastError.length)RemoteArbCall(s,CGPathRelease,path);
+ if(!drawn)return NO;
  if(!HHFloating.canvasVisible)HHSend(s,HHFloating.canvas,"setHidden:",0,0);
  if(!s.lastError.length){HHFloating.canvasVisible=YES;HHFloating.previousCount=count;memcpy(HHFloating.previousRectangles,rectangles,count*sizeof(CGRect));}
  return !s.lastError.length;
