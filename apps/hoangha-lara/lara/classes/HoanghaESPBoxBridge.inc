@@ -1,13 +1,53 @@
 // Display objects stay in SpringBoard, beside the existing floating menu.
 // The full-size drawing window is noninteractive; only the bounded menu receives touches.
-BOOL hoangha_game_geometry(RemoteCall *game,CGSize *size,NSInteger *orientation){
- if(!game||game.lastError.length)return NO;
- uint64_t app=HHApplication(game),scene=HHWindowScene(game,app);
- if(!scene||HHSend(game,scene,"activationState",0,0)!=UISceneActivationStateForegroundActive)return NO;
- uint64_t space=HHSend(game,scene,"coordinateSpace",0,0);CGRect bounds=HHGetRect(game,space,"bounds");
- NSInteger o=(NSInteger)HHSend(game,scene,"interfaceOrientation",0,0);
- if(o<1||o>4||!isfinite(bounds.size.width)||!isfinite(bounds.size.height)||bounds.size.width<100||bounds.size.height<100||bounds.size.width>10000||bounds.size.height>10000)return NO;
- if(size)*size=bounds.size;if(orientation)*orientation=o;return YES;
+static uint64_t HHOptionalSend(RemoteCall *springboard, uint64_t object, const char *name) {
+    if (!object || springboard.lastError.length) return 0;
+    if (!(BOOL)HHRawSend(springboard, object, "respondsToSelector:", remote_sel(springboard, name), 0)) return 0;
+    return HHSend(springboard, object, name, 0, 0);
+}
+
+pid_t hoangha_foreground_game(RemoteCall *springboard, CGSize *size, NSInteger *orientation) {
+    if (!HHFloating.active || springboard.lastError.length) return 0;
+    uint64_t front = HHOptionalSend(springboard, HHFloating.app, "_accessibilityFrontMostApplication");
+    pid_t pid = (pid_t)HHOptionalSend(springboard, front, "pid");
+    if (pid <= 0) pid = (pid_t)HHOptionalSend(springboard, front, "processID");
+    if (pid <= 0) return 0;
+
+    uint64_t identifier = HHOptionalSend(springboard, front, "bundleIdentifier");
+    if (!identifier) return 0;
+    const char prefix[] = "com.dts.freefireth";
+    char bundle[64] = {0};
+    uint64_t length = HHSend(springboard, identifier, "lengthOfBytesUsingEncoding:", NSUTF8StringEncoding, 0);
+    if (length < sizeof(prefix) - 1 || length >= sizeof(bundle)) return 0;
+    uint64_t bytes = HHSend(springboard, identifier, "UTF8String", 0, 0);
+    if (!bytes || ![springboard remoteRead:bytes to:bundle size:length] ||
+        memcmp(bundle, prefix, sizeof(prefix) - 1)) return 0;
+    for (size_t i = sizeof(prefix) - 1; i < length; ++i) {
+        if (bundle[i] < '0' || bundle[i] > '9') return 0;
+    }
+
+    // Display state comes from SpringBoard. Never wait for Unity's main thread here.
+    if (!HHFloating.orientationObserver) {
+        uint64_t cls = remote_getClass(springboard, "FBSOrientationObserver");
+        uint64_t observer = HHOptionalSend(springboard, cls, "new");
+        if (observer) {
+            HHKeep(springboard, observer);
+            HHSend(springboard, observer, "release", 0, 0);
+            HHFloating.orientationObserver = observer;
+        }
+    }
+    NSInteger current = (NSInteger)HHOptionalSend(springboard, HHFloating.orientationObserver, "activeInterfaceOrientation");
+    if (!UIInterfaceOrientationIsLandscape(current)) {
+        current = (NSInteger)HHOptionalSend(springboard, HHFloating.app, "statusBarOrientation");
+    }
+    if (springboard.lastError.length || !UIInterfaceOrientationIsLandscape(current)) return 0;
+
+    CGSize fixed = HHFloating.fixedScreen;
+    if (!isfinite(fixed.width) || !isfinite(fixed.height) || MIN(fixed.width, fixed.height) < 100 ||
+        MAX(fixed.width, fixed.height) > 10000) return 0;
+    *size = CGSizeMake(MAX(fixed.width, fixed.height), MIN(fixed.width, fixed.height));
+    *orientation = current;
+    return pid;
 }
 void hoangha_floating_layout(RemoteCall *s,CGSize size,NSInteger orientation){
  if(!HHFloating.active||s.lastError.length||orientation<1||orientation>4||!isfinite(size.width)||!isfinite(size.height)||size.width<100||size.height<100||size.width>10000||size.height>10000)return;

@@ -68,7 +68,7 @@ static void HHLog(const char *message) {
     self.title = @"Hoangha";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
-                       [NSString stringWithFormat:@"Hoangha-v1.5.1-%@.log", NSUUID.UUID.UUIDString]];
+                       [NSString stringWithFormat:@"Hoangha-v1.5.2-%@.log", NSUUID.UUID.UUIDString]];
     [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
@@ -321,7 +321,7 @@ static void HHLog(const char *message) {
                             [self.spinner stopAnimating];
                         });
                         HHFreeFireReader *reader=nil;
-                        HHGameSchedule schedule={0};BOOL gameVisible=NO;
+                        HHGameSchedule schedule={0};
                         NSString *lastStatus=nil;
                         while (self.floatingRunning) {
                             @autoreleasepool {
@@ -330,24 +330,26 @@ static void HHLog(const char *message) {
                                 HHGameWork work=hh_game_work(&schedule,enabled,CFAbsoluteTimeGetCurrent());
                                 if(work.disconnect){
                                     hoangha_floating_boxes(session,@[]);
-                                    [reader disconnect];reader=nil;gameVisible=NO;
+                                    [reader disconnect];reader=nil;
                                     [self setStatus:@"ESP đã tắt; đã đóng kết nối game"];
                                 }
                                 if(work.changed&&enabled){
-                                    [self setStatus:@"Bạn đã bật ESP; bắt đầu kết nối FF TH"];
+                                    [self setStatus:@"Bạn đã bật ESP; đang chờ FF TH ổn định ở màn hình ngang"];
                                     reader=[HHFreeFireReader new];
                                 }
                                 if(work.sample){
-                                    [reader connectIfNeeded];
                                     if(work.geometry){
                                         CGSize size=CGSizeZero;NSInteger orientation=0;
-                                        gameVisible=reader.session&&hoangha_game_geometry(reader.session,&size,&orientation);
-                                        if(gameVisible)hoangha_floating_layout(session,size,orientation);
+                                        pid_t pid=hoangha_foreground_game(session,&size,&orientation);
+                                        hh_game_observe_foreground(&schedule,pid);
+                                        if(pid>0)hoangha_floating_layout(session,size,orientation);
                                     }
-                                    NSArray *boxes=gameVisible?[reader boxesForSize:hoangha_floating_size()]:@[];
+                                    BOOL connected=schedule.foregroundPID>0&&[reader connectIfNeededForPID:schedule.foregroundPID];
+                                    NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     if(!hoangha_floating_boxes(session,boxes)){success=NO;self.floatingRunning=NO;break;}
                                 }
-                                NSString *status=enabled?reader.status:@"ESP Box đang tắt · chưa kết nối game";
+                                NSString *status=@"ESP Box đang tắt · chưa kết nối game";
+                                if(enabled)status=schedule.foregroundPID>0?reader.status:@"Đang chờ FF TH ở màn hình ngang";
                                 if(![lastStatus isEqualToString:status]){hoangha_floating_status(session,status);[self setStatus:status];lastStatus=status;}
                             }
                             usleep(100000);

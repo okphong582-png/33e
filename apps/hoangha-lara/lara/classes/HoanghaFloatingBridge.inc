@@ -7,6 +7,7 @@ typedef struct {
 
 static struct {
     uint64_t app, scene, roots, bubble, menu, pan, flags, espSwitch, statusLabel, canvas, shape, rectangles;
+    uint64_t orientationObserver;
     NSInteger orientation;
     CGSize fixedScreen;
     BOOL espEnabled, canvasVisible;

@@ -12,7 +12,7 @@ bool hoangha_floating_tick(RemoteCall *session);
 bool hoangha_floating_stop(RemoteCall *session);
 
 
-BOOL hoangha_game_geometry(RemoteCall *session, CGSize *size, NSInteger *orientation);
+pid_t hoangha_foreground_game(RemoteCall *springboard, CGSize *size, NSInteger *orientation);
 void hoangha_floating_layout(RemoteCall *session, CGSize size, NSInteger orientation);
 BOOL hoangha_floating_esp_enabled(void);
 CGSize hoangha_floating_size(void);

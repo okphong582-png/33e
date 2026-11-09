@@ -3,6 +3,7 @@
 #import "RemoteCall.h"
 #import "utils.h"
 #import "darksword.h"
+#import "offsets.h"
 #include <mach/task_info.h>
 #include <dlfcn.h>
 #include <string.h>
@@ -29,7 +30,7 @@ static bool HHGameRead(void *context,uint64_t address,void *buffer,size_t size){
  return !session.lastError.length&&[session remoteRead:address to:buffer size:size];
 }
 @interface HHFreeFireReader ()
-@property(nonatomic,strong,readwrite) RemoteCall *session;
+@property(nonatomic,strong) RemoteCall *session;
 @property(nonatomic,copy,readwrite) NSString *status;
 @property(nonatomic) uint64_t base,process;
 @property(nonatomic) CFAbsoluteTime retryAt;
@@ -38,18 +39,21 @@ static bool HHGameRead(void *context,uint64_t address,void *buffer,size_t size){
 @end
 @implementation HHFreeFireReader
 - (instancetype)init{if((self=[super init]))_status=@"Đang chờ FF TH";return self;}
-- (BOOL)connectIfNeeded{
- CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();if(now<self.retryAt)return self.session!=nil;
+- (BOOL)connectIfNeededForPID:(pid_t)pid{
+ if(pid<=0)return NO;
+ CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
+ if(now<self.retryAt)return self.session.pid==pid&&!self.session.lastError.length;
  self.retryAt=now+2;
+ if(!ds_is_ready()){self.status=@"Phiên Lara chưa sẵn sàng";return NO;}
  uint64_t process=proc_find_by_name("FreeFire");
- if(self.session&&(!process||process!=self.process||self.session.lastError.length)){[self disconnect];self.connectionAttempted=YES;self.status=@"Phiên game đã dừng; tắt/bật ESP để thử lại";self.retryAt=now+3;return NO;}
- if(!process){self.status=@"Mở FF TH để kết nối";return NO;}
+ if(self.session&&(!process||process!=self.process||self.session.pid!=pid||self.session.lastError.length)){[self disconnect];self.connectionAttempted=YES;self.status=@"Phiên game đã đổi; tắt/bật ESP để thử lại";self.retryAt=now+3;return NO;}
+ if(!process||(pid_t)ds_kread32(process+off_proc_p_pid)!=pid){self.status=@"Chưa khớp phiên FF TH đang mở";return NO;}
  if(!self.session){
   if(self.connectionAttempted){self.status=@"Kết nối lỗi; tắt/bật ESP để thử lại";return NO;}
-  if(!ds_is_ready()){self.status=@"Phiên Lara chưa sẵn sàng";return NO;}
   self.connectionAttempted=YES;
   self.session=[[RemoteCall alloc] initWithProcess:@"FreeFire" useMigFilterBypass:NO];
   if(!self.session){self.status=[RemoteCall lastInitError]?:@"Chưa kết nối được FF TH";self.retryAt=now+5;return NO;}
+  if(self.session.pid!=pid){[self disconnect];self.connectionAttempted=YES;self.status=@"Phiên FF TH đã đổi khi kết nối";return NO;}
   self.process=process;self.status=@"Đã kết nối FF TH";
  }
  if(!self.base){self.base=HHUnityImage(self.session);if(!self.base){self.status=@"Đang chờ UnityFramework";return YES;}}
