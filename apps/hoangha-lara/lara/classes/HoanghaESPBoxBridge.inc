@@ -6,27 +6,27 @@ static uint64_t HHOptionalSend(RemoteCall *springboard, uint64_t object, const c
     return HHSend(springboard, object, name, 0, 0);
 }
 
-pid_t hoangha_foreground_game(RemoteCall *springboard, CGSize *size, NSInteger *orientation) {
-    if (!HHFloating.active || springboard.lastError.length) return 0;
-    uint64_t front = HHOptionalSend(springboard, HHFloating.app, "_accessibilityFrontMostApplication");
-    pid_t pid = (pid_t)HHOptionalSend(springboard, front, "pid");
-    if (pid <= 0) pid = (pid_t)HHOptionalSend(springboard, front, "processID");
-    if (pid <= 0) return 0;
-
+static BOOL HHIsFreeFire(RemoteCall *springboard, uint64_t front) {
     uint64_t identifier = HHOptionalSend(springboard, front, "bundleIdentifier");
-    if (!identifier) return 0;
+    if (!identifier) return NO;
     const char prefix[] = "com.dts.freefireth";
     char bundle[64] = {0};
     uint64_t length = HHSend(springboard, identifier, "lengthOfBytesUsingEncoding:", NSUTF8StringEncoding, 0);
-    if (length < sizeof(prefix) - 1 || length >= sizeof(bundle)) return 0;
+    if (length < sizeof(prefix) - 1 || length >= sizeof(bundle)) return NO;
     uint64_t bytes = HHSend(springboard, identifier, "UTF8String", 0, 0);
     if (!bytes || ![springboard remoteRead:bytes to:bundle size:length] ||
-        memcmp(bundle, prefix, sizeof(prefix) - 1)) return 0;
+        memcmp(bundle, prefix, sizeof(prefix) - 1)) return NO;
     for (size_t i = sizeof(prefix) - 1; i < length; ++i) {
-        if (bundle[i] < '0' || bundle[i] > '9') return 0;
+        if (bundle[i] < '0' || bundle[i] > '9') return NO;
     }
+    return YES;
+}
 
-    // Display state comes from SpringBoard. Never wait for Unity's main thread here.
+static NSInteger HHDisplayOrientation(RemoteCall *springboard, BOOL expectLandscape) {
+    NSInteger current = (NSInteger)HHOptionalSend(springboard, HHFloating.app, "_frontMostAppOrientation");
+    if (UIInterfaceOrientationIsLandscape(current) ||
+        (!expectLandscape && UIInterfaceOrientationIsPortrait(current))) return current;
+
     if (!HHFloating.orientationObserver) {
         uint64_t cls = remote_getClass(springboard, "FBSOrientationObserver");
         uint64_t observer = HHOptionalSend(springboard, cls, "new");
@@ -36,20 +36,42 @@ pid_t hoangha_foreground_game(RemoteCall *springboard, CGSize *size, NSInteger *
             HHFloating.orientationObserver = observer;
         }
     }
-    NSInteger current = (NSInteger)HHOptionalSend(springboard, HHFloating.orientationObserver, "activeInterfaceOrientation");
-    if (!UIInterfaceOrientationIsLandscape(current)) {
-        current = (NSInteger)HHOptionalSend(springboard, HHFloating.app, "statusBarOrientation");
-    }
-    if (springboard.lastError.length || !UIInterfaceOrientationIsLandscape(current)) return 0;
+    NSInteger observed = (NSInteger)HHOptionalSend(springboard, HHFloating.orientationObserver, "activeInterfaceOrientation");
+    if (UIInterfaceOrientationIsLandscape(observed) ||
+        (!expectLandscape && UIInterfaceOrientationIsPortrait(observed))) return observed;
+    NSInteger statusBar = (NSInteger)HHOptionalSend(springboard, HHFloating.app, "statusBarOrientation");
+    return UIInterfaceOrientationIsLandscape(statusBar) || !current ? statusBar : current;
+}
 
+static void HHLayoutFloatingWindows(RemoteCall *s,CGSize size,NSInteger orientation);
+
+pid_t hoangha_foreground_game(RemoteCall *springboard, NSString **waitingStatus) {
+    if (!HHFloating.active || springboard.lastError.length) return 0;
+    // Opening the menu can refresh layout without probing the game process.
+    uint64_t front = waitingStatus ? HHOptionalSend(springboard, HHFloating.app, "_accessibilityFrontMostApplication") : 0;
+    BOOL isFreeFire = HHIsFreeFire(springboard, front);
+    NSInteger current = HHDisplayOrientation(springboard, isFreeFire);
+    BOOL landscape = UIInterfaceOrientationIsLandscape(current);
     CGSize fixed = HHFloating.fixedScreen;
-    if (!isfinite(fixed.width) || !isfinite(fixed.height) || MIN(fixed.width, fixed.height) < 100 ||
-        MAX(fixed.width, fixed.height) > 10000) return 0;
-    *size = CGSizeMake(MAX(fixed.width, fixed.height), MIN(fixed.width, fixed.height));
-    *orientation = current;
+    HHLayoutFloatingWindows(springboard, landscape ? CGSizeMake(fixed.height, fixed.width) : fixed, current);
+    if (!waitingStatus) return 0;
+    *waitingStatus = @"Đang chờ FF TH mở";
+    if (!isFreeFire || springboard.lastError.length) return 0;
+    *waitingStatus = @"Chưa nhận hướng ngang";
+    if (!landscape) return 0;
+
+    uint64_t state = HHOptionalSend(springboard, front, "processState");
+    pid_t pid = (pid_t)HHOptionalSend(springboard, state, "pid");
+    if (pid <= 0) pid = (pid_t)HHOptionalSend(springboard, front, "pid");
+    if (pid <= 0) pid = (pid_t)HHOptionalSend(springboard, front, "processID");
+    if (pid <= 0 || springboard.lastError.length) {
+        *waitingStatus = @"Chưa nhận tiến trình FF TH";
+        return 0;
+    }
+    *waitingStatus = @"Đang xác nhận phiên FF TH";
     return pid;
 }
-void hoangha_floating_layout(RemoteCall *s,CGSize size,NSInteger orientation){
+static void HHLayoutFloatingWindows(RemoteCall *s,CGSize size,NSInteger orientation){
  if(!HHFloating.active||s.lastError.length||orientation<1||orientation>4||!isfinite(size.width)||!isfinite(size.height)||size.width<100||size.height<100||size.width>10000||size.height>10000)return;
  if(CGSizeEqualToSize(size,HHFloating.screen)&&orientation==HHFloating.orientation)return;
  HHFloating.screen=size;HHFloating.orientation=orientation;HHFloating.dragging=NO;

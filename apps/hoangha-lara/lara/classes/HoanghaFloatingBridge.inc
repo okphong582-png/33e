@@ -329,6 +329,7 @@ bool hoangha_floating_tick(RemoteCall *s) {
     if(flags[3]==0){BOOL enabled=NO;if(!HHRunCall(s,HHFloating.espState,&enabled))return false;HHFloating.espEnabled=enabled;}
     if (flags[0]==0) {
         HHFloating.menuVisible = !HHFloating.menuVisible;
+        if (HHFloating.menuVisible) hoangha_foreground_game(s, NULL);
         if(!HHMenuHidden(s,!HHFloating.menuVisible))return false;
         if (HHFloating.menuVisible && !HHCachedBounds(s, HHFloating.menuBounds,
             CGSizeMake(MIN(280,HHFloating.screen.width-24),180))) {HHMenuHidden(s,YES);return false;}

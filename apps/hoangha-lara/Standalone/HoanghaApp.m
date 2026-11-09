@@ -68,7 +68,7 @@ static void HHLog(const char *message) {
     self.title = @"Hoangha";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
-                       [NSString stringWithFormat:@"Hoangha-v1.5.2-%@.log", NSUUID.UUID.UUIDString]];
+                       [NSString stringWithFormat:@"Hoangha-v1.5.3-%@.log", NSUUID.UUID.UUIDString]];
     [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
@@ -323,6 +323,7 @@ static void HHLog(const char *message) {
                         HHFreeFireReader *reader=nil;
                         HHGameSchedule schedule={0};
                         NSString *lastStatus=nil;
+                        NSString *waitingStatus=nil;
                         while (self.floatingRunning) {
                             @autoreleasepool {
                                 if (!hoangha_floating_tick(session)) {self.floatingRunning=NO;success=NO;break;}
@@ -339,17 +340,15 @@ static void HHLog(const char *message) {
                                 }
                                 if(work.sample){
                                     if(work.geometry){
-                                        CGSize size=CGSizeZero;NSInteger orientation=0;
-                                        pid_t pid=hoangha_foreground_game(session,&size,&orientation);
+                                        pid_t pid=hoangha_foreground_game(session,&waitingStatus);
                                         hh_game_observe_foreground(&schedule,pid);
-                                        if(pid>0)hoangha_floating_layout(session,size,orientation);
                                     }
                                     BOOL connected=schedule.foregroundPID>0&&[reader connectIfNeededForPID:schedule.foregroundPID];
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     if(!hoangha_floating_boxes(session,boxes)){success=NO;self.floatingRunning=NO;break;}
                                 }
                                 NSString *status=@"ESP Box đang tắt · chưa kết nối game";
-                                if(enabled)status=schedule.foregroundPID>0?reader.status:@"Đang chờ FF TH ở màn hình ngang";
+                                if(enabled)status=schedule.foregroundPID>0?reader.status:(waitingStatus?:@"Đang chờ FF TH mở");
                                 if(![lastStatus isEqualToString:status]){hoangha_floating_status(session,status);[self setStatus:status];lastStatus=status;}
                             }
                             usleep(100000);
