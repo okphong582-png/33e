@@ -120,6 +120,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 @property(nonatomic) uint64_t base;
 @property(nonatomic) pid_t pid;
 @property(nonatomic) CFAbsoluteTime retryAt;
+@property(nonatomic) BOOL recovering;
 @end
 
 @implementation HHFreeFireReader
@@ -172,9 +173,12 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     size_t count = 0;
     BOOL sampled = hh_ff_snapshot(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count);
     if (!sampled) {
+        if (!self.recovering) HHReleaseGamePages(&_memory);
+        self.recovering = YES;
         self.status = @"Đang chờ trận / dữ liệu hợp lệ";
         return nil;
     }
+    self.recovering = NO;
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:count];
     for (size_t i = 0; i < count; ++i) {
@@ -190,6 +194,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     self.base = 0;
     self.pid = 0;
     self.retryAt = 0;
+    self.recovering = NO;
     self.status = @"Đang chờ FF TH";
 }
 
