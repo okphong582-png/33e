@@ -121,11 +121,15 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 @property(nonatomic) pid_t pid;
 @property(nonatomic) CFAbsoluteTime retryAt;
 @property(nonatomic) BOOL recovering;
+@property(nonatomic,strong) NSMutableDictionary<NSNumber *, NSNumber *> *numbers;
 @end
 
 @implementation HHFreeFireReader
 - (instancetype)init {
-    if ((self = [super init])) _status = @"Đang chờ FF TH";
+    if ((self = [super init])) {
+        _status = @"Đang chờ FF TH";
+        _numbers = [NSMutableDictionary new];
+    }
     return self;
 }
 
@@ -142,6 +146,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     if (!process || (pid_t)ds_kread32(process + off_proc_p_pid) != pid) {
         HHReleaseGamePages(&_memory);
         _memory.map = 0;
+        [self.numbers removeAllObjects];
         self.base = 0;
         self.status = @"Chưa khớp phiên FF TH đang mở";
         return NO;
@@ -152,6 +157,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     if (map != _memory.map) {
         HHReleaseGamePages(&_memory);
         _memory.map = map;
+        [self.numbers removeAllObjects];
         self.base = 0;
     }
     if (!map) {
@@ -182,7 +188,13 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:count];
     for (size_t i = 0; i < count; ++i) {
-        [result addObject:[NSValue valueWithCGRect:CGRectMake(boxes[i].x, boxes[i].y, boxes[i].w, boxes[i].h)]];
+        NSNumber *key=@(boxes[i].id), *number=self.numbers[key];
+        if(!number&&self.numbers.count<1024){
+            number=@(self.numbers.count+1);
+            self.numbers[key]=number;
+        }
+        boxes[i].number=number.unsignedShortValue;
+        [result addObject:[NSValue valueWithBytes:&boxes[i] objCType:@encode(HHFFBox)]];
     }
     self.status = [NSString stringWithFormat:@"ESP Box · %lu đối tượng", (unsigned long)count];
     return result;
@@ -195,6 +207,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     self.pid = 0;
     self.retryAt = 0;
     self.recovering = NO;
+    [self.numbers removeAllObjects];
     self.status = @"Đang chờ FF TH";
 }
 

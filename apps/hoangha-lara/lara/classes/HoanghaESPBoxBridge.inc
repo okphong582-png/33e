@@ -1,3 +1,5 @@
+#import "../../Standalone/HHFFProfile.h"
+
 // Display objects stay in SpringBoard, beside the existing floating menu.
 // The full-size drawing window is noninteractive; only the bounded menu receives touches.
 static uint64_t HHOptionalSend(RemoteCall *springboard, uint64_t object, const char *name) {
@@ -79,7 +81,8 @@ static void HHLayoutFloatingWindows(RemoteCall *s,CGSize size,NSInteger orientat
  HHFloating.position=CGPointMake(point.x,point.y);
  HHPlaceWindow(s,HHFloating.bubble,(CGRect){HHFloating.position,{58,58}});
  CGFloat width=MIN(280,size.width-24);
- HHPlaceWindow(s,HHFloating.menu,CGRectMake((size.width-width)/2,(size.height-180)/2,width,180));
+ HHPlaceWindow(s,HHFloating.menu,CGRectMake((size.width-width)/2,(size.height-230)/2,width,230));
+ if(HHFloating.countLabel)HHSetRect(s,HHFloating.countLabel,CGRectMake((size.width-108)/2,12,108,22));
  if(HHFloating.canvas){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,size});}
 }
 BOOL hoangha_floating_esp_enabled(void){return HHFloating.active&&HHFloating.espEnabled;}
@@ -93,16 +96,53 @@ static BOOL HHSetCanvasPath(RemoteCall *s,uint64_t path){
  remote_msg(s,call.invocation,HHFloating.setArgument,call.scratch+64,2,0,0);
  return HHRunCall(s,call,NULL);
 }
+static NSUInteger HHNumberMarks(CGRect *marks, CGRect box, const HHFFBox *target, CGFloat screenWidth){
+ static const uint8_t digits[]={63,6,91,79,102,109,125,7,127,111};
+ const CGRect strokes[]={
+  {{0,0},{2.8,.6}},{{2.8,.6},{.6,2.4}},{{2.8,3.6},{.6,2.4}},
+  {{0,6},{2.8,.6}},{{0,3.6},{.6,2.4}},{{0,.6},{.6,2.4}},{{0,3},{2.8,.6}}
+ };
+ char text[12];
+ snprintf(text,sizeof(text),"%u-%u",(unsigned)target->number,(unsigned)target->hp);
+ CGFloat x=MAX(1,MIN(screenWidth-1-5*strlen(text),CGRectGetMidX(box)-2.5*strlen(text)));
+ CGFloat y=MAX(2,CGRectGetMinY(box)-9);
+ NSUInteger count=0;
+ for(const char *p=text;*p;p++,x+=5){
+  uint8_t mask=*p=='-'?64:digits[*p-'0'];
+  for(NSUInteger i=0;i<7;i++)if(mask&(1<<i))marks[count++]=CGRectOffset(strokes[i],x,y);
+ }
+ return count;
+}
+
+static void HHUpdateEnemyBadge(RemoteCall *s,NSUInteger count){
+ if(!HHFloating.countLabel||HHFloating.badgeCount==count)return;
+ if(count){
+  NSString *label=[NSString stringWithFormat:@"ĐỊCH  %lu",(unsigned long)count];
+  HHSend(s,HHFloating.countLabel,"setText:",remote_NSString(s,label.UTF8String),0);
+ }
+ HHSend(s,HHFloating.countLabel,"setHidden:",count==0,0);
+ HHFloating.badgeCount=count;
+}
 BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
  if(!HHFloating.active||s.lastError.length)return NO;
- CGRect rectangles[32];NSUInteger count=0;
+ CGRect rectangles[HHMaxMarks];CGPoint lines[2*HHMaxBoxes+1];
+ NSUInteger count=0,targets=0;
+ CGPoint origin=CGPointMake(HHFloating.screen.width*0.5,HHFloating.screen.height-8);
+ lines[0]=origin;
  if(HHFloating.espEnabled)for(NSValue *value in boxes){
-  CGRect r=value.CGRectValue;
+  HHFFBox target={0};
+  [value getValue:&target size:sizeof(target)];
+  CGRect r=CGRectMake(round(target.x*4)/4,round(target.y*4)/4,round(target.w*4)/4,round(target.h*4)/4);
   if(!isfinite(r.origin.x)||!isfinite(r.origin.y)||!isfinite(r.size.width)||!isfinite(r.size.height)||r.size.width<1||r.size.height<1||r.size.width>HHFloating.screen.width*2||r.size.height>HHFloating.screen.height*2)continue;
-  rectangles[count++]=r;if(count==32)break;
+  rectangles[count++]=r;
+  if(HHFloating.countEnabled)count+=HHNumberMarks(rectangles+count,r,&target,HHFloating.screen.width);
+  lines[2*targets+1]=CGPointMake(CGRectGetMidX(r),CGRectGetMaxY(r));
+  lines[2*targets+2]=origin;
+  if(++targets==HHMaxBoxes)break;
  }
+ HHUpdateEnemyBadge(s,HHFloating.countEnabled?targets:0);
  if(!count){if(HHFloating.canvasVisible){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;}return !s.lastError.length;}
- if(HHFloating.canvasVisible&&HHFloating.previousCount==count&&!memcmp(rectangles,HHFloating.previousRectangles,count*sizeof(CGRect)))return YES;
+ if(HHFloating.canvasVisible&&HHFloating.previousLine==HHFloating.lineEnabled&&HHFloating.previousCount==count&&!memcmp(rectangles,HHFloating.previousRectangles,count*sizeof(CGRect)))return YES;
  if(!HHFloating.canvas){
   uint64_t root=0;
   HHFloating.canvas=HHCreateSmallWindow(s,(CGRect){CGPointZero,HHFloating.screen},&root);
@@ -110,28 +150,45 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
   HHAssociate(s,HHCanvasKey,HHFloating.canvas);
   HHSend(s,HHFloating.canvas,"setUserInteractionEnabled:",0,0);HHSend(s,root,"setUserInteractionEnabled:",0,0);
   HHSetNumber(s,HHFloating.canvas,"windowLevel",3000);
+  uint64_t colors=remote_getClass(s,"UIColor");
+  HHFloating.countLabel=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
+  HHSetRect(s,HHFloating.countLabel,CGRectMake((HHFloating.screen.width-108)/2,12,108,22));
+  HHSend(s,HHFloating.countLabel,"setTextAlignment:",NSTextAlignmentCenter,0);
+  HHSend(s,HHFloating.countLabel,"setTextColor:",HHSend(s,colors,"systemRedColor",0,0),0);
+  HHSend(s,HHFloating.countLabel,"setFont:",HHFont(s,16),0);
+  HHSend(s,HHFloating.countLabel,"setHidden:",1,0);
+  HHSend(s,root,"addSubview:",HHFloating.countLabel,0);HHSend(s,HHFloating.countLabel,"release",0,0);
+  HHUpdateEnemyBadge(s,HHFloating.countEnabled?targets:0);
   HHFloating.shape=HHSend(s,remote_getClass(s,"CAShapeLayer"),"new",0,0);
   uint64_t actions=HHSend(s,remote_getClass(s,"NSMutableDictionary"),"new",0,0);
   uint64_t null=HHSend(s,remote_getClass(s,"NSNull"),"null",0,0);
   HHSend(s,actions,"setObject:forKey:",null,remote_NSString(s,"path"));
   HHSend(s,HHFloating.shape,"setActions:",actions,0);HHSend(s,actions,"release",0,0);
-  uint64_t color=HHSend(s,remote_getClass(s,"UIColor"),"cyanColor",0,0),cgColor=HHSend(s,color,"CGColor",0,0);
+  uint64_t color=HHSend(s,colors,"whiteColor",0,0),cgColor=HHSend(s,color,"CGColor",0,0);
   HHSend(s,HHFloating.shape,"setStrokeColor:",cgColor,0);HHSend(s,HHFloating.shape,"setFillColor:",0,0);
-  CGFloat width=1.5;HHInvoke(s,HHFloating.shape,"setLineWidth:",&width,sizeof(width),NULL,0,NULL,0);
+  CGFloat width=1;HHInvoke(s,HHFloating.shape,"setLineWidth:",&width,sizeof(width),NULL,0,NULL,0);
   HHSend(s,HHSend(s,root,"layer",0,0),"addSublayer:",HHFloating.shape,0);HHSend(s,HHFloating.shape,"release",0,0);
   uint64_t emptyPath=0;
   HHFloating.canvasPath=HHPrepareCall(s,HHFloating.shape,"setPath:",&emptyPath,sizeof(emptyPath));
   if(!HHFloating.canvasPath.invocation)return NO;
-  HHFloating.rectangles=RemoteArbCall(s,malloc,sizeof(rectangles));
+  HHFloating.rectangles=RemoteArbCall(s,malloc,sizeof(rectangles)+sizeof(lines));
   HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,HHFloating.screen});
  }
  if(!HHFloating.rectangles||![s remote_write:HHFloating.rectangles from:rectangles size:count*sizeof(CGRect)])return NO;
  uint64_t path=RemoteArbCall(s,CGPathCreateMutable);if(!path)return NO;
  RemoteArbCall(s,CGPathAddRects,path,0,HHFloating.rectangles,count);
+ if(HHFloating.lineEnabled){
+  uint64_t points=HHFloating.rectangles+sizeof(rectangles);
+  if(![s remote_write:points from:lines size:(2*targets+1)*sizeof(CGPoint)]){
+   if(!s.lastError.length)RemoteArbCall(s,CGPathRelease,path);
+   return NO;
+  }
+  RemoteArbCall(s,CGPathAddLines,path,0,points,2*targets+1);
+ }
  BOOL drawn=HHSetCanvasPath(s,path);
  if(!s.lastError.length)RemoteArbCall(s,CGPathRelease,path);
  if(!drawn)return NO;
  if(!HHFloating.canvasVisible)HHSend(s,HHFloating.canvas,"setHidden:",0,0);
- if(!s.lastError.length){HHFloating.canvasVisible=YES;HHFloating.previousCount=count;memcpy(HHFloating.previousRectangles,rectangles,count*sizeof(CGRect));}
+ if(!s.lastError.length){HHFloating.canvasVisible=YES;HHFloating.previousLine=HHFloating.lineEnabled;HHFloating.previousCount=count;memcpy(HHFloating.previousRectangles,rectangles,count*sizeof(CGRect));}
  return !s.lastError.length;
 }

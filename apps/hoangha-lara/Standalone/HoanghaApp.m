@@ -68,7 +68,7 @@ static void HHLog(const char *message) {
     self.title = @"Hoangha";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
-                       [NSString stringWithFormat:@"Hoangha-v1.5.7-%@.log", NSUUID.UUID.UUIDString]];
+                       [NSString stringWithFormat:@"Hoangha-v1.5.8-%@.log", NSUUID.UUID.UUIDString]];
     [NSFileManager.defaultManager createFileAtPath:self.journalURL.path contents:[NSData data] attributes:nil];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
@@ -357,12 +357,11 @@ static void HHLog(const char *message) {
                                     CFAbsoluteTime sampleStarted=CFAbsoluteTimeGetCurrent();
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
-                                    BOOL keepBriefly=connected&&!boxes.count&&lastBoxesAt>0&&now-lastBoxesAt<0.14;
+                                    BOOL keepBriefly=connected&&!boxes&&lastBoxesAt>0&&now-lastBoxesAt<0.10;
                                     if(!keepBriefly){
                                         lastBoxesAt=boxes.count?sampleStarted:0;
                                         if(!hoangha_floating_boxes(session,boxes?:@[])){success=NO;self.floatingRunning=NO;break;}
                                     }
-                                    schedule.sampleAt=fmax(schedule.sampleAt,sampleStarted+0.075);
                                     hh_game_sample_finished(&schedule,CFAbsoluteTimeGetCurrent());
                                 }
                                 NSString *status=@"ESP Box đang tắt · chưa kết nối game";

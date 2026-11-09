@@ -51,6 +51,7 @@ int main() {
     FreeFireESP::Reader<decltype(read)> reader(read);FreeFireESP::Frame frame;
     check(reader.supports(f.base));check(reader.snapshot(f.base,1000,800,frame));check(frame.count==1);check(frame.targets[0].id==f.enemy);check(std::abs(frame.targets[0].h-547.2f)<.01f);check(std::abs(frame.targets[0].headX-500)<.01f);
     moveCameraDuringPose=true;
+    check(frame.targets[0].hp==150);
     check(reader.snapshot(f.base,1000,800,frame)&&frame.count==1&&std::abs(frame.targets[0].headX-625)<.01f);
     moveCameraDuringPose=false;
     f.m.set(f.cameraInner+0x80+12*sizeof(float),0.f);

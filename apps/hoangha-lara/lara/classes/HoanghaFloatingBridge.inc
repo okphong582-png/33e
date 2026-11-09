@@ -1,6 +1,8 @@
 // Two bounded windows: a 58-point bubble and a compact panel. No full-screen
 // overlay or modal/key window is used. Events outside their bounds remain with
 // the underlying windows. UIKit event actions only update three shared bytes.
+enum { HHMaxBoxes = 32, HHMaxMarks = HHMaxBoxes * 72 };
+
 typedef struct {
     uint64_t invocation, scratch, length;
 } HHFastCall;
@@ -10,8 +12,11 @@ static struct {
     uint64_t orientationObserver;
     NSInteger orientation;
     CGSize fixedScreen;
-    BOOL espEnabled, canvasVisible;
-    CGRect previousRectangles[32];NSUInteger previousCount;
+    BOOL espEnabled, canvasVisible, lineEnabled, countEnabled, previousLine;
+    uint64_t countLabel;
+    NSUInteger badgeCount;
+    HHFastCall lineState, countState;
+    CGRect previousRectangles[HHMaxMarks];NSUInteger previousCount;
     uint64_t perform, invoke, setArgument, getReturn;
     HHFastCall panState, translation, move, menuHidden, espState, bubbleBounds, menuBounds, canvasPath;
     CGSize screen;
@@ -236,11 +241,11 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s, button, "setAccessibilityLabel:", remote_NSString(s, "Mizze — mở menu"), 0);
 
     uint64_t data = HHSend(s, remote_getClass(s, "NSMutableData"), "alloc", 0, 0);
-    data = HHSend(s, data, "initWithLength:", 4, 0);
+    data = HHSend(s, data, "initWithLength:", 6, 0);
     HHKeep(s, data);
     HHFloating.flags = HHSend(s, data, "mutableBytes", 0, 0);
-    const uint8_t clear[4] = {1, 1, 1, 1};
-    if (!HHFloating.flags || ![s remote_write:HHFloating.flags from:clear size:4]) return false;
+    const uint8_t clear[6] = {1, 1, 1, 1, 1, 1};
+    if (!HHFloating.flags || ![s remote_write:HHFloating.flags from:clear size:sizeof(clear)]) return false;
     uint64_t tap = HHEventAction(s, data, 0), close = HHEventAction(s, data, 1), drag = HHEventAction(s, data, 2), esp=HHEventAction(s,data,3);
     if (!HHButtonAction(s, button, tap)) return false;
     HHFloating.pan = HHSend(s, remote_getClass(s, "UIPanGestureRecognizer"), "alloc", 0, 0);
@@ -250,7 +255,7 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s, HHFloating.pan, "release", 0, 0);
     HHSend(s, button, "release", 0, 0);
 
-    CGSize panel = CGSizeMake(MIN(280, HHFloating.screen.width - 24), 180);
+    CGSize panel = CGSizeMake(MIN(280, HHFloating.screen.width - 24), 230);
     CGRect panelFrame = CGRectMake((HHFloating.screen.width-panel.width)/2,
                                    (HHFloating.screen.height-panel.height)/2, panel.width, panel.height);
     uint64_t panelRoot = 0;
@@ -263,7 +268,7 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s, panelRoot, "setClipsToBounds:", 1, 0);
     uint64_t title = HHSend(s, remote_getClass(s, "UILabel"), "new", 0, 0);
     HHSetRect(s, title, CGRectMake(18, 15, panel.width-76, 28));
-    HHSend(s, title, "setText:", remote_NSString(s, "MIZZE"), 0);
+    HHSend(s, title, "setText:", remote_NSString(s, "MIZZE  /  ESP"), 0);
     HHSend(s, title, "setFont:", HHFont(s, 20), 0);
     HHSend(s, title, "setTextColor:", HHSend(s, colors, "labelColor", 0, 0), 0);
     HHSend(s, panelRoot, "addSubview:", title, 0); HHSend(s, title, "release", 0, 0);
@@ -279,8 +284,28 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s,panelRoot,"addSubview:",HHFloating.espSwitch,0);
     if(!HHControlAction(s,HHFloating.espSwitch,esp,UIControlEventValueChanged))return false;
     HHSend(s,HHFloating.espSwitch,"release",0,0);
+    const char *options[]={"Đường nối","Số địch"};
+    HHFastCall *states[]={&HHFloating.lineState,&HHFloating.countState};
+    for (NSUInteger i=0;i<2;i++) {
+        CGFloat y=108+42*i;
+        uint64_t label=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
+        uint64_t toggle=HHSend(s,remote_getClass(s,"UISwitch"),"new",0,0);
+        uint64_t name=remote_NSString(s,options[i]);
+        HHSetRect(s,label,CGRectMake(18,y,panel.width-102,31));
+        HHSetRect(s,toggle,CGRectMake(panel.width-72,y,51,31));
+        HHSend(s,label,"setText:",name,0);
+        HHSend(s,label,"setFont:",HHFont(s,16),0);
+        HHSend(s,toggle,"setAccessibilityLabel:",name,0);
+        HHSend(s,panelRoot,"addSubview:",label,0);
+        HHSend(s,panelRoot,"addSubview:",toggle,0);
+        HHSend(s,label,"release",0,0);
+        if(!HHControlAction(s,toggle,HHEventAction(s,data,4+i),UIControlEventValueChanged))return false;
+        *states[i]=HHPrepareCall(s,toggle,"isOn",NULL,0);
+        HHSend(s,toggle,"release",0,0);
+        if(!states[i]->invocation)return false;
+    }
     HHFloating.statusLabel=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
-    HHSetRect(s,HHFloating.statusLabel,CGRectMake(18,110,panel.width-36,54));
+    HHSetRect(s,HHFloating.statusLabel,CGRectMake(18,187,panel.width-36,32));
     HHSend(s,HHFloating.statusLabel,"setText:",remote_NSString(s,"ESP Box đang tắt"),0);
     HHSend(s,HHFloating.statusLabel,"setNumberOfLines:",3,0);HHSend(s,HHFloating.statusLabel,"setFont:",HHFont(s,12),0);
     HHSend(s,HHFloating.statusLabel,"setTextColor:",HHSend(s,colors,"secondaryLabelColor",0,0),0);
@@ -320,19 +345,21 @@ bool hoangha_floating_tick(RemoteCall *s) {
         if (!HHCachedBounds(s,HHFloating.bubbleBounds,CGSizeMake(58,58))) {HHSend(s,HHFloating.bubble,"setHidden:",1,0);return false;}
 
     }
-    uint8_t flags[4];
-    if (![s remoteRead:HHFloating.flags to:flags size:4]) return false;
-    for (NSUInteger i=0;i<4;i++) if (flags[i]==0) {
+    uint8_t flags[6];
+    if (![s remoteRead:HHFloating.flags to:flags size:sizeof(flags)]) return false;
+    for (NSUInteger i=0;i<sizeof(flags);i++) if (flags[i]==0) {
         uint8_t clear=1;
         if (![s remote_write:HHFloating.flags+i from:&clear size:1]) return false;
     }
     if(flags[3]==0){BOOL enabled=NO;if(!HHRunCall(s,HHFloating.espState,&enabled))return false;HHFloating.espEnabled=enabled;}
+    if(flags[4]==0&&!HHRunCall(s,HHFloating.lineState,&HHFloating.lineEnabled))return false;
+    if(flags[5]==0&&!HHRunCall(s,HHFloating.countState,&HHFloating.countEnabled))return false;
     if (flags[0]==0) {
         HHFloating.menuVisible = !HHFloating.menuVisible;
         if (HHFloating.menuVisible) hoangha_foreground_game(s, NULL);
         if(!HHMenuHidden(s,!HHFloating.menuVisible))return false;
         if (HHFloating.menuVisible && !HHCachedBounds(s, HHFloating.menuBounds,
-            CGSizeMake(MIN(280,HHFloating.screen.width-24),180))) {HHMenuHidden(s,YES);return false;}
+            CGSizeMake(MIN(280,HHFloating.screen.width-24),230))) {HHMenuHidden(s,YES);return false;}
     }
     if (flags[1]==0) {
         HHFloating.menuVisible=NO;
@@ -360,7 +387,7 @@ bool hoangha_floating_stop(RemoteCall *s) {
     if (!HHFloating.app) return false;
     HHRemoveOld(s, HHBubbleKey); HHRemoveOld(s, HHMenuKey);HHRemoveOld(s,HHCanvasKey);
     if(HHFloating.rectangles&&!s.lastError.length)RemoteArbCall(s,free,HHFloating.rectangles);
-    HHFastCall calls[]={HHFloating.panState,HHFloating.translation,HHFloating.move,HHFloating.menuHidden,HHFloating.espState,HHFloating.bubbleBounds,HHFloating.menuBounds,HHFloating.canvasPath};
+    HHFastCall calls[]={HHFloating.panState,HHFloating.translation,HHFloating.move,HHFloating.menuHidden,HHFloating.espState,HHFloating.bubbleBounds,HHFloating.menuBounds,HHFloating.canvasPath,HHFloating.lineState,HHFloating.countState};
     for (NSUInteger i=0;i<sizeof(calls)/sizeof(calls[0]);i++) if (calls[i].scratch && !s.lastError.length) RemoteArbCall(s, free, calls[i].scratch);
     HHAssociate(s, HHRootsKey, 0);
     BOOL okay=!s.lastError.length;
