@@ -14,6 +14,7 @@ constexpr uint64_t FacadeTypeInfo = 0xbb46a50;
 constexpr size_t MaxPlayers = 256, MaxTargets = 32;
 struct Vec3 { float x=0, y=0, z=0; };
 struct Transform { float position[4], rotation[4], scale[4]; };
+struct Viewport { float x,y,width,height; };
 struct Target { uint64_t id=0; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; };
 struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; };
 inline bool valid(uint64_t a) { return a>0x10000 && a<0x80000000000ull && (a&7)==0; }
@@ -58,12 +59,16 @@ template<class Read> class Reader {
         if(!ptr(statics+8,game)&&!ptr(statics,game))return false;
         return ptr(game+0x90,match)&&ptr(match+0xd8,local);
     }
-    static bool project(Vec3 v,const float *m,float width,float height,float &x,float &y) {
+    static bool project(Vec3 v,const float *m,const Viewport &viewport,float &x,float &y) {
         const float w=m[3]*v.x+m[7]*v.y+m[11]*v.z+m[15];
         if(!std::isfinite(w)||w<=0.001f)return false;
-        x=width*0.5f*(1+(m[0]*v.x+m[4]*v.y+m[8]*v.z+m[12])/w);
-        y=height*0.5f*(1-(m[1]*v.x+m[5]*v.y+m[9]*v.z+m[13])/w);
+        x=viewport.x+viewport.width*0.5f*(1+(m[0]*v.x+m[4]*v.y+m[8]*v.z+m[12])/w);
+        y=viewport.y+viewport.height*0.5f*(1-(m[1]*v.x+m[5]*v.y+m[9]*v.z+m[13])/w);
         return std::isfinite(x)&&std::isfinite(y);
+    }
+    bool projectBone(uint64_t player,uint64_t field,const float *matrix,const Viewport &viewport,float &x,float &y) {
+        Vec3 point;
+        return bone(player,field,point)&&project(point,matrix,viewport,x,y);
     }
 public:
     explicit Reader(Read r):read(r) {}
@@ -92,8 +97,18 @@ public:
         static_assert(sizeof(Entry)==24,"Dictionary<byte,Player> ABI");
         std::array<Entry,MaxPlayers> roster{};
         if(count&&!read(entries+0x20,roster.data(),size_t(count)*sizeof(Entry)))return false;
-        std::array<float,16> view{},projection{},matrix{};
-        if(!value(inner+0x80,view)||!value(inner+0xc0,projection))return false;
+        struct CameraMatrices { std::array<float,16> view,projection; } cameraMatrices;
+        std::array<float,16> matrix{};
+        Viewport rect;
+        // Camera::get_rect returns this normalized rectangle with a bottom-left origin.
+        if(!value(inner+0x42c,rect)||!std::isfinite(rect.x)||!std::isfinite(rect.y)||
+           !std::isfinite(rect.width)||!std::isfinite(rect.height)||
+           rect.width<=0||rect.height<=0||!value(inner+0x80,cameraMatrices))return false;
+        const float left=std::max(0.f,rect.x),right=std::min(1.f,rect.x+rect.width);
+        const float bottom=std::max(0.f,rect.y),top=std::min(1.f,rect.y+rect.height);
+        if(right<=left||top<=bottom)return false;
+        const Viewport viewport{left*width,(1.f-top)*height,(right-left)*width,(top-bottom)*height};
+        const auto &view=cameraMatrices.view,&projection=cameraMatrices.projection;
         for(float f:view)if(!std::isfinite(f))return false;
         for(float f:projection)if(!std::isfinite(f))return false;
         for(int c=0;c<4;c++)for(int r=0;r<4;r++)for(int k=0;k<4;k++)matrix[c*4+r]+=projection[k*4+r]*view[c*4+k];
@@ -105,16 +120,40 @@ public:
             if(duplicate)continue;
             uint8_t team;uint16_t health;
             if(!value(player+0x410,team)||team==myTeam||!hp(player,health)||!health)continue;
-            Vec3 head,foot;
-            if(!bone(player,0x6a0,head)||!bone(player,0x6d8,foot))continue;
             Target t;t.id=player;
-            if(!project(head,matrix.data(),width,height,t.headX,t.headY)||!project(foot,matrix.data(),width,height,t.footX,t.footY))continue;
-            t.h=std::abs(t.footY-t.headY);t.w=t.h*0.48f;t.x=(t.headX+t.footX)*0.5f-t.w*0.5f;t.y=std::min(t.headY,t.footY);
-            if(t.h<2||t.h>height*2||t.x+t.w<0||t.x>width||t.y+t.h<0||t.y>height)continue;
+            const float *m=matrix.data();
+            if(!projectBone(player,0x6a0,m,viewport,t.headX,t.headY))continue;
+            float leftX=0,leftY=0,rightX=0,rightY=0;
+            // Player's left/right toe getters, with the respective ankles as fallbacks.
+            const bool hasLeft=projectBone(player,0x6e8,m,viewport,leftX,leftY)||
+                               projectBone(player,0x6d8,m,viewport,leftX,leftY);
+            const bool hasRight=projectBone(player,0x6f0,m,viewport,rightX,rightY)||
+                                projectBone(player,0x6e0,m,viewport,rightX,rightY);
+            if(!hasLeft&&!hasRight) {
+                if(!projectBone(player,0x6c8,m,viewport,leftX,leftY))continue;
+                rightX=leftX;rightY=leftY;
+            } else if(!hasRight) {
+                rightX=leftX;rightY=leftY;
+            } else if(!hasLeft) {
+                leftX=rightX;leftY=rightY;
+            }
+            t.footX=(leftX+rightX)*0.5f;t.footY=std::max(leftY,rightY);
+            const float minY=std::min({t.headY,leftY,rightY}),maxY=std::max({t.headY,leftY,rightY});
+            const float bodyHeight=maxY-minY;
+            if(bodyHeight<1||bodyHeight>viewport.height*2)continue;
+            const float minX=std::min({t.headX,leftX,rightX}),maxX=std::max({t.headX,leftX,rightX});
+            const float halfWidth=std::max(bodyHeight*0.24f,(maxX-minX)*0.5f+bodyHeight*0.06f);
+            const float centerX=(minX+maxX)*0.5f;
+            t.x=std::max(viewport.x,centerX-halfWidth);
+            t.y=std::max(viewport.y,minY-bodyHeight*0.08f);
+            t.w=std::min(viewport.x+viewport.width,centerX+halfWidth)-t.x;
+            t.h=std::min(viewport.y+viewport.height,maxY+bodyHeight*0.06f)-t.y;
+            if(t.w<1||t.h<1)continue;
             pending.targets[pending.count++]=t;
         }
-        uint64_t gameNow,matchNow,localNow,entriesNow;int32_t versionNow,countNow;
+        uint64_t gameNow,matchNow,localNow,entriesNow,cameraNow,innerNow;int32_t versionNow,countNow;
         if(!context(base,gameNow,matchNow,localNow)||gameNow!=game||matchNow!=match||localNow!=local||
+           !ptr(controller+0x20,cameraNow)||cameraNow!=camera||!ptr(cameraNow+0x10,innerNow)||innerNow!=inner||
            !ptr(dict+0x18,entriesNow)||entriesNow!=entries||!value(dict+0x24,versionNow)||versionNow!=version||!value(dict+0x20,countNow)||countNow!=count)return false;
         out=pending;return true;
     }

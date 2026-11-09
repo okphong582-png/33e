@@ -25,6 +25,7 @@ struct Fixture {
         m.set(dict+0x18,entries);m.set(dict+0x20,int32_t(1));m.set(dict+0x24,int32_t(7));m.versionAddress=dict+0x24;m.set(entries+0x18,uint64_t(256));
         m.set(game+0xd8,controller);m.set(controller+0x20,camera);m.set(camera+0x10,cameraInner);
         const std::array<float,16> identity={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};m.set(cameraInner+0x80,identity);m.set(cameraInner+0xc0,identity);
+        m.set(cameraInner+0x42c,FreeFireESP::Viewport{0,0,1,1});
         local=player(1,200);m.set(match+0xd8,local);enemy=player(2,150);entry(0,enemy);
     }
     uint64_t transform(FreeFireESP::Vec3 position,uint64_t *indexOut=nullptr) {
@@ -42,7 +43,17 @@ struct Fixture {
 int main() {
     int checks=0;auto check=[&](bool ok){assert(ok);++checks;};
     Fixture f;auto read=[&](uint64_t a,void *p,size_t n){return f.m.read(a,p,n);};FreeFireESP::Reader<decltype(read)> reader(read);FreeFireESP::Frame frame;
-    check(reader.supports(f.base));check(reader.snapshot(f.base,1000,800,frame));check(frame.count==1);check(frame.targets[0].id==f.enemy);check(std::abs(frame.targets[0].h-480)<.01f);check(std::abs(frame.targets[0].headX-500)<.01f);
+    check(reader.supports(f.base));check(reader.snapshot(f.base,1000,800,frame));check(frame.count==1);check(frame.targets[0].id==f.enemy);check(std::abs(frame.targets[0].h-547.2f)<.01f);check(std::abs(frame.targets[0].headX-500)<.01f);
+    f.m.set(f.cameraInner+0x42c,FreeFireESP::Viewport{.1f,.2f,.6f,.5f});
+    check(reader.snapshot(f.base,1000,800,frame)&&frame.count==1);
+    check(std::abs(frame.targets[0].headX-400)<.01f&&std::abs(frame.targets[0].headY-320)<.01f);
+    f.m.set(f.cameraInner+0x42c,FreeFireESP::Viewport{0,0,1,1});
+    const auto rightToe=f.m.alloc();
+    f.m.set(rightToe+0x10,f.transform({.7f,-.65f,1}));
+    f.m.set(f.enemy+0x6f0,rightToe);
+    check(reader.snapshot(f.base,1000,800,frame)&&frame.count==1);
+    check(frame.targets[0].x+frame.targets[0].w>850&&std::abs(frame.targets[0].footY-660)<.01f);
+    f.m.set(f.enemy+0x6f0,uint64_t(0));
     auto wrong=FreeFireESP::UUID;wrong[0]^=1;f.m.set(f.base+40,wrong);check(!reader.supports(f.base));f.m.set(f.base+40,FreeFireESP::UUID);
     f.m.set(f.base+36,uint32_t(0));check(!reader.supports(f.base));f.m.set(f.base+36,uint32_t(24));
     f.m.set(f.dict+0x20,int32_t(6));f.entry(1,f.local);f.entry(2,f.player(1,200));f.entry(3,f.player(2,0));f.entry(4,f.enemy);f.entry(5,f.player(2,100),-1);

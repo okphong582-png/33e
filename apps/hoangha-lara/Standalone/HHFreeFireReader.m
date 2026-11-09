@@ -133,7 +133,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     HHReleaseGamePages(&memory);
     if (!sampled) {
         self.status = @"Đang chờ trận / dữ liệu hợp lệ";
-        return @[];
+        return nil;
     }
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:count];
