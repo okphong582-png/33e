@@ -174,6 +174,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 @property(nonatomic) CFAbsoluteTime retryAt;
 @property(nonatomic) BOOL recovering;
 @property(nonatomic,copy) NSString *aimCapabilityReport;
+@property(nonatomic,copy) NSString *lastAimCapability;
+@property(nonatomic) CFAbsoluteTime aimProbeAt;
 @property(nonatomic,strong) NSMutableDictionary<NSNumber *, NSNumber *> *numbers;
 @end
 
@@ -221,7 +223,6 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
         ++_memory.frame;
         self.base = HHUnityImage(&_memory);
         self.status = self.base ? @"Đã nhận FF TH 1.132.1" : @"Chưa tìm thấy Unity 1.132.1";
-        if(self.base)self.aimCapabilityReport=HHProbeAimCapability(&_memory,self.base,pid);
     }
     return self.base != 0;
 }
@@ -245,6 +246,15 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
         return nil;
     }
     self.recovering = NO;
+    CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
+    if(now>=self.aimProbeAt){
+        self.aimProbeAt=now+5;
+        NSString *report=HHProbeAimCapability(&_memory,self.base,self.pid);
+        if(![report isEqualToString:self.lastAimCapability]){
+            self.lastAimCapability=report;
+            self.aimCapabilityReport=report;
+        }
+    }
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:count];
     for (size_t i = 0; i < count; ++i) {
@@ -268,6 +278,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     self.retryAt = 0;
     self.recovering = NO;
     self.aimCapabilityReport=nil;
+    self.lastAimCapability=nil;
+    self.aimProbeAt=0;
     [self.numbers removeAllObjects];
     self.status = @"Đang chờ FF TH";
 }

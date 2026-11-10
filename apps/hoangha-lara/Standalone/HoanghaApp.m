@@ -354,10 +354,10 @@ static void HHLog(const char *message) {
                                         if(previousPID>0&&previousPID!=schedule.foregroundPID)[reader disconnect];
                                     }
                                     BOOL connected=schedule.foregroundPID>0&&[reader connectIfNeededForPID:schedule.foregroundPID];
-                                    NSString *capability=[reader takeAimCapabilityReport];
-                                    if(capability.length)[self appendLog:capability];
                                     CFAbsoluteTime sampleStarted=CFAbsoluteTimeGetCurrent();
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
+                                    NSString *capability=[reader takeAimCapabilityReport];
+                                    if(capability.length)[self appendLog:capability];
                                     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
                                     BOOL keepBriefly=connected&&!boxes&&lastBoxesAt>0&&now-lastBoxesAt<0.10;
                                     if(!keepBriefly){
