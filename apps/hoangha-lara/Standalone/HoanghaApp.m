@@ -45,7 +45,7 @@ static void HHLog(const char *message) {
     if (message) [HHScreen appendLog:[NSString stringWithUTF8String:message] ?: @""];
 }
 
-- (void)setStatus:(NSString *)text {
+- (void)appendJournal:(NSString *)text {
     @synchronized (self) {
         NSFileHandle *file = [NSFileHandle fileHandleForWritingAtPath:self.journalURL.path];
         if (file) {
@@ -56,6 +56,10 @@ static void HHLog(const char *message) {
             [file closeFile];
         }
     }
+}
+
+- (void)setStatus:(NSString *)text {
+    [self appendJournal:text];
     dispatch_async(dispatch_get_main_queue(), ^{ self.statusLabel.text = text; });
     [self appendLog:text];
 }
@@ -357,7 +361,7 @@ static void HHLog(const char *message) {
                                     CFAbsoluteTime sampleStarted=CFAbsoluteTimeGetCurrent();
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     NSString *capability=[reader takeAimCapabilityReport];
-                                    if(capability.length)[self appendLog:capability];
+                                    if(capability.length){[self appendJournal:capability];[self appendLog:capability];}
                                     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
                                     BOOL keepBriefly=connected&&!boxes&&lastBoxesAt>0&&now-lastBoxesAt<0.10;
                                     if(!keepBriefly){
