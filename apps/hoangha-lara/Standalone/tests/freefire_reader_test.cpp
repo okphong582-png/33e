@@ -46,7 +46,7 @@ struct Fixture {
     void entry(int i,uint64_t player,int32_t hash=1) {const auto a=entries+0x20+24ull*i;m.set(a,hash);m.set(a+16,player);}
 };
 int main() {
-    int checks=0;auto check=[&](bool ok){assert(ok);++checks;};
+    int checks=0;auto check=[&](bool ok){if(!ok)std::cerr<<"FF reader check "<<checks+1<<" failed\n";assert(ok);++checks;};
     Fixture f;
     f.nickname(f.enemy,u"Tân\U0001f525");
     bool moveCameraDuringPose=false;
@@ -68,7 +68,7 @@ int main() {
     check(!reader.reproject(f.base,1000,800,cached,frame)&&frame.count==0);
     f.m.set(f.match+0xd8,f.local);
     moveCameraDuringPose=true;
-    check(frame.targets[0].hp==150);
+    check(cached.targets[0].hp==150);
     check(reader.snapshot(f.base,1000,800,frame)&&frame.count==1&&std::abs(frame.targets[0].headX-625)<.01f);
     moveCameraDuringPose=false;
     f.m.set(f.cameraInner+0x80+12*sizeof(float),0.f);
