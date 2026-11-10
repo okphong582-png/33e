@@ -106,6 +106,9 @@ static void HHUpdateEnemyBadge(RemoteCall *s,NSUInteger count){
  HHFloating.badgeCount=count;
 }
 static void HHUpdateTargetLabels(RemoteCall *s,const HHFFBox *targets,NSUInteger count){
+ CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
+ if(count==HHFloating.targetLabelCount&&now-HHFloating.lastTargetLabelAt<0.12)return;
+ HHFloating.lastTargetLabelAt=now;
  for(NSUInteger i=0;i<count;i++){
   const HHFFBox *target=&targets[i];
   uint64_t label=HHFloating.targetLabels[i];
@@ -175,7 +178,7 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
   lines[2*i+2]=origin;
  }
  HHUpdateEnemyBadge(s,HHFloating.countEnabled?targets:0);
- if(!count){HHFloating.previousTargetCount=0;HHFloating.targetLabelCount=0;if(HHFloating.canvasVisible){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;}return !s.lastError.length;}
+ if(!count){HHUpdateTargetLabels(s,ordered,0);HHFloating.previousTargetCount=0;if(HHFloating.canvasVisible){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;}return !s.lastError.length;}
  HHFloating.previousTargetCount=targets;
  for(NSUInteger i=0;i<targets;i++){
   const HHFFBox *target=&ordered[i];

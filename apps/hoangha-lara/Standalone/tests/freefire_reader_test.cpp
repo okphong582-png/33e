@@ -89,5 +89,12 @@ int main() {
     for(int i=0;i<40;i++)f.entry(i,f.player(2,100));f.m.set(f.dict+0x20,int32_t(40));check(reader.snapshot(f.base,1000,800,frame)&&frame.count==32);
     for(int i=0;i<120;i++)check(reader.snapshot(f.base,1000,800,frame)&&frame.count==32);
     f.m.set(f.dict+0x20,int32_t(-1));check(!reader.snapshot(f.base,1000,800,frame)&&frame.count==0);
+    FreeFireESP::SnapshotStage stage=FreeFireESP::SnapshotStage::Ready;
+    check(!reader.snapshot(f.base,1000,800,frame,&stage)&&stage==FreeFireESP::SnapshotStage::Roster);
+    f.m.set(f.dict+0x20,int32_t(1));
+    f.m.set(f.match+0xd8,uint64_t(0));
+    check(!reader.snapshot(f.base,1000,800,frame,&stage)&&stage==FreeFireESP::SnapshotStage::Match);
+    f.m.set(f.match+0xd8,f.local);
+    check(reader.snapshot(f.base,1000,800,frame,&stage)&&stage==FreeFireESP::SnapshotStage::Ready);
     std::cout<<"PASS "<<checks<<" FF reader checks: UUID, projection, teams/HP, duplicates, failed reads, roster mutation, transform cycles and bounded dense frames.\n";
 }

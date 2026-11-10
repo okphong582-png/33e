@@ -17,6 +17,7 @@ struct Transform { float position[4], rotation[4], scale[4]; };
 struct Viewport { float x,y,width,height; };
 struct Target { uint64_t id=0; uint16_t hp=0; char name[64]{}; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; };
 struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; };
+enum class SnapshotStage : uint8_t { Geometry, Match, Local, Roster, Changed, Camera, Ready };
 inline bool valid(uint64_t a) { return a>0x10000 && a<0x80000000000ull && (a&7)==0; }
 inline bool finite(Vec3 v) { return std::isfinite(v.x)&&std::isfinite(v.y)&&std::isfinite(v.z)&&std::abs(v.x)<100000&&std::abs(v.y)<100000&&std::abs(v.z)<100000; }
 
@@ -105,13 +106,18 @@ public:
         }
         return false;
     }
-    bool snapshot(uint64_t base,float width,float height,Frame &out) {
+    bool snapshot(uint64_t base,float width,float height,Frame &out,SnapshotStage *stage=nullptr) {
         out={};
+        if(stage)*stage=SnapshotStage::Geometry;
         if(!std::isfinite(width)||!std::isfinite(height)||width<1||height<1||width>16384||height>16384)return false;
         uint64_t game,match,local,dict,entries,controller,camera,inner;
         uint8_t myTeam;uint16_t localHP;
-        if(!context(base,game,match,local)||!value(local+0x410,myTeam)||!hp(local,localHP)||localHP==0||
+        if(stage)*stage=SnapshotStage::Match;
+        if(!context(base,game,match,local))return false;
+        if(stage)*stage=SnapshotStage::Local;
+        if(!value(local+0x410,myTeam)||!hp(local,localHP)||localHP==0||
            !ptr(match+0x148,dict)||!ptr(dict+0x18,entries)||!ptr(game+0xd8,controller)||!ptr(controller+0x20,camera)||!ptr(camera+0x10,inner))return false;
+        if(stage)*stage=SnapshotStage::Roster;
         int32_t count,version;uint64_t capacity;
         if(!value(dict+0x20,count)||!value(dict+0x24,version)||!value(entries+0x18,capacity)||capacity>MaxPlayers||count<0||uint64_t(count)>capacity)return false;
         struct Entry { int32_t hash,next;uint8_t key;uint8_t padding[7];uint64_t player; };
@@ -141,6 +147,7 @@ public:
             poses[poseCount++]=p;
         }
         uint64_t gameNow,matchNow,localNow,entriesNow,cameraNow,innerNow;int32_t versionNow,countNow;
+        if(stage)*stage=SnapshotStage::Changed;
         if(!context(base,gameNow,matchNow,localNow)||gameNow!=game||matchNow!=match||localNow!=local||
            !ptr(controller+0x20,cameraNow)||cameraNow!=camera||!ptr(cameraNow+0x10,innerNow)||innerNow!=inner||
            !ptr(dict+0x18,entriesNow)||entriesNow!=entries||!value(dict+0x24,versionNow)||versionNow!=version||!value(dict+0x20,countNow)||countNow!=count)return false;
@@ -150,6 +157,7 @@ public:
         std::array<float,16> matrix{};
         Viewport rect;
         // Camera::get_rect returns this normalized rectangle with a bottom-left origin.
+        if(stage)*stage=SnapshotStage::Camera;
         if(!value(inner+0x42c,rect)||!std::isfinite(rect.x)||!std::isfinite(rect.y)||
            !std::isfinite(rect.width)||!std::isfinite(rect.height)||
            rect.width<=0||rect.height<=0||!value(inner+0x80,cameraMatrices))return false;
@@ -190,7 +198,7 @@ public:
             if(t.w<1||t.h<1)continue;
             pending.targets[pending.count++]=t;
         }
-        out=pending;return true;
+        out=pending;if(stage)*stage=SnapshotStage::Ready;return true;
     }
 };
 }

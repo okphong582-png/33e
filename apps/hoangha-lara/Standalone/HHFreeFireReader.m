@@ -14,6 +14,7 @@ enum { HHGamePageLimit = 96, HHGameMapEntryLimit = 4096 };
 typedef struct {
     uint64_t address, local, entryAddress;
     uint64_t start, end, object, offset, usedAt;
+    CFAbsoluteTime checkedAt;
 } HHGamePage;
 
 typedef struct {
@@ -43,6 +44,13 @@ static uint64_t HHMapGamePage(HHGameMemory *memory, uint64_t address) {
         HHGamePage *page = &memory->pages[i];
         if (page->local && page->address == address) {
             if (page->usedAt == memory->frame) return page->local;
+            // The map is already bound to this PID. Bound the costly kernel entry
+            // walk while retaining a short freshness window for remaps.
+            CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+            if (now - page->checkedAt < 0.10) {
+                page->usedAt = memory->frame;
+                return page->local;
+            }
             struct vmmapentry entry = {0};
             ds_kreadbuf(page->entryAddress, &entry, sizeof(entry));
             if (HHReadableEntry(&entry, address) && entry.links.start == page->start &&
@@ -53,6 +61,7 @@ static uint64_t HHMapGamePage(HHGameMemory *memory, uint64_t address) {
                     off_vm_map_header_links_next : off_vm_map_entry_links_next;
                 if (previous && ds_kreadptr(previous + nextOffset) == page->entryAddress) {
                     page->usedAt = memory->frame;
+                    page->checkedAt = now;
                     return page->local;
                 }
             }
@@ -75,7 +84,8 @@ static uint64_t HHMapGamePage(HHGameMemory *memory, uint64_t address) {
     if (!page.localAddress) return 0;
     HHReleaseGamePage(slot);
     *slot = (HHGamePage){address, page.localAddress, entryAddress, entry.links.start,
-                         entry.links.end, entry.vme_object_value, entry.vme_offset, memory->frame};
+                         entry.links.end, entry.vme_object_value, entry.vme_offset,
+                         memory->frame, CFAbsoluteTimeGetCurrent()};
     return page.localAddress;
 }
 
@@ -238,14 +248,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     ++_memory.frame;
     HHFFBox boxes[32];
     size_t count = 0;
-    BOOL sampled = hh_ff_snapshot(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count);
-    if (!sampled) {
-        if (!self.recovering) HHReleaseGamePages(&_memory);
-        self.recovering = YES;
-        self.status = @"Đang chờ trận / dữ liệu hợp lệ";
-        return nil;
-    }
-    self.recovering = NO;
+    int stage = 0;
+    BOOL sampled = hh_ff_snapshot_stage(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count, &stage);
     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
     if(now>=self.aimProbeAt){
         self.aimProbeAt=now+5;
@@ -255,6 +259,15 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
             self.aimCapabilityReport=report;
         }
     }
+    if (!sampled) {
+        if (!self.recovering) HHReleaseGamePages(&_memory);
+        self.recovering = YES;
+        NSArray<NSString *> *stages=@[@"kích thước màn hình", @"phiên trận", @"nhân vật/camera", @"danh sách người chơi", @"dữ liệu trận thay đổi", @"ma trận camera"];
+        NSString *reason=stage>=0 && stage<(int)stages.count?stages[(NSUInteger)stage]:@"dữ liệu chưa hợp lệ";
+        self.status=[@"ESP đang chờ: " stringByAppendingString:reason];
+        return nil;
+    }
+    self.recovering = NO;
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:count];
     for (size_t i = 0; i < count; ++i) {

@@ -68,8 +68,9 @@ static void HHLog(const char *message) {
     [super viewDidLoad];
     HHScreen = self;
     self.operationQueue = dispatch_queue_create("com.hoangha.lara.operations", DISPATCH_QUEUE_SERIAL);
-    self.view.backgroundColor = UIColor.systemBackgroundColor;
-    self.title = @"Hoangha";
+    self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+    self.view.backgroundColor = [UIColor colorWithRed:0.055 green:0.075 blue:0.12 alpha:1];
+    self.title = @"HOANGHA";
     NSURL *documents = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     self.journalURL = [documents URLByAppendingPathComponent:
                        [NSString stringWithFormat:@"Hoangha-v1.5.8-%@.log", NSUUID.UUID.UUIDString]];
@@ -77,19 +78,35 @@ static void HHLog(const char *message) {
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Log"
         style:UIBarButtonItemStylePlain target:self action:@selector(shareLog:)];
 
+    UILabel *eyebrow = [UILabel new];
+    eyebrow.text = @"LARA  /  FF TH 1.132.1";
+    eyebrow.font = [UIFont monospacedSystemFontOfSize:12 weight:UIFontWeightSemibold];
+    eyebrow.textColor = UIColor.systemTealColor;
+    eyebrow.textAlignment = NSTextAlignmentCenter;
+
     UILabel *title = [UILabel new];
-    title.text = @"hoangha";
-    title.font = [UIFont boldSystemFontOfSize:76];
+    title.text = @"HOANGHA";
+    title.font = [UIFont systemFontOfSize:52 weight:UIFontWeightBlack];
+    title.textColor = UIColor.whiteColor;
     title.textAlignment = NSTextAlignmentCenter;
     title.adjustsFontSizeToFitWidth = YES;
     title.minimumScaleFactor = 0.35;
     title.accessibilityTraits |= UIAccessibilityTraitHeader;
 
+    UILabel *subtitle = [UILabel new];
+    subtitle.text = @"ESP  ·  BOX  ·  TÊN  ·  HP";
+    subtitle.font = [UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightMedium];
+    subtitle.textColor = UIColor.systemTealColor;
+    subtitle.textAlignment = NSTextAlignmentCenter;
+
     self.statusLabel = [UILabel new];
     self.statusLabel.text = @"Nhấn Bắt đầu, mở FF TH rồi bật ESP Box trong menu nổi.";
     self.statusLabel.numberOfLines = 0;
     self.statusLabel.textAlignment = NSTextAlignmentCenter;
-    self.statusLabel.textColor = UIColor.secondaryLabelColor;
+    self.statusLabel.textColor = UIColor.whiteColor;
+    self.statusLabel.backgroundColor = [UIColor colorWithRed:0.10 green:0.15 blue:0.23 alpha:1];
+    self.statusLabel.layer.cornerRadius = 14;
+    self.statusLabel.clipsToBounds = YES;
     self.statusLabel.accessibilityIdentifier = @"hoangha.status";
 
     self.startButton = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -97,6 +114,8 @@ static void HHLog(const char *message) {
     start.title = @"Bắt đầu";
     start.buttonSize = UIButtonConfigurationSizeLarge;
     start.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
+    start.baseBackgroundColor = UIColor.systemTealColor;
+    start.baseForegroundColor = UIColor.blackColor;
     self.startButton.configuration = start;
     self.startButton.accessibilityIdentifier = @"hoangha.start";
     [self.startButton addTarget:self action:@selector(startPressed) forControlEvents:UIControlEventTouchUpInside];
@@ -106,6 +125,8 @@ static void HHLog(const char *message) {
     stop.title = @"Dừng";
     stop.buttonSize = UIButtonConfigurationSizeLarge;
     stop.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
+    stop.baseBackgroundColor = [UIColor colorWithRed:0.16 green:0.22 blue:0.32 alpha:1];
+    stop.baseForegroundColor = UIColor.whiteColor;
     self.stopButton.configuration = stop;
     self.stopButton.accessibilityIdentifier = @"hoangha.stop";
     [self.stopButton addTarget:self action:@selector(stopPressed) forControlEvents:UIControlEventTouchUpInside];
@@ -115,10 +136,10 @@ static void HHLog(const char *message) {
     self.spinner.accessibilityLabel = @"Đang xử lý";
 
     UIStackView *content = [[UIStackView alloc] initWithArrangedSubviews:
-                            @[title, self.statusLabel, self.spinner, self.startButton, self.stopButton]];
+                            @[eyebrow, title, subtitle, self.statusLabel, self.spinner, self.startButton, self.stopButton]];
     content.axis = UILayoutConstraintAxisVertical;
     content.alignment = UIStackViewAlignmentFill;
-    content.spacing = 22;
+    content.spacing = 14;
     content.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:content];
 
@@ -126,17 +147,19 @@ static void HHLog(const char *message) {
     self.logView.editable = NO;
     self.logView.font = [UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular];
     self.logView.textColor = UIColor.secondaryLabelColor;
-    self.logView.backgroundColor = UIColor.clearColor;
+    self.logView.backgroundColor = [UIColor colorWithRed:0.09 green:0.12 blue:0.18 alpha:1];
+    self.logView.layer.cornerRadius = 14;
+    self.logView.textContainerInset = UIEdgeInsetsMake(12, 12, 12, 12);
     self.logView.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:self.logView];
 
     UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
     [NSLayoutConstraint activateConstraints:@[
         [content.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor],
-        [content.centerYAnchor constraintEqualToAnchor:safe.centerYAnchor constant:-35],
         [content.widthAnchor constraintEqualToAnchor:safe.widthAnchor constant:-56],
-        [content.topAnchor constraintGreaterThanOrEqualToAnchor:safe.topAnchor constant:12],
-        [self.logView.topAnchor constraintEqualToAnchor:content.bottomAnchor constant:16],
+        [content.topAnchor constraintEqualToAnchor:safe.topAnchor constant:20],
+        [self.statusLabel.heightAnchor constraintGreaterThanOrEqualToConstant:58],
+        [self.logView.topAnchor constraintEqualToAnchor:content.bottomAnchor constant:18],
         [self.logView.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:20],
         [self.logView.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-20],
         [self.logView.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-8],
