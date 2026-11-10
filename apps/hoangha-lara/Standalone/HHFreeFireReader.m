@@ -4,6 +4,7 @@
 #import "offsets.h"
 #import "utils.h"
 #import "vm.h"
+#import <mach/mach.h>
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
@@ -96,6 +97,57 @@ static bool HHGameRead(void *context, uint64_t address, void *buffer, size_t siz
     return true;
 }
 
+static BOOL HHProbePointer(HHGameMemory *memory,uint64_t address,uint64_t *value) {
+    *value=0;
+    return HHGameRead(memory,address,value,sizeof(*value))&&
+        *value>0x10000&&*value<0x80000000000ULL&&(*value&7)==0;
+}
+
+static NSString *HHProbeAimCapability(HHGameMemory *memory,uint64_t base,pid_t pid) {
+    mach_port_t task=MACH_PORT_NULL;
+    kern_return_t taskResult=task_for_pid(mach_task_self(),pid,&task);
+    if(taskResult==KERN_SUCCESS&&task!=MACH_PORT_NULL)
+        mach_port_deallocate(mach_task_self(),task);
+    uint64_t type=0,statics=0,game=0,match=0,local=0;
+    BOOL context=HHProbePointer(memory,base+0xbb46a50,&type)&&
+        HHProbePointer(memory,type+0xb8,&statics)&&
+        (HHProbePointer(memory,statics+8,&game)||HHProbePointer(memory,statics,&game))&&
+        HHProbePointer(memory,game+0x90,&match)&&HHProbePointer(memory,match+0xd8,&local);
+    int rotationRead=0,rotationWrite=0,slotRead=0,slotWrite=0,slotOriginal=0;
+    if(context){
+        uint64_t entryAddress=vmmapfindentry(memory->map,local+0x614);
+        struct vmmapentry entry={0};
+        if(entryAddress){
+            ds_kreadbuf(entryAddress,&entry,sizeof(entry));
+            rotationRead=(entry.protection&VM_PROT_READ)!=0;
+            rotationWrite=(entry.protection&VM_PROT_WRITE)!=0;
+        }
+        uint64_t manager=0,owner=0,weapon=0,handler=0,klass=0,current=0;
+        uint8_t combined=0;
+        if(HHProbePointer(memory,local+0x740,&manager)&&
+           HHGameRead(memory,manager+0x30,&owner,sizeof(owner))&&owner==local&&
+           HHGameRead(memory,manager+0x148,&combined,sizeof(combined))&&combined<=1&&
+           HHProbePointer(memory,manager+(combined?0xa8:0xa0),&weapon)&&
+           HHGameRead(memory,weapon+0x60,&owner,sizeof(owner))&&owner==local&&
+           HHProbePointer(memory,weapon+0x80,&handler)&&
+           HHProbePointer(memory,handler,&klass)){
+            const uint64_t slot=klass+0x138+17*16;
+            entryAddress=vmmapfindentry(memory->map,slot);
+            if(entryAddress){
+                ds_kreadbuf(entryAddress,&entry,sizeof(entry));
+                slotRead=(entry.protection&VM_PROT_READ)!=0;
+                slotWrite=(entry.protection&VM_PROT_WRITE)!=0;
+            }
+            if(HHGameRead(memory,slot,&current,sizeof(current)))
+                slotOriginal=current==base+0x5c59b94;
+        }
+    }
+    return [NSString stringWithFormat:
+        @"Aim capability: gameContext=%d taskForPID=%d taskPort=%d rotationRW=%d/%d shotSlotRW=%d/%d shotSlotOriginal=%d",
+        context,(int)taskResult,taskResult==KERN_SUCCESS&&task!=MACH_PORT_NULL,rotationRead,rotationWrite,
+        slotRead,slotWrite,slotOriginal];
+}
+
 static uint64_t HHUnityImage(HHGameMemory *memory) {
     __block uint64_t base = 0;
     __block unsigned visited = 0;
@@ -121,6 +173,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 @property(nonatomic) pid_t pid;
 @property(nonatomic) CFAbsoluteTime retryAt;
 @property(nonatomic) BOOL recovering;
+@property(nonatomic,copy) NSString *aimCapabilityReport;
 @property(nonatomic,strong) NSMutableDictionary<NSNumber *, NSNumber *> *numbers;
 @end
 
@@ -168,8 +221,15 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
         ++_memory.frame;
         self.base = HHUnityImage(&_memory);
         self.status = self.base ? @"Đã nhận FF TH 1.132.1" : @"Chưa tìm thấy Unity 1.132.1";
+        if(self.base)self.aimCapabilityReport=HHProbeAimCapability(&_memory,self.base,pid);
     }
     return self.base != 0;
+}
+
+- (NSString *)takeAimCapabilityReport {
+    NSString *report=self.aimCapabilityReport;
+    self.aimCapabilityReport=nil;
+    return report;
 }
 
 - (NSArray<NSValue *> *)boxesForSize:(CGSize)size {
@@ -207,6 +267,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     self.pid = 0;
     self.retryAt = 0;
     self.recovering = NO;
+    self.aimCapabilityReport=nil;
     [self.numbers removeAllObjects];
     self.status = @"Đang chờ FF TH";
 }
