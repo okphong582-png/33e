@@ -81,13 +81,22 @@ static void HHLayoutFloatingWindows(RemoteCall *s,CGSize size,NSInteger orientat
  HHFloating.position=CGPointMake(point.x,point.y);
  HHPlaceWindow(s,HHFloating.bubble,(CGRect){HHFloating.position,{58,58}});
  CGFloat width=MIN(280,size.width-24);
- HHPlaceWindow(s,HHFloating.menu,CGRectMake((size.width-width)/2,(size.height-318)/2,width,318));
+ HHPlaceWindow(s,HHFloating.menu,CGRectMake((size.width-width)/2,(size.height-340)/2,width,340));
  if(HHFloating.countLabel)HHSetRect(s,HHFloating.countLabel,CGRectMake((size.width-72)/2,10,72,32));
- if(HHFloating.canvas){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;HHFloating.previousTargetCount=0;HHFloating.targetLabelCount=0;HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,size});}
+ if(HHFloating.canvas){
+  uint64_t empty=0;
+  HHFastSet(s,HHFloating.canvasPath,&empty,sizeof(empty));
+  HHFastSet(s,HHFloating.fovPath,&empty,sizeof(empty));
+  HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;
+  HHFloating.previousCount=0;HHFloating.previousFOV=NO;HHFloating.previousFOVRadius=0;
+  HHFloating.previousTargetCount=0;HHFloating.lastTargetLabelAt=0;
+  HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,size});
+ }
 }
 BOOL hoangha_floating_esp_enabled(void){return HHFloating.active&&HHFloating.espEnabled;}
 BOOL hoangha_floating_silent_enabled(void){return HHFloating.active&&HHFloating.silentEnabled;}
 BOOL hoangha_floating_neck_enabled(void){return HHFloating.active&&HHFloating.neckEnabled;}
+float hoangha_floating_fov_percent(void){return HHFloating.fovPercent>=5&&HHFloating.fovPercent<=48?HHFloating.fovPercent:18;}
 CGSize hoangha_floating_size(void){return HHFloating.screen;}
 void hoangha_floating_status(RemoteCall *s,NSString *status){
  if(HHFloating.statusLabel&&status.length)HHSend(s,HHFloating.statusLabel,"setText:",remote_NSString(s,status.UTF8String),0);
@@ -97,6 +106,27 @@ static BOOL HHSetCanvasPath(RemoteCall *s,uint64_t path){
  if(!call.invocation||![s remote_write:call.scratch+64 from:&path size:sizeof(path)])return NO;
  remote_msg(s,call.invocation,HHFloating.setArgument,call.scratch+64,2,0,0);
  return HHRunCall(s,call,NULL);
+}
+static BOOL HHUpdateFOV(RemoteCall *s,BOOL enabled,CGFloat radius){
+ if(!HHFloating.fovPath.invocation)return NO;
+ if(!enabled){
+  if(HHFloating.previousFOV){uint64_t empty=0;if(!HHFastSet(s,HHFloating.fovPath,&empty,sizeof(empty)))return NO;}
+  HHFloating.previousFOV=NO;HHFloating.previousFOVRadius=0;return YES;
+ }
+ if(HHFloating.previousFOV&&fabs(HHFloating.previousFOVRadius-radius)<0.1)return YES;
+ CGPoint circle[65];CGPoint center=CGPointMake(HHFloating.screen.width*0.5,HHFloating.screen.height*0.5);
+ for(NSUInteger i=0;i<65;i++){
+  CGFloat angle=(CGFloat)i*(2*M_PI/64.0);
+  circle[i]=CGPointMake(center.x+radius*cos(angle),center.y+radius*sin(angle));
+ }
+ uint64_t points=HHFloating.rectangles+sizeof(CGRect)*HHMaxMarks+sizeof(CGPoint)*(2*HHMaxBoxes+1);
+ if(!HHFloating.rectangles||![s remote_write:points from:circle size:sizeof(circle)])return NO;
+ uint64_t path=RemoteArbCall(s,CGPathCreateMutable);if(!path)return NO;
+ RemoteArbCall(s,CGPathAddLines,path,0,points,65);
+ BOOL drawn=HHFastSet(s,HHFloating.fovPath,&path,sizeof(path));
+ if(!s.lastError.length)RemoteArbCall(s,CGPathRelease,path);
+ if(drawn){HHFloating.previousFOV=YES;HHFloating.previousFOVRadius=radius;}
+ return drawn;
 }
 static void HHUpdateEnemyBadge(RemoteCall *s,NSUInteger count){
  if(!HHFloating.countLabel||HHFloating.badgeCount==count)return;
@@ -109,7 +139,7 @@ static void HHUpdateEnemyBadge(RemoteCall *s,NSUInteger count){
 }
 static void HHUpdateTargetLabels(RemoteCall *s,const HHFFBox *targets,NSUInteger count){
  CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
- if(count==HHFloating.targetLabelCount&&now-HHFloating.lastTargetLabelAt<0.12)return;
+ if(count==HHFloating.targetLabelCount&&now-HHFloating.lastTargetLabelAt<0.08)return;
  HHFloating.lastTargetLabelAt=now;
  for(NSUInteger i=0;i<count;i++){
   const HHFFBox *target=&targets[i];
@@ -127,7 +157,12 @@ static void HHUpdateTargetLabels(RemoteCall *s,const HHFFBox *targets,NSUInteger
    HHInvoke(s,label,"setShadowOffset:",&shadow,sizeof(shadow),NULL,0,NULL,0);
    HHSend(s,label,"setFont:",HHFont(s,11),0);
    HHSend(s,HHFloating.canvasRoot,"addSubview:",label,0);
+   CGRect initialRect=CGRectZero;
+   uint64_t initialText=remote_NSString(s,"");
+   HHFloating.targetFrames[i]=HHPrepareCall(s,label,"setFrame:",&initialRect,sizeof(initialRect));
+   HHFloating.targetTextCalls[i]=HHPrepareCall(s,label,"setText:",&initialText,sizeof(initialText));
    HHSend(s,label,"release",0,0);
+   if(!HHFloating.targetFrames[i].invocation||!HHFloating.targetTextCalls[i].invocation)return;
   }
   NSString *name=[NSString stringWithUTF8String:target->name];
   if(!name.length)name=[NSString stringWithFormat:@"#%u",(unsigned)target->number];
@@ -135,13 +170,14 @@ static void HHUpdateTargetLabels(RemoteCall *s,const HHFFBox *targets,NSUInteger
   NSString *caption=[NSString stringWithFormat:@"%@ · %u HP",name,(unsigned)target->hp];
   const char *bytes=caption.UTF8String;
   if(bytes&&strncmp(bytes,HHFloating.targetTexts[i],sizeof(HHFloating.targetTexts[i]))){
-   HHSend(s,label,"setText:",remote_NSString(s,bytes),0);
+   uint64_t value=remote_NSString(s,bytes);
+   if(!HHFastSet(s,HHFloating.targetTextCalls[i],&value,sizeof(value)))return;
    snprintf(HHFloating.targetTexts[i],sizeof(HHFloating.targetTexts[i]),"%s",bytes);
   }
   CGRect rect=CGRectMake(MAX(0,MIN(HHFloating.screen.width-160,target->x+target->w*0.5-80)),
                          MAX(0,target->y-21),160,19);
   if(i>=HHFloating.targetLabelCount||!CGRectEqualToRect(rect,HHFloating.targetLabelRects[i])){
-   HHSetRect(s,label,rect);
+   if(!HHFastSet(s,HHFloating.targetFrames[i],&rect,sizeof(rect)))return;
    HHFloating.targetLabelRects[i]=rect;
   }
   if(i>=HHFloating.targetLabelCount)HHSend(s,label,"setHidden:",0,0);
@@ -180,7 +216,17 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
   lines[2*i+2]=origin;
  }
  HHUpdateEnemyBadge(s,HHFloating.countEnabled?targets:0);
- if(!count){HHUpdateTargetLabels(s,ordered,0);HHFloating.previousTargetCount=0;if(HHFloating.canvasVisible){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;}return !s.lastError.length;}
+ BOOL ring=HHFloating.fovEnabled&&(HHFloating.espEnabled||HHFloating.silentEnabled||HHFloating.neckEnabled);
+ CGFloat radius=MIN(HHFloating.screen.width,HHFloating.screen.height)*hoangha_floating_fov_percent()/100.f;
+ if(!count&&!ring){
+  HHUpdateTargetLabels(s,ordered,0);HHFloating.previousTargetCount=0;
+  if(HHFloating.canvas&&HHFloating.previousFOV&&!HHUpdateFOV(s,NO,0))return NO;
+  if(HHFloating.canvasVisible){uint64_t empty=0;
+   if(!HHFastSet(s,HHFloating.canvasPath,&empty,sizeof(empty)))return NO;
+   HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;
+  }
+  return !s.lastError.length;
+ }
  HHFloating.previousTargetCount=targets;
  for(NSUInteger i=0;i<targets;i++){
   const HHFFBox *target=&ordered[i];
@@ -224,16 +270,32 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
   uint64_t emptyPath=0;
   HHFloating.canvasPath=HHPrepareCall(s,HHFloating.shape,"setPath:",&emptyPath,sizeof(emptyPath));
   if(!HHFloating.canvasPath.invocation)return NO;
-  HHFloating.rectangles=RemoteArbCall(s,malloc,sizeof(rectangles)+sizeof(lines));
+  HHFloating.fovShape=HHSend(s,remote_getClass(s,"CAShapeLayer"),"new",0,0);
+  HHSend(s,HHFloating.fovShape,"setActions:",HHSend(s,HHFloating.shape,"actions",0,0),0);
+  HHSend(s,HHFloating.fovShape,"setStrokeColor:",cgColor,0);
+  HHSend(s,HHFloating.fovShape,"setFillColor:",0,0);
+  HHInvoke(s,HHFloating.fovShape,"setLineWidth:",&width,sizeof(width),NULL,0,NULL,0);
+  HHSend(s,HHSend(s,root,"layer",0,0),"addSublayer:",HHFloating.fovShape,0);
+  HHSend(s,HHFloating.fovShape,"release",0,0);
+  HHFloating.fovPath=HHPrepareCall(s,HHFloating.fovShape,"setPath:",&emptyPath,sizeof(emptyPath));
+  if(!HHFloating.fovPath.invocation)return NO;
+  HHFloating.rectangles=RemoteArbCall(s,malloc,sizeof(rectangles)+sizeof(lines)+sizeof(CGPoint)*65);
   HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,HHFloating.screen});
  }
  HHUpdateTargetLabels(s,ordered,targets);
- if(s.lastError.length)return NO;
- if(HHFloating.canvasVisible&&HHFloating.previousLine==HHFloating.lineEnabled&&HHFloating.previousCount==count&&!memcmp(rectangles,HHFloating.previousRectangles,count*sizeof(CGRect)))return YES;
- if(!HHFloating.rectangles||![s remote_write:HHFloating.rectangles from:rectangles size:count*sizeof(CGRect)])return NO;
+ if(s.lastError.length||!HHUpdateFOV(s,ring,radius))return NO;
+ if(!count){
+  if(HHFloating.previousCount){uint64_t empty=0;if(!HHFastSet(s,HHFloating.canvasPath,&empty,sizeof(empty)))return NO;}
+  if(!HHFloating.canvasVisible)HHSend(s,HHFloating.canvas,"setHidden:",0,0);
+  HHFloating.canvasVisible=YES;HHFloating.previousCount=0;
+  return !s.lastError.length;
+ }
+ if(HHFloating.canvasVisible&&HHFloating.previousLine==HHFloating.lineEnabled&&
+    HHFloating.previousCount==count&&!memcmp(rectangles,HHFloating.previousRectangles,count*sizeof(CGRect)))return YES;
+ if(!HHFloating.rectangles||(count&&![s remote_write:HHFloating.rectangles from:rectangles size:count*sizeof(CGRect)]))return NO;
  uint64_t path=RemoteArbCall(s,CGPathCreateMutable);if(!path)return NO;
- RemoteArbCall(s,CGPathAddRects,path,0,HHFloating.rectangles,count);
- if(HHFloating.lineEnabled){
+ if(count)RemoteArbCall(s,CGPathAddRects,path,0,HHFloating.rectangles,count);
+ if(HHFloating.lineEnabled&&targets){
   uint64_t points=HHFloating.rectangles+sizeof(rectangles);
   if(![s remote_write:points from:lines size:(2*targets+1)*sizeof(CGPoint)]){
    if(!s.lastError.length)RemoteArbCall(s,CGPathRelease,path);
@@ -245,6 +307,8 @@ BOOL hoangha_floating_boxes(RemoteCall *s,NSArray<NSValue *> *boxes){
  if(!s.lastError.length)RemoteArbCall(s,CGPathRelease,path);
  if(!drawn)return NO;
  if(!HHFloating.canvasVisible)HHSend(s,HHFloating.canvas,"setHidden:",0,0);
- if(!s.lastError.length){HHFloating.canvasVisible=YES;HHFloating.previousLine=HHFloating.lineEnabled;HHFloating.previousCount=count;memcpy(HHFloating.previousRectangles,rectangles,count*sizeof(CGRect));}
+ if(!s.lastError.length){HHFloating.canvasVisible=YES;HHFloating.previousLine=HHFloating.lineEnabled;
+  HHFloating.previousCount=count;
+  memcpy(HHFloating.previousRectangles,rectangles,count*sizeof(CGRect));}
  return !s.lastError.length;
 }

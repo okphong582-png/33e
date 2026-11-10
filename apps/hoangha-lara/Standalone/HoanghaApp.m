@@ -354,6 +354,9 @@ static void HHLog(const char *message) {
                         NSString *waitingStatus=nil;
                         CFAbsoluteTime lastBoxesAt=0;
                         CFAbsoluteTime menuAt=0;
+                        CFAbsoluteTime metricsAt=CFAbsoluteTimeGetCurrent()+5;
+                        double readTotal=0,drawTotal=0,readPeak=0,drawPeak=0;
+                        NSUInteger measured=0;
                         while (self.floatingRunning) {
                             @autoreleasepool {
                                 CFAbsoluteTime tickNow=CFAbsoluteTimeGetCurrent();
@@ -384,7 +387,9 @@ static void HHLog(const char *message) {
                                     CFAbsoluteTime sampleStarted=CFAbsoluteTimeGetCurrent();
                                     reader.silentEnabled=hoangha_floating_silent_enabled();
                                     reader.neckEnabled=hoangha_floating_neck_enabled();
+                                    reader.fovPercent=hoangha_floating_fov_percent();
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
+                                    CFAbsoluteTime afterRead=CFAbsoluteTimeGetCurrent();
                                     NSString *capability=[reader takeAimCapabilityReport];
                                     if(capability.length){[self appendJournal:capability];[self appendLog:capability];}
                                     NSString *silent=[reader takeSilentReport];
@@ -396,6 +401,18 @@ static void HHLog(const char *message) {
                                     if(!keepBriefly){
                                         lastBoxesAt=boxes.count?sampleStarted:0;
                                         if(!hoangha_floating_boxes(session,boxes?:@[])){success=NO;self.floatingRunning=NO;break;}
+                                    }
+                                    CFAbsoluteTime afterDraw=CFAbsoluteTimeGetCurrent();
+                                    double readMs=(afterRead-sampleStarted)*1000.0;
+                                    double drawMs=(afterDraw-afterRead)*1000.0;
+                                    readTotal+=readMs;drawTotal+=drawMs;
+                                    readPeak=MAX(readPeak,readMs);drawPeak=MAX(drawPeak,drawMs);measured++;
+                                    if(afterDraw>=metricsAt&&measured){
+                                        NSString *timing=[NSString stringWithFormat:
+                                            @"ESP timing: %lu mẫu/5s · đọc %.1f/%.1f ms · vẽ %.1f/%.1f ms (TB/đỉnh)",
+                                            (unsigned long)measured,readTotal/measured,readPeak,drawTotal/measured,drawPeak];
+                                        [self appendJournal:timing];[self appendLog:timing];
+                                        readTotal=drawTotal=readPeak=drawPeak=0;measured=0;metricsAt=afterDraw+5;
                                     }
                                     hh_game_sample_finished(&schedule,CFAbsoluteTimeGetCurrent());
                                 }

@@ -14,7 +14,7 @@ static inline HHGameWork hh_game_work(HHGameSchedule *s,bool requested,double no
  HHGameWork w={false,false,false,false};if(!isfinite(now))return w;
  if(s->enabled!=requested){w.changed=true;w.disconnect=s->enabled;s->enabled=requested;s->sampleAt=now;s->geometryAt=now;hh_game_observe_foreground(s,0);}
  if(!requested)return w;
- if(now>=s->sampleAt){w.sample=true;s->sampleAt=now+0.06;}
+ if(now>=s->sampleAt){w.sample=true;s->sampleAt=now+0.05;}
  if(w.sample&&now>=s->geometryAt){w.geometry=true;s->geometryAt=now+2.0;}
  return w;
 }

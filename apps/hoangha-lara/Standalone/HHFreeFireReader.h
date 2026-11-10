@@ -4,6 +4,7 @@
 @property(nonatomic,readonly,nonnull) NSString *status;
 @property(nonatomic) BOOL silentEnabled;
 @property(nonatomic) BOOL neckEnabled;
+@property(nonatomic) float fovPercent;
 - (BOOL)connectIfNeededForPID:(pid_t)pid;
 - (nullable NSArray<NSValue *> *)boxesForSize:(CGSize)size;
 - (nullable NSString *)takeAimCapabilityReport;

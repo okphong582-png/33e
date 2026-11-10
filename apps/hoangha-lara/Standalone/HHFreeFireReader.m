@@ -250,6 +250,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 - (instancetype)init {
     if ((self = [super init])) {
         _status = @"Đang chờ FF TH";
+        _fovPercent = 18;
         _numbers = [NSMutableDictionary new];
     }
     return self;
@@ -349,7 +350,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     self.recovering = NO;
     HHFFBox *chosen=NULL;
     if(self.silentEnabled||self.neckEnabled){
-        float best=INFINITY, radius=MIN(size.width,size.height)*0.18f;
+        float percent=isfinite(self.fovPercent)?fminf(48.f,fmaxf(5.f,self.fovPercent)):18.f;
+        float best=INFINITY, radius=MIN(size.width,size.height)*percent/100.f;
         for(size_t i=0;i<count;i++){
             HHFFBox *box=&boxes[i];
             if(!isfinite(box->headX)||!isfinite(box->headY)||
