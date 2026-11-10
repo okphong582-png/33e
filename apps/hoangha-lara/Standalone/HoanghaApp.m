@@ -94,13 +94,13 @@ static void HHLog(const char *message) {
     title.accessibilityTraits |= UIAccessibilityTraitHeader;
 
     UILabel *subtitle = [UILabel new];
-    subtitle.text = @"ESP  ·  BOX  ·  TÊN  ·  HP";
+    subtitle.text = @"ESP  ·  AIM CỔ  ·  SILENT";
     subtitle.font = [UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightMedium];
     subtitle.textColor = UIColor.systemTealColor;
     subtitle.textAlignment = NSTextAlignmentCenter;
 
     self.statusLabel = [UILabel new];
-    self.statusLabel.text = @"Nhấn Bắt đầu, mở FF TH rồi bật ESP Box trong menu nổi.";
+    self.statusLabel.text = @"Nhấn Bắt đầu, mở FF TH rồi bật tính năng trong menu nổi.";
     self.statusLabel.numberOfLines = 0;
     self.statusLabel.textAlignment = NSTextAlignmentCenter;
     self.statusLabel.textColor = UIColor.whiteColor;
@@ -341,7 +341,7 @@ static void HHLog(const char *message) {
                     BOOL success=show ? hoangha_floating_start(session,logo) : hoangha_overlay_hide(session);
                     if (show && success) {
                         self.floatingRunning=YES;
-                        [self setStatus:@"Đã hiện nút nổi. Mở menu và bật ESP Box."];
+                            [self setStatus:@"Đã hiện nút nổi. Mở FF TH và chọn tính năng trong menu."];
                         dispatch_async(dispatch_get_main_queue(), ^{
                             self.busy=NO;
                             self.startButton.enabled=NO;
@@ -361,7 +361,7 @@ static void HHLog(const char *message) {
                                     menuAt=tickNow+0.1;
                                     if(!hoangha_floating_tick(session)){self.floatingRunning=NO;success=NO;break;}
                                 }
-                                BOOL enabled=hoangha_floating_esp_enabled()||hoangha_floating_silent_enabled();
+                                BOOL enabled=hoangha_floating_esp_enabled()||hoangha_floating_silent_enabled()||hoangha_floating_neck_enabled();
                                 HHGameWork work=hh_game_work(&schedule,enabled,CFAbsoluteTimeGetCurrent());
                                 if(work.disconnect){
                                     hoangha_floating_boxes(session,@[]);
@@ -383,11 +383,14 @@ static void HHLog(const char *message) {
                                     BOOL connected=schedule.foregroundPID>0&&[reader connectIfNeededForPID:schedule.foregroundPID];
                                     CFAbsoluteTime sampleStarted=CFAbsoluteTimeGetCurrent();
                                     reader.silentEnabled=hoangha_floating_silent_enabled();
+                                    reader.neckEnabled=hoangha_floating_neck_enabled();
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     NSString *capability=[reader takeAimCapabilityReport];
                                     if(capability.length){[self appendJournal:capability];[self appendLog:capability];}
                                     NSString *silent=[reader takeSilentReport];
                                     if(silent.length){[self appendJournal:silent];[self appendLog:silent];}
+                                    NSString *neck=[reader takeNeckReport];
+                                    if(neck.length){[self appendJournal:neck];[self appendLog:neck];}
                                     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
                                     BOOL keepBriefly=connected&&!boxes&&lastBoxesAt>0&&now-lastBoxesAt<0.10;
                                     if(!keepBriefly){

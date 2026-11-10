@@ -64,7 +64,7 @@ info = {
     'CFBundleDisplayName': 'Hoangha', 'CFBundleName': 'Hoangha',
     'CFBundleExecutable': 'Hoangha', 'CFBundleIdentifier': 'com.hoangha.lara',
     'CFBundlePackageType': 'APPL', 'CFBundleInfoDictionaryVersion': '6.0',
-    'CFBundleShortVersionString': '1.5.8', 'CFBundleVersion': '19',
+    'CFBundleShortVersionString': '1.5.8', 'CFBundleVersion': '20',
     'CFBundleSupportedPlatforms': ['iPhoneOS'], 'MinimumOSVersion': '16.0',
     'LSRequiresIPhoneOS': True, 'UIDeviceFamily': [1, 2],
     'UIRequiredDeviceCapabilities': ['arm64'], 'UIFileSharingEnabled': True,

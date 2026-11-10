@@ -16,7 +16,7 @@ struct Vec3 { float x=0, y=0, z=0; };
 struct Transform { float position[4], rotation[4], scale[4]; };
 struct Viewport { float x,y,width,height; };
 struct Target { uint64_t id=0; uint16_t hp=0; char name[64]{}; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; Vec3 head{},hip{}; };
-struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; uint64_t match=0,local=0; };
+struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; uint64_t match=0,local=0; Vec3 origin{}; };
 enum class SnapshotStage : uint8_t { Geometry, Match, Local, Roster, Changed, Camera, Ready };
 inline bool valid(uint64_t a) { return a>0x10000 && a<0x80000000000ull && (a&7)==0; }
 inline bool finite(Vec3 v) { return std::isfinite(v.x)&&std::isfinite(v.y)&&std::isfinite(v.z)&&std::abs(v.x)<100000&&std::abs(v.y)<100000&&std::abs(v.z)<100000; }
@@ -171,6 +171,8 @@ public:
         for(float f:projection)if(!std::isfinite(f))return false;
         for(int c=0;c<4;c++)for(int r=0;r<4;r++)for(int k=0;k<4;k++)matrix[c*4+r]+=projection[k*4+r]*view[c*4+k];
         Frame pending{};pending.match=match;pending.local=local;
+        uint64_t cameraTransform=0;
+        if(aim&&ptr(local+0x3e8,cameraTransform))position(cameraTransform,pending.origin);
         for(size_t i=0;i<poseCount&&pending.count<MaxTargets;i++) {
             const Pose &p=poses[i];
             Target t;t.id=p.id;t.hp=p.hp;t.head=p.head;t.hip=p.hip;std::memcpy(t.name,p.name,sizeof(t.name));

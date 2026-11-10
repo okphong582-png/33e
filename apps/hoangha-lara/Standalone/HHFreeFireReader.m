@@ -109,6 +109,31 @@ static bool HHGameRead(void *context, uint64_t address, void *buffer, size_t siz
     return true;
 }
 
+static BOOL HHGameCanWrite(HHGameMemory *memory,uint64_t address,size_t size) {
+    if(!memory->map||address<0x10000||!size||size>PAGE_SIZE||
+       (address&PAGE_MASK)+size>PAGE_SIZE)return NO;
+    uint64_t entryAddress=vmmapfindentry(memory->map,address);
+    struct vmmapentry entry={0};
+    if(!entryAddress)return NO;
+    ds_kreadbuf(entryAddress,&entry,sizeof(entry));
+    return HHReadableEntry(&entry,address)&&(entry.protection&VM_PROT_WRITE)&&
+        address<=entry.links.end&&size<=entry.links.end-address;
+}
+
+static BOOL HHGameWrite(HHGameMemory *memory,uint64_t address,const void *data,size_t size) {
+    if(!data||!HHGameCanWrite(memory,address,size))return NO;
+    uint64_t pageAddress=address&~(uint64_t)PAGE_MASK;
+    for(size_t i=0;i<HHGamePageLimit;i++)if(memory->pages[i].local&&
+       memory->pages[i].address==pageAddress){
+        memory->pages[i].checkedAt=0;
+        memory->pages[i].usedAt=0;
+    }
+    uint64_t mapped=HHMapGamePage(memory,pageAddress);
+    if(!mapped)return NO;
+    memcpy((void *)(uintptr_t)(mapped+(address&PAGE_MASK)),data,size);
+    return YES;
+}
+
 static BOOL HHProbePointer(HHGameMemory *memory,uint64_t address,uint64_t *value) {
     *value=0;
     return HHGameRead(memory,address,value,sizeof(*value))&&
@@ -128,6 +153,14 @@ static BOOL HHVisibleEnemy(HHGameMemory *memory,uint64_t player) {
         HHGameRead(memory,space,namespaceName,sizeof(namespaceName))&&
         strcmp(className,"UmaAvatarSimple")==0&&strcmp(namespaceName,"UMA.Simple")==0&&
         HHGameRead(memory,avatar+0x101,&visible,sizeof(visible))&&visible==1;
+}
+
+static BOOL HHFiring(HHGameMemory *memory,uint64_t local) {
+    uint64_t pool=0,entries=0,pri=0;uint16_t raw=0;
+    return HHProbePointer(memory,local+0x70,&pool)&&
+        HHProbePointer(memory,pool+0x10,&entries)&&
+        HHProbePointer(memory,entries+0xc8,&pri)&&
+        HHGameRead(memory,pri+0x18,&raw,sizeof(raw))&&raw==2;
 }
 
 static NSString *HHProbeAimCapability(HHGameMemory *memory,uint64_t base,pid_t pid) {
@@ -206,11 +239,14 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 @property(nonatomic) CFAbsoluteTime nextSilentAt;
 @property(nonatomic,copy) NSString *silentReport;
 @property(nonatomic,copy) NSString *lastSilentReport;
+@property(nonatomic,copy) NSString *neckReport;
+@property(nonatomic,copy) NSString *lastNeckReport;
 @property(nonatomic,strong) NSMutableDictionary<NSNumber *, NSNumber *> *numbers;
 @end
 
 @implementation HHFreeFireReader
 @synthesize silentEnabled=_silentEnabled;
+@synthesize neckEnabled=_neckEnabled;
 - (instancetype)init {
     if ((self = [super init])) {
         _status = @"Đang chờ FF TH";
@@ -271,6 +307,12 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     return report;
 }
 
+- (NSString *)takeNeckReport {
+    NSString *report=self.neckReport;
+    self.neckReport=nil;
+    return report;
+}
+
 - (void)setSilentEnabled:(BOOL)enabled {
     if (_silentEnabled == enabled) return;
     _silentEnabled=enabled;
@@ -284,8 +326,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     HHFFBox boxes[32];
     size_t count = 0;
     int stage = 0;
-    uint64_t match=0,local=0;
-    BOOL sampled = hh_ff_snapshot_stage(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count, &stage,&match,&local,self.silentEnabled);
+    uint64_t match=0,local=0;float origin[3]={0};
+    BOOL sampled = hh_ff_snapshot_stage(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count, &stage,&match,&local,origin,self.silentEnabled||self.neckEnabled);
     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
     if(now>=self.aimProbeAt){
         self.aimProbeAt=now+5;
@@ -305,8 +347,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
         return nil;
     }
     self.recovering = NO;
-    if(self.silentEnabled&&now>=self.nextSilentAt){
-        HHFFBox *chosen=NULL;
+    HHFFBox *chosen=NULL;
+    if(self.silentEnabled||self.neckEnabled){
         float best=INFINITY, radius=MIN(size.width,size.height)*0.18f;
         for(size_t i=0;i<count;i++){
             HHFFBox *box=&boxes[i];
@@ -320,6 +362,8 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
             float distance=dx*dx+dy*dy;
             if(distance<radius*radius&&distance<best){best=distance;chosen=box;}
         }
+    }
+    if(self.silentEnabled&&now>=self.nextSilentAt){
         int state=hh_silent_update(self.pid,self.base,match,local,chosen?chosen->id:0,
                                    chosen?chosen->head:NULL,chosen?chosen->hip:NULL);
         NSString *report=[NSString stringWithFormat:@"Silent aim: state=%d target=%d detail=%s",
@@ -328,6 +372,28 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
             self.lastSilentReport=report;self.silentReport=report;
         }
         if(state==9||state==10)self.nextSilentAt=now+2;
+    }
+    if(self.neckEnabled){
+        NSString *state=@"đợi mục tiêu trong FOV";
+        uint64_t currentLocal=0;
+        if(chosen&&HHFiring(&_memory,local)&&
+           HHProbePointer(&_memory,match+0xd8,&currentLocal)&&currentLocal==local&&
+           fabsf(origin[0])+fabsf(origin[1])+fabsf(origin[2])>0.01f){
+            uint8_t knocked=1;
+            float rotation[4]={0};
+            if(HHGameRead(&_memory,local+0x1258,&knocked,sizeof(knocked))&&!knocked&&
+               hh_ff_neck_rotation(origin,chosen->head,chosen->hip,rotation)&&
+               HHGameCanWrite(&_memory,local+0x614,sizeof(rotation))&&
+               HHGameCanWrite(&_memory,local+0x628,sizeof(rotation))){
+                BOOL first=HHGameWrite(&_memory,local+0x614,rotation,sizeof(rotation));
+                BOOL second=first&&HHGameWrite(&_memory,local+0x628,rotation,sizeof(rotation));
+                state=second?@"đã ghi góc quay":@"ghi góc quay thất bại";
+            }else state=@"dữ liệu/góc quay chưa đủ điều kiện";
+        }else if(chosen)state=@"đợi bắn hoặc camera hợp lệ";
+        NSString *report=[@"Aim cổ: " stringByAppendingString:state];
+        if(![report isEqualToString:self.lastNeckReport]){
+            self.lastNeckReport=report;self.neckReport=report;
+        }
     }
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:count];
@@ -350,6 +416,9 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     self.nextSilentAt=0;
     self.silentReport=nil;
     self.lastSilentReport=nil;
+    _neckEnabled=NO;
+    self.neckReport=nil;
+    self.lastNeckReport=nil;
     HHReleaseGamePages(&_memory);
     _memory.map = 0;
     self.base = 0;
