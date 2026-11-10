@@ -8,6 +8,12 @@
 #include <cmath>
 #include <cstring>
 
+extern "C" {
+kern_return_t mach_vm_read_overwrite(vm_map_t,mach_vm_address_t,mach_vm_size_t,
+                                      mach_vm_address_t,mach_vm_size_t *);
+kern_return_t mach_vm_write(vm_map_t,mach_vm_address_t,pointer_t,mach_msg_type_number_t);
+}
+
 extern "C" const unsigned char SilentAimRemoteStart[], SilentAimRemoteEnd[];
 
 namespace {
