@@ -3,10 +3,13 @@
 #include "SilentAimRemoteMapping.h"
 #include <mach/mach.h>
 #include <mach/mach_time.h>
+#include <mach-o/dyld_images.h>
+#include <dlfcn.h>
 #include <ptrauth.h>
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <cstdio>
 
 extern "C" {
 kern_return_t mach_vm_read_overwrite(vm_map_t,mach_vm_address_t,mach_vm_size_t,
@@ -25,6 +28,10 @@ uint64_t image=0,allocation=0,installedSlot=0;
 uint32_t sequence=0;
 bool verified=false;
 const char *failure="";
+char failureText[128]{};
+void failMach(const char *step,kern_return_t error){
+ snprintf(failureText,sizeof(failureText),"%s (kern=%d)",step,error);failure=failureText;
+}
 
 bool valid(uint64_t p){return p>0x10000&&p<0x80000000000ULL;}
 bool readBytes(uint64_t address,void *out,size_t size){
@@ -85,7 +92,9 @@ bool attach(pid_t pid,uint64_t base){
  if(task!=MACH_PORT_NULL&&attachedPID==pid&&image==base)return true;
  detach();
  mach_port_t candidate=MACH_PORT_NULL;
- if(pid<=0||task_for_pid(mach_task_self(),pid,&candidate)!=KERN_SUCCESS||candidate==MACH_PORT_NULL){failure="task_for_pid denied";return false;}
+ if(pid<=0){failure="invalid game PID";return false;}
+ kern_return_t result=task_for_pid(mach_task_self(),pid,&candidate);
+ if(result!=KERN_SUCCESS||candidate==MACH_PORT_NULL){failMach("task_for_pid denied",result);return false;}
  int actual=0;
  if(pid_for_task(candidate,&actual)!=KERN_SUCCESS||actual!=pid){mach_port_deallocate(mach_task_self(),candidate);failure="task PID mismatch";return false;}
  task=candidate;attachedPID=pid;image=base;return true;
@@ -102,9 +111,34 @@ bool className(uint64_t object,const char *expected){
   readBytes(name,actual,size)&&memcmp(actual,expected,size)==0;
 }
 uint64_t remoteClock(){
- uint64_t address=(uint64_t)ptrauth_strip((void *)&mach_absolute_time,ptrauth_key_function_pointer);
+ const uint64_t local=(uint64_t)ptrauth_strip((void *)&mach_absolute_time,ptrauth_key_function_pointer);
+ Dl_info info{};
+ if(!dladdr((void *)local,&info)||!info.dli_fbase||!info.dli_fname){failure="clock library unavailable";return 0;}
+ const char *localName=strrchr(info.dli_fname,'/');localName=localName?localName+1:info.dli_fname;
+ task_dyld_info_data_t dyld{};mach_msg_type_number_t count=TASK_DYLD_INFO_COUNT;
+ if(task_info(task,TASK_DYLD_INFO,(task_info_t)&dyld,&count)!=KERN_SUCCESS){failure="game image list unavailable";return 0;}
+ struct ImageList {uint32_t version,imageCount;uint64_t images;} list{};
+ if(!read(dyld.all_image_info_addr,list)||list.imageCount>4096||!valid(list.images)){
+  failure="game image list unreadable";return 0;
+ }
+ uint64_t address=0;
+ for(uint32_t i=0;i<list.imageCount;i++){
+  struct dyld_image_info imageInfo{};char path[256]{};
+  if(!read(list.images+uint64_t(i)*sizeof(imageInfo),imageInfo)||
+     !valid((uint64_t)imageInfo.imageLoadAddress)||!valid((uint64_t)imageInfo.imageFilePath)||
+     !readBytes((uint64_t)imageInfo.imageFilePath,path,sizeof(path)))continue;
+  path[sizeof(path)-1]=0;
+  const char *name=strrchr(path,'/');name=name?name+1:path;
+  if(strcmp(name,localName)==0){
+   address=(uint64_t)imageInfo.imageLoadAddress+(local-(uint64_t)info.dli_fbase);break;
+  }
+ }
+ if(!address){failure="clock library absent in game";return 0;}
  std::array<uint8_t,32> remote{};
- return read(address,remote)&&memcmp(remote.data(),(const void *)address,remote.size())==0?address:0;
+ if(!read(address,remote)||memcmp(remote.data(),(const void *)local,remote.size())){
+  failure="clock code differs in game";return 0;
+ }
+ return address;
 }
 bool adopt(uint64_t address){
  if(!valid(address)||address%SILENT_REMOTE_PAGE)return false;
@@ -115,7 +149,7 @@ bool adopt(uint64_t address){
  allocation=address;sequence=state.sequence&~1u;clear();return true;
 }
 bool allocate(){
- uint64_t clock=remoteClock();if(!clock){failure="remote clock mismatch";return false;}
+ uint64_t clock=remoteClock();if(!clock)return false;
  auto mapping=SilentAimMapping::Map(task,SilentAimRemoteStart,SilentAimRemoteEnd);
  if(!mapping.address){failure=mapping.operation;return false;}
  SilentAimRemote::State state{};state.original=image+HandlerMethod;state.clock=clock;
@@ -196,7 +230,8 @@ extern "C" int hh_silent_update(pid_t pid,uint64_t base,uint64_t match,uint64_t 
   uninstall();failure="weapon handler not verified";return 9;
  }
  if(!install(klass+HandlerSlot)){clear();return 10;}
- if(!target||!head||!hip||!eligible(match,local,target)){clear();return 7;}
+ if(!target||!head||!hip){clear();failure="no target inside FOV";return 7;}
+ if(!eligible(match,local,target)){clear();failure="target failed live eligibility";return 7;}
  SilentAimDirection::Point h{head[0],head[1],head[2]},b{hip[0],hip[1],hip[2]};
  if(!SilentAimDirection::Finite(h)||!SilentAimDirection::Finite(b)){
   clear();failure="target position invalid";return 7;

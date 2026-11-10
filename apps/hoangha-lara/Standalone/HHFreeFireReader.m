@@ -279,6 +279,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     uint64_t map = task ? task_get_vm_map(task) : 0;
     if (map != _memory.map) {
         hh_silent_stop();
+        hh_ff_reset_cache();
         HHReleaseGamePages(&_memory);
         _memory.map = map;
         [self.numbers removeAllObjects];
@@ -414,6 +415,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 
 - (void)disconnect {
     hh_silent_stop();
+    hh_ff_reset_cache();
     _silentEnabled=NO;
     self.nextSilentAt=0;
     self.silentReport=nil;

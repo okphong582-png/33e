@@ -276,11 +276,38 @@ static void HHLog(const char *message) {
 - (void)stopPressed { [self performOverlay:NO]; }
 
 - (void)shareLog:(UIBarButtonItem *)sender {
-    if (!self.journalURL) return;
-    UIActivityViewController *share = [[UIActivityViewController alloc]
-        initWithActivityItems:@[self.journalURL] applicationActivities:nil];
-    share.popoverPresentationController.barButtonItem = sender;
-    [self presentViewController:share animated:YES completion:nil];
+    NSURL *directory=[self.journalURL URLByDeletingLastPathComponent];
+    if(!directory)return;
+    NSArray<NSURL *> *files=[NSFileManager.defaultManager contentsOfDirectoryAtURL:directory
+        includingPropertiesForKeys:@[NSURLContentModificationDateKey] options:0 error:nil];
+    NSMutableArray<NSURL *> *logs=[NSMutableArray array];
+    for(NSURL *url in files)if([url.lastPathComponent hasPrefix:@"Hoangha-v1.5.8-"]&&
+       [url.pathExtension isEqualToString:@"log"])[logs addObject:url];
+    [logs sortUsingComparator:^NSComparisonResult(NSURL *a,NSURL *b){
+        NSDate *ad=nil,*bd=nil;
+        [a getResourceValue:&ad forKey:NSURLContentModificationDateKey error:nil];
+        [b getResourceValue:&bd forKey:NSURLContentModificationDateKey error:nil];
+        return [bd compare:ad];
+    }];
+    UIAlertController *picker=[UIAlertController alertControllerWithTitle:@"Chọn log Hoangha"
+        message:@"Có thể chọn log phiên trước sau khi máy respring."
+        preferredStyle:UIAlertControllerStyleActionSheet];
+    NSDateFormatter *format=[NSDateFormatter new];format.dateFormat=@"dd/MM HH:mm:ss";
+    for(NSUInteger i=0;i<MIN(logs.count,10);i++){
+        NSURL *url=logs[i];NSDate *date=nil;
+        [url getResourceValue:&date forKey:NSURLContentModificationDateKey error:nil];
+        NSString *title=[NSString stringWithFormat:@"%@ · %@",[url isEqual:self.journalURL]?@"Phiên này":@"Phiên trước",
+                         date?[format stringFromDate:date]:url.lastPathComponent];
+        [picker addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action){
+            UIActivityViewController *share=[[UIActivityViewController alloc]
+                initWithActivityItems:@[url] applicationActivities:nil];
+            share.popoverPresentationController.barButtonItem=sender;
+            [self presentViewController:share animated:YES completion:nil];
+        }]];
+    }
+    [picker addAction:[UIAlertAction actionWithTitle:@"Hủy" style:UIAlertActionStyleCancel handler:nil]];
+    picker.popoverPresentationController.barButtonItem=sender;
+    [self presentViewController:picker animated:YES completion:nil];
 }
 
 - (void)startKeepAlive {

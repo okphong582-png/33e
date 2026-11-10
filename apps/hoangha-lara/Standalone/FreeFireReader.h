@@ -15,7 +15,7 @@ constexpr size_t MaxPlayers = 256, MaxTargets = 32;
 struct Vec3 { float x=0, y=0, z=0; };
 struct Transform { float position[4], rotation[4], scale[4]; };
 struct Viewport { float x,y,width,height; };
-struct Target { uint64_t id=0; uint16_t hp=0; char name[64]{}; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; Vec3 head{},hip{}; };
+struct Target { uint64_t id=0; uint16_t hp=0; char name[64]{}; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; Vec3 head{},hip{},left{},right{}; bool hasLeft=false,hasRight=false; };
 struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; uint64_t match=0,local=0; Vec3 origin{}; };
 enum class SnapshotStage : uint8_t { Geometry, Match, Local, Roster, Changed, Camera, Ready };
 inline bool valid(uint64_t a) { return a>0x10000 && a<0x80000000000ull && (a&7)==0; }
@@ -94,6 +94,48 @@ template<class Read> class Reader {
     }
 public:
     explicit Reader(Read r):read(r) {}
+    bool reproject(uint64_t base,float width,float height,const Frame &cached,Frame &out,bool aim=false) {
+        out={};
+        if(!cached.match||!cached.local||!std::isfinite(width)||!std::isfinite(height)||width<1||height<1||width>16384||height>16384)return false;
+        uint64_t game=0,match=0,local=0,controller=0,camera=0,inner=0;
+        if(!context(base,game,match,local)||match!=cached.match||local!=cached.local||
+           !ptr(game+0xd8,controller)||!ptr(controller+0x20,camera)||!ptr(camera+0x10,inner))return false;
+        Viewport rect{};struct CameraMatrices {std::array<float,16> view,projection;} matrices{};
+        if(!value(inner+0x42c,rect)||!value(inner+0x80,matrices)||
+           !std::isfinite(rect.x)||!std::isfinite(rect.y)||!std::isfinite(rect.width)||!std::isfinite(rect.height)||rect.width<=0||rect.height<=0)return false;
+        const float left=std::max(0.f,rect.x),right=std::min(1.f,rect.x+rect.width);
+        const float bottom=std::max(0.f,rect.y),top=std::min(1.f,rect.y+rect.height);
+        if(right<=left||top<=bottom)return false;
+        const Viewport viewport{left*width,(1.f-top)*height,(right-left)*width,(top-bottom)*height};
+        std::array<float,16> matrix{};
+        for(float v:matrices.view)if(!std::isfinite(v))return false;
+        for(float v:matrices.projection)if(!std::isfinite(v))return false;
+        for(int c=0;c<4;c++)for(int r=0;r<4;r++)for(int k=0;k<4;k++)matrix[c*4+r]+=matrices.projection[k*4+r]*matrices.view[c*4+k];
+        out.match=match;out.local=local;out.origin=cached.origin;
+        uint64_t cameraTransform=0;
+        if(aim&&ptr(local+0x3e8,cameraTransform))position(cameraTransform,out.origin);
+        for(size_t i=0;i<cached.count&&out.count<MaxTargets;i++) {
+            Target t=cached.targets[i];
+            if(!project(t.head,matrix.data(),viewport,t.headX,t.headY))continue;
+            float leftX=0,leftY=0,rightX=0,rightY=0;
+            const bool hasLeft=t.hasLeft&&project(t.left,matrix.data(),viewport,leftX,leftY);
+            const bool hasRight=t.hasRight&&project(t.right,matrix.data(),viewport,rightX,rightY);
+            if(!hasLeft&&!hasRight)continue;
+            if(!hasLeft){leftX=rightX;leftY=rightY;}else if(!hasRight){rightX=leftX;rightY=leftY;}
+            t.footX=(leftX+rightX)*0.5f;t.footY=std::max(leftY,rightY);
+            const float minY=std::min({t.headY,leftY,rightY}),maxY=std::max({t.headY,leftY,rightY});
+            const float bodyHeight=maxY-minY;
+            if(bodyHeight<1||bodyHeight>viewport.height*2)continue;
+            const float minX=std::min({t.headX,leftX,rightX}),maxX=std::max({t.headX,leftX,rightX});
+            const float halfWidth=std::max(bodyHeight*0.24f,(maxX-minX)*0.5f+bodyHeight*0.06f);
+            const float centerX=(minX+maxX)*0.5f;
+            t.x=std::max(viewport.x,centerX-halfWidth);t.y=std::max(viewport.y,minY-bodyHeight*0.08f);
+            t.w=std::min(viewport.x+viewport.width,centerX+halfWidth)-t.x;
+            t.h=std::min(viewport.y+viewport.height,maxY+bodyHeight*0.06f)-t.y;
+            if(t.w>=1&&t.h>=1)out.targets[out.count++]=t;
+        }
+        return true;
+    }
     bool supports(uint64_t base) {
         struct Header { uint32_t magic,cpu,subtype,type,commands,bytes,flags,reserved; } h{};
         if(!valid(base)||!value(base,h)||h.magic!=0xfeedfacf||h.cpu!=0x100000c||h.commands>128||h.bytes>65536)return false;
@@ -175,7 +217,7 @@ public:
         if(aim&&ptr(local+0x3e8,cameraTransform))position(cameraTransform,pending.origin);
         for(size_t i=0;i<poseCount&&pending.count<MaxTargets;i++) {
             const Pose &p=poses[i];
-            Target t;t.id=p.id;t.hp=p.hp;t.head=p.head;t.hip=p.hip;std::memcpy(t.name,p.name,sizeof(t.name));
+            Target t;t.id=p.id;t.hp=p.hp;t.head=p.head;t.hip=p.hip;t.left=p.left;t.right=p.right;t.hasLeft=p.hasLeft;t.hasRight=p.hasRight;std::memcpy(t.name,p.name,sizeof(t.name));
             const float *m=matrix.data();
             if(!project(p.head,m,viewport,t.headX,t.headY))continue;
             float leftX=0,leftY=0,rightX=0,rightY=0;
