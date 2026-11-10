@@ -1,7 +1,7 @@
 // Two bounded windows: a 58-point bubble and a compact panel. No full-screen
 // overlay or modal/key window is used. Events outside their bounds remain with
 // the underlying windows. UIKit event actions only update three shared bytes.
-enum { HHMaxBoxes = 32, HHMaxMarks = HHMaxBoxes * 72 };
+enum { HHMaxBoxes = 32, HHMaxMarks = HHMaxBoxes };
 
 typedef struct {
     uint64_t invocation, scratch, length;
@@ -15,8 +15,14 @@ static struct {
     BOOL espEnabled, canvasVisible, lineEnabled, countEnabled, previousLine;
     uint64_t countLabel;
     NSUInteger badgeCount;
+    uint64_t canvasRoot, targetLabels[HHMaxBoxes];
+    char targetTexts[HHMaxBoxes][128];
+    CGRect targetLabelRects[HHMaxBoxes];
+    NSUInteger targetLabelCount;
     HHFastCall lineState, countState;
     CGRect previousRectangles[HHMaxMarks];NSUInteger previousCount;
+    struct { uint64_t id; HHRect rect; } previousTargets[HHMaxBoxes];
+    NSUInteger previousTargetCount;
     uint64_t perform, invoke, setArgument, getReturn;
     HHFastCall panState, translation, move, menuHidden, espState, bubbleBounds, menuBounds, canvasPath;
     CGSize screen;

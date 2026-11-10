@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <limits>
+#include <string>
 
 struct Memory {
     std::map<uint64_t,std::vector<uint8_t>> blocks;
@@ -38,18 +39,23 @@ struct Fixture {
         m.set(player+0x410,team);m.set(player+0x70,pool);m.set(pool+0x10,poolEntries);m.set(poolEntries+0x20,hpEntry);m.set(hpEntry+0x18,hp);
         m.set(player+0x6a0,head);m.set(player+0x6d8,foot);m.set(head+0x10,transform({0,.6f,1},&headIndices));m.set(foot+0x10,transform({0,-.6f,1}));return player;
     }
+    void nickname(uint64_t player,const std::u16string &name) {
+        const auto text=m.alloc();m.set(player+0x490,text);m.set(text+0x10,int32_t(name.size()));
+        std::memcpy(m.at(text+0x14,name.size()*2),name.data(),name.size()*2);
+    }
     void entry(int i,uint64_t player,int32_t hash=1) {const auto a=entries+0x20+24ull*i;m.set(a,hash);m.set(a+16,player);}
 };
 int main() {
     int checks=0;auto check=[&](bool ok){assert(ok);++checks;};
     Fixture f;
+    f.nickname(f.enemy,u"Tân\U0001f525");
     bool moveCameraDuringPose=false;
     auto read=[&](uint64_t a,void *p,size_t n){
         if(moveCameraDuringPose&&a==f.enemy+0x6a0)f.m.set(f.cameraInner+0x80+12*sizeof(float),.25f);
         return f.m.read(a,p,n);
     };
     FreeFireESP::Reader<decltype(read)> reader(read);FreeFireESP::Frame frame;
-    check(reader.supports(f.base));check(reader.snapshot(f.base,1000,800,frame));check(frame.count==1);check(frame.targets[0].id==f.enemy);check(std::abs(frame.targets[0].h-547.2f)<.01f);check(std::abs(frame.targets[0].headX-500)<.01f);
+    check(reader.supports(f.base));check(reader.snapshot(f.base,1000,800,frame));check(frame.count==1);check(frame.targets[0].id==f.enemy);check(std::strcmp(frame.targets[0].name,u8"Tân🔥")==0);check(std::abs(frame.targets[0].h-547.2f)<.01f);check(std::abs(frame.targets[0].headX-500)<.01f);
     moveCameraDuringPose=true;
     check(frame.targets[0].hp==150);
     check(reader.snapshot(f.base,1000,800,frame)&&frame.count==1&&std::abs(frame.targets[0].headX-625)<.01f);

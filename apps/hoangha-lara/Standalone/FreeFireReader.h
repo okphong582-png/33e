@@ -15,7 +15,7 @@ constexpr size_t MaxPlayers = 256, MaxTargets = 32;
 struct Vec3 { float x=0, y=0, z=0; };
 struct Transform { float position[4], rotation[4], scale[4]; };
 struct Viewport { float x,y,width,height; };
-struct Target { uint64_t id=0; uint16_t hp=0; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; };
+struct Target { uint64_t id=0; uint16_t hp=0; char name[64]{}; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; };
 struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; };
 inline bool valid(uint64_t a) { return a>0x10000 && a<0x80000000000ull && (a&7)==0; }
 inline bool finite(Vec3 v) { return std::isfinite(v.x)&&std::isfinite(v.y)&&std::isfinite(v.z)&&std::abs(v.x)<100000&&std::abs(v.y)<100000&&std::abs(v.z)<100000; }
@@ -29,6 +29,31 @@ template<class Read> class Reader {
     bool hp(uint64_t player,uint16_t &out) {
         uint64_t pool,entries,entry;
         return ptr(player+0x70,pool)&&ptr(pool+0x10,entries)&&ptr(entries+0x20,entry)&&value(entry+0x18,out);
+    }
+    void nickname(uint64_t player,char (&out)[64]) {
+        uint64_t object;int32_t length;
+        if(!ptr(player+0x490,object)||!value(object+0x10,length)||length<1||length>32)return;
+        std::array<uint16_t,32> chars{};
+        if(!read(object+0x14,chars.data(),size_t(length)*sizeof(uint16_t)))return;
+        size_t used=0;
+        for(int32_t i=0;i<length;i++) {
+            uint32_t code=chars[i];
+            if(code<0x20||code==0x7f)continue;
+            if(code>=0xd800&&code<=0xdbff) {
+                if(i+1>=length||chars[i+1]<0xdc00||chars[i+1]>0xdfff)continue;
+                code=0x10000+((code-0xd800)<<10)+(chars[++i]-0xdc00);
+            } else if(code>=0xdc00&&code<=0xdfff)continue;
+            const size_t bytes=code<0x80?1:code<0x800?2:code<0x10000?3:4;
+            if(used+bytes>=sizeof(out))break;
+            if(bytes==1)out[used++]=char(code);
+            else {
+                if(bytes==2)out[used++]=char(0xc0|(code>>6));
+                else if(bytes==3){out[used++]=char(0xe0|(code>>12));out[used++]=char(0x80|((code>>6)&0x3f));}
+                else {out[used++]=char(0xf0|(code>>18));out[used++]=char(0x80|((code>>12)&0x3f));out[used++]=char(0x80|((code>>6)&0x3f));}
+                out[used++]=char(0x80|(code&0x3f));
+            }
+        }
+        out[used]=0;
     }
     bool position(uint64_t transform,Vec3 &result) {
         uint64_t inner,matrix,list,indices;int32_t index;
@@ -93,7 +118,7 @@ public:
         static_assert(sizeof(Entry)==24,"Dictionary<byte,Player> ABI");
         std::array<Entry,MaxPlayers> roster{};
         if(count&&!read(entries+0x20,roster.data(),size_t(count)*sizeof(Entry)))return false;
-        struct Pose { uint64_t id; uint16_t hp; Vec3 head,left,right; bool hasLeft,hasRight; };
+        struct Pose { uint64_t id; uint16_t hp; char name[64]; Vec3 head,left,right; bool hasLeft,hasRight; };
         std::array<Pose,MaxPlayers> poses{};
         size_t poseCount=0;
         for(int i=0;i<count;i++) {
@@ -104,6 +129,7 @@ public:
             uint8_t team;uint16_t health;
             if(!value(player+0x410,team)||team==myTeam||!hp(player,health)||!health)continue;
             Pose p{};p.id=player;p.hp=health;
+            nickname(player,p.name);
             if(!bone(player,0x6a0,p.head))continue;
             // Toe getters with the respective ankles as fallbacks.
             p.hasLeft=bone(player,0x6e8,p.left)||bone(player,0x6d8,p.left);
@@ -138,7 +164,7 @@ public:
         Frame pending{};
         for(size_t i=0;i<poseCount&&pending.count<MaxTargets;i++) {
             const Pose &p=poses[i];
-            Target t;t.id=p.id;t.hp=p.hp;
+            Target t;t.id=p.id;t.hp=p.hp;std::memcpy(t.name,p.name,sizeof(t.name));
             const float *m=matrix.data();
             if(!project(p.head,m,viewport,t.headX,t.headY))continue;
             float leftX=0,leftY=0,rightX=0,rightY=0;

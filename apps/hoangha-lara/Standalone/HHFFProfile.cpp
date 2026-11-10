@@ -6,5 +6,8 @@ bool hh_ff_snapshot(HHFFRead read,void *context,uint64_t base,float width,float 
  if(!boxes||!count)return false;*count=0;
  FreeFireESP::Reader<ReadAdapter> reader({read,context});FreeFireESP::Frame frame;
  if(!reader.snapshot(base,width,height,frame))return false;
- for(size_t i=0;i<frame.count;i++){const auto &t=frame.targets[i];boxes[i]={t.x,t.y,t.w,t.h,t.id,t.hp,0};}*count=frame.count;return true;
+ for(size_t i=0;i<frame.count;i++){
+  const auto &t=frame.targets[i];boxes[i]={t.x,t.y,t.w,t.h,t.id,t.hp,0,{0}};
+  std::memcpy(boxes[i].name,t.name,sizeof(t.name));
+ }*count=frame.count;return true;
 }
