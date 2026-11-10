@@ -81,11 +81,12 @@ static void HHLayoutFloatingWindows(RemoteCall *s,CGSize size,NSInteger orientat
  HHFloating.position=CGPointMake(point.x,point.y);
  HHPlaceWindow(s,HHFloating.bubble,(CGRect){HHFloating.position,{58,58}});
  CGFloat width=MIN(280,size.width-24);
- HHPlaceWindow(s,HHFloating.menu,CGRectMake((size.width-width)/2,(size.height-230)/2,width,230));
+ HHPlaceWindow(s,HHFloating.menu,CGRectMake((size.width-width)/2,(size.height-276)/2,width,276));
  if(HHFloating.countLabel)HHSetRect(s,HHFloating.countLabel,CGRectMake((size.width-72)/2,10,72,32));
  if(HHFloating.canvas){HHSend(s,HHFloating.shape,"setPath:",0,0);HHSend(s,HHFloating.canvas,"setHidden:",1,0);HHFloating.canvasVisible=NO;HHFloating.previousCount=0;HHFloating.previousTargetCount=0;HHFloating.targetLabelCount=0;HHPlaceWindow(s,HHFloating.canvas,(CGRect){CGPointZero,size});}
 }
 BOOL hoangha_floating_esp_enabled(void){return HHFloating.active&&HHFloating.espEnabled;}
+BOOL hoangha_floating_silent_enabled(void){return HHFloating.active&&HHFloating.silentEnabled;}
 CGSize hoangha_floating_size(void){return HHFloating.screen;}
 void hoangha_floating_status(RemoteCall *s,NSString *status){
  if(HHFloating.statusLabel&&status.length)HHSend(s,HHFloating.statusLabel,"setText:",remote_NSString(s,status.UTF8String),0);

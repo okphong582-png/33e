@@ -15,8 +15,8 @@ constexpr size_t MaxPlayers = 256, MaxTargets = 32;
 struct Vec3 { float x=0, y=0, z=0; };
 struct Transform { float position[4], rotation[4], scale[4]; };
 struct Viewport { float x,y,width,height; };
-struct Target { uint64_t id=0; uint16_t hp=0; char name[64]{}; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; };
-struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; };
+struct Target { uint64_t id=0; uint16_t hp=0; char name[64]{}; float headX=0,headY=0,footX=0,footY=0,x=0,y=0,w=0,h=0; Vec3 head{},hip{}; };
+struct Frame { std::array<Target,MaxTargets> targets{}; size_t count=0; uint64_t match=0,local=0; };
 enum class SnapshotStage : uint8_t { Geometry, Match, Local, Roster, Changed, Camera, Ready };
 inline bool valid(uint64_t a) { return a>0x10000 && a<0x80000000000ull && (a&7)==0; }
 inline bool finite(Vec3 v) { return std::isfinite(v.x)&&std::isfinite(v.y)&&std::isfinite(v.z)&&std::abs(v.x)<100000&&std::abs(v.y)<100000&&std::abs(v.z)<100000; }
@@ -106,7 +106,7 @@ public:
         }
         return false;
     }
-    bool snapshot(uint64_t base,float width,float height,Frame &out,SnapshotStage *stage=nullptr) {
+    bool snapshot(uint64_t base,float width,float height,Frame &out,SnapshotStage *stage=nullptr,bool aim=false) {
         out={};
         if(stage)*stage=SnapshotStage::Geometry;
         if(!std::isfinite(width)||!std::isfinite(height)||width<1||height<1||width>16384||height>16384)return false;
@@ -124,7 +124,7 @@ public:
         static_assert(sizeof(Entry)==24,"Dictionary<byte,Player> ABI");
         std::array<Entry,MaxPlayers> roster{};
         if(count&&!read(entries+0x20,roster.data(),size_t(count)*sizeof(Entry)))return false;
-        struct Pose { uint64_t id; uint16_t hp; char name[64]; Vec3 head,left,right; bool hasLeft,hasRight; };
+        struct Pose { uint64_t id; uint16_t hp; char name[64]; Vec3 head,hip,left,right; bool hasLeft,hasRight; };
         std::array<Pose,MaxPlayers> poses{};
         size_t poseCount=0;
         for(int i=0;i<count;i++) {
@@ -137,6 +137,7 @@ public:
             Pose p{};p.id=player;p.hp=health;
             nickname(player,p.name);
             if(!bone(player,0x6a0,p.head))continue;
+            if(aim)bone(player,0x6a8,p.hip);
             // Toe getters with the respective ankles as fallbacks.
             p.hasLeft=bone(player,0x6e8,p.left)||bone(player,0x6d8,p.left);
             p.hasRight=bone(player,0x6f0,p.right)||bone(player,0x6e0,p.right);
@@ -169,10 +170,10 @@ public:
         for(float f:view)if(!std::isfinite(f))return false;
         for(float f:projection)if(!std::isfinite(f))return false;
         for(int c=0;c<4;c++)for(int r=0;r<4;r++)for(int k=0;k<4;k++)matrix[c*4+r]+=projection[k*4+r]*view[c*4+k];
-        Frame pending{};
+        Frame pending{};pending.match=match;pending.local=local;
         for(size_t i=0;i<poseCount&&pending.count<MaxTargets;i++) {
             const Pose &p=poses[i];
-            Target t;t.id=p.id;t.hp=p.hp;std::memcpy(t.name,p.name,sizeof(t.name));
+            Target t;t.id=p.id;t.hp=p.hp;t.head=p.head;t.hip=p.hip;std::memcpy(t.name,p.name,sizeof(t.name));
             const float *m=matrix.data();
             if(!project(p.head,m,viewport,t.headX,t.headY))continue;
             float leftX=0,leftY=0,rightX=0,rightY=0;

@@ -41,6 +41,11 @@ done
 xcrun --sdk iphoneos clang++ -arch arm64e -isysroot "$SDK" -miphoneos-version-min=16.0 -std=c++17 -O1 \
     -include "$ROOT/Standalone/RequirePAC.h" -c "$ROOT/Standalone/HHFFProfile.cpp" -o "$BUILD_DIR/objects/HHFFProfile.o"
 OBJECTS+=("$BUILD_DIR/objects/HHFFProfile.o")
+xcrun --sdk iphoneos clang++ "${FLAGS[@]}" -std=c++17 -c "$ROOT/Standalone/HHSilentAim.mm" -o "$BUILD_DIR/objects/HHSilentAim.o"
+OBJECTS+=("$BUILD_DIR/objects/HHSilentAim.o")
+xcrun --sdk iphoneos clang -arch arm64e -isysroot "$SDK" -miphoneos-version-min=16.0 \
+    -I "$ROOT/Standalone" -c "$ROOT/Standalone/SilentAimRemote.S" -o "$BUILD_DIR/objects/SilentAimRemote.o"
+OBJECTS+=("$BUILD_DIR/objects/SilentAimRemote.o")
 xcrun --sdk iphoneos clang -arch arm64e -isysroot "$SDK" -miphoneos-version-min=16.0 \
     "${OBJECTS[@]}" -L "$ROOT/lara/lib" -lxpf -lgrabkernel2 -lobjc -lc++ -lz \
     -framework UIKit -framework Foundation -framework CoreFoundation \
@@ -59,7 +64,7 @@ info = {
     'CFBundleDisplayName': 'Hoangha', 'CFBundleName': 'Hoangha',
     'CFBundleExecutable': 'Hoangha', 'CFBundleIdentifier': 'com.hoangha.lara',
     'CFBundlePackageType': 'APPL', 'CFBundleInfoDictionaryVersion': '6.0',
-    'CFBundleShortVersionString': '1.5.8', 'CFBundleVersion': '18',
+    'CFBundleShortVersionString': '1.5.8', 'CFBundleVersion': '19',
     'CFBundleSupportedPlatforms': ['iPhoneOS'], 'MinimumOSVersion': '16.0',
     'LSRequiresIPhoneOS': True, 'UIDeviceFamily': [1, 2],
     'UIRequiredDeviceCapabilities': ['arm64'], 'UIFileSharingEnabled': True,

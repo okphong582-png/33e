@@ -1,5 +1,6 @@
 #import "HHFreeFireReader.h"
 #import "HHFFProfile.h"
+#import "HHSilentAim.h"
 #import "darksword.h"
 #import "offsets.h"
 #import "utils.h"
@@ -8,6 +9,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <math.h>
 
 enum { HHGamePageLimit = 96, HHGameMapEntryLimit = 4096 };
 
@@ -113,6 +115,21 @@ static BOOL HHProbePointer(HHGameMemory *memory,uint64_t address,uint64_t *value
         *value>0x10000&&*value<0x80000000000ULL&&(*value&7)==0;
 }
 
+static BOOL HHVisibleEnemy(HHGameMemory *memory,uint64_t player) {
+    uint64_t manager=0,avatar=0,klass=0,name=0,space=0;
+    uint8_t visible=0;
+    char className[16]={0},namespaceName[11]={0};
+    return HHProbePointer(memory,player+0x770,&manager)&&
+        HHProbePointer(memory,manager+0x138,&avatar)&&
+        HHProbePointer(memory,avatar,&klass)&&
+        HHGameRead(memory,klass+0x10,&name,sizeof(name))&&name>0x10000&&name<0x80000000000ULL&&
+        HHGameRead(memory,klass+0x18,&space,sizeof(space))&&space>0x10000&&space<0x80000000000ULL&&
+        HHGameRead(memory,name,className,sizeof(className))&&
+        HHGameRead(memory,space,namespaceName,sizeof(namespaceName))&&
+        strcmp(className,"UmaAvatarSimple")==0&&strcmp(namespaceName,"UMA.Simple")==0&&
+        HHGameRead(memory,avatar+0x101,&visible,sizeof(visible))&&visible==1;
+}
+
 static NSString *HHProbeAimCapability(HHGameMemory *memory,uint64_t base,pid_t pid) {
     mach_port_t task=MACH_PORT_NULL;
     kern_return_t taskResult=task_for_pid(mach_task_self(),pid,&task);
@@ -186,10 +203,14 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 @property(nonatomic,copy) NSString *aimCapabilityReport;
 @property(nonatomic,copy) NSString *lastAimCapability;
 @property(nonatomic) CFAbsoluteTime aimProbeAt;
+@property(nonatomic) CFAbsoluteTime nextSilentAt;
+@property(nonatomic,copy) NSString *silentReport;
+@property(nonatomic,copy) NSString *lastSilentReport;
 @property(nonatomic,strong) NSMutableDictionary<NSNumber *, NSNumber *> *numbers;
 @end
 
 @implementation HHFreeFireReader
+@synthesize silentEnabled=_silentEnabled;
 - (instancetype)init {
     if ((self = [super init])) {
         _status = @"Đang chờ FF TH";
@@ -220,6 +241,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     uint64_t task = proc_task(process);
     uint64_t map = task ? task_get_vm_map(task) : 0;
     if (map != _memory.map) {
+        hh_silent_stop();
         HHReleaseGamePages(&_memory);
         _memory.map = map;
         [self.numbers removeAllObjects];
@@ -243,13 +265,27 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
     return report;
 }
 
+- (NSString *)takeSilentReport {
+    NSString *report=self.silentReport;
+    self.silentReport=nil;
+    return report;
+}
+
+- (void)setSilentEnabled:(BOOL)enabled {
+    if (_silentEnabled == enabled) return;
+    _silentEnabled=enabled;
+    self.nextSilentAt=0;
+    if (!enabled) hh_silent_stop();
+}
+
 - (NSArray<NSValue *> *)boxesForSize:(CGSize)size {
     if (!_memory.map || !self.base || (kill(self.pid, 0) != 0 && errno == ESRCH)) return @[];
     ++_memory.frame;
     HHFFBox boxes[32];
     size_t count = 0;
     int stage = 0;
-    BOOL sampled = hh_ff_snapshot_stage(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count, &stage);
+    uint64_t match=0,local=0;
+    BOOL sampled = hh_ff_snapshot_stage(HHGameRead, &_memory, self.base, size.width, size.height, boxes, &count, &stage,&match,&local,self.silentEnabled);
     CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
     if(now>=self.aimProbeAt){
         self.aimProbeAt=now+5;
@@ -260,6 +296,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
         }
     }
     if (!sampled) {
+        if(self.silentEnabled)hh_silent_clear();
         if (!self.recovering) HHReleaseGamePages(&_memory);
         self.recovering = YES;
         NSArray<NSString *> *stages=@[@"kích thước màn hình", @"phiên trận", @"nhân vật/camera", @"danh sách người chơi", @"dữ liệu trận thay đổi", @"ma trận camera"];
@@ -268,6 +305,30 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
         return nil;
     }
     self.recovering = NO;
+    if(self.silentEnabled&&now>=self.nextSilentAt){
+        HHFFBox *chosen=NULL;
+        float best=INFINITY, radius=MIN(size.width,size.height)*0.18f;
+        for(size_t i=0;i<count;i++){
+            HHFFBox *box=&boxes[i];
+            if(!isfinite(box->headX)||!isfinite(box->headY)||
+               box->headX<0||box->headX>size.width||box->headY<0||box->headY>size.height||
+               !isfinite(box->head[0])||!isfinite(box->head[1])||!isfinite(box->head[2])||
+               !isfinite(box->hip[0])||!isfinite(box->hip[1])||!isfinite(box->hip[2])||
+               (fabsf(box->hip[0])+fabsf(box->hip[1])+fabsf(box->hip[2])<0.01f)||
+               !HHVisibleEnemy(&_memory,box->id))continue;
+            float dx=box->headX-size.width*0.5f,dy=box->headY-size.height*0.5f;
+            float distance=dx*dx+dy*dy;
+            if(distance<radius*radius&&distance<best){best=distance;chosen=box;}
+        }
+        int state=hh_silent_update(self.pid,self.base,match,local,chosen?chosen->id:0,
+                                   chosen?chosen->head:NULL,chosen?chosen->hip:NULL);
+        NSString *report=[NSString stringWithFormat:@"Silent aim: state=%d target=%d detail=%s",
+                          state,chosen!=NULL,hh_silent_failure()];
+        if(![report isEqualToString:self.lastSilentReport]){
+            self.lastSilentReport=report;self.silentReport=report;
+        }
+        if(state==9||state==10)self.nextSilentAt=now+2;
+    }
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:count];
     for (size_t i = 0; i < count; ++i) {
@@ -284,6 +345,11 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 }
 
 - (void)disconnect {
+    hh_silent_stop();
+    _silentEnabled=NO;
+    self.nextSilentAt=0;
+    self.silentReport=nil;
+    self.lastSilentReport=nil;
     HHReleaseGamePages(&_memory);
     _memory.map = 0;
     self.base = 0;
@@ -298,6 +364,7 @@ static uint64_t HHUnityImage(HHGameMemory *memory) {
 }
 
 - (void)dealloc {
+    hh_silent_stop();
     HHReleaseGamePages(&_memory);
 }
 @end

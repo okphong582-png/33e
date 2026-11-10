@@ -14,6 +14,7 @@ bool hoangha_floating_stop(RemoteCall *session);
 
 pid_t hoangha_foreground_game(RemoteCall *springboard, NSString * _Nullable * _Nullable waitingStatus);
 BOOL hoangha_floating_esp_enabled(void);
+BOOL hoangha_floating_silent_enabled(void);
 CGSize hoangha_floating_size(void);
 BOOL hoangha_floating_boxes(RemoteCall *session, NSArray<NSValue *> *boxes);
 void hoangha_floating_status(RemoteCall *session, NSString *status);
