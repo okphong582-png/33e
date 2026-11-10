@@ -27,6 +27,8 @@ jobs:
           /tmp/hoangha-geometry-test
           c++ -std=c++17 -Wall -Wextra -Werror Standalone/tests/game_schedule_test.cpp -o /tmp/hoangha-schedule-test
           /tmp/hoangha-schedule-test
+          c++ -std=c++17 -Wall -Wextra -Werror Standalone/tests/aim_math_test.cpp -o /tmp/hoangha-aim-math-test
+          /tmp/hoangha-aim-math-test
       - name: Build with Apple arm64e ABI
         run: bash Standalone/build-macos.sh
       - name: Upload IPA and build report
