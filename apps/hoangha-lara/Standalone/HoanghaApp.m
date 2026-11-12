@@ -391,7 +391,7 @@ static void HHLog(const char *message) {
                                     menuAt=tickNow+0.1;
                                     if(!hoangha_floating_tick(session)){self.floatingRunning=NO;success=NO;break;}
                                 }
-                                BOOL enabled=hoangha_floating_esp_enabled()||hoangha_floating_silent_enabled()||hoangha_floating_neck_enabled();
+                                BOOL enabled=hoangha_floating_esp_enabled();
                                 HHGameWork work=hh_game_work(&schedule,enabled,CFAbsoluteTimeGetCurrent());
                                 if(work.disconnect){
                                     hoangha_floating_boxes(session,@[]);
@@ -412,8 +412,8 @@ static void HHLog(const char *message) {
                                     }
                                     BOOL connected=schedule.foregroundPID>0&&[reader connectIfNeededForPID:schedule.foregroundPID];
                                     CFAbsoluteTime sampleStarted=CFAbsoluteTimeGetCurrent();
-                                    reader.silentEnabled=hoangha_floating_silent_enabled();
-                                    reader.neckEnabled=hoangha_floating_neck_enabled();
+                                    reader.silentEnabled=NO;
+                                    reader.neckEnabled=NO;
                                     reader.fovPercent=hoangha_floating_fov_percent();
                                     NSArray *boxes=connected?[reader boxesForSize:hoangha_floating_size()]:@[];
                                     CFAbsoluteTime afterRead=CFAbsoluteTimeGetCurrent();

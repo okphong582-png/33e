@@ -97,6 +97,15 @@ static BOOL HHFastSet(RemoteCall *s,HHFastCall call,const void *value,size_t siz
 }
 
 static BOOL HHMenuHidden(RemoteCall *s,BOOL hidden){
+    uint64_t transition=HHSend(s,remote_getClass(s,"CATransition"),"animation",0,0);
+    if(transition){
+        double duration=hidden?0.16:0.26;
+        HHInvoke(s,transition,"setDuration:",&duration,sizeof(duration),NULL,0,NULL,0);
+        HHSend(s,transition,"setType:",remote_NSString(s,hidden?"fade":"moveIn"),0);
+        if(!hidden)HHSend(s,transition,"setSubtype:",remote_NSString(s,"fromBottom"),0);
+        HHSend(s,HHSend(s,HHFloating.menu,"layer",0,0),"addAnimation:forKey:",
+               transition,remote_NSString(s,"mizzeMenuTransition"));
+    }
     if(![s remote_write:HHFloating.menuHidden.scratch+64 from:&hidden size:sizeof(hidden)])return NO;
     remote_msg(s,HHFloating.menuHidden.invocation,HHFloating.setArgument,HHFloating.menuHidden.scratch+64,2,0,0);
     return HHRunCall(s,HHFloating.menuHidden,NULL);
@@ -273,7 +282,7 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s, HHFloating.pan, "release", 0, 0);
     HHSend(s, button, "release", 0, 0);
 
-    CGSize panel = CGSizeMake(MIN(280, HHFloating.screen.width - 24), 340);
+    CGSize panel = CGSizeMake(MIN(280, HHFloating.screen.width - 24), 266);
     CGRect panelFrame = CGRectMake((HHFloating.screen.width-panel.width)/2,
                                    (HHFloating.screen.height-panel.height)/2, panel.width, panel.height);
     uint64_t panelRoot = 0;
@@ -281,12 +290,22 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     if (!HHFloating.menu) return false;
     HHAssociate(s, HHMenuKey, HHFloating.menu);
     uint64_t colors = remote_getClass(s, "UIColor");
-    HHSend(s, panelRoot, "setBackgroundColor:", HHSend(s, colors, "systemBackgroundColor", 0, 0), 0);
+    HHSend(s, panelRoot, "setBackgroundColor:", HHSend(s, colors, "clearColor", 0, 0), 0);
     HHSetNumber(s, HHSend(s, panelRoot, "layer", 0, 0), "cornerRadius", 22);
     HHSend(s, panelRoot, "setClipsToBounds:", 1, 0);
+    uint64_t blurEffect=HHSend(s,remote_getClass(s,"UIBlurEffect"),"effectWithStyle:",UIBlurEffectStyleRegular,0);
+    uint64_t blur=HHSend(s,remote_getClass(s,"UIVisualEffectView"),"alloc",0,0);
+    blur=HHSend(s,blur,"initWithEffect:",blurEffect,0);
+    HHSetRect(s,blur,CGRectMake(0,0,panel.width,panel.height));
+    HHSend(s,blur,"setUserInteractionEnabled:",0,0);
+    HHSend(s,panelRoot,"addSubview:",blur,0);
+    HHSend(s,blur,"release",0,0);
+    uint64_t panelLayer=HHSend(s,panelRoot,"layer",0,0);
+    HHSend(s,panelLayer,"setBorderColor:",HHSend(s,HHSend(s,colors,"whiteColor",0,0),"CGColor",0,0),0);
+    HHSetNumber(s,panelLayer,"borderWidth",0.7);
     uint64_t title = HHSend(s, remote_getClass(s, "UILabel"), "new", 0, 0);
     HHSetRect(s, title, CGRectMake(18, 15, panel.width-76, 28));
-    HHSend(s, title, "setText:", remote_NSString(s, "HOANGHA  ·  FF TH"), 0);
+    HHSend(s, title, "setText:", remote_NSString(s, "MIZZE  ·  FF TH"), 0);
     HHSend(s, title, "setFont:", HHFont(s, 18), 0);
     HHSend(s, title, "setTextColor:", HHSend(s, colors, "systemIndigoColor", 0, 0), 0);
     HHSend(s, panelRoot, "addSubview:", title, 0); HHSend(s, title, "release", 0, 0);
@@ -328,41 +347,13 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
         HHSend(s,toggle,"release",0,0);
         if(!states[i]->invocation)return false;
     }
-    uint64_t silentLabel=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
-    HHSetRect(s,silentLabel,CGRectMake(18,188,panel.width-102,31));
-    HHSend(s,silentLabel,"setText:",remote_NSString(s,"Silent aim · thử nghiệm"),0);
-    HHSend(s,silentLabel,"setFont:",HHFont(s,16),0);
-    HHSend(s,panelRoot,"addSubview:",silentLabel,0);HHSend(s,silentLabel,"release",0,0);
-    HHFloating.silentSwitch=HHSend(s,remote_getClass(s,"UISwitch"),"new",0,0);
-    HHSetRect(s,HHFloating.silentSwitch,CGRectMake(panel.width-72,188,51,31));
-    HHSend(s,HHFloating.silentSwitch,"setOnTintColor:",HHSend(s,colors,"systemIndigoColor",0,0),0);
-    HHSend(s,HHFloating.silentSwitch,"setAccessibilityLabel:",remote_NSString(s,"Silent aim"),0);
-    HHSend(s,panelRoot,"addSubview:",HHFloating.silentSwitch,0);
-    if(!HHControlAction(s,HHFloating.silentSwitch,HHEventAction(s,data,6),UIControlEventValueChanged))return false;
-    HHFloating.silentState=HHPrepareCall(s,HHFloating.silentSwitch,"isOn",NULL,0);
-    HHSend(s,HHFloating.silentSwitch,"release",0,0);
-    if(!HHFloating.silentState.invocation)return false;
-    uint64_t neckLabel=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
-    HHSetRect(s,neckLabel,CGRectMake(18,230,panel.width-102,31));
-    HHSend(s,neckLabel,"setText:",remote_NSString(s,"Aim cổ · khi bắn"),0);
-    HHSend(s,neckLabel,"setFont:",HHFont(s,16),0);
-    HHSend(s,panelRoot,"addSubview:",neckLabel,0);HHSend(s,neckLabel,"release",0,0);
-    HHFloating.neckSwitch=HHSend(s,remote_getClass(s,"UISwitch"),"new",0,0);
-    HHSetRect(s,HHFloating.neckSwitch,CGRectMake(panel.width-72,230,51,31));
-    HHSend(s,HHFloating.neckSwitch,"setOnTintColor:",HHSend(s,colors,"systemIndigoColor",0,0),0);
-    HHSend(s,HHFloating.neckSwitch,"setAccessibilityLabel:",remote_NSString(s,"Aim cổ"),0);
-    HHSend(s,panelRoot,"addSubview:",HHFloating.neckSwitch,0);
-    if(!HHControlAction(s,HHFloating.neckSwitch,HHEventAction(s,data,7),UIControlEventValueChanged))return false;
-    HHFloating.neckState=HHPrepareCall(s,HHFloating.neckSwitch,"isOn",NULL,0);
-    HHSend(s,HHFloating.neckSwitch,"release",0,0);
-    if(!HHFloating.neckState.invocation)return false;
     uint64_t fovLabel=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
-    HHSetRect(s,fovLabel,CGRectMake(18,269,44,31));
+    HHSetRect(s,fovLabel,CGRectMake(18,188,44,31));
     HHSend(s,fovLabel,"setText:",remote_NSString(s,"FOV"),0);
     HHSend(s,fovLabel,"setFont:",HHFont(s,15),0);
     HHSend(s,panelRoot,"addSubview:",fovLabel,0);HHSend(s,fovLabel,"release",0,0);
     HHFloating.fovSlider=HHSend(s,remote_getClass(s,"UISlider"),"new",0,0);
-    HHSetRect(s,HHFloating.fovSlider,CGRectMake(62,269,panel.width-144,31));
+    HHSetRect(s,HHFloating.fovSlider,CGRectMake(62,188,panel.width-144,31));
     float sliderValue=(18.f-5.f)/43.f;
     HHInvoke(s,HHFloating.fovSlider,"setValue:",&sliderValue,sizeof(sliderValue),NULL,0,NULL,0);
     HHSend(s,HHFloating.fovSlider,"setMinimumTrackTintColor:",HHSend(s,colors,"whiteColor",0,0),0);
@@ -372,7 +363,7 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHFloating.fovValue=HHPrepareCall(s,HHFloating.fovSlider,"value",NULL,0);
     HHSend(s,HHFloating.fovSlider,"release",0,0);
     HHFloating.fovSwitch=HHSend(s,remote_getClass(s,"UISwitch"),"new",0,0);
-    HHSetRect(s,HHFloating.fovSwitch,CGRectMake(panel.width-72,269,51,31));
+    HHSetRect(s,HHFloating.fovSwitch,CGRectMake(panel.width-72,188,51,31));
     HHSend(s,HHFloating.fovSwitch,"setOn:animated:",1,0);
     HHSend(s,HHFloating.fovSwitch,"setAccessibilityLabel:",remote_NSString(s,"Vòng FOV trắng"),0);
     HHSend(s,panelRoot,"addSubview:",HHFloating.fovSwitch,0);
@@ -381,7 +372,7 @@ bool hoangha_floating_start(RemoteCall *s, NSData *logo) {
     HHSend(s,HHFloating.fovSwitch,"release",0,0);
     if(!HHFloating.fovState.invocation||!HHFloating.fovValue.invocation)return false;
     HHFloating.statusLabel=HHSend(s,remote_getClass(s,"UILabel"),"new",0,0);
-    HHSetRect(s,HHFloating.statusLabel,CGRectMake(18,306,panel.width-36,29));
+    HHSetRect(s,HHFloating.statusLabel,CGRectMake(18,226,panel.width-36,30));
     HHSend(s,HHFloating.statusLabel,"setText:",remote_NSString(s,"ESP Box đang tắt"),0);
     HHSend(s,HHFloating.statusLabel,"setNumberOfLines:",3,0);HHSend(s,HHFloating.statusLabel,"setFont:",HHFont(s,12),0);
     HHSend(s,HHFloating.statusLabel,"setTextColor:",HHSend(s,colors,"secondaryLabelColor",0,0),0);
@@ -430,8 +421,6 @@ bool hoangha_floating_tick(RemoteCall *s) {
     if(flags[3]==0){BOOL enabled=NO;if(!HHRunCall(s,HHFloating.espState,&enabled))return false;HHFloating.espEnabled=enabled;}
     if(flags[4]==0&&!HHRunCall(s,HHFloating.lineState,&HHFloating.lineEnabled))return false;
     if(flags[5]==0&&!HHRunCall(s,HHFloating.countState,&HHFloating.countEnabled))return false;
-    if(flags[6]==0&&!HHRunCall(s,HHFloating.silentState,&HHFloating.silentEnabled))return false;
-    if(flags[7]==0&&!HHRunCall(s,HHFloating.neckState,&HHFloating.neckEnabled))return false;
     if(flags[8]==0&&!HHRunCall(s,HHFloating.fovState,&HHFloating.fovEnabled))return false;
     if(flags[9]==0){
         float value=0;
@@ -443,7 +432,7 @@ bool hoangha_floating_tick(RemoteCall *s) {
         if (HHFloating.menuVisible) hoangha_foreground_game(s, NULL);
         if(!HHMenuHidden(s,!HHFloating.menuVisible))return false;
         if (HHFloating.menuVisible && !HHCachedBounds(s, HHFloating.menuBounds,
-            CGSizeMake(MIN(280,HHFloating.screen.width-24),340))) {HHMenuHidden(s,YES);return false;}
+            CGSizeMake(MIN(280,HHFloating.screen.width-24),266))) {HHMenuHidden(s,YES);return false;}
     }
     if (flags[1]==0) {
         HHFloating.menuVisible=NO;
