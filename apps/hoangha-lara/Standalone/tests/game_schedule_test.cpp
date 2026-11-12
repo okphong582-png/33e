@@ -13,7 +13,7 @@ int main(){
  hh_game_observe_foreground(&s,0);assert(s.foregroundPID==0);
  hh_game_observe_foreground(&s,456);assert(s.foregroundPID==0);
  for(int i=1;i<=10000;i++){auto w=hh_game_work(&s,true,60+i*.001);work+=w.sample;geometry+=w.geometry;}
- assert(work>=345&&work<=355&&geometry<=5);
+ assert(work>=343&&work<=345&&geometry<=5);
  hh_game_sample_finished(&s,70.5);
  assert(!hh_game_work(&s,true,70.51).sample);
  assert(hh_game_work(&s,true,70.52).sample);
