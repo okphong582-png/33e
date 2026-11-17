@@ -79,7 +79,13 @@ NSString *HUDLastStatusMessage(void) {
         }
         return @"Tiến trình menu dừng ngoài dự kiến; chưa có mã lỗi từ iOS. Bấm Start để mở lại.";
     }
-    return [status[@"message"] isKindOfClass:NSString.class] ? status[@"message"] : @"Menu chưa khởi động.";
+    NSString *current = [status[@"message"] isKindOfClass:NSString.class] ? status[@"message"] : @"Menu chưa khởi động.";
+    NSDictionary *lastAim = [NSDictionary dictionaryWithContentsOfFile:[StatusPath() stringByAppendingString:@".aim.plist"]];
+    if (running && [lastAim[@"pid"] intValue] == ReadPID() && [lastAim[@"message"] isKindOfClass:NSString.class]) {
+        NSTimeInterval age = MAX(0, NSDate.date.timeIntervalSince1970 - [lastAim[@"time"] doubleValue]);
+        return [NSString stringWithFormat:@"%@\n\nTrong trận, %.0f giây trước\n%@", current, age, lastAim[@"message"]];
+    }
+    return current;
 }
 static BOOL StartError(NSError **error, int code, NSString *message) {
     WriteStatus(@"failed", message, 0);
@@ -154,6 +160,14 @@ void HUDUpdateKernelStatus(NSString *message) {
         lastWrite = now;
         WriteStatus(@"ready", message, getpid());
     }
+}
+void HUDRecordAimStatus(NSString *message) {
+    static CFAbsoluteTime lastWrite = 0;
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    if (now - lastWrite < 1) return;
+    lastWrite = now;
+    NSDictionary *record = @{@"pid":@(getpid()), @"time":@(NSDate.date.timeIntervalSince1970), @"message":message};
+    [record writeToFile:[StatusPath() stringByAppendingString:@".aim.plist"] atomically:YES];
 }
 void HUDRecordFrame(double milliseconds, int players, NSString *aimState) {
     static NSTimeInterval nextSample = 0;

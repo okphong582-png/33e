@@ -10,6 +10,7 @@ NSString *HUDLastStatusMessage(void);
 void HUDMarkStarting(void);
 void HUDMarkReady(void);
 void HUDUpdateKernelStatus(NSString *message);
+void HUDRecordAimStatus(NSString *message);
 void HUDRecordFrame(double milliseconds, int players, NSString *aimState);
 void RequestExitHUDWithMessage(NSString *message);
 void _0xFFFADK2(BOOL isEnabled);

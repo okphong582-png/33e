@@ -10,6 +10,7 @@
 #include "pid.h"
 #include "VnProfile.h"
 #include "KernelMemory.h"
+#include "KernelTableAddress.h"
 #import "HUDHelper.h"
 
 // Backend ABI recovered from hi.tipa, SHA256 70953e69...6fe84caf2.
@@ -28,7 +29,7 @@ struct Backend {
 };
 struct Target {
     pid_t pid = 0;
-    uint64_t process = 0, map = 0, table = 0, base = 0, pmap = 0;
+    uint64_t process = 0, map = 0, table = 0, base = 0, pmap = 0, tableOffset = 0;
     bool tableVerified = false;
 };
 Backend backend;
@@ -167,7 +168,7 @@ bool readTarget(const Target &context, uint64_t address, void *output, size_t le
 }
 
 bool validTable(uint64_t table) {
-    return table && !(table & 0xfff) && table < (1ULL << 52);
+    return KernelMemory::ValidTableAddress(table);
 }
 
 bool verifyTable(Target &context) {
@@ -183,14 +184,18 @@ bool verifyTable(Target &context) {
     for (uint64_t offset : offsets) {
         uint64_t pmap = backend.readPointer(context.map + offset);
         if (!kernelPointer(pmap)) continue;
-        uint64_t table = backend.readPointer(pmap + layout.pmapTtep);
-        if (!validTable(table)) continue;
-        if (backend.readVirtual(table, reinterpret_cast<const void *>(context.base), actual.data(), actual.size()) ||
-            expected != actual) continue;
-        context.pmap = pmap;
-        context.table = table;
-        context.tableVerified = true;
-        return true;
+        const uint64_t tableOffsets[] = {layout.pmapTtep, 0};
+        for (uint64_t tableOffset : tableOffsets) {
+            uint64_t table = backend.readPointer(pmap + tableOffset);
+            if (!validTable(table)) continue;
+            if (backend.readVirtual(table, reinterpret_cast<const void *>(context.base), actual.data(), actual.size()) ||
+                expected != actual) continue;
+            context.pmap = pmap;
+            context.table = table;
+            context.tableOffset = tableOffset;
+            context.tableVerified = true;
+            return true;
+        }
     }
     context.table = 0;
     return false;
@@ -230,6 +235,7 @@ Target discover(pid_t pid) {
     context.map = backend.readPointer(task + layout.taskMap);
     if (!kernelPointer(context.map)) { reportStatus(@"Kernel lỗi — chưa đọc được vm_map."); return {}; }
     context.pmap = backend.readPointer(context.map + layout.mapPmap);
+    context.tableOffset = layout.pmapTtep;
     if (kernelPointer(context.pmap)) context.table = backend.readPointer(context.pmap + layout.pmapTtep);
     if (!validTable(context.table)) {
         context.table = 0;
@@ -277,6 +283,11 @@ mach_port_t get_task = MACH_PORT_NULL;
 uint64_t KernelProcessIdentity() {
     std::lock_guard<std::mutex> lock(stateMutex);
     return target.base ? target.process : 0;
+}
+
+bool KernelAimWriteReady() {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    return target.base && target.tableVerified && backend.writeVirtual;
 }
 
 pid_t GetGameProcesspid(char *name) {
@@ -339,7 +350,7 @@ bool _write(long address, const void *input, int length) {
     { std::lock_guard<std::mutex> lock(stateMutex); context = target; }
     if (!context.base || !context.tableVerified || !backend.writeVirtual || kill(context.pid, 0) != 0 ||
         backend.findProcess(context.pid) != context.process) return false;
-    if (backend.readPointer(context.pmap + layout.pmapTtep) != context.table) return false;
+    if (backend.readPointer(context.pmap + context.tableOffset) != context.table) return false;
     return backend.writeVirtual(context.table, reinterpret_cast<const void *>(address), input, length) == 0;
 }
 

@@ -1,5 +1,8 @@
 
 #include "../Core/AimSelection.h"
+#ifdef MIZZE_KERNEL_BACKEND
+#include "../Core/KernelMemory.h"
+#endif
 #include "../../sources/MizzeMenuPrefs.h"
 #include "../Core/SilentAimSelection.h"
 #include "../Core/AutoFire.h"
@@ -780,6 +783,22 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
 
 #ifdef MIZZE_KERNEL_BACKEND
 extern void HUDUpdateKernelStatus(NSString *message);
+static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
+    NSString *reason = @"Đang kiểm tra mục tiêu";
+    if (gAimType == AimModePolicy::Type::Silent) reason = @"Silent Aim chưa được chuyển sang kernel";
+    else if (gAimActivation == AimModePolicy::Activation::Off) reason = @"AIM đang tắt";
+    else if (stats.aimState == 1) reason = @"Chưa đủ điều kiện kích hoạt";
+    else if (!selected) reason = @"Chưa chọn được mục tiêu trong FOV";
+    else if (!KernelAimWriteReady()) reason = @"Chưa xác minh bảng trang để ghi aim";
+    else if (stats.aimState == 4) reason = @"Đã ghi cả hai góc aim";
+    else if (stats.aimState == 6) reason = @"Ghi được góc chính, góc phụ thất bại";
+    else if (stats.aimState == 3) reason = @"Lệnh ghi góc aim chưa thành công";
+    else if (stats.aimState == 5) reason = @"Mục tiêu không vượt qua kiểm tra HP/hiển thị";
+    NSString *message = [NSString stringWithFormat:@"%@\nLoại=%d, kích hoạt=%d, bắn=%d, ngắm=%d, mục tiêu=%d, quyền ghi=%d, mã=%d.",
+        reason, static_cast<int>(gAimType), static_cast<int>(gAimActivation), stats.firing, stats.scoping,
+        selected, KernelAimWriteReady(), stats.aimState];
+    HUDRecordAimStatus(message);
+}
 #endif
 
 - (ESPFrameStats)renderESPWithBuffers:(ESPGeometryBuffers *)buffers
@@ -952,6 +971,9 @@ extern void HUDUpdateKernelStatus(NSString *message);
         silentFrame.published = true;
         gAimLockTarget = silentSelection.target;
         gAimSmoothedValid = false;
+#ifdef MIZZE_KERNEL_BACKEND
+        RecordKernelAimFrame(stats, silentSelection.target != 0);
+#endif
         return stats;
     }
 
@@ -973,10 +995,11 @@ extern void HUDUpdateKernelStatus(NSString *message);
                     // So sánh với previousTarget (trước khi reset)
                     // gAimLockTarget đã bị reset = 0 ở trên nên không dùng được
                     if (!gAimSmoothedValid || previousTarget != finalTarget) {
-                        gAimSmoothed = ReadAddr<Quaternion>(local + kAimRotation);
-                        if (!std::isfinite(gAimSmoothed.x) || !std::isfinite(gAimSmoothed.y) ||
-                            !std::isfinite(gAimSmoothed.z) || !std::isfinite(gAimSmoothed.w))
+                        const bool readRotation = _read(static_cast<long>(local + kAimRotation), &gAimSmoothed, sizeof(gAimSmoothed));
+                        const float norm = Quaternion::Norm(gAimSmoothed);
+                        if (!readRotation || !std::isfinite(norm) || norm < 0.0001f || norm > 10000.0f)
                             gAimSmoothed = targetRot;
+                        else gAimSmoothed = Quaternion::Normalized(gAimSmoothed);
                         gAimSmoothedValid = true;
                     }
                     const float dt     = gBalancedRender ? (1.0f/30.0f) : (1.0f/60.0f);
@@ -995,8 +1018,7 @@ extern void HUDUpdateKernelStatus(NSString *message);
     }
 
 #ifdef MIZZE_KERNEL_BACKEND
-    HUDUpdateKernelStatus([NSString stringWithFormat:@"FFVN đọc được %d người chơi, hiển thị %d, trạng thái aim %d.",
-                           count, stats.playerCount + stats.botCount, stats.aimState]);
+    RecordKernelAimFrame(stats, selection.target != 0);
 #endif
     return stats;
 }
