@@ -79,19 +79,64 @@ bool userRange(uint64_t address, size_t length) {
            length <= 0x1000000000000ULL - address;
 }
 
+NSArray<NSString *> *libraryCandidates() {
+    NSMutableOrderedSet<NSString *> *paths = [NSMutableOrderedSet orderedSet];
+    auto addRoot = [&](NSString *root) {
+        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libjailbreak.dylib"]];
+        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libjailbreak.roothide.dylib"]];
+        [paths addObject:[root stringByAppendingPathComponent:@"basebin/libjailbreak.dylib"]];
+    };
+    addRoot([NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@".jbroot"]);
+    NSFileManager *files = NSFileManager.defaultManager;
+    for (NSString *container in @[@"/var/containers/Bundle/Application", @"/var/mobile/Containers/Shared/AppGroup"]) {
+        NSArray<NSString *> *entries = [files contentsOfDirectoryAtPath:container error:nil];
+        for (NSString *entry in entries) {
+            if ([entry hasPrefix:@".jbroot-"])
+                addRoot([container stringByAppendingPathComponent:entry]);
+        }
+    }
+    [paths addObjectsFromArray:@[@"/var/jb/usr/lib/libjailbreak.dylib",
+        @"/var/jb/basebin/libjailbreak.dylib", @"/var/jb/usr/lib/libjailbreak.roothide.dylib",
+        @"/usr/lib/libjailbreak.dylib", @"/.jbroot/usr/lib/libjailbreak.dylib"]];
+    NSString *bundled = [NSBundle.mainBundle pathForResource:@"libjailbreak" ofType:@"dylib"];
+    if (bundled.length) [paths addObject:bundled];
+    return paths.array;
+}
+
+bool loadBackendLibrary() {
+    NSFileManager *files = NSFileManager.defaultManager;
+    NSString *lastFailure = nil;
+    bool foundFile = false;
+    for (NSString *path in libraryCandidates()) {
+        if (![files fileExistsAtPath:path]) continue;
+        foundFile = true;
+        dlerror();
+        void *library = dlopen(path.fileSystemRepresentation, RTLD_NOW | RTLD_GLOBAL);
+        if (library) {
+            // RootHide variants may expose a different subset of the API.
+            if (dlsym(library, "proc_find") && dlsym(library, "proc_task") && dlsym(library, "vreadbuf")) {
+                backend.library = library;
+                NSLog(@"[Kernel] Loaded provider %@", path);
+                return true;
+            }
+            lastFailure = [NSString stringWithFormat:@"%@ thiếu proc_find/proc_task/vreadbuf.", path];
+            dlclose(library);
+            continue;
+        }
+        const char *error = dlerror();
+        NSString *detail = error ? [NSString stringWithUTF8String:error] : @"dlopen không trả lý do";
+        if (detail.length > 320) detail = [detail substringToIndex:320];
+        lastFailure = [NSString stringWithFormat:@"%@\n%@", path, detail];
+    }
+    reportStatus(foundFile ? [@"Kernel không nạp được thư viện đã tìm thấy.\n" stringByAppendingString:lastFailure ?: @""] :
+        @"Kernel chưa tìm thấy libjailbreak trong .jbroot, .jbroot-* hoặc /var/jb. Kiểm tra trạng thái jailbreak trong Dopamine.");
+    return false;
+}
+
 bool initializeBackend() {
     if (backend.ready) return true;
     if (getuid() != 0) { reportStatus(@"Kernel lỗi — HUD chưa có quyền root."); return false; }
-    if (!backend.library) {
-        NSArray<NSString *> *paths = @[@"/var/jb/usr/lib/libjailbreak.dylib",
-            @"/var/jb/basebin/libjailbreak.dylib", @"/var/jb/usr/lib/libjailbreak.roothide.dylib",
-            @"/usr/lib/libjailbreak.dylib", @"/.jbroot/usr/lib/libjailbreak.dylib"];
-        for (NSString *path in paths) {
-            backend.library = dlopen(path.fileSystemRepresentation, RTLD_NOW | RTLD_LOCAL);
-            if (backend.library) break;
-        }
-    }
-    if (!backend.library) { reportStatus(@"Kernel lỗi — không nạp được libjailbreak của Dopamine."); return false; }
+    if (!backend.library && !loadBackendLibrary()) return false;
     auto initialize = reinterpret_cast<int (*)()>(dlsym(backend.library, "jbdInitPPLRW"));
     if (!initialize || initialize() != 0) { reportStatus(@"Kernel lỗi — jbdInitPPLRW chưa khởi tạo được."); return false; }
     backend.findProcess = reinterpret_cast<decltype(backend.findProcess)>(dlsym(backend.library, "proc_find"));
