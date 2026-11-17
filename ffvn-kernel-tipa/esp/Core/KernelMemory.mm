@@ -1,6 +1,10 @@
 #import <Foundation/Foundation.h>
 #include <dlfcn.h>
 #include <mach-o/loader.h>
+#include <mach-o/dyld_images.h>
+#include <mach/task_info.h>
+#include <algorithm>
+#include <limits.h>
 #include <sys/sysctl.h>
 #include <signal.h>
 #include <unistd.h>
@@ -290,6 +294,24 @@ bool KernelAimWriteReady() {
     return target.base && target.tableVerified && backend.writeVirtual;
 }
 
+mach_port_t KernelCopyTaskPort(uint64_t module, kern_return_t *error) {
+    Target context;
+    { std::lock_guard<std::mutex> lock(stateMutex); context = target; }
+    *error = KERN_INVALID_ARGUMENT;
+    if (!context.base || context.base != module || context.pid <= 0) return MACH_PORT_NULL;
+    mach_port_t port = MACH_PORT_NULL;
+    *error = task_for_pid(mach_task_self(), context.pid, &port);
+    if (*error != KERN_SUCCESS) return MACH_PORT_NULL;
+    int pid = -1;
+    *error = pid_for_task(port, &pid);
+    if (*error != KERN_SUCCESS || pid != context.pid || backend.findProcess(pid) != context.process) {
+        mach_port_deallocate(mach_task_self(), port);
+        if (*error == KERN_SUCCESS) *error = KERN_INVALID_ARGUMENT;
+        return MACH_PORT_NULL;
+    }
+    return port;
+}
+
 pid_t GetGameProcesspid(char *name) {
     if (!name || !name[0]) return -1;
     int query[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
@@ -355,7 +377,98 @@ bool _write(long address, const void *input, int length) {
 }
 
 mach_port_t get_task_for_PID(pid_t) { return MACH_PORT_NULL; }
-mach_vm_address_t get_image_base_address(mach_port_t, const char *) {
-    std::lock_guard<std::mutex> lock(stateMutex);
-    return target.base;
+static bool ReadTaskImagePath(mach_port_t task, mach_vm_address_t address,
+                          char *buffer, size_t capacity) {
+    if (!buffer || capacity < 2 || !isVaildPtr(address)) return false;
+    size_t offset = 0;
+    while (offset < capacity - 1) {
+        // Avoid crossing even a 4 KB page boundary while looking for the NUL.
+        const size_t pageRemaining = 4096 - ((address + offset) & 4095);
+        const size_t amount = std::min((size_t)128, std::min(capacity - 1 - offset, pageRemaining));
+        mach_vm_size_t actual = 0;
+        kern_return_t kr = mach_vm_read_overwrite(task, address + offset, amount,
+                                                (mach_vm_address_t)(buffer + offset), &actual);
+        if (kr != KERN_SUCCESS || actual != amount) return false;
+        if (memchr(buffer + offset, '\0', amount)) return true;
+        offset += amount;
+    }
+    buffer[capacity - 1] = '\0';
+    return false;
+}
+
+
+struct dyld_image_info64 {
+    mach_vm_address_t    imageLoadAddress;
+    mach_vm_address_t    imageFilePath;
+    mach_vm_size_t       imageFileModDate;
+};
+
+struct dyld_all_image_infos64 {
+    uint32_t version;
+    uint32_t infoArrayCount;
+    mach_vm_address_t infoArray;
+    dyld_image_notifier  notification;
+    bool                 processDetachedFromSharedRegion;
+    bool libSystemInitialized;
+    mach_vm_address_t            dyldImageLoadAddress;
+    mach_vm_address_t            jitInfo;
+    mach_vm_address_t            dyldVersion;
+    mach_vm_address_t            errorMessage;
+    uint64_t                    terminationFlags;
+    mach_vm_address_t            coreSymbolicationShmPage;
+    uint64_t                    systemOrderFlag;
+    uint64_t                    uuidArrayCount;
+    mach_vm_address_t            uuidArray;
+    mach_vm_address_t            dyldAllImageInfosAddress;
+    uint64_t                    initialImageCount;
+    uint64_t                    errorKind;
+    mach_vm_address_t            errorClientOfDylibPath;
+    mach_vm_address_t            errorTargetDylibPath;
+    mach_vm_address_t            errorSymbol;
+    uint64_t                    sharedCacheSlide;
+};
+
+mach_vm_address_t get_image_base_address(mach_port_t task, const char *image_name) {
+    task_dyld_info_data_t dyld_info;
+    mach_msg_type_number_t count = TASK_DYLD_INFO_COUNT;
+    kern_return_t kr = task_info(task, TASK_DYLD_INFO, (task_info_t)&dyld_info, &count);
+    if (kr != KERN_SUCCESS) {
+        fprintf(stderr, KH_STR("task_info failed: %s\n"), mach_error_string(kr));
+        return 0;
+    }
+
+    struct dyld_all_image_infos64 infos{};
+    mach_vm_size_t read_size = 0;
+    kr = mach_vm_read_overwrite(task, dyld_info.all_image_info_addr, sizeof(infos),
+                               (mach_vm_address_t)&infos, &read_size);
+    if (kr != KERN_SUCCESS || read_size != sizeof(infos)) {
+        return 0;
+    }
+
+    uint32_t image_count = infos.infoArrayCount;
+    mach_vm_address_t info_array_addr = infos.infoArray;
+    // dyld may be rebuilding this table during app launch. Retry later instead
+    // of allocating an unbounded size or interpreting a partial table.
+    if (!image_name || !image_name[0] || image_count == 0 || image_count > 4096 ||
+        !isVaildPtr(info_array_addr)) return 0;
+    vm_size_t image_info_size = image_count * sizeof(struct dyld_image_info64);
+    std::vector<dyld_image_info64> image_infos(image_count);
+
+    read_size = 0;
+    kr = mach_vm_read_overwrite(task, info_array_addr, image_info_size,
+                               (mach_vm_address_t)image_infos.data(), &read_size);
+    if (kr != KERN_SUCCESS || read_size != image_info_size) {
+        return 0;
+    }
+
+    for (uint32_t i = 0; i < image_count; ++i) {
+        char path_buffer[PATH_MAX] = {0};
+        if (ReadTaskImagePath(task, image_infos[i].imageFilePath, path_buffer, sizeof(path_buffer)) &&
+            strstr(path_buffer, image_name)) {
+            mach_vm_address_t base = image_infos[i].imageLoadAddress;
+            return base;
+        }
+    }
+
+    return 0;
 }

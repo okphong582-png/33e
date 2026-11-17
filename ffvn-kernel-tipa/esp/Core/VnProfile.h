@@ -12,6 +12,7 @@ constexpr uint64_t Rva(uint64_t baseline) {
     switch (baseline) {
         case 0xBB46A50: return 0xBB4D150; // GameFacade metadata slot in CurrentMatch
         case 0x5616118: return 0x5617A14; // Player.GetWeaponOnHand
+        case 0x5AC970C: return 0x5ACB12C; // Weapon manager getter called by GetWeaponOnHand
         case 0x5C59B94: return 0x5C5B5B8; // Common fire, virtual slot 17
         case 0x56A5F94: return 0x56A788C; // Player.get_AimStartPostion
         case 0x5C5D36C: return 0x5C5ED90; // Direction modifier, virtual slot 11
@@ -23,6 +24,7 @@ constexpr uint64_t Rva(uint64_t baseline) {
 constexpr uint32_t Hash(uint32_t baseline) {
     switch (baseline) {
         case 0xC5E012EE: return 0xAB912477;
+        case 0x93FD3984: return 0x30BA7C3C;
         case 0xDFE8FAC6: return 0x0E24739C;
         case 0xA1643E14: return 0x4F82305F;
         case 0x10B69D75: return 0xC43ECED8;

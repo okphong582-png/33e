@@ -12,6 +12,9 @@
 #include <array>
 #include <cstring>
 #include <mutex>
+#ifdef MIZZE_KERNEL_BACKEND
+#include "KernelMemory.h"
+#endif
 
 extern "C" const unsigned char SilentAimRemoteStart[], SilentAimRemoteEnd[];
 
@@ -24,8 +27,10 @@ bool codeVerified = false;
 mach_port_t ownedTask = MACH_PORT_NULL;
 int ownedPID = -1;
 uint64_t module = 0, allocation = 0, installedSlot = 0;
+uint64_t ownedProcessIdentity = 0;
 uint32_t sequence = 0;
 double nextInstallAttempt = 0;
+double nextTaskAttempt = 0;
 int installFailure = 0;
 SilentAimFailure lastFailure;
 int Fail(const char *operation, kern_return_t code) {
@@ -34,14 +39,24 @@ int Fail(const char *operation, kern_return_t code) {
 }
 
 bool ReadBytes(uint64_t address, void *buffer, size_t size) {
+#ifdef MIZZE_KERNEL_BACKEND
+    return ownedProcessIdentity && ownedProcessIdentity == KernelProcessIdentity() &&
+        size <= INT32_MAX && _read(static_cast<long>(address), buffer, static_cast<int>(size));
+#else
     mach_vm_size_t actual = 0;
     return ownedTask != MACH_PORT_NULL && isVaildPtr(address) &&
         mach_vm_read_overwrite(ownedTask, address, size, (mach_vm_address_t)buffer, &actual) == KERN_SUCCESS &&
         actual == size;
+#endif
 }
 bool WriteBytes(uint64_t address, const void *buffer, size_t size) {
+#ifdef MIZZE_KERNEL_BACKEND
+    return ownedProcessIdentity && ownedProcessIdentity == KernelProcessIdentity() &&
+        size <= INT32_MAX && _write(static_cast<long>(address), buffer, static_cast<int>(size));
+#else
     return ownedTask != MACH_PORT_NULL && isVaildPtr(address) &&
         mach_vm_write(ownedTask, address, (pointer_t)buffer, (mach_msg_type_number_t)size) == KERN_SUCCESS;
+#endif
 }
 template <typename T> bool Read(uint64_t address, T &value) { return ReadBytes(address, &value, sizeof(value)); }
 template <typename T> bool Write(uint64_t address, const T &value) { return WriteBytes(address, &value, sizeof(value)); }
@@ -109,12 +124,41 @@ void Detach() {
         mach_port_deallocate(mach_task_self(), ownedTask);
     }
     ownedTask = MACH_PORT_NULL; ownedPID = -1;
+    ownedProcessIdentity = 0;
     module = allocation = installedSlot = 0; sequence = 0;
     nextInstallAttempt = 0; installFailure = 0;
     codeVerified = false;
 }
 bool Attach(uint64_t base) {
     int pid = -1;
+#ifdef MIZZE_KERNEL_BACKEND
+    const uint64_t identity = KernelProcessIdentity();
+    if (ownedTask != MACH_PORT_NULL && module == base &&
+        identity && ownedProcessIdentity == identity &&
+        pid_for_task(ownedTask, &pid) == KERN_SUCCESS && pid == ownedPID) return true;
+    if (CACurrentMediaTime() < nextTaskAttempt) return false;
+    Detach();
+    kern_return_t error = KERN_SUCCESS;
+    mach_port_t acquired = KernelCopyTaskPort(base, &error);
+    if (acquired == MACH_PORT_NULL) {
+        nextTaskAttempt = CACurrentMediaTime() + 2;
+        Fail("xin task port để cài callback Silent", error);
+        return false;
+    }
+    error = pid_for_task(acquired, &pid);
+    if (error != KERN_SUCCESS || !identity || identity != KernelProcessIdentity()) {
+        mach_port_deallocate(mach_task_self(), acquired);
+        nextTaskAttempt = CACurrentMediaTime() + 2;
+        if (error == KERN_SUCCESS) error = KERN_INVALID_ARGUMENT;
+        Fail("xác định tiến trình Silent", error);
+        return false;
+    }
+    ownedTask = acquired; ownedPID = pid; module = base;
+    ownedProcessIdentity = identity;
+    lastFailure = {};
+    nextTaskAttempt = 0;
+    return true;
+#else
     if (get_task == MACH_PORT_NULL) { Detach(); Fail("chưa có quyền task game", KERN_INVALID_ARGUMENT); return false; }
     auto error = pid_for_task(get_task, &pid);
     if (error != KERN_SUCCESS) { Detach(); Fail("xác định tiến trình game", error); return false; }
@@ -124,6 +168,7 @@ bool Attach(uint64_t base) {
     if (error != KERN_SUCCESS) { Fail("giữ quyền task game", error); return false; }
     ownedTask = get_task; ownedPID = pid; module = base;
     return true;
+#endif
 }
 template <size_t N> bool Fingerprint(uint64_t address, uint32_t expected) {
     std::array<uint8_t, N> bytes{};
@@ -163,7 +208,7 @@ bool Adopt(uint64_t address) {
 }
 int Allocate() {
     const uint64_t clock = RemoteClock();
-    if (!clock) return 9;
+    if (!clock) return Fail("tìm đồng hồ mach_absolute_time trong game", KERN_INVALID_ADDRESS);
     const auto mapping = SilentAimMapping::Map(ownedTask, SilentAimRemoteStart, SilentAimRemoteEnd);
     if (!mapping.address) return Fail(mapping.operation, mapping.error);
     SilentAimRemote::State initial{};
@@ -245,7 +290,10 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t targ
     uint64_t handler = 0, klass = 0, info = 0, infoClass = 0;
     if (!weapon || !Read(weapon + 0x80, handler) || !ClassName(handler, "MDPBNKPCGNG") ||
         !Read(handler, klass) || !Read(handler + 0x28, info) ||
-        (info && (!ClassName(info, "CGKJLKPMGDJ") || !Read(info, infoClass)))) { Uninstall(); return 9; }
+        (info && (!ClassName(info, "CGKJLKPMGDJ") || !Read(info, infoClass)))) {
+        lastFailure = {"đọc súng/handler Silent FFVN", KERN_INVALID_ARGUMENT};
+        Uninstall(); return 9;
+    }
     // The handler constructor leaves +0x28 null until the first native shot.
     // Install before it exists; the callback checks its runtime class when the
     // shot creates it, so AimKill does not depend on a manual primer per gun.

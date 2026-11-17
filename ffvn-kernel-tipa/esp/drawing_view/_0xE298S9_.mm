@@ -785,7 +785,17 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
 extern void HUDUpdateKernelStatus(NSString *message);
 static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
     NSString *reason = @"Đang kiểm tra mục tiêu";
-    if (gAimType == AimModePolicy::Type::Silent) reason = @"Silent Aim chưa được chuyển sang kernel";
+    if (gAimType == AimModePolicy::Type::Silent) {
+        SilentAimFailure failure = SilentAimLastFailure();
+        if (stats.aimState == 8)
+            reason = [NSString stringWithFormat:@"Silent đã cài callback, đã đổi hướng đạn %llu lần.",
+                static_cast<unsigned long long>(SilentAimRedirectCount())];
+        else if (stats.aimState == 7) reason = @"Silent đã cài callback, đang chờ mục tiêu trong FOV.";
+        else if (failure.operation && failure.operation[0])
+            reason = [NSString stringWithFormat:@"Silent: %s — lỗi %d (%s).", failure.operation,
+                failure.code, mach_error_string(failure.code)];
+        else reason = @"Silent chưa khớp chữ ký mã hoặc slot xử lý của game.";
+    }
     else if (gAimActivation == AimModePolicy::Activation::Off) reason = @"AIM đang tắt";
     else if (stats.aimState == 1) reason = @"Chưa đủ điều kiện kích hoạt";
     else if (!selected) reason = @"Chưa chọn được mục tiêu trong FOV";
@@ -797,7 +807,7 @@ static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
     NSString *message = [NSString stringWithFormat:@"%@\nLoại=%d, kích hoạt=%d, bắn=%d, ngắm=%d, mục tiêu=%d, quyền ghi=%d, mã=%d.",
         reason, static_cast<int>(gAimType), static_cast<int>(gAimActivation), stats.firing, stats.scoping,
         selected, KernelAimWriteReady(), stats.aimState];
-    HUDRecordAimStatus(message, gAimType != AimModePolicy::Type::Silent && stats.aimState >= 2);
+    HUDRecordAimStatus(message, stats.aimState >= 2);
 }
 #endif
 

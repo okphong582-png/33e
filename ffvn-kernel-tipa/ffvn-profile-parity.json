@@ -5,7 +5,8 @@
     {
       "file": "esp/Core/VnProfile.h",
       "sha256": "97c3f68aee6d72bec616f72f939bbd6d65b97c40bd61580ce3fb2ce2837b078c",
-      "identical": true
+      "identical": false,
+      "extension": "Adds the VN Silent weapon-manager getter and its fingerprint from silent-native-evidence.json. Existing mappings are retained."
     },
     {
       "file": "esp/Core/GameProfileFields.h",

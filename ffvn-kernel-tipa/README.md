@@ -8,6 +8,6 @@ Unity discovery walks vm_map entries and accepts only UUID e50b0e3a-d931-385b-9e
 
 The existing UIKit HUD/menu and touch handling are reused. Root spawning requires a compatible TrollStore/jailbreak installation and a working libjailbreak provider. This build has no key login.
 
-Remote-code installers for Silent Aim, AutoFire, Ghost and PlayerModes still require a Mach task port and have not been ported to the kernel backend. Primary ESP reads, direct aim fields and supported direct field modifiers use the kernel reader. Hardware operation has not been verified.
+Silent uses kernel data reads/writes and requests its own Mach task port only for mapping signed callback code and installing/restoring the handler. The installer reports task permission, mapping, fingerprint and handler errors. Its VN weapon-manager RVA and fingerprint are validated against the supplied image. AutoFire, Ghost and PlayerModes remain disabled. Hardware Silent operation has not been verified.
 
 Build with make clean stage, then python3 package_tipa.py. GitHub Actions exports the TIPA and verification.json. Install the TIPA through TrollStore and press Start.

@@ -1,0 +1,11 @@
+{
+  "gameVersion": "1.134.1",
+  "sourceUnityUuid": "e50b0e3a-d931-385b-9e4c-9ffde6d1b923",
+  "weaponGetterRva": "0x5617A14",
+  "managerGetterCallsite": "0x5617A84",
+  "managerGetterRva": "0x5ACB12C",
+  "managerFingerprintLength": 160,
+  "managerFingerprintFNV1a": "0x30BA7C3C",
+  "oldFingerprintFNV1a": "0x93FD3984",
+  "deviceVerified": false
+}

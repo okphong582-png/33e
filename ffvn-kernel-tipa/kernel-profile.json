@@ -21,7 +21,7 @@
   "gameRead": "vreadbuf(ttep, address, buffer, length)",
   "gameWrite": "vwritebuf(ttep, address, buffer, length)",
   "moduleDiscovery": "Walk vm_map entries and match the supplied VN UnityFramework UUID",
-  "portingStatus": "Primary memory reads/writes and direct-field feature identity use the kernel backend. Remote-code installers that require a Mach task port have not been ported.",
+  "portingStatus": "Primary game reads/writes remain kernel based. Silent installer requests a separately owned Mach task port to map signed callback code and perform guarded installation; the provider may deny that request. Other remote-code modes are not enabled.",
   "deviceVerified": false,
   "kernelStructureOffsets": "Use jbinfo_get_serialized from initialized Dopamine when available. The recovered hi.tipa offsets are the legacy fallback.",
   "libraryDiscovery": "Same candidate roots recovered from hi.tipa: app .jbroot, .jbroot-* in Bundle/Application and Shared/AppGroup, fixed rootless paths, bundled resource.",
