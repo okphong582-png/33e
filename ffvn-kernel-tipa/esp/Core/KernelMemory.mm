@@ -309,8 +309,11 @@ uintptr_t GetGameModule_Base(char *name) {
                 if (pid > 0) {
                     Target previous;
                     { std::lock_guard<std::mutex> lock(stateMutex); previous = target; }
-                    if (previous.pid == pid && previous.base && backend.findProcess(pid) == previous.process) found = previous;
-                    else found = discover(pid);
+                    if (previous.pid == pid && previous.base && backend.findProcess(pid) == previous.process) {
+                        found = previous;
+                        if (!found.tableVerified && backend.readProcess && verifyTable(found))
+                            reportStatus(@"Đã xác minh lại TTEP của FFVN qua vreadbuf.");
+                    } else found = discover(pid);
                 } else reportStatus(@"Đang chờ tiến trình FreeFireVN. Hãy mở game.");
             }
             std::lock_guard<std::mutex> lock(stateMutex);
