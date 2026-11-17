@@ -80,10 +80,13 @@ NSString *HUDLastStatusMessage(void) {
         return @"Tiến trình menu dừng ngoài dự kiến; chưa có mã lỗi từ iOS. Bấm Start để mở lại.";
     }
     NSString *current = [status[@"message"] isKindOfClass:NSString.class] ? status[@"message"] : @"Menu chưa khởi động.";
-    NSDictionary *lastAim = [NSDictionary dictionaryWithContentsOfFile:[StatusPath() stringByAppendingString:@".aim.plist"]];
+    NSDictionary *lastAim = [NSDictionary dictionaryWithContentsOfFile:[StatusPath() stringByAppendingString:@".attempt.plist"]];
+    BOOL haveAttempt = [lastAim[@"pid"] intValue] == ReadPID();
+    if (!haveAttempt) lastAim = [NSDictionary dictionaryWithContentsOfFile:[StatusPath() stringByAppendingString:@".aim.plist"]];
     if (running && [lastAim[@"pid"] intValue] == ReadPID() && [lastAim[@"message"] isKindOfClass:NSString.class]) {
         NSTimeInterval age = MAX(0, NSDate.date.timeIntervalSince1970 - [lastAim[@"time"] doubleValue]);
-        return [NSString stringWithFormat:@"%@\n\nTrong trận, %.0f giây trước\n%@", current, age, lastAim[@"message"]];
+        return [NSString stringWithFormat:@"%@\n\n%@, %.0f giây trước\n%@", current,
+                haveAttempt ? @"Lần aim kích hoạt gần nhất" : @"Trong trận", age, lastAim[@"message"]];
     }
     return current;
 }
@@ -161,9 +164,15 @@ void HUDUpdateKernelStatus(NSString *message) {
         WriteStatus(@"ready", message, getpid());
     }
 }
-void HUDRecordAimStatus(NSString *message) {
+void HUDRecordAimStatus(NSString *message, BOOL activated) {
     static CFAbsoluteTime lastWrite = 0;
+    static CFAbsoluteTime lastAttempt = 0;
     CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    if (activated && now - lastAttempt >= 1) {
+        lastAttempt = now;
+        NSDictionary *attempt = @{@"pid":@(getpid()), @"time":@(NSDate.date.timeIntervalSince1970), @"message":message};
+        [attempt writeToFile:[StatusPath() stringByAppendingString:@".attempt.plist"] atomically:YES];
+    }
     if (now - lastWrite < 1) return;
     lastWrite = now;
     NSDictionary *record = @{@"pid":@(getpid()), @"time":@(NSDate.date.timeIntervalSince1970), @"message":message};

@@ -797,7 +797,7 @@ static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
     NSString *message = [NSString stringWithFormat:@"%@\nLoại=%d, kích hoạt=%d, bắn=%d, ngắm=%d, mục tiêu=%d, quyền ghi=%d, mã=%d.",
         reason, static_cast<int>(gAimType), static_cast<int>(gAimActivation), stats.firing, stats.scoping,
         selected, KernelAimWriteReady(), stats.aimState];
-    HUDRecordAimStatus(message);
+    HUDRecordAimStatus(message, gAimType != AimModePolicy::Type::Silent && stats.aimState >= 2);
 }
 #endif
 

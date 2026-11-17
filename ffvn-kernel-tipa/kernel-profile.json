@@ -25,5 +25,6 @@
   "deviceVerified": false,
   "kernelStructureOffsets": "Use jbinfo_get_serialized from initialized Dopamine when available. The recovered hi.tipa offsets are the legacy fallback.",
   "libraryDiscovery": "Same candidate roots recovered from hi.tipa: app .jbroot, .jbroot-* in Bundle/Application and Shared/AppGroup, fixed rootless paths, bundled resource.",
-  "tableVerification": "Accept physical TTEP and kernel virtual TTE roots supported by Dopamine; test pmap tte and ttep against the full Unity header and load commands before writes."
+  "tableVerification": "Accept physical TTEP and kernel virtual TTE roots supported by Dopamine; test pmap tte and ttep against the full Unity header and load commands before writes.",
+  "tableAlignment": "uint64 entry alignment (8 bytes), matching vtophys table indexing. Full Unity header comparison is still required before writes."
 }
