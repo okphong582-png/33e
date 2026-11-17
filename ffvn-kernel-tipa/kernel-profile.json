@@ -1,0 +1,20 @@
+{
+  "referenceTipaSha256": "70953e69eb98c334e8e3429f5004efa564a4f7a4433c03cfd5ea66c6fe84caf2",
+  "game": "com.garena.ffvn",
+  "gameExecutable": "FreeFireVN",
+  "gameVersion": "1.134.1",
+  "gameBuild": "2019121262",
+  "unityUuid": "e50b0e3a-d931-385b-9e4c-9ffde6d1b923",
+  "backend": "libjailbreak",
+  "initialization": "jbdInitPPLRW",
+  "processLookup": ["proc_find", "proc_task"],
+  "kernelLookup": ["kread_ptr", "kread64"],
+  "taskMapOffset": 40,
+  "mapPmapOffset": 64,
+  "pmapTtepOffset": 8,
+  "gameRead": "vreadbuf(ttep, address, buffer, length)",
+  "gameWrite": "vwritebuf(ttep, address, buffer, length)",
+  "moduleDiscovery": "Walk vm_map entries and match the supplied VN UnityFramework UUID",
+  "portingStatus": "Primary memory reads/writes and direct-field feature identity use the kernel backend. Remote-code installers that require a Mach task port have not been ported.",
+  "deviceVerified": false
+}

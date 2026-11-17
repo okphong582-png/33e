@@ -1,0 +1,24 @@
+name: Build FFVN kernel TIPA
+on:
+  push:
+    branches: [codex/ffvn-kernel-tipa]
+    paths: ['ffvn-kernel-tipa/**', '.github/workflows/ffvn-kernel-tipa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tipa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Randomblock1/theos-action@v1
+      - name: Build standalone FFVN application
+        run: |
+          make -C ffvn-kernel-tipa clean stage FINALPACKAGE=1 FOR_RELEASE=1
+          python3 ffvn-kernel-tipa/package_tipa.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-FFVN-1.134.1-Kernel-TIPA
+          path: ffvn-kernel-tipa/packages/*
+          if-no-files-found: error
