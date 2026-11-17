@@ -778,6 +778,10 @@ bool get_IsKnockedDown(uint64_t player) {
 bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeState(GetDataUInt16(p, 12)); }
 
 
+#ifdef MIZZE_KERNEL_BACKEND
+extern void HUDUpdateKernelStatus(NSString *message);
+#endif
+
 - (ESPFrameStats)renderESPWithBuffers:(ESPGeometryBuffers *)buffers
                             viewWidth:(CGFloat)vw viewHeight:(CGFloat)vh
                         matrixVpWidth:(CGFloat)vpW matrixVpHeight:(CGFloat)vpH {
@@ -796,6 +800,9 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     // Refresh the match identity each frame so a new match cannot reuse a stale lock.
     const uint64_t matchGame = getMatchGame(Moudule_Base);
     if (!isVaildPtr(matchGame)) {
+#ifdef MIZZE_KERNEL_BACKEND
+        HUDUpdateKernelStatus(@"Đã đọc Unity, đang chờ dữ liệu GameFacade FFVN.");
+#endif
         cachedMatchGame = cachedMatch = cachedCamera = 0;
         return stats;
     }
@@ -804,10 +811,20 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
     cachedMatchGame = matchGame;
     cachedMatch = match;
     cachedCamera = CameraMain(matchGame);
-    if (!isVaildPtr(cachedCamera) || !isVaildPtr(match)) return stats;
+    if (!isVaildPtr(cachedCamera) || !isVaildPtr(match)) {
+#ifdef MIZZE_KERNEL_BACKEND
+        HUDUpdateKernelStatus(@"Đã đọc GameFacade, đang chờ trận và camera.");
+#endif
+        return stats;
+    }
 
     const uint64_t local = getLocalPlayer(match);
-    if (!isVaildPtr(local) || get_CurHP(local) <= 0) return stats;
+    if (!isVaildPtr(local) || get_CurHP(local) <= 0) {
+#ifdef MIZZE_KERNEL_BACKEND
+        HUDUpdateKernelStatus(@"Đã đọc trận, đang chờ người chơi và HP.");
+#endif
+        return stats;
+    }
     const uint64_t camTransform = ReadAddr<uint64_t>(local + kMainCameraTransform);
     if (!isVaildPtr(camTransform)) return stats;
     const Vector3 myLoc = getPositionExt(camTransform);
@@ -977,6 +994,10 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         gAimSmoothedValid = false;
     }
 
+#ifdef MIZZE_KERNEL_BACKEND
+    HUDUpdateKernelStatus([NSString stringWithFormat:@"FFVN đọc được %d người chơi, hiển thị %d, trạng thái aim %d.",
+                           count, stats.playerCount + stats.botCount, stats.aimState]);
+#endif
     return stats;
 }
 

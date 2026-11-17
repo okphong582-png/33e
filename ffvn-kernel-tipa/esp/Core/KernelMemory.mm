@@ -10,6 +10,7 @@
 #include "pid.h"
 #include "VnProfile.h"
 #include "KernelMemory.h"
+#import "HUDHelper.h"
 
 // Backend ABI recovered from hi.tipa, SHA256 70953e69...6fe84caf2.
 // The task/map/pmap chain is checked before the game's UUID is inspected.
@@ -29,10 +30,48 @@ struct Target {
     uint64_t process = 0, map = 0, table = 0, base = 0;
 };
 Backend backend;
+struct KernelLayout {
+    uint64_t taskMap = 0x28, mapPmap = 0x40, pmapTtep = 8;
+    uint64_t mapHeader = 0x10, headerLinks = 0, headerCount = 0x20;
+    uint64_t entryLinks = 0, linksNext = 8, linksMin = 0x10, linksMax = 0x18;
+} layout;
 Target target;
 std::mutex stateMutex;
 bool scanRunning = false;
 CFAbsoluteTime nextScan = 0;
+
+void reportStatus(NSString *message) {
+    NSLog(@"[Kernel] %@", message);
+    HUDUpdateKernelStatus(message);
+}
+
+void loadKernelLayout() {
+    auto serialize = reinterpret_cast<void *(*)()>(dlsym(backend.library, "jbinfo_get_serialized"));
+    auto getValue = reinterpret_cast<void *(*)(void *, const char *)>(dlsym(RTLD_DEFAULT, "xpc_dictionary_get_value"));
+    auto getNumber = reinterpret_cast<uint64_t (*)(void *, const char *)>(dlsym(RTLD_DEFAULT, "xpc_dictionary_get_uint64"));
+    auto release = reinterpret_cast<void (*)(void *)>(dlsym(RTLD_DEFAULT, "xpc_release"));
+    if (!serialize || !getValue || !getNumber || !release) return;
+    void *information = serialize();
+    if (!information) return;
+    struct Field { const char *name; uint64_t *offset; } fields[] = {
+        {"kernelStruct.task.map", &layout.taskMap},
+        {"kernelStruct.vm_map.pmap", &layout.mapPmap},
+        {"kernelStruct.pmap.ttep", &layout.pmapTtep},
+        {"kernelStruct.vm_map.hdr", &layout.mapHeader},
+        {"kernelStruct.vm_map_header.links", &layout.headerLinks},
+        {"kernelStruct.vm_map_header.nentries", &layout.headerCount},
+        {"kernelStruct.vm_map_entry.links", &layout.entryLinks},
+        {"kernelStruct.vm_map_links.next", &layout.linksNext},
+        {"kernelStruct.vm_map_links.min", &layout.linksMin},
+        {"kernelStruct.vm_map_links.max", &layout.linksMax}
+    };
+    for (const auto &field : fields) {
+        if (!getValue(information, field.name)) continue;
+        uint64_t offset = getNumber(information, field.name);
+        if (offset <= 0x2000 && !(offset & 3) && (offset || *field.offset == 0)) *field.offset = offset;
+    }
+    release(information);
+}
 
 bool kernelPointer(uint64_t address) { return address >= 0xffff000000000000ULL && !(address & 7); }
 bool userRange(uint64_t address, size_t length) {
@@ -42,7 +81,7 @@ bool userRange(uint64_t address, size_t length) {
 
 bool initializeBackend() {
     if (backend.ready) return true;
-    if (getuid() != 0) { NSLog(@"[Kernel] HUD must run as root"); return false; }
+    if (getuid() != 0) { reportStatus(@"Kernel lỗi — HUD chưa có quyền root."); return false; }
     if (!backend.library) {
         NSArray<NSString *> *paths = @[@"/var/jb/usr/lib/libjailbreak.dylib",
             @"/var/jb/basebin/libjailbreak.dylib", @"/var/jb/usr/lib/libjailbreak.roothide.dylib",
@@ -52,9 +91,9 @@ bool initializeBackend() {
             if (backend.library) break;
         }
     }
-    if (!backend.library) { NSLog(@"[Kernel] libjailbreak unavailable"); return false; }
+    if (!backend.library) { reportStatus(@"Kernel lỗi — không nạp được libjailbreak của Dopamine."); return false; }
     auto initialize = reinterpret_cast<int (*)()>(dlsym(backend.library, "jbdInitPPLRW"));
-    if (!initialize || initialize() != 0) { NSLog(@"[Kernel] jbdInitPPLRW failed"); return false; }
+    if (!initialize || initialize() != 0) { reportStatus(@"Kernel lỗi — jbdInitPPLRW chưa khởi tạo được."); return false; }
     backend.findProcess = reinterpret_cast<decltype(backend.findProcess)>(dlsym(backend.library, "proc_find"));
     backend.processTask = reinterpret_cast<decltype(backend.processTask)>(dlsym(backend.library, "proc_task"));
     backend.readPointer = reinterpret_cast<decltype(backend.readPointer)>(dlsym(backend.library, "kread_ptr"));
@@ -63,6 +102,8 @@ bool initializeBackend() {
     backend.writeVirtual = reinterpret_cast<decltype(backend.writeVirtual)>(dlsym(backend.library, "vwritebuf"));
     backend.ready = backend.findProcess && backend.processTask && backend.readPointer &&
                     backend.read64 && backend.readVirtual;
+    if (backend.ready) loadKernelLayout();
+    else reportStatus(@"Kernel lỗi — libjailbreak thiếu hàm đọc bắt buộc.");
     NSLog(@"[Kernel] libjailbreak reader %@", backend.ready ? @"ready" : @"missing required symbols");
     return backend.ready;
 }
@@ -102,32 +143,43 @@ Target discover(pid_t pid) {
     Target context;
     context.pid = pid;
     context.process = backend.findProcess(pid);
-    if (!kernelPointer(context.process)) return {};
+    if (!kernelPointer(context.process)) { reportStatus(@"Kernel lỗi — proc_find chưa tìm được FFVN."); return {}; }
     uint64_t task = backend.processTask(context.process);
-    if (!kernelPointer(task)) return {};
-    context.map = backend.readPointer(task + 0x28);
-    if (!kernelPointer(context.map)) return {};
-    uint64_t pmap = backend.readPointer(context.map + 0x40);
-    if (!kernelPointer(pmap)) return {};
-    context.table = backend.read64(pmap + 8);
-    if (!context.table || (context.table & 0xfff) || context.table >= (1ULL << 52)) return {};
-    const uint64_t sentinel = context.map + 0x10;
-    uint64_t entry = backend.readPointer(sentinel + 8);
-    const uint32_t count = static_cast<uint32_t>(backend.read64(context.map + 0x30));
-    if (!count || count > 32768) return {};
+    if (!kernelPointer(task)) { reportStatus(@"Kernel lỗi — chưa lấy được task của FFVN."); return {}; }
+    context.map = backend.readPointer(task + layout.taskMap);
+    if (!kernelPointer(context.map)) { reportStatus(@"Kernel lỗi — chưa đọc được vm_map."); return {}; }
+    uint64_t pmap = backend.readPointer(context.map + layout.mapPmap);
+    if (!kernelPointer(pmap)) { reportStatus(@"Kernel lỗi — chưa đọc được pmap."); return {}; }
+    context.table = backend.read64(pmap + layout.pmapTtep);
+    if (!context.table || (context.table & 0xfff) || context.table >= (1ULL << 52)) {
+        reportStatus(@"Kernel lỗi — bảng trang TTEP không hợp lệ."); return {};
+    }
+    const uint64_t header = context.map + layout.mapHeader;
+    const uint64_t sentinel = header + layout.headerLinks;
+    uint64_t entry = backend.readPointer(sentinel + layout.linksNext);
+    const uint32_t count = static_cast<uint32_t>(backend.read64(header + layout.headerCount));
+    if (!count || count > 32768) { reportStatus(@"Kernel lỗi — danh sách vùng nhớ chưa hợp lệ."); return {}; }
+    uint32_t readableHeaders = 0;
     for (uint32_t index = 0; index < count && entry != sentinel; ++index) {
         if (!kernelPointer(entry) || kill(pid, 0) != 0) return {};
-        const uint64_t start = backend.read64(entry + 0x10);
-        const uint64_t end = backend.read64(entry + 0x18);
+        const uint64_t links = entry + layout.entryLinks;
+        const uint64_t start = backend.read64(links + layout.linksMin);
+        const uint64_t end = backend.read64(links + layout.linksMax);
+        uint32_t magic = 0;
+        if (end > start && userRange(start, sizeof(magic)) && readTarget(context, start, &magic, sizeof(magic)))
+            ++readableHeaders;
         if (end > start && userRange(start, end - start) && matchingImage(context, start)) {
             if (backend.findProcess(pid) != context.process) return {};
             context.base = start;
+            reportStatus(@"Kernel đã đọc được Unity FFVN 1.134.1. Vào trận để kiểm tra ESP/aim.");
             return context;
         }
-        const uint64_t next = backend.readPointer(entry + 8);
+        const uint64_t next = backend.readPointer(links + layout.linksNext);
         if (next == entry) return {};
         entry = next;
     }
+    reportStatus(readableHeaders ? @"Kernel đọc được game, chưa thấy UUID Unity FFVN 1.134.1 đã đối chiếu." :
+                                  @"Kernel chưa đọc được dữ liệu game qua vreadbuf.");
     return {};
 }
 }
@@ -172,7 +224,7 @@ uintptr_t GetGameModule_Base(char *name) {
                     { std::lock_guard<std::mutex> lock(stateMutex); previous = target; }
                     if (previous.pid == pid && previous.base && backend.findProcess(pid) == previous.process) found = previous;
                     else found = discover(pid);
-                }
+                } else reportStatus(@"Đang chờ tiến trình FreeFireVN. Hãy mở game.");
             }
             std::lock_guard<std::mutex> lock(stateMutex);
             if (found.base && found.base != target.base) NSLog(@"[Kernel] FFVN Unity UUID matched at 0x%llx", found.base);

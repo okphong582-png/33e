@@ -7,8 +7,14 @@
   "unityUuid": "e50b0e3a-d931-385b-9e4c-9ffde6d1b923",
   "backend": "libjailbreak",
   "initialization": "jbdInitPPLRW",
-  "processLookup": ["proc_find", "proc_task"],
-  "kernelLookup": ["kread_ptr", "kread64"],
+  "processLookup": [
+    "proc_find",
+    "proc_task"
+  ],
+  "kernelLookup": [
+    "kread_ptr",
+    "kread64"
+  ],
   "taskMapOffset": 40,
   "mapPmapOffset": 64,
   "pmapTtepOffset": 8,
@@ -16,5 +22,6 @@
   "gameWrite": "vwritebuf(ttep, address, buffer, length)",
   "moduleDiscovery": "Walk vm_map entries and match the supplied VN UnityFramework UUID",
   "portingStatus": "Primary memory reads/writes and direct-field feature identity use the kernel backend. Remote-code installers that require a Mach task port have not been ported.",
-  "deviceVerified": false
+  "deviceVerified": false,
+  "kernelStructureOffsets": "Use jbinfo_get_serialized from initialized Dopamine when available. The recovered hi.tipa offsets are the legacy fallback."
 }

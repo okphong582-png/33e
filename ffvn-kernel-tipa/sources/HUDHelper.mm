@@ -144,6 +144,17 @@ void HUDMarkStarting(void) {
     WriteStatus(@"starting", @"Đang khởi động menu kernel…", getpid());
 }
 void HUDMarkReady(void) { WriteStatus(@"ready", @"Nút Mizze đang chạy. Chạm để mở menu.", getpid()); }
+void HUDUpdateKernelStatus(NSString *message) {
+    static NSString *previous = nil;
+    static CFAbsoluteTime lastWrite = 0;
+    @synchronized(NSFileManager.defaultManager) {
+        CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+        if ([previous isEqualToString:message] || now - lastWrite < 1) return;
+        previous = [message copy];
+        lastWrite = now;
+        WriteStatus(@"ready", message, getpid());
+    }
+}
 void HUDRecordFrame(double milliseconds, int players, NSString *aimState) {
     static NSTimeInterval nextSample = 0;
     const NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;

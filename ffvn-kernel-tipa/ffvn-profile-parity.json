@@ -1,0 +1,36 @@
+{
+  "reference": "FFVN UIKit Documents IPA source with bypass.a",
+  "gameVersion": "1.134.1",
+  "fields": [
+    {
+      "file": "esp/Core/VnProfile.h",
+      "sha256": "97c3f68aee6d72bec616f72f939bbd6d65b97c40bd61580ce3fb2ce2837b078c",
+      "identical": true
+    },
+    {
+      "file": "esp/Core/GameProfileFields.h",
+      "sha256": "697f264fa06b06e7eddd1470a807daeca078a75ef2e1cd7e5b4120b4649c9e95",
+      "identical": true
+    },
+    {
+      "file": "esp/Core/GameProfileMethods.h",
+      "sha256": "c0e0bb83c80f968e41ec271645eaa815f36bade17e3ad7e985045461cbaf6527",
+      "identical": true
+    },
+    {
+      "file": "esp/Core/GameOffsets.h",
+      "sha256": "3f6e7cc3c4369f8658c86d7c23cb779ad44bd3d4c37c0727c5974ca21019bfa6",
+      "identical": true
+    },
+    {
+      "file": "esp/drawing_view/offset.h",
+      "sha256": "292461f1246bf02661c0a78701bc59d6abf3f8e05ee18988479cdbaf2ae3bdb4",
+      "identical": true
+    },
+    {
+      "file": "esp/Core/_0xUNT2872_.mm",
+      "sha256": "2e84de683291689720a3eafe52fc49401900750b1221aa5c919775c92927b860",
+      "identical": true
+    }
+  ]
+}
