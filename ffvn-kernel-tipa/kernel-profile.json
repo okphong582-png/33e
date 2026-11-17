@@ -24,5 +24,6 @@
   "portingStatus": "Primary memory reads/writes and direct-field feature identity use the kernel backend. Remote-code installers that require a Mach task port have not been ported.",
   "deviceVerified": false,
   "kernelStructureOffsets": "Use jbinfo_get_serialized from initialized Dopamine when available. The recovered hi.tipa offsets are the legacy fallback.",
-  "libraryDiscovery": "Same candidate roots recovered from hi.tipa: app .jbroot, .jbroot-* in Bundle/Application and Shared/AppGroup, fixed rootless paths, bundled resource."
+  "libraryDiscovery": "Same candidate roots recovered from hi.tipa: app .jbroot, .jbroot-* in Bundle/Application and Shared/AppGroup, fixed rootless paths, bundled resource.",
+  "tableVerification": "Use provider proc_vreadbuf for discovery when available. Compare the full verified Unity Mach-O header and load commands against raw vreadbuf before accepting TTEP for writes."
 }

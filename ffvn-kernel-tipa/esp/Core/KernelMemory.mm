@@ -22,12 +22,14 @@ struct Backend {
     uint64_t (*readPointer)(uint64_t) = nullptr;
     uint64_t (*read64)(uint64_t) = nullptr;
     int (*readVirtual)(uint64_t, const void *, void *, size_t) = nullptr;
+    int (*readProcess)(uint64_t, const void *, void *, size_t) = nullptr;
     int (*writeVirtual)(uint64_t, const void *, const void *, size_t) = nullptr;
     bool ready = false;
 };
 struct Target {
     pid_t pid = 0;
-    uint64_t process = 0, map = 0, table = 0, base = 0;
+    uint64_t process = 0, map = 0, table = 0, base = 0, pmap = 0;
+    bool tableVerified = false;
 };
 Backend backend;
 struct KernelLayout {
@@ -144,6 +146,7 @@ bool initializeBackend() {
     backend.readPointer = reinterpret_cast<decltype(backend.readPointer)>(dlsym(backend.library, "kread_ptr"));
     backend.read64 = reinterpret_cast<decltype(backend.read64)>(dlsym(backend.library, "kread64"));
     backend.readVirtual = reinterpret_cast<decltype(backend.readVirtual)>(dlsym(backend.library, "vreadbuf"));
+    backend.readProcess = reinterpret_cast<decltype(backend.readProcess)>(dlsym(backend.library, "proc_vreadbuf"));
     backend.writeVirtual = reinterpret_cast<decltype(backend.writeVirtual)>(dlsym(backend.library, "vwritebuf"));
     backend.ready = backend.findProcess && backend.processTask && backend.readPointer &&
                     backend.read64 && backend.readVirtual;
@@ -154,9 +157,42 @@ bool initializeBackend() {
 }
 
 bool readTarget(const Target &context, uint64_t address, void *output, size_t length) {
-    if (!output || !context.table || !userRange(address, length)) return false;
-    if (backend.readVirtual(context.table, reinterpret_cast<const void *>(address), output, length) == 0) return true;
+    if (!output || !userRange(address, length)) return false;
+    const void *source = reinterpret_cast<const void *>(address);
+    if (context.tableVerified && backend.readVirtual(context.table, source, output, length) == 0) return true;
+    if (backend.readProcess && context.process && backend.readProcess(context.process, source, output, length) == 0) return true;
+    if (!backend.readProcess && context.table && backend.readVirtual(context.table, source, output, length) == 0) return true;
     memset(output, 0, length);
+    return false;
+}
+
+bool validTable(uint64_t table) {
+    return table && !(table & 0xfff) && table < (1ULL << 52);
+}
+
+bool verifyTable(Target &context) {
+    // Compare the same loaded Unity header through the provider and raw vreadbuf.
+    // A plausible physical address alone does not authorize a game write.
+    mach_header_64 header{};
+    if (backend.readProcess(context.process, reinterpret_cast<const void *>(context.base), &header, sizeof(header)) ||
+        header.magic != MH_MAGIC_64 || header.sizeofcmds > 65536) return false;
+    std::vector<uint8_t> expected(sizeof(header) + header.sizeofcmds);
+    std::vector<uint8_t> actual(expected.size());
+    if (backend.readProcess(context.process, reinterpret_cast<const void *>(context.base), expected.data(), expected.size())) return false;
+    const uint64_t offsets[] = {layout.mapPmap, 0x40, 0x48, 0x50};
+    for (uint64_t offset : offsets) {
+        uint64_t pmap = backend.readPointer(context.map + offset);
+        if (!kernelPointer(pmap)) continue;
+        uint64_t table = backend.readPointer(pmap + layout.pmapTtep);
+        if (!validTable(table)) continue;
+        if (backend.readVirtual(table, reinterpret_cast<const void *>(context.base), actual.data(), actual.size()) ||
+            expected != actual) continue;
+        context.pmap = pmap;
+        context.table = table;
+        context.tableVerified = true;
+        return true;
+    }
+    context.table = 0;
     return false;
 }
 
@@ -193,11 +229,14 @@ Target discover(pid_t pid) {
     if (!kernelPointer(task)) { reportStatus(@"Kernel lỗi — chưa lấy được task của FFVN."); return {}; }
     context.map = backend.readPointer(task + layout.taskMap);
     if (!kernelPointer(context.map)) { reportStatus(@"Kernel lỗi — chưa đọc được vm_map."); return {}; }
-    uint64_t pmap = backend.readPointer(context.map + layout.mapPmap);
-    if (!kernelPointer(pmap)) { reportStatus(@"Kernel lỗi — chưa đọc được pmap."); return {}; }
-    context.table = backend.read64(pmap + layout.pmapTtep);
-    if (!context.table || (context.table & 0xfff) || context.table >= (1ULL << 52)) {
-        reportStatus(@"Kernel lỗi — bảng trang TTEP không hợp lệ."); return {};
+    context.pmap = backend.readPointer(context.map + layout.mapPmap);
+    if (kernelPointer(context.pmap)) context.table = backend.readPointer(context.pmap + layout.pmapTtep);
+    if (!validTable(context.table)) {
+        context.table = 0;
+        if (!backend.readProcess) {
+            reportStatus([NSString stringWithFormat:@"Kernel chưa lấy được TTEP, proc_vreadbuf không có. pmap offset=0x%llx, TTEP offset=0x%llx.", layout.mapPmap, layout.pmapTtep]);
+            return {};
+        }
     }
     const uint64_t header = context.map + layout.mapHeader;
     const uint64_t sentinel = header + layout.headerLinks;
@@ -216,7 +255,10 @@ Target discover(pid_t pid) {
         if (end > start && userRange(start, end - start) && matchingImage(context, start)) {
             if (backend.findProcess(pid) != context.process) return {};
             context.base = start;
-            reportStatus(@"Kernel đã đọc được Unity FFVN 1.134.1. Vào trận để kiểm tra ESP/aim.");
+            if (backend.readProcess) verifyTable(context);
+            else context.tableVerified = true; // UUID matched using raw vreadbuf.
+            reportStatus(context.tableVerified ? @"Đã đọc Unity FFVN và xác minh TTEP qua vreadbuf." :
+                @"Đã đọc Unity FFVN qua proc_vreadbuf. Chưa xác minh TTEP để ghi aim.");
             return context;
         }
         const uint64_t next = backend.readPointer(links + layout.linksNext);
@@ -292,8 +334,9 @@ bool _write(long address, const void *input, int length) {
     if (length <= 0 || !input || !userRange(address, length)) return false;
     Target context;
     { std::lock_guard<std::mutex> lock(stateMutex); context = target; }
-    if (!context.base || !backend.writeVirtual || kill(context.pid, 0) != 0 ||
+    if (!context.base || !context.tableVerified || !backend.writeVirtual || kill(context.pid, 0) != 0 ||
         backend.findProcess(context.pid) != context.process) return false;
+    if (backend.readPointer(context.pmap + layout.pmapTtep) != context.table) return false;
     return backend.writeVirtual(context.table, reinterpret_cast<const void *>(address), input, length) == 0;
 }
 
