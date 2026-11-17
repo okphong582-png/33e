@@ -14,6 +14,15 @@ for p in folder.rglob('*'):
 assert not (folder/'firebase').exists()
 assert not (folder/'sources/InjectedProtection.mm').exists()
 assert not (folder/'esp/Core/_0xNW2872_.mm').exists()
+ifix = folder/'ifix'
+ifix_manifest = json.loads((ifix/'payload-manifest.json').read_text())
+ifix_payload = (ifix/'Assembly-CSharp-patch.bytes').read_bytes()
+assert len(ifix_payload) == ifix_manifest['size']
+assert hashlib.sha256(ifix_payload).hexdigest() == ifix_manifest['sha256']
+assert struct.unpack_from('<Q',ifix_payload)[0] == 0x66a319b20db4a2cb
+only_fix, = ifix_manifest['fixes']
+assert only_fix['method']['owner'].split(',')[0] == 'COW.COWGameEntry'
+assert only_fix['method']['name'] == 'Update' and not only_fix['method']['parameters']
 if args.binary:
     b=(root/args.binary).read_bytes();assert len(b)>32
     magic,cpu,subtype,filetype=struct.unpack_from('<IIII',b)
@@ -35,5 +44,6 @@ if args.binary:
         pos+=size
     assert dependencies
     assert install_names == ['@rpath/Mizze.framework/Mizze'],install_names
+    assert b.count(ifix_payload) == 1, 'Expected one embedded VN startup payload'
     print('Verified ARM64 Mach-O dylib, system dependencies and no authentication markers:',len(b),'bytes')
 else: print('Verified source manifest and absence of authentication/server credential dependencies')

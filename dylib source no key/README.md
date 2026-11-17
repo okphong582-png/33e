@@ -9,6 +9,16 @@ Silent xác nhận RVA, hai slot vtable và fingerprint ARM64 trước khi gắn
 Các chế độ native chưa đối chiếu đủ (AutoFire, Ghost, các chế độ lag, Fly, Spin,
 Speed, NoReload, FastFire) bị tắt cho VN. Cần kiểm tra hành vi trên iPhone.
 
+Khởi động VN dùng payload IFix nhúng trong dylib. Loader truyền payload cho
+`IFix.Core.PatchManager.OptimizeLoad` qua `MemoryStream`. Hook một lần tại
+`COWGameEntry.Update()` chạy Update gốc, báo Unity đã sẵn sàng rồi nhường slot.
+Sau tín hiệu đó menu Mizze NoKey gắn vào cửa sổ UIKit khi cửa sổ ổn định.
+
+Build lại payload trên Windows bằng
+`python ifix/build_startup.py <INTEX-source.zip> <thư-mục-mới>`. Khi cập nhật
+payload, dùng cặp `Assembly-CSharp-patch.bytes` và `payload-manifest.json`
+cùng lần build.
+
 Gói VN dùng install name `@rpath/Mizze.framework/Mizze`. Đặt binary trong
 `Frameworks/Mizze.framework` và thêm liên kết từ UnityFramework theo cấu trúc
 IPA INTE​​X. Ký lại IPA hoàn chỉnh trước khi cài.

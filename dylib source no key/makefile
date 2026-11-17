@@ -20,6 +20,7 @@ ifeq ($(GAME_VARIANT),max)
 iOSViet_CFLAGS += -DMIZZE_GAME_MAX=1 -DMIZZE_GAME_PROCESS_NAME="\"FreeFireMAX\""
 else ifeq ($(GAME_VARIANT),vn)
 iOSViet_CFLAGS += -DMIZZE_GAME_VN=1 -DMIZZE_GAME_PROCESS_NAME="\"FreeFireVN\""
+iOSViet_FILES += sources/InjectedIfixStartup.mm sources/InjectedIfixPayload.S
 else
 iOSViet_CFLAGS += -DMIZZE_GAME_PROCESS_NAME="\"FreeFire\""
 endif

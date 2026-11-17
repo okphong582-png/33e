@@ -6,6 +6,9 @@
 #import "InjectedOverlayAttachment.h"
 #include "InjectedStartupPolicy.h"
 #include "InjectedBootstrapPolicy.h"
+#ifdef MIZZE_GAME_VN
+#include "InjectedIfixStartup.h"
+#endif
 
 @interface MizzeOverlayContainer : UIView
 @property(nonatomic,weak) UIView *contentView;
@@ -109,34 +112,40 @@ static void ScheduleInjectedBootstrapKick() {
     });
 }
 
+static void StartOverlayLifecycle() {
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+        for (NSNotificationName name in @[UIApplicationDidFinishLaunchingNotification,
+                                           UIApplicationDidBecomeActiveNotification,
+                                           UIWindowDidBecomeKeyNotification,
+                                           UIWindowDidBecomeVisibleNotification,
+                                           UISceneDidActivateNotification]) {
+            [center addObserverForName:name object:nil queue:NSOperationQueue.mainQueue
+                            usingBlock:^(NSNotification *notification) {
+                ScheduleInjectedBootstrapKick();
+            }];
+        }
+        for (NSNotificationName name in @[UIApplicationWillResignActiveNotification,
+                                           UIApplicationDidEnterBackgroundNotification]) {
+            [center addObserverForName:name object:nil queue:NSOperationQueue.mainQueue
+                            usingBlock:^(NSNotification *notification) {
+                bootstrap.cancel();
+                startupGate.reset();
+            }];
+        }
+        ScheduleInjectedBootstrapKick();
+    });
+}
+
 static void __attribute__((constructor)) MizzeDylibEntryPoint() {
-    // Do not perform UIKit work in the dyld constructor itself.
     dispatch_async(dispatch_get_main_queue(), ^{
         @autoreleasepool {
-            static dispatch_once_t once;
-            dispatch_once(&once, ^{
-                NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
-                for (NSNotificationName name in @[UIApplicationDidFinishLaunchingNotification,
-                                                   UIApplicationDidBecomeActiveNotification,
-                                                   UIWindowDidBecomeKeyNotification,
-                                                   UIWindowDidBecomeVisibleNotification,
-                                                   UISceneDidActivateNotification]) {
-                    [center addObserverForName:name object:nil queue:NSOperationQueue.mainQueue
-                                    usingBlock:^(NSNotification *notification) {
-                        ScheduleInjectedBootstrapKick();
-                    }];
-                }
-                for (NSNotificationName name in @[UIApplicationWillResignActiveNotification,
-                                                   UIApplicationDidEnterBackgroundNotification]) {
-                    [center addObserverForName:name object:nil queue:NSOperationQueue.mainQueue
-                                    usingBlock:^(NSNotification *notification) {
-                        bootstrap.cancel();
-                        startupGate.reset();
-                    }];
-                }
-                // Also covers injection after the launch notification.
-                ScheduleInjectedBootstrapKick();
-            });
+#ifdef MIZZE_GAME_VN
+            MizzeStartIfixStartup(StartOverlayLifecycle);
+#else
+            StartOverlayLifecycle();
+#endif
         }
     });
 }

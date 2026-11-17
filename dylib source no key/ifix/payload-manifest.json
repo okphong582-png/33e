@@ -1,0 +1,234 @@
+{
+  "sha256": "34d3591f5ec5f05b5f2f792e8fa6d5d304213affd6443c7b64598a10a5e83a24",
+  "size": 3853,
+  "sourceSha256": {
+    "MizzeStartup.cs": "58ba9abbffd0d569ca696037ea77f0bf9177f04ee00d2b884dc5e61b3f7947e6",
+    "UnityStartupBindings.cs": "3fe47620d1a4de32931affcd81250c856c3aa6055306b3b625ad566d1dacd247",
+    "StartupCompiler.cs": "bb5baba4cab9de4d8a716d8531292df98bdb956332fe04ed497794a9afea13fd"
+  },
+  "target": "Free Fire VN 1.134.1",
+  "fixes": [
+    {
+      "method": {
+        "generic": false,
+        "owner": "COW.COWGameEntry, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+        "name": "Update",
+        "args": [],
+        "parameters": [],
+        "parameterIsGeneric": []
+      },
+      "id": 0
+    }
+  ],
+  "externMethods": [
+    {
+      "generic": false,
+      "owner": "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "GetMethod",
+      "args": [],
+      "parameters": [
+        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Reflection.BindingFlags, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "get_Assembly",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "System.Reflection.Assembly, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "GetType",
+      "args": [],
+      "parameters": [
+        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "op_Equality",
+      "args": [],
+      "parameters": [
+        "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Type, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "GetField",
+      "args": [],
+      "parameters": [
+        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Reflection.BindingFlags, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Reflection.FieldInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "op_Equality",
+      "args": [],
+      "parameters": [
+        "System.Reflection.FieldInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Reflection.FieldInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Reflection.FieldInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "GetValue",
+      "args": [],
+      "parameters": [
+        "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Reflection.MethodInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "op_Equality",
+      "args": [],
+      "parameters": [
+        "System.Reflection.MethodInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Reflection.MethodInfo, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "GCommon.IL2CPPOptimize, Assembly-CSharp, Version=0.86.0.518, Culture=neutral, PublicKeyToken=null",
+      "name": "GetPositionIndex",
+      "args": [],
+      "parameters": [
+        "System.Reflection.MethodBase, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Array, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "get_Length",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "System.Array, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "GetValue",
+      "args": [],
+      "parameters": [
+        "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Array, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "SetValue",
+      "args": [],
+      "parameters": [
+        "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Reflection.MethodBase, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "Invoke",
+      "args": [],
+      "parameters": [
+        "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Object[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "get_InnerException",
+      "args": [],
+      "parameters": [],
+      "parameterIsGeneric": []
+    },
+    {
+      "generic": false,
+      "owner": "UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": ".ctor",
+      "args": [],
+      "parameters": [
+        "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "name": "DontDestroyOnLoad",
+      "args": [],
+      "parameters": [
+        "UnityEngine.Object, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+      ],
+      "parameterIsGeneric": [
+        false
+      ]
+    },
+    {
+      "generic": false,
+      "owner": "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+      "name": "ReferenceEquals",
+      "args": [],
+      "parameters": [
+        "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+        "System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+      ],
+      "parameterIsGeneric": [
+        false,
+        false
+      ]
+    }
+  ],
+  "deviceVerified": false
+}

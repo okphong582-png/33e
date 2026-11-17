@@ -6,7 +6,8 @@
     "build": "2019121262",
     "bundle": "com.garena.ffvn",
     "uuid": "e50b0e3ad931385b9e4c9ffde6d1b923",
-    "deviceVerified": false
+    "deviceVerified": false,
+    "startup": "IFix OptimizeLoad from MemoryStream, COWGameEntry.Update one-shot"
   },
   "files": [
     {
@@ -36,8 +37,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 6624,
-      "sha256": "848223c51ddf35dd5f5aadf92b1b4d5db0d1770df9df46f239ce5a11a8a9fb38"
+      "bytes": 7208,
+      "sha256": "2f744d381c13e187ba67403c8621780d9bae88a573ba7cb18ebce88ffe595c59"
     },
     {
       "path": "XorString.h",
@@ -571,8 +572,8 @@
     },
     {
       "path": "makefile",
-      "bytes": 1916,
-      "sha256": "796c2c6dacd841245d1774cba1a71303d03b77e552ae5ff371d92a2e0fb464d9"
+      "bytes": 1994,
+      "sha256": "d4d47df56517c256b8315fc8befd6913adbeb98954e058071fdb7ab1a1907ff1"
     },
     {
       "path": "obfuscation/AntiREProtection.h",
@@ -666,8 +667,8 @@
     },
     {
       "path": "sources/InjectedDylibInit.mm",
-      "bytes": 6043,
-      "sha256": "a2e83ed656ca4301935d471205d4eb7e1342306f6c827ec068e431c5e826f2f3"
+      "bytes": 5953,
+      "sha256": "84cb89aaf7dfe27138c8bdf1f3c68f42933d3b22bf2d82e5ce16b6c50cf2eca1"
     },
     {
       "path": "sources/InjectedMenuController.h",
@@ -798,6 +799,51 @@
       "path": "tests/VirtualHookRegistryTests.cpp",
       "bytes": 4535,
       "sha256": "17b3515862feda986915b3820227b66639609b8bcc548801a434766b007e704a"
+    },
+    {
+      "path": "sources/InjectedIfixStartup.h",
+      "bytes": 140,
+      "sha256": "a0d7cf308233a559ed5752c274d36d9aea9df0bb030b90cd06447f4c1a13fb7c"
+    },
+    {
+      "path": "sources/InjectedIfixStartup.mm",
+      "bytes": 14753,
+      "sha256": "eabe69be096a2ec4b281775dc4ec90e6d3a90394af98a4c55fe6a790407baef0"
+    },
+    {
+      "path": "sources/InjectedIfixPayload.S",
+      "bytes": 234,
+      "sha256": "69be2c3e22b88b5623d62d00c407023cf5e35eb8083e15d3653e044a54d3a09f"
+    },
+    {
+      "path": "ifix/Assembly-CSharp-patch.bytes",
+      "bytes": 3853,
+      "sha256": "34d3591f5ec5f05b5f2f792e8fa6d5d304213affd6443c7b64598a10a5e83a24"
+    },
+    {
+      "path": "ifix/build_startup.py",
+      "bytes": 5120,
+      "sha256": "c0f1b2f5db3a90ef2a935308fea7eab4f908e8a05a28f070569bf8565b63f810"
+    },
+    {
+      "path": "ifix/MizzeStartup.cs",
+      "bytes": 2191,
+      "sha256": "58ba9abbffd0d569ca696037ea77f0bf9177f04ee00d2b884dc5e61b3f7947e6"
+    },
+    {
+      "path": "ifix/payload-manifest.json",
+      "bytes": 7958,
+      "sha256": "e502e15ddb80b69e5be5031e4403856a12e7bf71f62edc629d00ee7395b312a0"
+    },
+    {
+      "path": "ifix/StartupCompiler.cs",
+      "bytes": 1372,
+      "sha256": "bb5baba4cab9de4d8a716d8531292df98bdb956332fe04ed497794a9afea13fd"
+    },
+    {
+      "path": "ifix/UnityStartupBindings.cs",
+      "bytes": 296,
+      "sha256": "3fe47620d1a4de32931affcd81250c856c3aa6055306b3b625ad566d1dacd247"
     }
   ]
 }

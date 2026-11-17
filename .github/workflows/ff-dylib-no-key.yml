@@ -1,4 +1,4 @@
-name: Build Free Fire VN 1.134.1 dylib no key
+name: Build Free Fire VN 1.134.1 IFix startup dylib
 on:
   push:
     branches: [codex/ff-dylib-no-key]
@@ -28,6 +28,6 @@ jobs:
         run: python3 tools/verify_ff_no_key_source.py --binary 'dylib source no key/packages/Mizze.dylib'
       - uses: actions/upload-artifact@v4
         with:
-          name: FreeFireVN-1.134.1-dylib-no-key
+          name: FreeFireVN-1.134.1-IFix-NoKey-dylib
           path: 'dylib source no key/packages/Mizze.dylib'
           if-no-files-found: error
