@@ -5,13 +5,14 @@
 #import "esp.h"
 #import "FloatingFeatureControl.h"
 #import "../../sources/MizzeTheme.h"
+#import "../../sources/MizzeLogo.h"
 #import "../../mahoa.h"
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
 #include "KabraxHide.h"
 #include <cmath>
 
-static const CGFloat kMenuButtonSize = 44.0f;
+static const CGFloat kMenuButtonSize = 60.0f;
 
 @interface _0xB1872A2 ()
 @property (nonatomic, strong) UIButton *menuButton;
@@ -97,21 +98,15 @@ static const CGFloat kMenuButtonSize = 44.0f;
 - (void)setupMenuButton {
     _menuButton = [UIButton buttonWithType:UIButtonTypeCustom];
     _menuButton.frame = CGRectMake(20, 100, kMenuButtonSize, kMenuButtonSize);
-    _menuButton.backgroundColor = [UIColor colorWithWhite:0.095 alpha:0.96];
-    _menuButton.layer.cornerRadius = 13;
-    _menuButton.layer.borderWidth = 0.5;
-    _menuButton.layer.borderColor = [MizzeMint() colorWithAlphaComponent:0.5].CGColor;
-    _menuButton.layer.shadowColor = [UIColor blackColor].CGColor;
-    _menuButton.layer.shadowOffset = CGSizeMake(0, 2);
-    _menuButton.layer.shadowOpacity = 0;
-    _menuButton.layer.shadowRadius = 4.0f;
-    _menuButton.layer.zPosition = 999.0f;
-    _menuButton.clipsToBounds = YES;
-
-    [_menuButton setTitle:@"m" forState:UIControlStateNormal];
-    [_menuButton setTitleColor:MizzeMint() forState:UIControlStateNormal];
-    _menuButton.titleLabel.font = [UIFont systemFontOfSize:27 weight:UIFontWeightMedium];
-    _menuButton.titleLabel.textAlignment = NSTextAlignmentCenter;
+    _menuButton.backgroundColor=UIColor.blackColor;
+    _menuButton.layer.cornerRadius=kMenuButtonSize*.5;
+    _menuButton.layer.borderWidth=.5;
+    _menuButton.layer.borderColor=[UIColor colorWithWhite:1 alpha:.18].CGColor;
+    _menuButton.layer.zPosition=999;
+    _menuButton.clipsToBounds=YES;
+    [_menuButton setImage:MizzeLogoImage() forState:UIControlStateNormal];
+    _menuButton.imageView.contentMode=UIViewContentModeScaleAspectFit;
+    _menuButton.accessibilityLabel=@"Mở menu Mizze";
     [_menuButton addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dragNativeButton:)];
     [_menuButton addGestureRecognizer:pan];
@@ -162,7 +157,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
 
 #ifdef MIZZE_INJECTED
 - (void)suspendInjectedMenu {
-    // Invalidate an opening queued before leaving the match or backgrounding.
+    // Cancel an opening queued before backgrounding or losing the host window.
     ++_menuVisibilityGeneration;
     self.hidden = YES;
     [self resetTouchState];
@@ -170,19 +165,26 @@ static const CGFloat kMenuButtonSize = 44.0f;
 }
 
 - (void)refreshInjectedMenuVisibility {
-    if (ESPMatchReady() &&
-        UIApplication.sharedApplication.applicationState == UIApplicationStateActive) {
+    if (self.window && UIApplication.sharedApplication.applicationState == UIApplicationStateActive) {
         self.hidden = NO;
+        [self reloadFloatingAuxButtonsFromPrefs];
     } else {
         [self suspendInjectedMenu];
     }
 }
 #endif
 
+- (void)didMoveToWindow {
+    [super didMoveToWindow];
+#ifdef MIZZE_INJECTED
+    [self refreshInjectedMenuVisibility];
+#endif
+}
+
 - (void)presentModMenu {
     if (self->_presentedModMenu) return;
 #ifdef MIZZE_INJECTED
-    if (self.hidden || !self.window || !ESPMatchReady() ||
+    if (self.hidden || !self.window ||
         UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
     const NSUInteger generation = _menuVisibilityGeneration;
 #endif
@@ -190,7 +192,7 @@ static const CGFloat kMenuButtonSize = 44.0f;
         if (self->_presentedModMenu) return;
 #ifdef MIZZE_INJECTED
         if (generation != self->_menuVisibilityGeneration || self.hidden ||
-            !self.window || !ESPMatchReady() ||
+            !self.window ||
             UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
 #endif
 
@@ -384,7 +386,11 @@ static const CGFloat kMenuButtonSize = 44.0f;
         dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadFloatingAuxButtonsFromPrefs]; });
         return;
     }
+#ifdef MIZZE_GAME_VN
+    NSArray *keys = @[];
+#else
     NSArray *keys = @[@"GhostMode", @"FakeLag", @"RunSpeed", @"AutoFire", @"Fly"];
+#endif
     NSArray *titles = @[@"Ghost", @"FakeLag", @"Speed", @"AimKill", @"Fly"];
     NSArray *symbols = @[@"person.fill", @"pause.circle.fill", @"figure.walk", @"scope", @"airplane"];
     for (NSString *key in self.quickControls.allKeys)
@@ -408,7 +414,11 @@ static const CGFloat kMenuButtonSize = 44.0f;
         }
         BOOL active = ESPPrefsBool(key, NO);
         [control setFeatureActive:active];
+#ifdef MIZZE_INJECTED
+        control.hidden = _presentedModMenu != nil || !ESPMatchReady();
+#else
         control.hidden = _presentedModMenu != nil;
+#endif
         [control clampToSuperview];
     }
 }

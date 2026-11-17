@@ -96,7 +96,7 @@ BOOL RenderFOVCirclePath(
     float fovRadius
 );
 
-void RenderXYZAxes(ESPGeometryBuffers *buffers, const Vector3 &origin,
+void RenderESPSnapline(ESPGeometryBuffers *buffers, const Vector3 &origin,
                    const float *matrix, float width, float height);
 
 void _0x35572DA(

@@ -1,4 +1,4 @@
-name: Build Free Fire dylib no key
+name: Build Free Fire VN 1.134.1 dylib no key
 on:
   push:
     branches: [codex/ff-dylib-no-key]
@@ -21,13 +21,13 @@ jobs:
       - name: Build Free Fire dylib only
         run: |
           cp -a 'dylib source no key' /tmp/ff-dylib-no-key
-          make -C /tmp/ff-dylib-no-key clean package FINALPACKAGE=1 FOR_RELEASE=1
+          make -C /tmp/ff-dylib-no-key clean package GAME_VARIANT=vn FINALPACKAGE=1 FOR_RELEASE=1
           mkdir -p 'dylib source no key/packages'
-          cp /tmp/ff-dylib-no-key/packages/libsubsystem.dylib 'dylib source no key/packages/'
+          cp /tmp/ff-dylib-no-key/packages/Mizze.dylib 'dylib source no key/packages/'
       - name: Verify ARM64 dylib and absence of authentication code
-        run: python3 tools/verify_ff_no_key_source.py --binary 'dylib source no key/packages/libsubsystem.dylib'
+        run: python3 tools/verify_ff_no_key_source.py --binary 'dylib source no key/packages/Mizze.dylib'
       - uses: actions/upload-artifact@v4
         with:
-          name: FreeFire-dylib-no-key
-          path: 'dylib source no key/packages/libsubsystem.dylib'
+          name: FreeFireVN-1.134.1-dylib-no-key
+          path: 'dylib source no key/packages/Mizze.dylib'
           if-no-files-found: error

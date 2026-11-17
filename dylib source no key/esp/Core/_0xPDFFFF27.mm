@@ -20,6 +20,30 @@
 #include "KabraxHide.h"
 #include <vector>
 #include <algorithm>
+#include "GameImageSelection.h"
+#ifdef MIZZE_GAME_VN
+#include "VnProfile.h"
+#include <mach-o/loader.h>
+
+static bool IsVerifiedUnityVN(const mach_header *image) {
+    if (!image || image->magic != MH_MAGIC_64 || image->cputype != CPU_TYPE_ARM64) return false;
+    const auto *header = reinterpret_cast<const mach_header_64 *>(image);
+    const auto *data = reinterpret_cast<const uint8_t *>(header + 1);
+    size_t remaining = header->sizeofcmds;
+    for (uint32_t i = 0; i < header->ncmds; ++i) {
+        if (remaining < sizeof(load_command)) return false;
+        const auto *command = reinterpret_cast<const load_command *>(data);
+        if (command->cmdsize < sizeof(load_command) || command->cmdsize > remaining) return false;
+        if (command->cmd == LC_UUID && command->cmdsize == sizeof(uuid_command)) {
+            const auto *uuid = reinterpret_cast<const uuid_command *>(command);
+            return memcmp(uuid->uuid, VnProfile::UnityUUID, sizeof(uuid->uuid)) == 0;
+        }
+        data += command->cmdsize;
+        remaining -= command->cmdsize;
+    }
+    return false;
+}
+#endif
 
 #pragma mark - Global task (được thiết lập bởi GetGameModule_Base)
 mach_port_t get_task = MACH_PORT_NULL;
@@ -97,6 +121,8 @@ uintptr_t GetGameModule_Base(char *GameProcessName) {
     // Each injected artifact must attach only to the game its profile targets.
 #ifdef MIZZE_GAME_MAX
     if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.dts.freefiremax"]) return 0;
+#elif defined(MIZZE_GAME_VN)
+    if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.garena.ffvn"]) return 0;
 #else
     if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.dts.freefireth"]) return 0;
 #endif
@@ -112,13 +138,18 @@ uintptr_t GetGameModule_Base(char *GameProcessName) {
     const uint32_t imageCount = _dyld_image_count();
     for (uint32_t index = 0; index < imageCount; ++index) {
         const char *path = _dyld_get_image_name(index);
-        if (path && strstr(path, "/UnityFramework.framework/UnityFramework")) {
-            cachedModuleBase = (uintptr_t)_dyld_get_image_header(index);
+        if (GameImageSelection::UnityFramework(path)) {
+            const auto *image = _dyld_get_image_header(index);
+#ifdef MIZZE_GAME_VN
+            if (!IsVerifiedUnityVN(image)) return 0;
+#endif
+            cachedModuleBase = (uintptr_t)image;
             return cachedModuleBase;
         }
     }
-    cachedModuleBase = (uintptr_t)_dyld_get_image_header(0);
-    return cachedModuleBase;
+    // Unity can load after this dylib. Never cache the application's main
+    // executable as Unity: all verified RVAs would then use the wrong image.
+    return 0;
 #else
     pid_t pid = GetGameProcesspid(GameProcessName);
     if (pid == -1) {

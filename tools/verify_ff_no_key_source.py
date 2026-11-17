@@ -20,15 +20,20 @@ if args.binary:
     assert magic==0xfeedfacf and cpu==0x100000c and filetype==6
     for term in blocked:
         assert term.encode() not in b and term.encode('utf-16le') not in b,term
-    pos=32;dependencies=[]
+    pos=32;dependencies=[];install_names=[]
     for _ in range(struct.unpack_from('<I',b,16)[0]):
         cmd,size=struct.unpack_from('<II',b,pos);assert size>=8 and pos+size<=len(b)
-        if cmd in [0xc,0x80000018]:
+        if cmd in [0xc,0xd,0x80000018]:
             at=pos+struct.unpack_from('<I',b,pos+8)[0]
-            dep=b[at:b.index(0,at)].decode();dependencies.append(dep)
-            assert dep.startswith('/System/Library/') or dep.startswith('/usr/lib/'),dep
-            assert not any(x in dep for x in ['BackBoardServices','GraphicsServices','SpringBoardServices']),dep
+            dep=b[at:b.index(0,at)].decode()
+            if cmd == 0xd:
+                install_names.append(dep)
+            else:
+                dependencies.append(dep)
+                assert dep.startswith('/System/Library/') or dep.startswith('/usr/lib/'),dep
+                assert not any(x in dep for x in ['BackBoardServices','GraphicsServices','SpringBoardServices']),dep
         pos+=size
     assert dependencies
+    assert install_names == ['@rpath/Mizze.framework/Mizze'],install_names
     print('Verified ARM64 Mach-O dylib, system dependencies and no authentication markers:',len(b),'bytes')
 else: print('Verified source manifest and absence of authentication/server credential dependencies')

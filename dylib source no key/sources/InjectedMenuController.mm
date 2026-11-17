@@ -18,6 +18,23 @@
         view.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
         [view hideViewFromCapture:ESPPrefsBool(@"AnLive",NO)];[self.view addSubview:view];
     }
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(restoreLauncherVisibility)
+        name:UIApplicationDidBecomeActiveNotification object:nil];
+}
+- (void)restoreLauncherVisibility {
+    if (self.isViewLoaded && self.view.window &&
+        UIApplication.sharedApplication.applicationState==UIApplicationStateActive)
+        self.view.alpha=1;
+}
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    // Restore the launcher after the host finishes attaching the controller.
+    // Its visibility belongs to the UI lifecycle, not match readiness.
+    __weak InjectedMenuController *owner=self;
+    dispatch_async(dispatch_get_main_queue(), ^{ [owner restoreLauncherVisibility]; });
+}
+- (void)dealloc {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
 }
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations {
     return self.gameWindow.rootViewController.supportedInterfaceOrientations ?: UIInterfaceOrientationMaskAll;

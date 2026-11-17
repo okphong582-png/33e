@@ -3,6 +3,11 @@
 #include <cmath>
 
 namespace OverlayGeometry {
+inline bool OnScreen(double x,double y,double depth,double width,double height) {
+    return std::isfinite(x) && std::isfinite(y) && std::isfinite(depth) &&
+        std::isfinite(width) && std::isfinite(height) && width>0 && height>0 &&
+        depth>0.001 && x>=0 && x<=width && y>=0 && y<=height;
+}
 // Clip in screen space before sending geometry to Core Animation. In particular,
 // a point just in front of the camera may project far beyond the screen edges.
 inline bool ClipSegment(double &x0, double &y0, double &x1, double &y1,

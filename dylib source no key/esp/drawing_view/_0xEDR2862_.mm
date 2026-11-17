@@ -1,5 +1,6 @@
 #import "esp.h"
 #import "ESPPrefs.h"
+#include "ESPReferenceStyle.h"
 #include "OverlayGeometry.h"
 #include "../Core/OverlayHealth.h"
 #include "KabraxHide.h"
@@ -29,72 +30,50 @@ static void AddRoundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
     CGPathAddRoundedRect(path, nullptr, rect, radius, radius);
 }
 
-#include "WorldAxes.h"
-
-void RenderXYZAxes(ESPGeometryBuffers *buffers, const Vector3 &origin,
-                   const float *matrix, float width, float height) {
-    if (!isLine || !buffers || !ValidPosition(origin)) return;
-    const auto triad=WorldAxes::Project({origin.x,origin.y,origin.z},matrix,width,height);
-    if (!triad.valid) return;
-    if (buffers->snaplinePath) {
-        const auto point=triad.axes[0].from;
-        AddLine(buffers->snaplinePath,CGPointMake(width*.5,height*.08),CGPointMake(point.x,point.y),width,height);
-        buffers->snaplineDirty=true;
-    }
-    CGMutablePathRef paths[]={buffers->axisXPath,buffers->axisYPath,buffers->axisZPath};
-    bool *dirty[]={&buffers->axisXDirty,&buffers->axisYDirty,&buffers->axisZDirty};
-    for (int i=0;i<3;++i) {
-        const auto &axis=triad.axes[i];
-        if (!paths[i] || !axis.valid) continue;
-        const CGPoint a=CGPointMake(axis.from.x,axis.from.y),b=CGPointMake(axis.to.x,axis.to.y);
-        AddLine(paths[i],a,b,width,height);
-        const double dx=b.x-a.x,dy=b.y-a.y,len=std::hypot(dx,dy);
-        if (len>8) {
-            const double ux=dx/len,uy=dy/len;
-            AddLine(paths[i],b,CGPointMake(b.x-ux*4+uy*2,b.y-uy*4-ux*2),width,height);
-            AddLine(paths[i],b,CGPointMake(b.x-ux*4-uy*2,b.y-uy*4+ux*2),width,height);
-        } else if (len<2) {
-            CGPathAddEllipseInRect(paths[i],nullptr,CGRectMake(b.x-1.2,b.y-1.2,2.4,2.4));
-        }
-        *dirty[i]=true;
-    }
+void RenderESPSnapline(ESPGeometryBuffers *buffers, const Vector3 &origin,
+                       const float *matrix, float width, float height) {
+    if (!isLine || !buffers || !buffers->snaplinePath || !matrix || !ValidPosition(origin)) return;
+    const Vector3 point=WorldToScreenLayer(origin,const_cast<float *>(matrix),width,height,width,height);
+    // Hide the whole snapline when its target leaves the camera viewport.
+    // Clipping an offscreen endpoint to the edge made lines linger while turning.
+    if (!OverlayGeometry::OnScreen(point.x,point.y,point.z,width,height)) return;
+    AddLine(buffers->snaplinePath,CGPointMake(width*.5,height*.08),
+            CGPointMake(point.x,point.y),width,height);
+    buffers->snaplineDirty=true;
 }
 
 static void AddSkeleton(ESPGeometryBuffers *buffers, uint64_t pawn,
                         const Vector3 &head, const Vector3 &hip, float *matrix,
                         float width, float height, float vpWidth, float vpHeight) {
     if (!isBone || !buffers->bonePath) return;
-    // One bounded set of joint reads and one shared path for all players.
-    // Reuse the existing per-frame transform cache; no per-joint UI layers.
+    // A small stick figure: no elbows/toes, one shared path per frame.
     using Reader = uint64_t (*)(uint64_t);
     const Reader readers[] = {getLeftShoulder, getRightShoulder,
-        getLeftElbow, getRightElbow, getLeftHand, getRightHand,
-        getLeftAnkle, getRightAnkle, getLeftToeNode, getRightToeNode};
-    Vector3 world[13] = {head, hip};
-    Vector3 screen[13]{};
-    bool valid[13]{};
-    for (int i = 0; i < 10; ++i) world[i + 2] = getPositionExt(readers[i](pawn));
-    // No verified neck/spine/knee nodes were supplied. Use the shoulder
-    // midpoint for the torso and direct hip-to-ankle segments for the legs.
-    for (int i = 0; i < 12; ++i)
-        valid[i] = ValidPosition(world[i]) && Vector3::Distance(world[i], hip) <= 3.0f;
-    if (valid[2] && valid[3]) {
-        world[12] = (world[2] + world[3]) * 0.5f;
-        valid[12] = true;
-    }
-    for (int i = 0; i < 13; ++i) {
+        getLeftHand, getRightHand, getLeftAnkle, getRightAnkle};
+    Vector3 world[9] = {head, hip}, screen[9]{};
+    bool valid[9]{};
+    for (int i=0;i<6;++i) world[i+2]=getPositionExt(readers[i](pawn));
+    for (int i=0;i<8;++i)
+        valid[i]=ValidPosition(world[i]) && Vector3::Distance(world[i],hip)<=3.0f;
+    if (valid[2] && valid[3]) {world[8]=(world[2]+world[3])*0.5f;valid[8]=true;}
+    for (int i=0;i<9;++i) {
         if (!valid[i]) continue;
-        screen[i] = WorldToScreenLayer(world[i], matrix, vpWidth, vpHeight, width, height);
-        valid[i] = ValidPosition(screen[i]) && screen[i].z > 0.001f;
+        screen[i]=WorldToScreenLayer(world[i],matrix,vpWidth,vpHeight,width,height);
+        valid[i]=ValidPosition(screen[i]) && screen[i].z>0.001f;
     }
-    const int edges[][2] = {{0,12}, {12,1}, {2,3}, {2,4}, {4,6},
-        {3,5}, {5,7}, {1,8}, {1,9}, {8,10}, {9,11}};
-    for (const auto &edge : edges) {
-        const int a = edge[0], b = edge[1];
+    for (const auto &edge : ESPReferenceStyle::SimpleEdges) {
+        int a=edge[0],b=edge[1];
         if (!valid[a] || !valid[b]) continue;
-        AddLine(buffers->bonePath, CGPointMake(screen[a].x, screen[a].y),
-                CGPointMake(screen[b].x, screen[b].y), width, height);
-        buffers->boneDirty = true;
+        AddLine(buffers->bonePath,CGPointMake(screen[a].x,screen[a].y),
+                CGPointMake(screen[b].x,screen[b].y),width,height);
+        buffers->boneDirty=true;
+    }
+    if (valid[0] && valid[1]) {
+        CGFloat radius=MAX(1.0f,MIN(3.2f,std::hypot(screen[0].x-screen[1].x,screen[0].y-screen[1].y)*0.08f));
+        if (screen[0].x>=radius && screen[0].x<=width-radius && screen[0].y>=radius && screen[0].y<=height-radius) {
+            CGPathAddEllipseInRect(buffers->bonePath,nullptr,CGRectMake(screen[0].x-radius,screen[0].y-radius,2*radius,2*radius));
+            buffers->boneDirty=true;
+        }
     }
 }
 
@@ -186,8 +165,7 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         if (!nick || nick.length == 0) {
             nick = bot ? @"[BOT]" : @"Player";
         }
-        UIColor *nameColor = knocked ? [UIColor colorWithRed:0.9 green:0.55 blue:0.55 alpha:0.85]
-                                      : [UIColor colorWithRed:0.84 green:0.91 blue:0.88 alpha:0.9];
+        UIColor *nameColor = UIColor.whiteColor;
         if (nick.length > 20) nick = [[nick substringToIndex:20] stringByAppendingString:@"…"];
         textCallback(context, nick, CGRectMake((minX + maxX) / 2.0f - 85.0f, minY - 23.0f, 170.0f, 19.0f),
                      nameColor, 12.5f, NO);
@@ -266,6 +244,6 @@ void _0x35572DA(ESPGeometryBuffers *buffers, ESPAddTextCallback textCallback,
         });
         NSString *label = labels[std::max(0, std::min(500, (int)distance))];
         textCallback(context, label, CGRectMake((minX + maxX) / 2 - 32, maxY + 4, 64, 17),
-                     [UIColor colorWithWhite:0.95 alpha:1], 11.5, NO);
+                     UIColor.whiteColor, 11.5, NO);
     }
 }

@@ -2,6 +2,9 @@
 #include "GameProfileFields.h"
 #ifndef __ASSEMBLER__
 #include "GameProfileMethods.h"
+#ifdef MIZZE_GAME_VN
+#include "VnProfile.h"
+#endif
 
 // Dump identities and native evidence are separate. The MAX native profile is
 // pinned to the supplied decrypted 2.132.1 image; it is not reusable for a new OB.
@@ -18,6 +21,8 @@ constexpr uint64_t Rva(uint64_t th) {
 #ifdef MIZZE_GAME_MAX
     const uint64_t fromDump = DumpRva(th);
     return fromDump ? fromDump : MaxNative::Rva(th);
+#elif defined(MIZZE_GAME_VN)
+    return VnProfile::Rva(th);
 #else
     return th;
 #endif
@@ -25,6 +30,8 @@ constexpr uint64_t Rva(uint64_t th) {
 constexpr uint32_t ExpectedHash(uint32_t thHash) {
 #ifdef MIZZE_GAME_MAX
     return MaxNative::ExpectedHash(thHash);
+#elif defined(MIZZE_GAME_VN)
+    return VnProfile::Hash(thHash);
 #else
     return thHash;
 #endif
@@ -32,6 +39,8 @@ constexpr uint32_t ExpectedHash(uint32_t thHash) {
 constexpr uint32_t ExpectedWord(uint32_t thWord) {
 #ifdef MIZZE_GAME_MAX
     return MaxNative::ExpectedWord(thWord);
+#elif defined(MIZZE_GAME_VN)
+    return 0;
 #else
     return thWord;
 #endif

@@ -102,23 +102,29 @@ static bool gFastFire = false;
 // ✅ SYNC PREFS - ESP & AIMBOT
 // ============================================================
 void ESPSyncFromPrefs(void) {
+#ifdef MIZZE_GAME_VN
+    constexpr bool legacyModesAvailable = false;
+#else
+    constexpr bool legacyModesAvailable = true;
+#endif
     MizzePrepareMenuPrefs();
+    MizzePrepareCompactPrefs();
     const bool espEnabled = ESPPrefsBool(@"ESPEnabled", YES);
     isBox        = espEnabled && ESPPrefsBool(KH_NS("Box"),        YES);
     isBone       = espEnabled && ESPPrefsBool(@"Skeleton", NO);
     isHealth     = espEnabled && ESPPrefsBool(KH_NS("Health"),     YES);
     isName       = espEnabled && ESPPrefsBool(KH_NS("Name"),       YES);
     isDis        = espEnabled && ESPPrefsBool(KH_NS("Dis"),        YES);
-    isLine       = espEnabled && ESPPrefsBool(KH_NS("Line"),       NO);
+    isLine       = espEnabled && ESPPrefsBool(KH_NS("Line"), YES);
     isHeadRedDot = espEnabled && ESPPrefsBool(KH_NS("HeadRedDot"), NO);
-    isBox3D = ESPPrefsBool(@"Box3D", NO);
+    isBox3D = false;
     isCleanESP = !isBox3D && ESPPrefsBool(@"CleanESP", YES);
     const auto type = AimModePolicy::ReadType(ESPPrefsFloat(@"AimType", 0));
     const auto activation = AimModePolicy::ReadActivation(ESPPrefsFloat(@"AimActivation", 0));
     if (type != gAimType || activation != gAimActivation) ESPClearAimLock();
     gAimType = type;
     gAimActivation = activation;
-    const bool autoFire = ESPPrefsBool(@"AutoFire", NO);
+    const bool autoFire = legacyModesAvailable && ESPPrefsBool(@"AutoFire", NO);
     if (gAutoFire && !autoFire) AutoFireClear();
     gAutoFire = autoFire;
     isAimNeck = !gAutoFire && type == AimModePolicy::Type::Neck;
@@ -131,18 +137,19 @@ void ESPSyncFromPrefs(void) {
     isSilentAim = silentEnabled;
     gAutoSwap = false;
     gTargetLine = ESPPrefsBool(@"AimTargetLine", YES);
-    gRunSpeed = ESPPrefsBool(@"RunSpeed", NO);
+    gRunSpeed = legacyModesAvailable && ESPPrefsBool(@"RunSpeed", NO);
     gRunSpeedValue = ESPPrefsFloat(@"RunSpeedValue", 6);
     if(!gRunSpeed) UpdateRunSpeed(Moudule_Base,false,gRunSpeedValue);
-    gGhostMode = ESPPrefsBool(@"GhostMode", NO);
+    gGhostMode = legacyModesAvailable && ESPPrefsBool(@"GhostMode", NO);
     GhostModeSetEnabled(gGhostMode);
     if (!ESPPrefsBool(@"FlyHeightRaisedV1", NO)) {
         ESPPrefsSetFloat(@"FlyHeight", PlayerModesControl::Height(ESPPrefsFloat(@"FlyHeight", 3.0f) + 1.0f));
         ESPPrefsSetBool(@"FlyHeightRaisedV1", YES);
     }
-    PlayerModesSetEnabled(ESPPrefsBool(@"Fly", NO), ESPPrefsBool(@"AimLag", NO),
-        ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"FlyHeight", PlayerModesControl::DefaultHeight));
-    PlayerModesSetSpin(ESPPrefsBool(@"VisualSpin", NO), ESPPrefsFloat(@"VisualSpinSpeed",0.5f));
+    PlayerModesSetEnabled(legacyModesAvailable && ESPPrefsBool(@"Fly", NO),
+        legacyModesAvailable && ESPPrefsBool(@"AimLag", NO),
+        legacyModesAvailable && ESPPrefsBool(@"FakeLag", NO), ESPPrefsFloat(@"FlyHeight", PlayerModesControl::DefaultHeight));
+    PlayerModesSetSpin(legacyModesAvailable && ESPPrefsBool(@"VisualSpin", NO), ESPPrefsFloat(@"VisualSpinSpeed",0.5f));
     showFov       = ESPPrefsBool(@"ShowFov", YES);
     fovPercent    = ESPPrefsFloat(@"FovSize", 40);
     gBalancedRender = ESPPrefsBool(@"BalancedRender", NO);
@@ -153,9 +160,9 @@ void ESPSyncFromPrefs(void) {
     silentMaxDistance = ESPPrefsFloat(@"SilentMaxDistance", 100);
     if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 100;
     silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
-    gNoReload = gAutoFire || ESPPrefsBool(@"ShootNoReload", NO);
+    gNoReload = legacyModesAvailable && (gAutoFire || ESPPrefsBool(@"ShootNoReload", NO));
     // AimKill must use ordinary weapon timing even if manual fast fire is saved.
-    gFastFire = !gAutoFire && ESPPrefsBool(@"FastFire", NO);
+    gFastFire = legacyModesAvailable && !gAutoFire && ESPPrefsBool(@"FastFire", NO);
     SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire, gAutoFire);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
     gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
@@ -165,12 +172,7 @@ void ESPSyncFromPrefs(void) {
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
-    // ESP Count logic
-    if (isLine || isBox || isHealth || isBone) {
-        isCount = YES;
-    } else {
-        isCount = NO;
-    }
+    isCount = espEnabled && ESPPrefsBool(@"EnemyCount",YES);
 }
 
 // Nhả aim lock → frame kế tiếp chọn lại target trong FOV mới
@@ -249,12 +251,7 @@ static inline ESPGeometryBuffers ESPGeometryBuffersCreate(void) {
         b.boxPlayerPath = CGPathCreateMutable();
     }
     if (isBox || isHeadRedDot) b.boxKnockPath = CGPathCreateMutable();
-    if (isLine) {
-        b.snaplinePath = CGPathCreateMutable();
-        b.axisZPath = CGPathCreateMutable();
-        b.axisYPath = CGPathCreateMutable();
-        b.axisXPath = CGPathCreateMutable();
-    }
+    if (isLine) b.snaplinePath = CGPathCreateMutable();
     if (isHealth) {
         b.hpBackgroundPath = CGPathCreateMutable();
         b.hpFillPath = CGPathCreateMutable();
@@ -343,6 +340,7 @@ static inline BOOL RenderFOVCirclePath(CGMutablePathRef path,
 // ─────────────────────────────────────────────
 @interface _0xDAB2826 ()
 @property (nonatomic, strong) CADisplayLink          *displayLink;
+@property (nonatomic, strong) UILabel *enemyCountLabel;
 @property (nonatomic, strong) CAShapeLayer           *boxLayer;
 @property (nonatomic, strong) CAShapeLayer           *boneLayer;
 @property (nonatomic, strong) CAShapeLayer           *snaplineLayer;
@@ -409,6 +407,17 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.textLayerPool          = [NSMutableArray array];
 
     [self configureRenderingLayers];
+    self.enemyCountLabel=[UILabel new];
+    self.enemyCountLabel.textAlignment=NSTextAlignmentCenter;
+    self.enemyCountLabel.font=[UIFont monospacedDigitSystemFontOfSize:23 weight:UIFontWeightBold];
+    self.enemyCountLabel.textColor=[UIColor colorWithRed:1 green:.12 blue:.16 alpha:1];
+    self.enemyCountLabel.backgroundColor=UIColor.clearColor;
+    self.enemyCountLabel.layer.shadowColor=UIColor.blackColor.CGColor;
+    self.enemyCountLabel.layer.shadowOpacity=.95;
+    self.enemyCountLabel.layer.shadowOffset=CGSizeMake(0,2);
+    self.enemyCountLabel.layer.shadowRadius=2;
+    self.enemyCountLabel.hidden=YES;
+    [self addSubview:self.enemyCountLabel];
 #ifdef MIZZE_INJECTED
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(applicationWillResignActive:)
                                               name:UIApplicationWillResignActiveNotification object:nil];
@@ -474,7 +483,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)configureRenderingLayers {
-    UIColor *white  = [UIColor colorWithRed:0.72 green:0.91 blue:1.0 alpha:0.95];
+    UIColor *white  = UIColor.whiteColor;
     UIColor *clear  = UIColor.clearColor;
     UIColor *yellow = [UIColor colorWithRed:0.95 green:0.79 blue:0.48 alpha:0.9];
 
@@ -490,7 +499,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.boxBotLayer     = [self makeShapeLayer:yellow fill:nil lineWidth:1.0f zPos:3];
     self.boxPlayerLayer  = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:3];
 
-    self.fovLayer        = [self makeShapeLayer:[UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f] fill:nil lineWidth:1.5f zPos:7];
+    self.fovLayer        = [self makeShapeLayer:UIColor.whiteColor fill:nil lineWidth:1.5f zPos:7];
     self.ghostLayer = [self makeShapeLayer:[UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.95]
         fill:nil lineWidth:1.8 zPos:7];
     self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.8f zPos:1];
@@ -559,14 +568,16 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 - (void)applyRenderPreferences {
     if (self.appliedRenderRevision == gRenderPrefsRevision) return;
     self.appliedRenderRevision = gRenderPrefsRevision;
-    UIColor *boxColor = ESPColor(@"BoxColor", 0.46, 0.86, 0.73);
+    UIColor *boxColor = ESPColor(@"BoxColor", 1, 1, 1);
     self.boxBotLayer.strokeColor = self.boxPlayerLayer.strokeColor = self.boxKnockLayer.strokeColor = boxColor.CGColor;
     self.axisXLayer.strokeColor = [UIColor colorWithRed:1 green:.36 blue:.4 alpha:1].CGColor;
     self.axisYLayer.strokeColor = [UIColor colorWithRed:.46 green:.86 blue:.73 alpha:1].CGColor;
     self.axisZLayer.strokeColor = [UIColor colorWithRed:.36 green:.65 blue:1 alpha:1].CGColor;
-    self.snaplineLayer.strokeColor = [UIColor colorWithWhite:1 alpha:.85].CGColor;
-    self.snaplineLayer.lineWidth = 1.1;
-    self.fovLayer.strokeColor = ESPColor(@"FovColor", 0.46, 0.86, 0.73).CGColor;
+    using namespace ESPReferenceStyle;
+    self.snaplineLayer.strokeColor = ESPColor(@"LineColor",Line.r,Line.g,Line.b).CGColor;
+    self.snaplineLayer.lineWidth = 0.9;
+    self.boneLayer.strokeColor = ESPColor(@"SkeletonColor",Skeleton.r,Skeleton.g,Skeleton.b).CGColor;
+    self.fovLayer.strokeColor = ESPColor(@"FovColor",Fov.r,Fov.g,Fov.b).CGColor;
     for (CAShapeLayer *layer in @[self.boxBotLayer, self.boxPlayerLayer, self.boxKnockLayer]) {
         layer.lineWidth = isCleanESP ? 1.35 : 1.5;
         layer.opacity = 0.95;
@@ -576,9 +587,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
         layer.opacity = .9;
     }
     self.boneLayer.lineWidth = 1.0;
-    self.boneLayer.opacity = 0.85;
-    self.fovLayer.lineWidth = 1.5;
-    self.fovLayer.opacity = 0.8;
+    self.boneLayer.opacity = 0.95;
+    self.fovLayer.lineWidth = 1.0;
+    self.fovLayer.opacity = 0.92;
     const float fps = gBalancedRender ? 30.0f : 60.0f;
     if (@available(iOS 15.0, *)) self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(fps, fps, fps);
     else self.displayLink.preferredFramesPerSecond = (NSInteger)fps;
@@ -674,6 +685,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
             [self clearAllContent];
         }
 
+        self.enemyCountLabel.frame=CGRectMake(vw*.5-30,self.safeAreaInsets.top+12,60,32);
+        self.enemyCountLabel.hidden=!stats.inMatch || !isCount;
+        self.enemyCountLabel.text=[NSString stringWithFormat:@"%d",stats.playerCount+stats.botCount];
         // FOV is a screen-space setting and does not depend on successful game reads.
         [self updateFovCircle];
         [CATransaction commit];
@@ -709,6 +723,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     CGPathRelease(path);
 }
 - (void)clearAllContent {
+    self.enemyCountLabel.hidden=YES;
     self.ghostLayer.path = nil;
     AutoFireClear();
     SilentAimSetEnabled(false);
@@ -887,7 +902,7 @@ bool get_IsScoping(uint64_t p) { return isVaildPtr(p) && AimSelection::ScopeStat
         }
 
         if (isLine && distance <= gESPMaxDistance)
-            RenderXYZAxes(buffers, getPositionExt(getHead(pawn)), matrix, vw, vh);
+            RenderESPSnapline(buffers, getPositionExt(getHead(pawn)), matrix, vw, vh);
         if ((visible || knocked) && distance <= gESPMaxDistance) {
             const bool bot = get_IsBot(pawn);
             if (bot) ++stats.botCount;

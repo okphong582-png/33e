@@ -2,13 +2,17 @@
 #include <cmath>
 #include <cstdint>
 
-// Wait for one unchanged, active host window before attaching another window.
+// Wait for one unchanged, active host window before attaching the overlay.
 // Rotation, a scene transition or backgrounding starts the interval again.
 namespace InjectedStartup {
 class Gate {
     uintptr_t window_=0;
     double width_=0, height_=0, since_=0, previous_=0;
 public:
+    void reset() {
+        window_=0; width_=0; height_=0; since_=0; previous_=0;
+    }
+
     bool ready(bool active, bool attached, uintptr_t window, double width, double height, double now) {
         if (!active || !attached || !window || !std::isfinite(width) || !std::isfinite(height) ||
             !std::isfinite(now) || width<=0 || height<=0) { window_=0; return false; }
