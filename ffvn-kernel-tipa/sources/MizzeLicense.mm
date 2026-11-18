@@ -70,8 +70,7 @@ void MizzeLicenseCheck(NSString *key,void (^completion)(BOOL,NSString *)){
 }
 void MizzeLicenseForget(void){++generation;deadline.store(0);activeKey=nil;SecItemDelete((__bridge CFDictionaryRef)Query(@"key"));[[NSFileManager defaultManager] removeItemAtPath:authPath error:nil];message=@"Nhập key để tiếp tục.";}
 void MizzeLicenseBegin(void){static dispatch_once_t once;dispatch_once(&once,^{
-    nw_path_monitor_t monitor=nw_path_monitor_create();nw_path_monitor_set_queue(monitor,dispatch_get_main_queue());nw_path_monitor_set_update_handler(monitor,^(nw_path_t path){online=nw_path_get_status(path)==nw_path_status_satisfied;if(!online)Deny(@"Đang mất mạng");});nw_path_monitor_start(monitor);
-    static nw_path_monitor_t kept;kept=monitor;
+    static nw_path_monitor_t monitor;monitor=nw_path_monitor_create();nw_path_monitor_set_queue(monitor,dispatch_get_main_queue());nw_path_monitor_set_update_handler(monitor,^(nw_path_t path){online=nw_path_get_status(path)==nw_path_status_satisfied;if(!online)Deny(@"Đang mất mạng");});nw_path_monitor_start(monitor);
     void (^refresh)(void)=^{if(busy)return;NSDictionary *saved=[NSDictionary dictionaryWithContentsOfFile:authPath];NSString *h=saved[@"hash"],*d=saved[@"device"];if(h.length!=64||d.length!=64)return;busy=YES;CheckHash(h,d,NO,^(BOOL ok,NSString *text){busy=NO;});};refresh();
     [NSTimer scheduledTimerWithTimeInterval:5 repeats:YES block:^(NSTimer *timer){refresh();}];
 });}
