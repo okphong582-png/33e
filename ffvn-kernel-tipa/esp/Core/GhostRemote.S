@@ -7,7 +7,13 @@
 #endif
 .p2align 14
 .globl _GhostRemoteStart
+#ifdef __APPLE__
+.private_extern _GhostRemoteStart
+#endif
 .globl _GhostRemoteEnd
+#ifdef __APPLE__
+.private_extern _GhostRemoteEnd
+#endif
 // All entries share one signed RX page and one private RW state page.
 .macro ghost_save
     stp x29, x30, [sp, #-224]!

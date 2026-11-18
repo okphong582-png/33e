@@ -7,7 +7,13 @@
 #endif
 .p2align 14
 .globl _PlayerModesRemoteStart
+#ifdef __APPLE__
+.private_extern _PlayerModesRemoteStart
+#endif
 .globl _PlayerModesRemoteEnd
+#ifdef __APPLE__
+.private_extern _PlayerModesRemoteEnd
+#endif
 // Wrap virtual OnUpdate(self, dt, time, MethodInfo). Incoming interpolation,
     // health and weapon logic still run; held skeletons only affect presentation.
 _PlayerModesRemoteStart:

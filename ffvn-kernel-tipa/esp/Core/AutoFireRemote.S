@@ -7,7 +7,13 @@
 #endif
 .p2align 14
 .globl _AutoFireRemoteStart
+#ifdef __APPLE__
+.private_extern _AutoFireRemoteStart
+#endif
 .globl _AutoFireRemoteEnd
+#ifdef __APPLE__
+.private_extern _AutoFireRemoteEnd
+#endif
 _AutoFireRemoteStart:
     b .LautoMain
     .p2align 4

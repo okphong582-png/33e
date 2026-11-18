@@ -9,7 +9,13 @@
 #endif
 .p2align 14
 .globl _SilentAimRemoteStart
+#ifdef __APPLE__
+.private_extern _SilentAimRemoteStart
+#endif
 .globl _SilentAimRemoteEnd
+#ifdef __APPLE__
+.private_extern _SilentAimRemoteEnd
+#endif
 _SilentAimRemoteStart:
     stp x29, x30, [sp, #-192]!
     mov x29, sp
