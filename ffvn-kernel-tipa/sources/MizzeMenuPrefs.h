@@ -40,6 +40,9 @@ static inline void MizzePrepareMenuPrefs(void) {
 // Compact edition exposes ESP and three aim modes only. Retired saved toggles
 // are disabled so a hidden setting cannot keep applying an old feature.
 static inline void MizzePrepareCompactPrefs(void) {
+    ESPPrefsSetFloat(@"AimType",2);
+    ESPPrefsSetFloat(@"AimActivation",0);
+    for(NSString *key in @[@"AimbotFire",@"AimbotScope",@"AimHipAlways",@"AimNeck"]) if(ESPPrefsBool(key,NO)) ESPPrefsSetBool(key,NO);
     if (!ESPPrefsBool(@"CompactGlassWhiteV2",NO)) {
         MizzeApplyReferenceColors();
         ESPPrefsSetBool(@"ESPEnabled",YES);

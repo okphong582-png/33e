@@ -16,8 +16,8 @@ assert struct.unpack_from('<II', binary) == (0xfeedfacf, 0x100000c)
 info = plistlib.loads((app / 'Info.plist').read_bytes())
 assert info['CFBundleIdentifier'] == 'com.mizze.ffvn.kernel'
 assert info['CFBundleExecutable'] == 'MizzeFFVN'
-for symbol in (b'jbdInitPPLRW', b'proc_find', b'proc_task', b'kread_ptr', b'kread64', b'vreadbuf'):
-    assert symbol in binary, symbol
+assert b'Network.framework/Network' in binary
+assert b'mizze-ffvn-tipa' in binary
 assert bytes.fromhex('e50b0e3ad931385b9e4c9ffde6d1b923') in binary
 output = root / 'packages'
 output.mkdir(exist_ok=True)

@@ -1,3 +1,4 @@
+#import "../../sources/MizzeLicense.h"
 
 #include "../Core/AimSelection.h"
 #ifdef MIZZE_KERNEL_BACKEND
@@ -613,6 +614,9 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
 }
 
 - (void)updateFrame {
+#ifdef MIZZE_KERNEL_BACKEND
+    if (!MizzeLicenseAuthorized()) { [self clearAllContent]; return; }
+#endif
     if (!self.window) return;
 #ifdef MIZZE_INJECTED
     if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) {

@@ -259,7 +259,7 @@ int Install(uint64_t slot) {
     if (installedSlot && installedSlot != slot) return 9;
     uint64_t current = 0;
     if (!Read(slot, current)) return 9;
-    if (installedSlot && current == allocation) return 8;
+    if (allocation && current == allocation) { installedSlot = slot; return 8; }
     installedSlot = 0;
     if (current != module + HandlerMethod) {
         if (!allocation && Adopt(current)) { installedSlot = slot; return 8; }

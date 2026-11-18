@@ -171,7 +171,7 @@
 }
 - (void)buildPage {
     CGFloat offset=self.scroll.contentOffset.y;for(UIView *v in self.scroll.subviews)[v removeFromSuperview];[self.controls removeAllObjects];self.builtWidth=[self contentWidth];
-    ((UILabel *)[self.header viewWithTag:10]).text=self.page==1?@"MIZZE  /  ESP":@"MIZZE  /  AIM";
+    ((UILabel *)[self.header viewWithTag:10]).text=self.page==1?@"MIZZE  /  ESP":@"MIZZE  /  SILENT";
     for(UIButton *b in self.navButtons){BOOL active=b.tag-200==self.page;b.backgroundColor=active?[UIColor colorWithWhite:1 alpha:.34]:UIColor.clearColor;
         [b viewWithTag:21].tintColor=active?MizzeMint():MizzeMuted();((UILabel *)[b viewWithTag:22]).textColor=active?MizzeMint():MizzeMuted();}
     CGFloat y=2;
@@ -180,15 +180,9 @@
         y=[self toggleGrid:@[@[@"Khung",@"Box",@YES],@[@"Xương",@"Skeleton",@YES],@[@"Line",@"Line",@YES],@[@"Tên",@"Name",@YES],
             @[@"Khoảng cách",@"Dis",@YES],@[@"Máu",@"Health",@YES],@[@"Đếm địch",@"EnemyCount",@YES],@[@"FOV",@"ShowFov",@YES]] y:y];
     }else{
-        UISegmentedControl *mode=[[UISegmentedControl alloc] initWithItems:@[@"Đầu",@"Cổ",@"Silent"]];
-        mode.frame=CGRectMake(0,y,[self contentWidth],38);mode.selectedSegmentIndex=(NSInteger)AimModePolicy::ReadType(ESPPrefsFloat(@"AimType",0));
-        mode.selectedSegmentTintColor=[UIColor colorWithWhite:1 alpha:.62];
-        [mode setTitleTextAttributes:@{NSFontAttributeName:MizzeFont(12,UIFontWeightSemibold),NSForegroundColorAttributeName:MizzeText()} forState:UIControlStateNormal];
-        [mode addTarget:self action:@selector(aimModeChanged:) forControlEvents:UIControlEventValueChanged];[self.scroll addSubview:mode];[self.controls addObject:mode];y+=48;
-        y=[self toggle:@"Bật AIM" key:@"AimEnabled" fallback:NO y:y];
-        const BOOL silent=AimModePolicy::ReadType(ESPPrefsFloat(@"AimType",0))==AimModePolicy::Type::Silent;
-        y=[self slider:@"FOV" key:silent?@"SilentFovSize":@"FovSize" min:5 max:48 fallback:silent?18:40 y:y+6];
-        if(silent)y=[self slider:@"Tỷ lệ đầu" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
+        y=[self toggle:@"Silent Aim" key:@"AimEnabled" fallback:NO y:y];
+        y=[self slider:@"FOV" key:@"SilentFovSize" min:5 max:48 fallback:18 y:y+6];
+        y=[self slider:@"Tỷ lệ đầu" key:@"SilentHeadPercent" min:0 max:100 fallback:75 y:y];
         y=[self toggle:@"Vòng FOV" key:@"ShowFov" fallback:YES y:y];
     }
     self.scroll.contentSize=CGSizeMake([self contentWidth],y+2);self.scroll.contentOffset=CGPointMake(0,MAX(0,MIN(offset,y+2-self.scroll.bounds.size.height)));

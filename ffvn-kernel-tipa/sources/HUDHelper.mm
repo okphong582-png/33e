@@ -1,4 +1,5 @@
 #import "HUDHelper.h"
+#import "MizzeLicense.h"
 
 #import "rootless.h"
 #import "../esp/Core/libproc.h"
@@ -96,6 +97,7 @@ static BOOL StartError(NSError **error, int code, NSString *message) {
     return NO;
 }
 BOOL StartHUD(NSError **error) {
+    if (!MizzeLicenseAuthorized()) return StartError(error, 401, @"Cần xác minh key qua mạng trước khi mở menu.");
     NSString *executable = NSBundle.mainBundle.executablePath;
     if (!executable.length) return StartError(error, 3, @"Không tìm thấy file chạy của ứng dụng.");
 

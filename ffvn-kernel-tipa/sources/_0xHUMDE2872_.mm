@@ -15,6 +15,7 @@
 
 #import "../esp/Core/pid.h"
 #import "HUDHelper.h"
+#import "MizzeLicense.h"
 
 
 #import "UIView+SecureView.h"
@@ -378,6 +379,7 @@ self.window.bounds = targetFrame;
         [invocation setArgument:&windowLevel atIndex:3];
         [invocation invoke];
     }
+    MizzeLicenseBegin();
     HUDMarkReady();
 }
 

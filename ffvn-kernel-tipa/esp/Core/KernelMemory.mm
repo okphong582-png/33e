@@ -1,3 +1,4 @@
+#include "KabraxHide.h"
 #import <Foundation/Foundation.h>
 #include <dlfcn.h>
 #include <mach-o/loader.h>
@@ -48,15 +49,14 @@ bool scanRunning = false;
 CFAbsoluteTime nextScan = 0;
 
 void reportStatus(NSString *message) {
-    NSLog(@"[Kernel] %@", message);
     HUDUpdateKernelStatus(message);
 }
 
 void loadKernelLayout() {
-    auto serialize = reinterpret_cast<void *(*)()>(dlsym(backend.library, "jbinfo_get_serialized"));
-    auto getValue = reinterpret_cast<void *(*)(void *, const char *)>(dlsym(RTLD_DEFAULT, "xpc_dictionary_get_value"));
-    auto getNumber = reinterpret_cast<uint64_t (*)(void *, const char *)>(dlsym(RTLD_DEFAULT, "xpc_dictionary_get_uint64"));
-    auto release = reinterpret_cast<void (*)(void *)>(dlsym(RTLD_DEFAULT, "xpc_release"));
+    auto serialize = reinterpret_cast<void *(*)()>(dlsym(backend.library, KH_STR("jbinfo_get_serialized")));
+    auto getValue = reinterpret_cast<void *(*)(void *, const char *)>(dlsym(RTLD_DEFAULT, KH_STR("xpc_dictionary_get_value")));
+    auto getNumber = reinterpret_cast<uint64_t (*)(void *, const char *)>(dlsym(RTLD_DEFAULT, KH_STR("xpc_dictionary_get_uint64")));
+    auto release = reinterpret_cast<void (*)(void *)>(dlsym(RTLD_DEFAULT, KH_STR("xpc_release")));
     if (!serialize || !getValue || !getNumber || !release) return;
     void *information = serialize();
     if (!information) return;
@@ -89,23 +89,23 @@ bool userRange(uint64_t address, size_t length) {
 NSArray<NSString *> *libraryCandidates() {
     NSMutableOrderedSet<NSString *> *paths = [NSMutableOrderedSet orderedSet];
     auto addRoot = [&](NSString *root) {
-        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libjailbreak.dylib"]];
-        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libjailbreak.roothide.dylib"]];
-        [paths addObject:[root stringByAppendingPathComponent:@"basebin/libjailbreak.dylib"]];
+        [paths addObject:[root stringByAppendingPathComponent:KH_NS("usr/lib/libjailbreak.dylib")]];
+        [paths addObject:[root stringByAppendingPathComponent:KH_NS("usr/lib/libjailbreak.roothide.dylib")]];
+        [paths addObject:[root stringByAppendingPathComponent:KH_NS("basebin/libjailbreak.dylib")]];
     };
-    addRoot([NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@".jbroot"]);
+    addRoot([NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:KH_NS(".jbroot")]);
     NSFileManager *files = NSFileManager.defaultManager;
-    for (NSString *container in @[@"/var/containers/Bundle/Application", @"/var/mobile/Containers/Shared/AppGroup"]) {
+    for (NSString *container in @[KH_NS("/var/containers/Bundle/Application"), KH_NS("/var/mobile/Containers/Shared/AppGroup")]) {
         NSArray<NSString *> *entries = [files contentsOfDirectoryAtPath:container error:nil];
         for (NSString *entry in entries) {
-            if ([entry hasPrefix:@".jbroot-"])
+            if ([entry hasPrefix:KH_NS(".jbroot-")])
                 addRoot([container stringByAppendingPathComponent:entry]);
         }
     }
-    [paths addObjectsFromArray:@[@"/var/jb/usr/lib/libjailbreak.dylib",
-        @"/var/jb/basebin/libjailbreak.dylib", @"/var/jb/usr/lib/libjailbreak.roothide.dylib",
-        @"/usr/lib/libjailbreak.dylib", @"/.jbroot/usr/lib/libjailbreak.dylib"]];
-    NSString *bundled = [NSBundle.mainBundle pathForResource:@"libjailbreak" ofType:@"dylib"];
+    [paths addObjectsFromArray:@[KH_NS("/var/jb/usr/lib/libjailbreak.dylib"),
+        KH_NS("/var/jb/basebin/libjailbreak.dylib"), KH_NS("/var/jb/usr/lib/libjailbreak.roothide.dylib"),
+        KH_NS("/usr/lib/libjailbreak.dylib"), KH_NS("/.jbroot/usr/lib/libjailbreak.dylib")]];
+    NSString *bundled = [NSBundle.mainBundle pathForResource:KH_NS("libjailbreak") ofType:KH_NS("dylib")];
     if (bundled.length) [paths addObject:bundled];
     return paths.array;
 }
@@ -121,43 +121,41 @@ bool loadBackendLibrary() {
         void *library = dlopen(path.fileSystemRepresentation, RTLD_NOW | RTLD_GLOBAL);
         if (library) {
             // RootHide variants may expose a different subset of the API.
-            if (dlsym(library, "proc_find") && dlsym(library, "proc_task") && dlsym(library, "vreadbuf")) {
+            if (dlsym(library, KH_STR("proc_find")) && dlsym(library, KH_STR("proc_task")) && dlsym(library, KH_STR("vreadbuf"))) {
                 backend.library = library;
-                NSLog(@"[Kernel] Loaded provider %@", path);
-                return true;
+                            return true;
             }
-            lastFailure = [NSString stringWithFormat:@"%@ thiếu proc_find/proc_task/vreadbuf.", path];
+            lastFailure = [NSString stringWithFormat:KH_NS("%@ thiếu proc_find/proc_task/vreadbuf."), path];
             dlclose(library);
             continue;
         }
         const char *error = dlerror();
-        NSString *detail = error ? [NSString stringWithUTF8String:error] : @"dlopen không trả lý do";
+        NSString *detail = error ? [NSString stringWithUTF8String:error] : KH_NS("dlopen không trả lý do");
         if (detail.length > 320) detail = [detail substringToIndex:320];
-        lastFailure = [NSString stringWithFormat:@"%@\n%@", path, detail];
+        lastFailure = [NSString stringWithFormat:KH_NS("%@\n%@"), path, detail];
     }
-    reportStatus(foundFile ? [@"Kernel không nạp được thư viện đã tìm thấy.\n" stringByAppendingString:lastFailure ?: @""] :
-        @"Kernel chưa tìm thấy libjailbreak trong .jbroot, .jbroot-* hoặc /var/jb. Kiểm tra trạng thái jailbreak trong Dopamine.");
+    reportStatus(foundFile ? [KH_NS("Kernel không nạp được thư viện đã tìm thấy.\n") stringByAppendingString:lastFailure ?: KH_NS("")] :
+        KH_NS("Kernel chưa tìm thấy libjailbreak trong .jbroot, .jbroot-* hoặc /var/jb. Kiểm tra trạng thái jailbreak trong Dopamine."));
     return false;
 }
 
 bool initializeBackend() {
     if (backend.ready) return true;
-    if (getuid() != 0) { reportStatus(@"Kernel lỗi — HUD chưa có quyền root."); return false; }
+    if (getuid() != 0) { reportStatus(KH_NS("Kernel lỗi — HUD chưa có quyền root.")); return false; }
     if (!backend.library && !loadBackendLibrary()) return false;
-    auto initialize = reinterpret_cast<int (*)()>(dlsym(backend.library, "jbdInitPPLRW"));
-    if (!initialize || initialize() != 0) { reportStatus(@"Kernel lỗi — jbdInitPPLRW chưa khởi tạo được."); return false; }
-    backend.findProcess = reinterpret_cast<decltype(backend.findProcess)>(dlsym(backend.library, "proc_find"));
-    backend.processTask = reinterpret_cast<decltype(backend.processTask)>(dlsym(backend.library, "proc_task"));
-    backend.readPointer = reinterpret_cast<decltype(backend.readPointer)>(dlsym(backend.library, "kread_ptr"));
-    backend.read64 = reinterpret_cast<decltype(backend.read64)>(dlsym(backend.library, "kread64"));
-    backend.readVirtual = reinterpret_cast<decltype(backend.readVirtual)>(dlsym(backend.library, "vreadbuf"));
-    backend.readProcess = reinterpret_cast<decltype(backend.readProcess)>(dlsym(backend.library, "proc_vreadbuf"));
-    backend.writeVirtual = reinterpret_cast<decltype(backend.writeVirtual)>(dlsym(backend.library, "vwritebuf"));
+    auto initialize = reinterpret_cast<int (*)()>(dlsym(backend.library, KH_STR("jbdInitPPLRW")));
+    if (!initialize || initialize() != 0) { reportStatus(KH_NS("Kernel lỗi — jbdInitPPLRW chưa khởi tạo được.")); return false; }
+    backend.findProcess = reinterpret_cast<decltype(backend.findProcess)>(dlsym(backend.library, KH_STR("proc_find")));
+    backend.processTask = reinterpret_cast<decltype(backend.processTask)>(dlsym(backend.library, KH_STR("proc_task")));
+    backend.readPointer = reinterpret_cast<decltype(backend.readPointer)>(dlsym(backend.library, KH_STR("kread_ptr")));
+    backend.read64 = reinterpret_cast<decltype(backend.read64)>(dlsym(backend.library, KH_STR("kread64")));
+    backend.readVirtual = reinterpret_cast<decltype(backend.readVirtual)>(dlsym(backend.library, KH_STR("vreadbuf")));
+    backend.readProcess = reinterpret_cast<decltype(backend.readProcess)>(dlsym(backend.library, KH_STR("proc_vreadbuf")));
+    backend.writeVirtual = reinterpret_cast<decltype(backend.writeVirtual)>(dlsym(backend.library, KH_STR("vwritebuf")));
     backend.ready = backend.findProcess && backend.processTask && backend.readPointer &&
                     backend.read64 && backend.readVirtual;
     if (backend.ready) loadKernelLayout();
-    else reportStatus(@"Kernel lỗi — libjailbreak thiếu hàm đọc bắt buộc.");
-    NSLog(@"[Kernel] libjailbreak reader %@", backend.ready ? @"ready" : @"missing required symbols");
+    else reportStatus(KH_NS("Kernel lỗi — libjailbreak thiếu hàm đọc bắt buộc."));
     return backend.ready;
 }
 
@@ -233,18 +231,18 @@ Target discover(pid_t pid) {
     Target context;
     context.pid = pid;
     context.process = backend.findProcess(pid);
-    if (!kernelPointer(context.process)) { reportStatus(@"Kernel lỗi — proc_find chưa tìm được FFVN."); return {}; }
+    if (!kernelPointer(context.process)) { reportStatus(KH_NS("Kernel lỗi — proc_find chưa tìm được FFVN.")); return {}; }
     uint64_t task = backend.processTask(context.process);
-    if (!kernelPointer(task)) { reportStatus(@"Kernel lỗi — chưa lấy được task của FFVN."); return {}; }
+    if (!kernelPointer(task)) { reportStatus(KH_NS("Kernel lỗi — chưa lấy được task của FFVN.")); return {}; }
     context.map = backend.readPointer(task + layout.taskMap);
-    if (!kernelPointer(context.map)) { reportStatus(@"Kernel lỗi — chưa đọc được vm_map."); return {}; }
+    if (!kernelPointer(context.map)) { reportStatus(KH_NS("Kernel lỗi — chưa đọc được vm_map.")); return {}; }
     context.pmap = backend.readPointer(context.map + layout.mapPmap);
     context.tableOffset = layout.pmapTtep;
     if (kernelPointer(context.pmap)) context.table = backend.readPointer(context.pmap + layout.pmapTtep);
     if (!validTable(context.table)) {
         context.table = 0;
         if (!backend.readProcess) {
-            reportStatus([NSString stringWithFormat:@"Kernel chưa lấy được TTEP, proc_vreadbuf không có. pmap offset=0x%llx, TTEP offset=0x%llx.", layout.mapPmap, layout.pmapTtep]);
+            reportStatus([NSString stringWithFormat:KH_NS("Kernel chưa lấy được TTEP, proc_vreadbuf không có. pmap offset=0x%llx, TTEP offset=0x%llx."), layout.mapPmap, layout.pmapTtep]);
             return {};
         }
     }
@@ -252,7 +250,7 @@ Target discover(pid_t pid) {
     const uint64_t sentinel = header + layout.headerLinks;
     uint64_t entry = backend.readPointer(sentinel + layout.linksNext);
     const uint32_t count = static_cast<uint32_t>(backend.read64(header + layout.headerCount));
-    if (!count || count > 32768) { reportStatus(@"Kernel lỗi — danh sách vùng nhớ chưa hợp lệ."); return {}; }
+    if (!count || count > 32768) { reportStatus(KH_NS("Kernel lỗi — danh sách vùng nhớ chưa hợp lệ.")); return {}; }
     uint32_t readableHeaders = 0;
     for (uint32_t index = 0; index < count && entry != sentinel; ++index) {
         if (!kernelPointer(entry) || kill(pid, 0) != 0) return {};
@@ -267,16 +265,16 @@ Target discover(pid_t pid) {
             context.base = start;
             if (backend.readProcess) verifyTable(context);
             else context.tableVerified = true; // UUID matched using raw vreadbuf.
-            reportStatus(context.tableVerified ? @"Đã đọc Unity FFVN và xác minh TTEP qua vreadbuf." :
-                @"Đã đọc Unity FFVN qua proc_vreadbuf. Chưa xác minh TTEP để ghi aim.");
+            reportStatus(context.tableVerified ? KH_NS("Đã đọc Unity FFVN và xác minh TTEP qua vreadbuf.") :
+                KH_NS("Đã đọc Unity FFVN qua proc_vreadbuf. Chưa xác minh TTEP để ghi aim."));
             return context;
         }
         const uint64_t next = backend.readPointer(links + layout.linksNext);
         if (next == entry) return {};
         entry = next;
     }
-    reportStatus(readableHeaders ? @"Kernel đọc được game, chưa thấy UUID Unity FFVN 1.134.1 đã đối chiếu." :
-                                  @"Kernel chưa đọc được dữ liệu game qua vreadbuf.");
+    reportStatus(readableHeaders ? KH_NS("Kernel đọc được game, chưa thấy UUID Unity FFVN 1.134.1 đã đối chiếu.") :
+                                  KH_NS("Kernel chưa đọc được dữ liệu game qua vreadbuf."));
     return {};
 }
 }
@@ -345,12 +343,12 @@ uintptr_t GetGameModule_Base(char *name) {
                     if (previous.pid == pid && previous.base && backend.findProcess(pid) == previous.process) {
                         found = previous;
                         if (!found.tableVerified && backend.readProcess && verifyTable(found))
-                            reportStatus(@"Đã xác minh lại TTEP của FFVN qua vreadbuf.");
+                            reportStatus(KH_NS("Đã xác minh lại TTEP của FFVN qua vreadbuf."));
                     } else found = discover(pid);
-                } else reportStatus(@"Đang chờ tiến trình FreeFireVN. Hãy mở game.");
+                } else reportStatus(KH_NS("Đang chờ tiến trình FreeFireVN. Hãy mở game."));
             }
             std::lock_guard<std::mutex> lock(stateMutex);
-            if (found.base && found.base != target.base) NSLog(@"[Kernel] FFVN Unity UUID matched at 0x%llx", found.base);
+            if (found.base && found.base != target.base) NSLog(KH_NS("[Kernel] FFVN Unity UUID matched at 0x%llx"), found.base);
             target = found;
             scanRunning = false;
         }
