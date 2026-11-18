@@ -60,20 +60,46 @@ bool WriteBytes(uint64_t address, const void *buffer, size_t size) {
 }
 template <typename T> bool Read(uint64_t address, T &value) { return ReadBytes(address, &value, sizeof(value)); }
 template <typename T> bool Write(uint64_t address, const T &value) { return WriteBytes(address, &value, sizeof(value)); }
+bool MappedTaskValid() {
+#ifdef MIZZE_KERNEL_BACKEND
+    return ownedTask != MACH_PORT_NULL && ownedProcessIdentity &&
+        ownedProcessIdentity == KernelProcessIdentity();
+#else
+    return ownedTask != MACH_PORT_NULL;
+#endif
+}
+kern_return_t ReadMapped(uint64_t address, void *buffer, size_t size) {
+    if (!MappedTaskValid() || !buffer || !size) return KERN_INVALID_ARGUMENT;
+    mach_vm_size_t actual = 0;
+    const kern_return_t error = mach_vm_read_overwrite(
+        ownedTask, address, size, reinterpret_cast<mach_vm_address_t>(buffer), &actual);
+    return error == KERN_SUCCESS && actual != size ? KERN_MEMORY_ERROR : error;
+}
+kern_return_t WriteMapped(uint64_t address, const void *buffer, size_t size) {
+    if (!MappedTaskValid() || !buffer || !size || size > UINT32_MAX) return KERN_INVALID_ARGUMENT;
+    return mach_vm_write(ownedTask, address, reinterpret_cast<vm_offset_t>(buffer),
+        static_cast<mach_msg_type_number_t>(size));
+}
+template <typename T> kern_return_t ReadMapped(uint64_t address, T &value) {
+    return ReadMapped(address, &value, sizeof(value));
+}
+template <typename T> kern_return_t WriteMapped(uint64_t address, const T &value) {
+    return WriteMapped(address, &value, sizeof(value));
+}
 uint64_t StateAddress() { return allocation + SILENT_REMOTE_PAGE; }
 
 bool Publish(const SilentAimRemote::State &state) {
     if (!allocation) return false;
     // Odd sequence makes dispatches bypass a partially written snapshot.
     const uint32_t odd = (sequence + 1) | 1u;
-    if (!Write(StateAddress() + SILENT_REMOTE_SEQUENCE, odd)) return false;
+    if (WriteMapped(StateAddress() + SILENT_REMOTE_SEQUENCE, odd) != KERN_SUCCESS) return false;
     sequence = odd + 1;
     constexpr size_t start = SILENT_REMOTE_ENABLED;
     constexpr size_t end = SILENT_REMOTE_REDIRECTS;
-    if (!WriteBytes(StateAddress() + start, (const uint8_t *)&state + start, end - start) ||
-        !WriteBytes(StateAddress() + SILENT_REMOTE_MATCH, (const uint8_t *)&state + SILENT_REMOTE_MATCH,
-            SILENT_REMOTE_HEAD_PERCENT + sizeof(uint32_t) - SILENT_REMOTE_MATCH)) return false;
-    return Write(StateAddress() + SILENT_REMOTE_SEQUENCE, sequence);
+    if (WriteMapped(StateAddress() + start, (const uint8_t *)&state + start, end - start) != KERN_SUCCESS ||
+        WriteMapped(StateAddress() + SILENT_REMOTE_MATCH, (const uint8_t *)&state + SILENT_REMOTE_MATCH,
+            SILENT_REMOTE_HEAD_PERCENT + sizeof(uint32_t) - SILENT_REMOTE_MATCH) != KERN_SUCCESS) return false;
+    return WriteMapped(StateAddress() + SILENT_REMOTE_SEQUENCE, sequence) == KERN_SUCCESS;
 }
 void Clear() {
     if (!allocation) return;
@@ -81,7 +107,7 @@ void Clear() {
     // Dispatch owns the phase; Publish never writes it after initialization.
     // Keep the user percentage across render-frame invalidation.
     // Clearing a target must not reset the dispatch distribution to 100% head.
-    Read(StateAddress(), state);
+    ReadMapped(StateAddress(), state);
     state.enabled = 0;
     state.deadline = 0;
     state.local = state.handler = state.infoClass = state.match = 0;
@@ -199,8 +225,8 @@ bool Adopt(uint64_t address) {
     if (!isVaildPtr(address) || address % SILENT_REMOTE_PAGE) return false;
     std::array<uint8_t, SILENT_REMOTE_PAGE> code{};
     SilentAimRemote::State state{};
-    if (!Read(address, code) || std::memcmp(code.data(), SilentAimRemoteStart, code.size()) ||
-        !Read(address + SILENT_REMOTE_PAGE, state) || state.magic != SilentAimRemote::Magic ||
+    if (ReadMapped(address, code) != KERN_SUCCESS || std::memcmp(code.data(), SilentAimRemoteStart, code.size()) ||
+        ReadMapped(address + SILENT_REMOTE_PAGE, state) != KERN_SUCCESS || state.magic != SilentAimRemote::Magic ||
         state.original != module + HandlerMethod || state.clock != RemoteClock()) return false;
     allocation = address; sequence = state.sequence & ~1u;
     Clear();
@@ -214,10 +240,16 @@ int Allocate() {
     SilentAimRemote::State initial{};
     initial.original = module + HandlerMethod; initial.clock = clock;
     std::array<uint8_t, SILENT_REMOTE_PAGE> code{};
-    if (!Read(mapping.address, code) || std::memcmp(code.data(), SilentAimRemoteStart, code.size()) ||
-        !Write(mapping.address + SILENT_REMOTE_PAGE, initial)) {
+    const kern_return_t codeRead = ReadMapped(mapping.address, code);
+    const bool codeMatches = codeRead == KERN_SUCCESS &&
+        std::memcmp(code.data(), SilentAimRemoteStart, code.size()) == 0;
+    const kern_return_t stateWrite = codeMatches ?
+        WriteMapped(mapping.address + SILENT_REMOTE_PAGE, initial) : KERN_SUCCESS;
+    if (codeRead != KERN_SUCCESS || !codeMatches || stateWrite != KERN_SUCCESS) {
         mach_vm_deallocate(ownedTask, mapping.address, 2 * SILENT_REMOTE_PAGE);
-        return Fail("kiểm tra mã/ghi trạng thái", KERN_MEMORY_ERROR);
+        if (codeRead != KERN_SUCCESS) return Fail("đọc trang mã vừa ánh xạ", codeRead);
+        if (!codeMatches) return Fail("mã vừa ánh xạ khác mã nguồn", KERN_MEMORY_ERROR);
+        return Fail("ghi trang trạng thái", stateWrite);
     }
     allocation = mapping.address;
     return 8;
@@ -263,7 +295,7 @@ void SilentAimClearTarget() {
 uint64_t SilentAimRedirectCount() {
     std::lock_guard<std::recursive_mutex> guard(controllerMutex);
     uint64_t value = 0;
-    if (allocation) Read(StateAddress() + SILENT_REMOTE_REDIRECTS, value);
+    if (allocation) ReadMapped(StateAddress() + SILENT_REMOTE_REDIRECTS, value);
     return value;
 }
 uint64_t SilentAimAutoFireGate() {
