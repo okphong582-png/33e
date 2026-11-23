@@ -93,7 +93,7 @@ static Vector3  gAimLockedHead  = {};
 static Quaternion gAimSmoothed      = {0,0,0,1};
 static bool       gAimSmoothedValid = false;
 static float      gAimSpeed         = 180.0f;
-static float      gESPMaxDistance   = 150.0f; // khoảng cách tối đa hiển thị ESP (mét)
+static float      gESPMaxDistance   = 110.0f; // khoảng cách tối đa hiển thị ESP (mét)
 
 
 static bool gESPPrefsLoadedOnce = false;
@@ -160,19 +160,19 @@ void ESPSyncFromPrefs(void) {
     silentFovPercent = ESPPrefsFloat(@"SilentFovSize", 18);
     silentAutoConfig = ESPPrefsBool(@"SilentAutoConfig", YES);
     silentHeadPercent = SilentAimPolicy::HeadPercent(ESPPrefsFloat(@"SilentHeadPercent", 75));
+    silentMaxDistance = ESPPrefsFloat(@"SilentMaxDistance", 110);
+    if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 110;
+    silentMaxDistance = std::max(10.0f, std::min(110.0f, silentMaxDistance));
     activeSilentFov = SilentAimPolicy::Resolve(false, silentAutoConfig, silentFovPercent, silentMaxDistance).fov;
-    silentMaxDistance = ESPPrefsFloat(@"SilentMaxDistance", 100);
-    if (!std::isfinite(silentMaxDistance)) silentMaxDistance = 100;
-    silentMaxDistance = std::max(10.0f, std::min(150.0f, silentMaxDistance));
     gNoReload = legacyModesAvailable && (gAutoFire || ESPPrefsBool(@"ShootNoReload", NO));
     // AimKill must use ordinary weapon timing even if manual fast fire is saved.
     gFastFire = legacyModesAvailable && !gAutoFire && ESPPrefsBool(@"FastFire", NO);
     SyncWeaponFeatureSwitches(Moudule_Base, gNoReload, gFastFire, gAutoFire);
     gAimSpeed       = ESPPrefsFloat(@"AimSpeed", 180.0f);
-    gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 150.0f);
-    if (!std::isfinite(gESPMaxDistance)) gESPMaxDistance = 150;
+    gESPMaxDistance = ESPPrefsFloat(@"ESPMaxDistance", 110.0f);
+    if (!std::isfinite(gESPMaxDistance)) gESPMaxDistance = 110;
     if (gESPMaxDistance < 30.0f)  gESPMaxDistance = 30.0f;
-    if (gESPMaxDistance > 500.0f) gESPMaxDistance = 500.0f;
+    if (gESPMaxDistance > 110.0f) gESPMaxDistance = 110.0f;
     gESPPrefsLoadedOnce = true;
     ++gRenderPrefsRevision;
 
@@ -491,7 +491,7 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     UIColor *clear  = UIColor.clearColor;
     UIColor *yellow = [UIColor colorWithRed:0.95 green:0.79 blue:0.48 alpha:0.9];
 
-    UIColor *hpGreen = [UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.9];
+    UIColor *hpGreen = [UIColor colorWithRed:0.18 green:0.84 blue:0.51 alpha:1.0];
     UIColor *red     = [UIColor colorWithRed:0.9 green:0.55 blue:0.55 alpha:0.8];
 
     self.axisZLayer  = [self makeShapeLayer:red fill:nil lineWidth:0.5f zPos:1];
@@ -500,14 +500,14 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.axisYLayer    = [self makeShapeLayer:yellow fill:nil lineWidth:1.0f zPos:1];
     self.axisXLayer = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:1];
 
-    self.boxBotLayer     = [self makeShapeLayer:yellow fill:nil lineWidth:1.0f zPos:3];
-    self.boxPlayerLayer  = [self makeShapeLayer:white fill:nil lineWidth:1.0f zPos:3];
+    self.boxBotLayer     = [self makeShapeLayer:yellow fill:nil lineWidth:0.55f zPos:3];
+    self.boxPlayerLayer  = [self makeShapeLayer:white fill:nil lineWidth:0.55f zPos:3];
 
-    self.fovLayer        = [self makeShapeLayer:UIColor.whiteColor fill:nil lineWidth:1.5f zPos:7];
+    self.fovLayer        = [self makeShapeLayer:UIColor.whiteColor fill:nil lineWidth:0.5f zPos:7];
     self.ghostLayer = [self makeShapeLayer:[UIColor colorWithRed:0.46 green:0.86 blue:0.73 alpha:0.95]
         fill:nil lineWidth:1.8 zPos:7];
-    self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.8f zPos:1];
-    self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:1.0f zPos:2];
+    self.snaplineLayer     = [self makeShapeLayer:white   fill:nil     lineWidth:0.55f zPos:1];
+    self.boneLayer         = [self makeShapeLayer:white   fill:nil     lineWidth:0.65f zPos:2];
     self.boxLayer          = [self makeShapeLayer:white   fill:nil     lineWidth:0.5f zPos:3];
     self.hpBackgroundLayer = [self makeShapeLayer:nil     fill:[UIColor colorWithWhite:0.02 alpha:0.9] lineWidth:0 zPos:4];
     self.hpFillLayer       = [self makeShapeLayer:nil     fill:hpGreen lineWidth:0    zPos:5];
@@ -579,20 +579,20 @@ static void ESPTextCallback(void *ctx, NSString *str, CGRect frame,
     self.axisZLayer.strokeColor = [UIColor colorWithRed:.36 green:.65 blue:1 alpha:1].CGColor;
     using namespace ESPReferenceStyle;
     self.snaplineLayer.strokeColor = ESPColor(@"LineColor",Line.r,Line.g,Line.b).CGColor;
-    self.snaplineLayer.lineWidth = 0.9;
+    self.snaplineLayer.lineWidth = 0.55;
     self.boneLayer.strokeColor = ESPColor(@"SkeletonColor",Skeleton.r,Skeleton.g,Skeleton.b).CGColor;
     self.fovLayer.strokeColor = ESPColor(@"FovColor",Fov.r,Fov.g,Fov.b).CGColor;
     for (CAShapeLayer *layer in @[self.boxBotLayer, self.boxPlayerLayer, self.boxKnockLayer]) {
-        layer.lineWidth = isCleanESP ? 1.35 : 1.5;
+        layer.lineWidth = 0.55;
         layer.opacity = 0.95;
     }
     for (CAShapeLayer *layer in @[self.axisYLayer, self.axisXLayer, self.axisZLayer]) {
-        layer.lineWidth = 1.35;
+        layer.lineWidth = 0.7;
         layer.opacity = .9;
     }
-    self.boneLayer.lineWidth = 1.0;
+    self.boneLayer.lineWidth = 0.65;
     self.boneLayer.opacity = 0.95;
-    self.fovLayer.lineWidth = 1.0;
+    self.fovLayer.lineWidth = 0.5;
     self.fovLayer.opacity = 0.92;
     const float fps = gBalancedRender ? 30.0f : 60.0f;
     if (@available(iOS 15.0, *)) self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(fps, fps, fps);
@@ -821,8 +821,11 @@ static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
     ESPFrameStats stats = {};
     struct SilentFrame {
         bool published = false;
+        bool liveMatch = false;
         ~SilentFrame() {
-            if (isSilentAim && !published) SilentAimClearTarget();
+            // A failed page read can skip one render tick. Keep the last
+            // publication for its 150 ms deadline while the same match lives.
+            if (isSilentAim && !published && !liveMatch) SilentAimClearTarget();
             if (gAutoFire && !published) AutoFireClear();
         }
     } silentFrame;
@@ -858,6 +861,7 @@ static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
 #endif
         return stats;
     }
+    silentFrame.liveMatch = true;
     const uint64_t camTransform = ReadAddr<uint64_t>(local + kMainCameraTransform);
     if (!isVaildPtr(camTransform)) return stats;
     const Vector3 myLoc = getPositionExt(camTransform);
@@ -871,8 +875,28 @@ static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
     const int capacity = ReadAddr<int>(entries + kIl2CppArrayMaxLength);
     if (capacity <= 0 || capacity > 256 || count < 0 || count > capacity) return stats;
     std::array<uint8_t, 256 * kDictEntryStrideBytePlayer> snapshot{};
+    // Dictionary Count is the number of live entries, not their last slot.
+    // Hash slots are sparse; reading only Count slots drops enemies in later
+    // buckets and makes ESP and Silent appear to cut out together.
     if (count && !_read((long)(entries + kIl2CppArrayItems), snapshot.data(),
-                       count * kDictEntryStrideBytePlayer)) return stats;
+                       capacity * kDictEntryStrideBytePlayer)) {
+        // One nonresident page must not blank every player in the frame.
+        // Retry smaller ranges, then salvage readable entries of failed ranges.
+        for (int first = 0; first < capacity; first += 32) {
+            const int blockCount = std::min(32, capacity - first);
+            const uint64_t address = entries + kIl2CppArrayItems + first * kDictEntryStrideBytePlayer;
+            uint8_t *block = snapshot.data() + first * kDictEntryStrideBytePlayer;
+            if (_read((long)address, block, blockCount * kDictEntryStrideBytePlayer)) continue;
+            for (int j = 0; j < blockCount; ++j) {
+                uint8_t *slot = block + j * kDictEntryStrideBytePlayer;
+                if (!_read((long)(address + j * kDictEntryStrideBytePlayer), slot,
+                           kDictEntryStrideBytePlayer)) {
+                    const int missing = -1;
+                    std::memcpy(slot, &missing, sizeof(missing));
+                }
+            }
+        }
+    }
     // Luôn đọc matrix mới nhất từ camera mỗi frame để ESP theo đúng góc màn hình
     // Không cache matrix — nếu camera xoay, ESP phải cập nhật ngay
     cachedCamera = CameraMain(matchGame);
@@ -912,7 +936,7 @@ static void RecordKernelAimFrame(const ESPFrameStats &stats, bool selected) {
 
     const float radius = isSilentAim ? SilentAimSelection::Radius(vw, vh, activeSilentFov) :
         AimSelection::Radius(vw, vh, fovPercent);
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; count && i < capacity; ++i) {
         const uint8_t *entry = snapshot.data() + kDictEntryStrideBytePlayer * i;
         int hash = -1;
         uint64_t pawn = 0;

@@ -7,7 +7,7 @@ inline uint32_t HeadPercent(float value) {
     return std::isfinite(value) ? static_cast<uint32_t>(std::clamp(value, 0.0f, 100.0f)+0.5f) : 75;
 }
 struct Config { float fov, distance; };
-inline Config Automatic(bool scoping) { return scoping ? Config{12,120} : Config{18,80}; }
+inline Config Automatic(bool scoping) { return scoping ? Config{12,110} : Config{18,110}; }
 // Auto configuration adjusts range, while the user's visible FOV stays fixed.
 inline Config Resolve(bool scoping, bool automatic, float fov, float distance) {
     if (!std::isfinite(fov)) fov = 18;

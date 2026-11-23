@@ -277,7 +277,9 @@ int Install(uint64_t slot) {
 bool Eligible(uint64_t match, uint64_t local, uint64_t target) {
     uint8_t localKnock = 0, targetKnock = 0;
     return getMatch(getMatchGame(module)) == match && getLocalPlayer(match) == local &&
-        get_CurHP(local) > 0 && get_CurHP(target) > 0 && getAimVisibility(target) &&
+        // The render selection already checked live HP and avatar visibility.
+        // Re-reading those transient fields here dropped an otherwise valid
+        // target between selection and publication on a single missed page.
         !isLocalTeamMate(local, target) && Read(local + kKnocked, localKnock) && !localKnock &&
         Read(target + kKnocked, targetKnock) && !targetKnock;
 }
@@ -324,7 +326,10 @@ int SilentAimUpdate(uint64_t base, uint64_t match, uint64_t local, uint64_t targ
         !Read(handler, klass) || !Read(handler + 0x28, info) ||
         (info && (!ClassName(info, "CGKJLKPMGDJ") || !Read(info, infoClass)))) {
         lastFailure = {"đọc súng/handler Silent FFVN", KERN_INVALID_ARGUMENT};
-        Uninstall(); return 9;
+        // A weapon swap or a nonresident page can leave this chain incomplete
+        // for one frame. Disable the target but retain the verified hook; the
+        // next frame can publish without suspending and patching the game again.
+        Clear(); return 9;
     }
     // The handler constructor leaves +0x28 null until the first native shot.
     // Install before it exists; the callback checks its runtime class when the
