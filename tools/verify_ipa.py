@@ -11,6 +11,10 @@ with zipfile.ZipFile(p) as z:
  assert info['CFBundleDisplayName']=='Mizze Kernel'
  assert info['CFBundleIdentifier']=='vn.mizze.kernel.ffvn'
  assert info['UIUserInterfaceStyle']=='Dark'
+ assert info['CFBundleVersion']=='20261123.3'
+ assert info['CFBundleShortVersionString']=='1.4.2'
+ gif_hash=hashlib.sha256(z.read(prefix+'Mizze-Antiban-Eye-Slow.gif')).hexdigest()
+ assert gif_hash=='1d98523ecd1ae8a9b45a7d528361caadd3bf56102e8906593b3f9f76eb381c0c'
  data=z.read(prefix+'Mizze')
  assert b'-----BEGIN PRIVATE KEY-----' not in data
  assert b'-----BEGIN RSA PRIVATE KEY-----' not in data
@@ -26,6 +30,6 @@ with zipfile.ZipFile(p) as z:
    assert ent.get('application-identifier')=='TROLLTROLL.vn.mizze.kernel.ffvn'
    assert ent.get('com.apple.developer.team-identifier')=='TROLLTROLL'
    assert ent.get('keychain-access-groups',[])[0]==ent['application-identifier']
- result={'ipa':p.name,'ipaBytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'binarySha256':hashlib.sha256(data).hexdigest(),'bundle':info['CFBundleIdentifier'],'version':info['CFBundleVersion'],'architectures':arches,'zipCrcValid':True,'entitlementsParsed':True,'privateKeyMarkersAbsent':True,'physicalIphoneTested':False,'gameplayFpsMeasured':False}
+ result={'ipa':p.name,'ipaBytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'binarySha256':hashlib.sha256(data).hexdigest(),'bundle':info['CFBundleIdentifier'],'version':info['CFBundleVersion'],'gifSha256':gif_hash,'architectures':arches,'zipCrcValid':True,'entitlementsParsed':True,'privateKeyMarkersAbsent':True,'physicalIphoneTested':False,'gameplayFpsMeasured':False}
 out.write_text(json.dumps(result,indent=2))
 print(json.dumps(result))

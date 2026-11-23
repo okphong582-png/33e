@@ -3423,18 +3423,14 @@ void ESPSyncFromPrefs(void) {
     // Force-clear legacy ice-wall pref so old installs cannot soft-enable it.
     ESPPrefsSetBool(@"AimBehindIceWall", NO);
     isAimRage = ESPPrefsBool(@"AimRage", NO);
-    // Aimbot + Aim Assist can run together (share target priority / AimPos).
-    // Only Legit is exclusive vs hard LookAt (soft Slerp fights Aimbot).
-    isAimbot    = ESPPrefsBool(@"Aimbot", NO);
-    isAimAssist = ESPPrefsBool(@"AimAssist", NO);
+    // This build exposes Silent Aim only. Old camera-aim preferences must not
+    // leave an invisible head/neck camera override running after an upgrade.
+    isAimbot = false;
+    isAimAssist = false;
+    isAimLegit = false;
     isKillGameAA = ESPPrefsBool(@"KillGameAA", YES);
-    isAimLegit  = ESPPrefsBool(@"AimLegit", NO);
-    if (isAimbot && isAimLegit) {
-        ESPPrefsSetBool(@"AimLegit", NO);
-        isAimLegit = NO;
-    } else if (!isAimbot && isAimAssist && isAimLegit) {
-        ESPPrefsSetBool(@"AimLegit", NO);
-        isAimLegit = NO;
+    for (NSString *removed in @[@"AimMaster", @"Aimbot", @"AimAssist", @"AimLegit", @"FloatAimBtn", @"FloatAimPosBtn"]) {
+        if (ESPPrefsBool(removed, NO)) ESPPrefsSetBool(removed, NO);
     }
     // Aim sphere: FOV / 180 / 360. Only active with Aimbot.
     // Migrate legacy Aim360 bool → mode 2.
@@ -4722,10 +4718,6 @@ static void EspEmitStatusLine(void) {
 
     g_cacheFrameCounter++;          // Tăng frame counter mỗi lần render (dùng cho cache)
 
-    CGMutablePathRef aNumBGPath = CGPathCreateMutable();
-    CGMutablePathRef aNumGPath  = CGPathCreateMutable();
-    CGMutablePathRef aNumOPath  = CGPathCreateMutable();
-    CGMutablePathRef aNumRPath  = CGPathCreateMutable();
 
     if (!buffers || Moudule_Base == 0 || Moudule_Base == (uint64_t)-1) {
         DIAG_EARLY(@"no-base");
@@ -6164,17 +6156,18 @@ static void EspEmitStatusLine(void) {
     // then project + draw ESP + pick aim. One matrix for the whole project pass.
     // -------------------------------------------------------------------------
     if (!GetViewMatrixInto(camera, matrixData)) {
-        // Paths allocated above — free before early out (matrix unavailable this frame).
-        CGPathRelease(aNumBGPath);
-        CGPathRelease(aNumGPath);
-        CGPathRelease(aNumOPath);
-        CGPathRelease(aNumRPath);
+        // The counter paths are allocated only after this final read succeeds.
         if (stats.aimAssistPath) {
             CGPathRelease(stats.aimAssistPath);
             stats.aimAssistPath = NULL;
         }
         return stats;
     }
+    CGMutablePathRef aNumBGPath = CGPathCreateMutable();
+    CGMutablePathRef aNumGPath  = CGPathCreateMutable();
+    CGMutablePathRef aNumOPath  = CGPathCreateMutable();
+    CGMutablePathRef aNumRPath  = CGPathCreateMutable();
+
     // Crowded-match LOD: when many enemies, skip heavy Pro extras for far targets.
     // Keeps Lite/Pro box lock smooth under 30+ players.
     const int crowdN = snapN;

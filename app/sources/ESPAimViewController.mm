@@ -379,58 +379,7 @@ typedef NS_ENUM(NSInteger, ESPSection) {
                 @[ @"s", @"Player Count", @"Count",     @YES ],
             ];
         case ESPSectionAim:
-            // Everything here already exists in esp.mm. None of it is new
-            // behaviour: every row writes a pref that the renderer and the aim
-            // loop already read.
-            //
-            // The FOV ring moved in from the old VIEW section. It belongs with
-            // the aim controls rather than beside the ESP switches — the ring
-            // exists to show the aim's reach. CamPC went with it; the engine
-            // still honours the pref, nothing in the app sets it now.
-            //
-            // Kill Game AA is not an aim mode. It controls the game's own chest
-            // magnet, DisableGameDefaultAimAssist in GameLogic.mm, on its own.
-            // On kills it for the whole match. Off leaves it alone even while
-            // Aimbot or Aim Assist is firing, so the magnet stays live and can
-            // pull against what the custom aim writes. Aimbot and Aim Assist
-            // themselves are not touched either way.
-            return @[
-                @[ @"s", @"FOV Circle",        @"ShowFovCircle", @YES ],
-                @[ @"l", @"FOV Size",          @"FovSize",       @(10.0f), @(190.0f), @(120.0f) ],
-                @[ @"s", @"Enable Aim",        @"AimMaster",     @NO ],
-                @[ @"s", @"Kill Game AA",     @"KillGameAA",   @YES ],
-                @[ @"g", @"Aim Range",         @"AimSphereMode", @(0.0f),
-                   @[ @"FOV", @"180°", @"360°" ] ],
-                @[ @"s", @"Aim Behind Wall",   @"AimBehindWall", @NO ],
-                // Everything on the far side of this already exists in esp.mm:
-                // ESPSyncFromPrefs reads the AimIgnoreKnock pref into
-                // isAimIgnoreKnock, and the aim pick, the low-HP target mode and
-                // AimTargetStillValid all honour it. What was missing is a row, so
-                // nothing ever wrote the pref and the switch was unreachable.
-                //
-                // The switch says what it does: ON ignores knocked pawns, so the aim
-                // passes over a downed enemy and goes to the next one. Default is NO,
-                // which is the pref's own default and leaves a fresh install behaving
-                // as it did before.
-                //
-                // It also releases a lock already held on someone who goes down, not
-                // just the initial pick -- AimTargetStillValid carries the same test,
-                // so a target that drops is released rather than kept.
-                @[ @"s", @"Ignore Knocked",    @"AimIgnoreKnock", @NO ],
-                @[ @"g", @"Aim Mode",          @"AimMode",       @(1.0f),
-                   @[ @"Safe (PC)", @"Normal", @"Rage" ] ],
-                @[ @"g", @"Aim Type",          @"AimTypeMode",   @(0.0f),
-                   @[ @"Aimbot", @"Aim Assist" ] ],
-                @[ @"s", @"Aim Silent",        @"AimSilent",     @NO ],
-                @[ @"g", @"Aim Position",      @"AimPos",        @(0.0f),
-                   @[ @"Head", @"Neck", @"Chest" ] ],
-                @[ @"g", @"Target",            @"AimTargetMode", @(0.0f),
-                   @[ @"Crosshair", @"Low HP", @"Closest" ] ],
-                @[ @"g", @"Trigger",           @"TriggerMode",   @(0.0f),
-                   @[ @"Auto", @"Fire", @"Scope", @"Both" ] ],
-                @[ @"l", @"Aim Distance",      @"AimDistance",   @(1.0f),  @(400.0f), @(200.0f) ],
-                @[ @"l", @"Aim Speed",         @"AimSpeed",      @(1.0f),  @(100.0f),  @(100.0f) ],
-            ];
+            return @[ @[ @"s", @"Silent Aim", @"AimSilent", @NO ] ];
     }
     return @[];
 }

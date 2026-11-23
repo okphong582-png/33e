@@ -14,7 +14,7 @@ extern "C" void ToggleSpeedX50(bool enable);
 static const CGFloat kPanelWidth = 600.0f;
 static const CGFloat kPanelHeight = 340.0f;
 static const CGFloat kHeaderHeight = 56.0f;
-static const CGFloat kSideNavWidth = 118.0f;
+static const CGFloat kSideNavWidth = 126.0f;
 static const CGFloat kFooterHeight = 30.0f;
 static const CGFloat kContentWidth = kPanelWidth - kSideNavWidth;
 static const CGFloat kContentHeight = kPanelHeight - kHeaderHeight - kFooterHeight;
@@ -58,12 +58,12 @@ static inline UIColor *MZBg(void) {
 static inline UIColor *MZPanel(void) {
     return g_mdLight
         ? [UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:0.98f]
-        : [UIColor colorWithRed:0.063f green:0.063f blue:0.075f alpha:0.98f];
+        : [UIColor colorWithWhite:0.035f alpha:0.98f];
 }
 static inline UIColor *MZPanel2(void) {
     return g_mdLight
         ? [UIColor colorWithRed:0.945f green:0.953f blue:0.965f alpha:0.98f]
-        : [UIColor colorWithRed:0.098f green:0.098f blue:0.118f alpha:0.95f];
+        : [UIColor colorWithWhite:0.070f alpha:0.98f];
 }
 static inline UIColor *MZLine(void) {
     return g_mdLight
@@ -535,7 +535,7 @@ typedef NS_ENUM(NSInteger, MenuTab) {
     _containerView.layer.borderColor = MZLine().CGColor;
     _containerView.clipsToBounds = YES;
     
-    _containerView.layer.shouldRasterize = YES;
+    _containerView.layer.shouldRasterize = NO;
     _containerView.layer.rasterizationScale = [UIScreen mainScreen].scale;
     
     [_floatingPanel addSubview:_containerView];
@@ -551,15 +551,13 @@ typedef NS_ENUM(NSInteger, MenuTab) {
     headerSep.tag = 7001;
     [_headerBar addSubview:headerSep];
 
-    UIView *brandMark = [[UIView alloc] initWithFrame:CGRectMake(14, (kHeaderHeight - 34) * 0.5f, 34, 34)];
-    brandMark.backgroundColor = MZAccent();
-    brandMark.layer.cornerRadius = 10.0f;
-    brandMark.tag = 7101;
+    UIImageView *brandMark = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"logo.png"]];
+    brandMark.frame = CGRectMake(14, (kHeaderHeight - 34) * 0.5f, 34, 34);
+    brandMark.contentMode = UIViewContentModeScaleAspectFit;
+    brandMark.backgroundColor = UIColor.blackColor;
+    brandMark.layer.cornerRadius = 10;
+    brandMark.clipsToBounds = YES;
     [_headerBar addSubview:brandMark];
-    UILabel *bolt = MDFALabel(@"bolt", 14, [UIColor colorWithRed:0.02f green:0.07f blue:0.05f alpha:1.0f]);
-    bolt.frame = CGRectMake(0, 0, 34, 34);
-    bolt.tag = 7102;
-    [brandMark addSubview:bolt];
 
     _headerTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(56, 8, kPanelWidth - 150, 22)];
     _headerTitleLabel.text = @(oxorany("MIZZE STUDIO"));
@@ -569,7 +567,7 @@ typedef NS_ENUM(NSInteger, MenuTab) {
     [_headerBar addSubview:_headerTitleLabel];
 
     UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(56, 28, kPanelWidth - 150, 16)];
-    sub.text = @(oxorany("External Interface"));
+    sub.text = @"MIZZE KERNEL / FFVN";
     sub.font = MZFont(10, UIFontWeightMedium);
     sub.textColor = MZMuted();
     sub.tag = 7103;
@@ -675,7 +673,7 @@ typedef NS_ENUM(NSInteger, MenuTab) {
 
     NSArray *tabTitles = @[
         @(oxorany("ESP")),
-        @(oxorany("Aimbot")),
+        @"Silent Aim",
         @(oxorany("Other")),
         @(oxorany("Settings"))
     ];
@@ -1137,224 +1135,8 @@ typedef NS_ENUM(NSInteger, MenuTab) {
         }
 
     } else if (tab == MenuTabAimbot) {
-        addSectionHeader(@(oxorany("Switch")));
-
-        // Master aim enable + exclusive mode dropdown (Aimbot / Assist / Legit).
-        BOOL aimbotOn = ESPPrefsBool(@(oxorany("Aimbot")), NO);
-        BOOL aimAssistOn = ESPPrefsBool(@(oxorany("AimAssist")), NO);
-        BOOL aimLegitOn = ESPPrefsBool(@(oxorany("AimLegit")), NO);
-        // Prefer one active hard mode; Legit wins if somehow multi-on from old prefs.
-        int aimTypeSel = 0; // 0 Aimbot, 1 Assist, 2 Legit
-        if (aimLegitOn && !aimbotOn && !aimAssistOn) aimTypeSel = 2;
-        else if (aimAssistOn && !aimbotOn) aimTypeSel = 1;
-        else aimTypeSel = 0;
-        BOOL aimMasterOn = aimbotOn || aimAssistOn || aimLegitOn;
-        // Keep prefs exclusive when opening tab (old builds could stack).
-        if (aimMasterOn) {
-            if (aimTypeSel == 0) {
-                if (!aimbotOn) ESPPrefsSetBool(@(oxorany("Aimbot")), YES);
-                if (aimAssistOn) ESPPrefsSetBool(@(oxorany("AimAssist")), NO);
-                if (aimLegitOn) ESPPrefsSetBool(@(oxorany("AimLegit")), NO);
-                aimbotOn = YES; aimAssistOn = NO; aimLegitOn = NO;
-            } else if (aimTypeSel == 1) {
-                if (aimbotOn) ESPPrefsSetBool(@(oxorany("Aimbot")), NO);
-                if (!aimAssistOn) ESPPrefsSetBool(@(oxorany("AimAssist")), YES);
-                if (aimLegitOn) ESPPrefsSetBool(@(oxorany("AimLegit")), NO);
-                aimbotOn = NO; aimAssistOn = YES; aimLegitOn = NO;
-            } else {
-                if (aimbotOn) ESPPrefsSetBool(@(oxorany("Aimbot")), NO);
-                if (aimAssistOn) ESPPrefsSetBool(@(oxorany("AimAssist")), NO);
-                if (!aimLegitOn) ESPPrefsSetBool(@(oxorany("AimLegit")), YES);
-                aimbotOn = NO; aimAssistOn = NO; aimLegitOn = YES;
-            }
-        }
-
-        // AimSphereMode: 0=FOV, 1=180, 2=360. Migrate legacy Aim360 bool.
-        int sphereMode = (int)ESPPrefsFloat(@(oxorany("AimSphereMode")), -1.0f);
-        if (sphereMode < 0) {
-            sphereMode = ESPPrefsBool(@(oxorany("Aim360")), NO) ? 2 : 0;
-            ESPPrefsSetFloat(@(oxorany("AimSphereMode")), (float)sphereMode);
-        }
-        if (sphereMode < 0) sphereMode = 0;
-        if (sphereMode > 2) sphereMode = 2;
-        if (!aimbotOn) sphereMode = 0; // sphere modes require Aimbot
-        BOOL hideFovSlider = aimbotOn && sphereMode != 0;
-
-        addSwitchRow([self localized:@(oxorany("Enable Aim")) viText:@(oxorany("Bật Aim"))], @(oxorany("AimMaster")), aimMasterOn);
-        if (aimMasterOn) {
-            NSArray *typeOpts = self.isVietnamese
-                ? @[@(oxorany("Aimbot")), @(oxorany("Assist")), @(oxorany("Legit"))]
-                : @[@(oxorany("Aimbot")), @(oxorany("Assist")), @(oxorany("Legit"))];
-            UIView *typeRow = [self createSegmentRowWithTitle:[self localized:@(oxorany("Aim Type")) viText:@(oxorany("Chế độ Aim"))]
-                                                      options:typeOpts
-                                                selectedIndex:aimTypeSel
-                                                            y:y width:contentWidth key:@(oxorany("AimTypeMode"))];
-            [_contentContainer addSubview:typeRow];
-            y += typeRow.frame.size.height + 8.0f;
-        }
-
-        if (menuStyle == 0) {
-            // Floating on-screen AIM quick toggle (MenuView AIM button)
-            addSwitchRow([self localized:@(oxorany("Show AIM Quick Button")) viText:@(oxorany("Hiện nút tắt/bật Aim nhanh"))], @(oxorany("FloatAimBtn")), YES);
-        }
-
-        // Always show bot toggle so training vs real players is one switch away.
-        addSwitchRow([self localized:@(oxorany("Aim Bot")) viText:@(oxorany("Aim vào Bot"))], @(oxorany("AimOnBot")), YES);
-        if (menuStyle == 0) {
-            addSwitchRow([self localized:@(oxorany("Ignore Knock")) viText:@(oxorany("Bỏ qua Knock"))], @(oxorany("AimIgnoreKnock")), NO);
-        }
-
-        // Silent / magic bullet — independent of camera aim type.
-        addSwitchRow([self localized:@(oxorany("Aim Silent (Magic)")) viText:@(oxorany("Aim Silent (Đạn ma)"))], @(oxorany("AimSilent")), NO);
-
-        if (menuStyle == 0) {
-            // Single wall-through toggle (bom keo / ice wall removed).
-            addSwitchRow([self localized:@(oxorany("Aim Behind Wall")) viText:@(oxorany("Aim sau tường"))],
-                         @(oxorany("AimBehindWall")), NO);
-        }
-
-        addSectionHeader(@(oxorany("Config")));
-
-        // Aim range mode (requires Aimbot): FOV circle / 180 front / 360 full.
-        if (aimbotOn) {
-            NSArray *sphereOpts = self.isVietnamese
-                ? @[@(oxorany("FOV")), @(oxorany("180°")), @(oxorany("360°"))]
-                : @[@(oxorany("FOV")), @(oxorany("180°")), @(oxorany("360°"))];
-            UIView *sphereRow = [self createSegmentRowWithTitle:[self localized:@(oxorany("Aim Range")) viText:@(oxorany("Phạm vi Aim"))]
-                                                        options:sphereOpts
-                                                  selectedIndex:sphereMode
-                                                              y:y width:contentWidth key:@(oxorany("AimSphereMode"))];
-            [_contentContainer addSubview:sphereRow];
-            y += sphereRow.frame.size.height;
-        }
-
-        // Trigger always shown (Lite + Pro). Lite previously hid it → TriggerMode stayed 0 (Auto) → cam locked.
-        {
-            NSArray *triggerOpts = self.isVietnamese
-                ? @[@(oxorany("Tự động")), @(oxorany("Bắn")), @(oxorany("Ngắm")), @(oxorany("Bắn&Ngắm"))]
-                : @[@(oxorany("Auto")), @(oxorany("Fire")), @(oxorany("Scope")), @(oxorany("Both"))];
-            int trigSel = (int)ESPPrefsFloat(@(oxorany("TriggerMode")), (menuStyle == 1) ? 3.0f : 0.0f);
-            if (trigSel < 0) trigSel = 0;
-            if (trigSel > 3) trigSel = 3;
-            UIView *triggerRow = [self createSegmentRowWithTitle:[self localized:@(oxorany("Trigger Mode")) viText:@(oxorany("Kích hoạt"))]
-                                                     options:triggerOpts
-                                               selectedIndex:trigSel
-                                                           y:y width:contentWidth key:@(oxorany("TriggerMode"))];
-            [_contentContainer addSubview:triggerRow];
-            y += triggerRow.frame.size.height;
-        }
-
-        if (menuStyle == 0) {
-            NSArray *aimModeOpts = @[@(oxorany("Safe (PC)")), @(oxorany("Normal")), @(oxorany("Rage"))];
-            UIView *aimModeRow = [self createSegmentRowWithTitle:[self localized:@(oxorany("Aim Mode")) viText:@(oxorany("Chế độ ngắm"))]
-                                                     options:aimModeOpts
-                                               selectedIndex:(int)ESPPrefsFloat(@(oxorany("AimMode")), 1.0f)
-                                                           y:y width:contentWidth key:@(oxorany("AimMode"))];
-            [_contentContainer addSubview:aimModeRow];
-            y += aimModeRow.frame.size.height;
-
-            NSArray *targetOpts = self.isVietnamese ? @[@(oxorany("Gần tâm")), @(oxorany("Thấp HP")), @(oxorany("Gần nhất"))] : @[@(oxorany("Crosshair")), @(oxorany("Low HP")), @(oxorany("Closest"))];
-            UIView *targetRow = [self createSegmentRowWithTitle:[self localized:@(oxorany("Target")) viText:@(oxorany("Ưu tiên Mục tiêu"))]
-                                                     options:targetOpts
-                                               selectedIndex:(int)ESPPrefsFloat(@(oxorany("AimTargetMode")), 0.0f)
-                                                           y:y width:contentWidth key:@(oxorany("AimTargetMode"))];
-            [_contentContainer addSubview:targetRow];
-            y += targetRow.frame.size.height;
-        }
-
-        NSArray *posOpts = (menuStyle == 0) ? @[@(oxorany("Head")), @(oxorany("Neck")), @(oxorany("Chest"))] : @[@(oxorany("Head")), @(oxorany("Neck"))];
-        int currentPos = (int)ESPPrefsFloat(@(oxorany("AimPos")), 0.0f);
-        if (menuStyle == 1 && currentPos > 1) { 
-            currentPos = 1; 
-            ESPPrefsSetFloat(@(oxorany("AimPos")), 1.0f); 
-        }
-        
-        UIView *posRow = [self createSegmentRowWithTitle:[self localized:@(oxorany("Position")) viText:@(oxorany("Vị trí"))]
-                                                 options:posOpts
-                                           selectedIndex:currentPos
-                                                       y:y width:contentWidth key:@(oxorany("AimPos"))];
-        [_contentContainer addSubview:posRow];
-        y += posRow.frame.size.height;
-        if (menuStyle == 0) {
-            addSwitchRow([self localized:@(oxorany("Show Aim Mode Quick Button")) viText:@(oxorany("Hiện nút chế độ Aim nhanh"))], @(oxorany("FloatAimPosBtn")), YES);
-        }
-
-
-        // FOV slider only in FOV mode. 180/360 hide FOV (sphere modes).
-        if (!hideFovSlider) {
-            // Show/hide the on-screen FOV ring (Lite + Pro) when Aim range = FOV.
-            addSwitchRow([self localized:@(oxorany("Show FOV Circle")) viText:@(oxorany("Hiện vòng FOV"))],
-                         @(oxorany("ShowFovCircle")), YES);
-            CGFloat fov = ESPPrefsFloat(@(oxorany("Fov")), 150.0f);
-            UILabel *fovLbl = [[UILabel alloc] initWithFrame:CGRectMake(16, y+5, contentWidth - 32, 20)];
-            fovLbl.text = [NSString stringWithFormat:[self localized:@(oxorany("Aim FOV: %.0f")) viText:@(oxorany("Vòng FOV: %.0f"))], fov];
-            fovLbl.font = MZFont(14, UIFontWeightMedium);
-            fovLbl.textColor = textColor;
-            [_contentContainer addSubview:fovLbl];
-            y += 25;
-            UISlider *fovSlider = [[UISlider alloc] initWithFrame:CGRectMake(16, y, contentWidth - 32, 30)];
-            fovSlider.minimumValue = 10.0f; fovSlider.maximumValue = 500.0f; fovSlider.value = fov;
-            fovSlider.minimumTrackTintColor = MZAccent();
-            objc_setAssociatedObject(fovSlider, kKeyKey, @(oxorany("Fov")), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            objc_setAssociatedObject(fovSlider, kLabelKey, fovLbl, OBJC_ASSOCIATION_ASSIGN);
-            [fovSlider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
-            [_contentContainer addSubview:fovSlider];
-            y += 40;
-        } else {
-            UILabel *fovOffLbl = [[UILabel alloc] initWithFrame:CGRectMake(16, y+5, contentWidth - 32, 20)];
-            NSString *modeName = (sphereMode == 1)
-                ? [self localized:@(oxorany("180° front")) viText:@(oxorany("180° phía trước"))]
-                : [self localized:@(oxorany("360° full")) viText:@(oxorany("360° toàn hướng"))];
-            fovOffLbl.text = [NSString stringWithFormat:[self localized:@(oxorany("Aim FOV: OFF (%@)")) viText:@(oxorany("Vòng FOV: TẮT (%@)"))], modeName];
-            fovOffLbl.font = MZFont(13, UIFontWeightMedium);
-            fovOffLbl.textColor = MZMuted();
-            [_contentContainer addSubview:fovOffLbl];
-            y += 30;
-        }
-
-        if (menuStyle == 0) {
-            CGFloat aimDist = ESPPrefsFloat(@(oxorany("AimDistance")), -1.0f);
-            if (aimDist < 0.0f) {
-                // Migrate legacy float accidentally stored under bool key "Distance"
-                id legacy = AppSettingsObjectForKey(@(oxorany("Distance")));
-                if ([legacy isKindOfClass:[NSNumber class]] && [(NSNumber *)legacy floatValue] > 1.5f) {
-                    aimDist = [(NSNumber *)legacy floatValue];
-                } else {
-                    aimDist = 200.0f;
-                }
-            }
-            UILabel *distLbl = [[UILabel alloc] initWithFrame:CGRectMake(16, y+5, contentWidth - 32, 20)];
-            distLbl.text = [NSString stringWithFormat:[self localized:@(oxorany("Distance: %.0fm")) viText:@(oxorany("Cự ly Aim: %.0fm"))], aimDist];
-            distLbl.font = MZFont(14, UIFontWeightMedium);
-            distLbl.textColor = textColor;
-            [_contentContainer addSubview:distLbl];
-            y += 25;
-            UISlider *distSlider = [[UISlider alloc] initWithFrame:CGRectMake(16, y, contentWidth - 32, 30)];
-            distSlider.minimumValue = 1.0f; distSlider.maximumValue = 400.0f; distSlider.value = aimDist;
-            distSlider.minimumTrackTintColor = MZAccent();
-            objc_setAssociatedObject(distSlider, kKeyKey, @(oxorany("AimDistance")), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            objc_setAssociatedObject(distSlider, kLabelKey, distLbl, OBJC_ASSOCIATION_ASSIGN);
-            [distSlider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
-            [_contentContainer addSubview:distSlider];
-            y += 40;
-
-            CGFloat speedPct = ESPPrefsFloat(@(oxorany("AimSpeed")), 100.0f);
-            UILabel *spdLbl = [[UILabel alloc] initWithFrame:CGRectMake(16, y+5, contentWidth - 32, 20)];
-            spdLbl.text = [NSString stringWithFormat:[self localized:@(oxorany("Aim Speed: %.0f%%")) viText:@(oxorany("Tốc độ kéo: %.0f%%"))], speedPct];
-            spdLbl.font = MZFont(14, UIFontWeightMedium);
-            spdLbl.textColor = textColor;
-            [_contentContainer addSubview:spdLbl];
-            y += 25;
-            UISlider *spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(16, y, contentWidth - 32, 30)];
-            spdSlider.minimumValue = 1.0f; spdSlider.maximumValue = 100.0f; spdSlider.value = speedPct;
-            spdSlider.minimumTrackTintColor = MZAccent();
-            objc_setAssociatedObject(spdSlider, kKeyKey, @(oxorany("AimSpeed")), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            objc_setAssociatedObject(spdSlider, kLabelKey, spdLbl, OBJC_ASSOCIATION_ASSIGN);
-            [spdSlider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
-            [_contentContainer addSubview:spdSlider];
-            y += 40;
-        }
-
+        addSectionHeader(@"SILENT AIM");
+        addSwitchRow(@"Silent Aim", @(oxorany("AimSilent")), NO);
     } else if (tab == MenuTabOther) {
         // Functions only — menu style / language moved to Settings tab
         addSectionHeader(@(oxorany("Streamer Mode")));

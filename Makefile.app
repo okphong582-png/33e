@@ -56,7 +56,7 @@ $(APPLICATION_NAME)_CFLAGS += -DPID_PATH="@\"/var/mobile/Library/Caches/com.gare
 $(APPLICATION_NAME)_CCFLAGS += -std=c++17
 $(APPLICATION_NAME)_OBJCFLAGS += -fobjc-arc
 
-$(APPLICATION_NAME)_FRAMEWORKS += CoreGraphics CoreServices QuartzCore IOKit UIKit CoreText AVFoundation AVKit CoreMedia CFNetwork Security SystemConfiguration MobileCoreServices UniformTypeIdentifiers SafariServices Network
+$(APPLICATION_NAME)_FRAMEWORKS += ImageIO CoreGraphics CoreServices QuartzCore IOKit UIKit CoreText AVFoundation AVKit CoreMedia CFNetwork Security SystemConfiguration MobileCoreServices UniformTypeIdentifiers SafariServices Network
 $(APPLICATION_NAME)_PRIVATE_FRAMEWORKS += BackBoardServices GraphicsServices SpringBoardServices IOSurface
 $(APPLICATION_NAME)_LIBRARIES += z compression
 
