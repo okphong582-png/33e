@@ -27,3 +27,6 @@ assert 'AimSilent' in aim and 'AimPos' in aim and 'ShowFovCircle' in aim and 'Fo
 print('PASS: exact GIF bytes, all counter paths released on every return, weak menu lifetime, Silent-only controls')
 
 assert "CADisplayLink" not in panel and "__weak ModMenuViewController *weakSelf" in panel
+
+hud = (root / "esp/hud/HUDMainApplicationDelegate.mm").read_text(encoding="utf-8")
+assert "ESP_View *espView" not in hud and "kHUDExitThreshold" not in hud

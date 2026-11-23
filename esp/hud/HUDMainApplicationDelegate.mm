@@ -187,15 +187,9 @@ BOOL HUDFloatButtonHandleTouch(CGPoint screenPoint, UITouchPhase phase, NSIntege
 
     HUDLandscapeContainerViewController *container = [[HUDLandscapeContainerViewController alloc] init];
 
-    // Cấu hình ESP View vẽ khung
-    ESP_View *espView = [[ESP_View alloc] initWithFrame:CGRectZero];
-    espView.translatesAutoresizingMaskIntoConstraints = NO;
-    espView.backgroundColor = [UIColor clearColor];
-    espView.userInteractionEnabled = NO; // ESP không nhận touch để tránh chặn game
-    [espView hideViewFromCapture:NO];
-
+    // The app process already runs ESP_View and mirrors its paths to SpringBoard.
+    // A second ESP_View here repeated all game reads and remote publishes.
     UIView *containerView = container.view;
-    [containerView addSubview:espView];
 
     // Cấu hình Menu View
     MenuView *menuView = [[MenuView alloc] initWithFrame:CGRectZero];
@@ -213,10 +207,6 @@ BOOL HUDFloatButtonHandleTouch(CGPoint screenPoint, UITouchPhase phase, NSIntege
 
     // Auto Layout căn đều toàn màn hình cho cả ESP và Menu
     [NSLayoutConstraint activateConstraints:@[
-        [espView.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor],
-        [espView.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor],
-        [espView.topAnchor constraintEqualToAnchor:containerView.topAnchor],
-        [espView.bottomAnchor constraintEqualToAnchor:containerView.bottomAnchor],
         [menuView.leadingAnchor constraintEqualToAnchor:containerView.leadingAnchor],
         [menuView.trailingAnchor constraintEqualToAnchor:containerView.trailingAnchor],
         [menuView.topAnchor constraintEqualToAnchor:containerView.topAnchor],
@@ -281,7 +271,6 @@ BOOL HUDFloatButtonHandleTouch(CGPoint screenPoint, UITouchPhase phase, NSIntege
     [containerView setNeedsLayout];
     [containerView layoutIfNeeded];
 
-    espView.frame = containerView.bounds;
     menuView.frame = containerView.bounds;
 
     // Đăng ký Context ID đè hệ thống (SBSAccessibility)
@@ -399,44 +388,8 @@ BOOL HUDFloatButtonHandleTouch(CGPoint screenPoint, UITouchPhase phase, NSIntege
         });
     });
 
-    _gameCheckTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
-    if (_gameCheckTimer) {
-        // Wait 10s before first game check (gives user time to switch to FF).
-        // Then poll every 2s. Require 15 consecutive misses (~30s) to exit —
-        // the user may be in lobby or between matches.
-        dispatch_source_set_timer(_gameCheckTimer,
-                                  dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10.0 * NSEC_PER_SEC)),
-                                  (uint64_t)(2.0 * NSEC_PER_SEC),
-                                  (uint64_t)(0.5 * NSEC_PER_SEC));
-        const int kHUDExitThreshold = 15;
-        __weak __typeof__(self) wself = self;
-        dispatch_source_set_event_handler(_gameCheckTimer, ^{
-            __strong __typeof__(wself) sself = wself;
-            if (!sself) return;
-            if (!GameTargetIsRunning()) {
-                sself->_gameMissingStreak++;
-                if (sself->_gameMissingStreak < kHUDExitThreshold) return;
-
-                // Game gone for too long — exit HUD.
-                if (sself.window) {
-                    sself.window.hidden = YES;
-                    sself.window.alpha = 0.0f;
-                }
-                if (sself->_menuView) {
-                    sself->_menuView.hidden = YES;
-                    [sself->_menuView hideMenu];
-                }
-                if (sself->_gameCheckTimer) {
-                    dispatch_source_cancel(sself->_gameCheckTimer);
-                    sself->_gameCheckTimer = nil;
-                }
-                RequestExitHUD();
-            } else {
-                sself->_gameMissingStreak = 0;
-            }
-        });
-        dispatch_resume(_gameCheckTimer);
-    }
+    // The menu process must survive a slow game launch or a match transition.
+    // The main app owns the session lifetime and stops us with NOTIFY_DESTROY_HUD.
 
     return YES;
 }
