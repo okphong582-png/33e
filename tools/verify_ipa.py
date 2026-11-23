@@ -23,7 +23,9 @@ with zipfile.ZipFile(p) as z:
    thin=Path(t)/('Mizze-'+architecture)
    subprocess.run(['lipo',str(binary),'-thin',architecture,'-output',str(thin)],check=True)
    ent=plistlib.loads(subprocess.check_output(['ldid','-e',str(thin)]))
-   assert 'com.dts.bugchi' in ent.get('keychain-access-groups',[])
+   assert ent.get('application-identifier')=='TROLLTROLL.vn.mizze.kernel.ffvn'
+   assert ent.get('com.apple.developer.team-identifier')=='TROLLTROLL'
+   assert ent.get('keychain-access-groups',[])[0]==ent['application-identifier']
  result={'ipa':p.name,'ipaBytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'binarySha256':hashlib.sha256(data).hexdigest(),'bundle':info['CFBundleIdentifier'],'version':info['CFBundleVersion'],'architectures':arches,'zipCrcValid':True,'entitlementsParsed':True,'privateKeyMarkersAbsent':True,'physicalIphoneTested':False,'gameplayFpsMeasured':False}
 out.write_text(json.dumps(result,indent=2))
 print(json.dumps(result))

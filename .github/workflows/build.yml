@@ -22,8 +22,10 @@ jobs:
           validation/profile-tests | tee validation/profile-tests.txt
           clang++ -std=c++17 -fobjc-arc tests/TextOutlineTests.mm esp/esp/MizzeTextOutline.mm -framework Foundation -framework CoreGraphics -framework CoreText -framework QuartzCore -o validation/text-tests
           validation/text-tests | tee validation/text-tests.txt
-          clang++ -std=c++17 -fobjc-arc -I. -Iapp/sources tests/LicenseTests.mm -framework Foundation -framework Security -framework Network -framework QuartzCore -o validation/license-tests
+          clang++ -std=c++17 -fobjc-arc -I. -Iapp/sources tests/LicenseTests.mm app/sources/MizzeKeychain.mm -framework Foundation -framework Security -framework Network -framework QuartzCore -o validation/license-tests
           validation/license-tests tests/license-fixtures.json | tee validation/license-tests.txt
+          clang++ -std=c++17 -fobjc-arc tests/KeychainTests.mm -framework Foundation -framework Security -o validation/keychain-tests
+          validation/keychain-tests | tee validation/keychain-tests.txt
       - name: Install Theos
         uses: actions/checkout@v4
         with:

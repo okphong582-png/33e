@@ -209,7 +209,12 @@
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
+		<string>TROLLTROLL.vn.mizze.kernel.ffvn</string>
 		<string>com.dts.bugchi</string>
 	</array>
+	<key>application-identifier</key>
+	<string>TROLLTROLL.vn.mizze.kernel.ffvn</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>TROLLTROLL</string>
 </dict>
 </plist>

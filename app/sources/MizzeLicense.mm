@@ -1,5 +1,6 @@
 #include "mahoa.h"
 #import "MizzeLicense.h"
+#import "MizzeKeychain.h"
 #import "MizzeLicenseConfig.h"
 #import "MizzeFirebaseDirectConfig.h"
 #include "MizzeDirectLeasePolicy.h"
@@ -27,9 +28,10 @@ static BOOL IsBoolean(id v,BOOL expected){return v&&CFGetTypeID((__bridge CFType
 static NSString *HashData(NSData *data){unsigned char h[32];CC_SHA256(data.bytes,(CC_LONG)data.length,h);NSMutableString *s=[NSMutableString string];for(auto b:h)[s appendFormat:NSSENCRYPT("%02x"),b];return s;}
 static NSString *Hash(NSString *s){return HashData([s dataUsingEncoding:NSUTF8StringEncoding]);}
 static NSString *Random(){unsigned char b[32];if(SecRandomCopyBytes(kSecRandomDefault,sizeof(b),b))return nil;return HashData([NSData dataWithBytes:b length:sizeof(b)]);}
-static NSMutableDictionary *Query(NSString *a){return [@{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,(__bridge id)kSecAttrService:service,(__bridge id)kSecAttrAccount:a,(__bridge id)kSecAttrAccessGroup:NSSENCRYPT("com.dts.bugchi"),(__bridge id)kSecAttrSynchronizable:@NO}mutableCopy];}
-static NSString *Load(NSString *a){NSMutableDictionary *q=Query(a);q[(__bridge id)kSecReturnData]=@YES;CFTypeRef result=NULL;if(SecItemCopyMatching((__bridge CFDictionaryRef)q,&result)!=errSecSuccess)return @"";return [[NSString alloc]initWithData:CFBridgingRelease(result) encoding:NSUTF8StringEncoding]?:@"";}
-static BOOL Store(NSString *a,NSString *value){NSMutableDictionary *q=Query(a);SecItemDelete((__bridge CFDictionaryRef)q);q[(__bridge id)kSecValueData]=[value dataUsingEncoding:NSUTF8StringEncoding];q[(__bridge id)kSecAttrAccessible]=(__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly;return SecItemAdd((__bridge CFDictionaryRef)q,NULL)==errSecSuccess;}
+static OSStatus lastKeychainStatus = errSecSuccess;
+static NSString *startupKey;
+static NSString *Load(NSString *a){NSData *data=MizzeKeychainRead(service,a,&lastKeychainStatus);return data?[[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding]:@"";}
+static BOOL Store(NSString *a,NSString *value){return MizzeKeychainWrite(service,a,[value dataUsingEncoding:NSUTF8StringEncoding],&lastKeychainStatus);}
 static void Notify(){[[NSNotificationCenter defaultCenter]postNotificationName:@"MizzeLicenseStateChanged" object:nil];}
 static void Deny(NSString *text){deadline.store(0);message=text?:@"Không xác minh được phiên.";Notify();}
 BOOL MizzeLicenseAuthorized(){return online.load()&&deadline.load()>MizzeLeaseNow();}
@@ -71,8 +73,9 @@ static void EnsureIdentity(unsigned long g,void(^done)(BOOL,NSString *)){
  Request([NSURL URLWithString:address],NSSENCRYPT("POST"),body,g,^(NSDictionary *r,double now,NSString *error){
   NSString *token=r[renew?NSSENCRYPT("id_token"):NSSENCRYPT("idToken")],*refresh=r[renew?NSSENCRYPT("refresh_token"):NSSENCRYPT("refreshToken")],*identity=r[renew?NSSENCRYPT("user_id"):NSSENCRYPT("localId")];id life=r[renew?NSSENCRYPT("expires_in"):NSSENCRYPT("expiresIn")];
   double seconds=(Text(life)||Number(life))?[life doubleValue]:0;
-  if(!r||!Text(refresh)||refresh.length<16||!Identity(token,identity)||seconds<60||seconds>7200||(uid.length&&![uid isEqual:identity])){idToken=nil;tokenUntil=0;done(NO,error?:NSSENCRYPT("Phiên thiết bị không hợp lệ. Xác minh lại."));return;}
-  if(!isHUD&&(!Store(NSSENCRYPT("uid"),identity)||!Store(NSSENCRYPT("refresh"),refresh))){done(NO,NSSENCRYPT("Không lưu được phiên an toàn."));return;}
+  if(!r||!Text(refresh)||refresh.length<16||!Identity(token,identity)||seconds<60||seconds>7200){idToken=nil;tokenUntil=0;done(NO,error?:NSSENCRYPT("Phiên thiết bị không hợp lệ. Xác minh lại."));return;}
+  if(!isHUD&&!MizzeKeychainWriteIdentity(service,identity,refresh,&lastKeychainStatus)){done(NO,[NSString stringWithFormat:@"Chưa lưu được phiên trên máy (KC %d).",(int)lastKeychainStatus]);return;}
+  MizzeKeychainDelete(service,@"uid",NULL);MizzeKeychainDelete(service,@"refresh",NULL);
   idToken=token;refreshToken=refresh;uid=identity;tokenUntil=MizzeLeaseNow()+MIN(3600.0,seconds)-30;done(YES,nil);
  });
 }
@@ -131,26 +134,30 @@ static void Refresh(void(^completion)(BOOL,NSString *)){
 }
 void MizzeLicenseCheck(NSString *key,void(^completion)(BOOL,NSString *)){
  if(isHUD){Refresh(completion);return;}
- if(busy){NSString *candidate=[key stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];if(keyHash.length&&[Hash(candidate)isEqual:keyHash]&&!pending){pending=^(BOOL ok,NSString *text){if(ok&&!Store(NSSENCRYPT("key"),candidate)){Deny(NSSENCRYPT("Không lưu được key an toàn."));ok=NO;}if(completion)completion(ok,message);};return;}if(completion)completion(NO,NSSENCRYPT("Đang xác minh…"));return;}
+ if(busy){NSString *candidate=[key stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];if(keyHash.length&&[Hash(candidate)isEqual:keyHash]&&!pending){pending=^(BOOL ok,NSString *text){if(ok)Store(NSSENCRYPT("key"),candidate);if(completion)completion(ok,message);};return;}if(completion)completion(NO,NSSENCRYPT("Đang xác minh…"));return;}
  NSString *clean=[key stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];if(clean.length<8||clean.length>256){++generation;[task cancel];busy=NO;pending=nil;keyHash=sessionID=nil;Deny(NSSENCRYPT("Nhập key hợp lệ."));if(completion)completion(NO,message);return;}
  NSString *hash=Hash(clean);if(![keyHash isEqual:hash]){++generation;Deny(NSSENCRYPT("Đang xác minh…"));keyHash=hash;sessionID=Random();}
  if(!sessionID.length){Deny(NSSENCRYPT("Không tạo được phiên."));if(completion)completion(NO,message);return;}
- Refresh(^(BOOL ok,NSString *text){if(ok&&!Store(NSSENCRYPT("key"),clean)){Deny(NSSENCRYPT("Không lưu được key an toàn."));ok=NO;}if(completion)completion(ok,message);});
+ Refresh(^(BOOL ok,NSString *text){if(ok)Store(NSSENCRYPT("key"),clean);if(completion)completion(ok,message);});
 }
 void MizzeLicenseForget(){
  ++generation;[task cancel];task=nil;busy=NO;pending=nil;
  if(online.load()&&uid.length&&idToken.length){Request(DatabaseURL([@"tipaDirectV6/revocations/" stringByAppendingString:uid],YES),@"PUT",@{@"revokedAt":@{@".sv":@"timestamp"}},generation,^(NSDictionary *r,double time,NSString *error){});}
- for(NSString *account in @[@"key",@"uid",@"refresh"])SecItemDelete((__bridge CFDictionaryRef)Query(account));
+ for(NSString *account in @[@"key",@"device-session.v1",@"uid",@"refresh"])MizzeKeychainDelete(service,account,NULL);
+ startupKey=nil;
  keyHash=uid=refreshToken=idToken=sessionID=nil;tokenUntil=0;
  Deny(@"Nhập key để tiếp tục.");
 }
 void MizzeLicenseBegin(){
  if(!NSThread.isMainThread){dispatch_async(dispatch_get_main_queue(),^{MizzeLicenseBegin();});return;}
  static dispatch_once_t once;dispatch_once(&once,^{
-  uid=Load(@"uid");refreshToken=Load(@"refresh");
-  if((uid.length==0)!=(refreshToken.length==0)){
-   uid=refreshToken=nil;SecItemDelete((__bridge CFDictionaryRef)Query(@"uid"));SecItemDelete((__bridge CFDictionaryRef)Query(@"refresh"));
+  NSDictionary *identity=MizzeKeychainReadIdentity(service,&lastKeychainStatus);
+  uid=identity[@"uid"];refreshToken=identity[@"refresh"];
+  if(!identity&&lastKeychainStatus==errSecItemNotFound){
+   NSString *recover=Load(@"refresh");
+   if(recover.length>=16&&recover.length<=4096)refreshToken=recover;
   }
+  startupKey=Load(@"key");
   static nw_path_monitor_t monitor=nw_path_monitor_create();
   nw_path_monitor_set_queue(monitor,dispatch_get_main_queue());
   nw_path_monitor_set_update_handler(monitor,^(nw_path_t path){
@@ -159,6 +166,7 @@ void MizzeLicenseBegin(){
     ++generation;[task cancel];task=nil;busy=NO;Deny(@"Mất kết nối mạng.");
     void(^done)(BOOL,NSString *)=pending;pending=nil;if(done)done(NO,message);
    }else if(keyHash.length&&sessionID.length&&!busy)Refresh(nil);
+   else if(startupKey.length&&!busy){NSString *resume=startupKey;startupKey=nil;MizzeLicenseCheck(resume,nil);}
   });nw_path_monitor_start(monitor);
   static dispatch_source_t renew,expiry;
   renew=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,dispatch_get_main_queue());
