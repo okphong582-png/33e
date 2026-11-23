@@ -369,7 +369,7 @@ typedef NS_ENUM(NSInteger, MenuTab) {
 // =======================================================
 
 @interface ModMenuViewController () <UIGestureRecognizerDelegate>
-@property (nonatomic, strong) CADisplayLink *displayLink; 
+@property (nonatomic, strong) NSTimer *visibilityTimer;
 @property (nonatomic, assign) MenuTab currentTab;
 
 @property (nonatomic, strong) HTHMenuSecureWrapper *secureTextField;
@@ -451,13 +451,15 @@ typedef NS_ENUM(NSInteger, MenuTab) {
     tap.delegate = self;
     [self.view addGestureRecognizer:tap];
 
-    self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(updateVisibility)];
-    [self.displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+    __weak ModMenuViewController *weakSelf = self;
+    self.visibilityTimer = [NSTimer timerWithTimeInterval:0.2 repeats:YES block:^(NSTimer *timer) {
+        [weakSelf updateVisibility];
+    }];
+    [NSRunLoop.mainRunLoop addTimer:self.visibilityTimer forMode:NSRunLoopCommonModes];
 }
 
 - (void)dealloc {
-    [self.displayLink invalidate];
-    self.displayLink = nil;
+    [_visibilityTimer invalidate];
 }
 
 - (void)handleOutsideTap:(UITapGestureRecognizer *)tap { }
