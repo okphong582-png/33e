@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Host regression tests
         run: |
+          set -euo pipefail
           mkdir -p validation
           clang++ -std=c++17 tests/ProfileAndPacerTests.cpp -o validation/profile-tests
           validation/profile-tests | tee validation/profile-tests.txt

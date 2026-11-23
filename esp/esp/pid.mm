@@ -1,3 +1,5 @@
+#include <vector>
+#include <algorithm>
 #import <Foundation/Foundation.h>
 #import <mach/mach.h>
 #import <mach/task_info.h>
@@ -159,20 +161,17 @@ mach_port_t get_task_for_PID(pid_t pid)
 
 pid_t get_pid_by_name(const char *keyword)
 {
+    if (!keyword || !keyword[0]) return -1;
     int count = proc_listallpids(NULL, 0);
-    pid_t pids[count];
-    proc_listallpids(pids, sizeof(pids));
-
-    for (int i = 0; i < count; i++)
-    {
-        char name[1000];
-        proc_name(pids[i], name, sizeof(name));
-        if (strstr(name, keyword) != NULL)
-        {
-            return pids[i];
-        }
+    if (count <= 0 || count > 1048576) return -1;
+    std::vector<pid_t> pids((size_t)count);
+    int written = proc_listallpids(pids.data(), (int)(pids.size() * sizeof(pid_t)));
+    written = std::min(written, count);
+    for (int i = 0; i < written; i++) {
+        char name[1000] = {};
+        if (proc_name(pids[(size_t)i], name, sizeof(name)) > 0 && strstr(name, keyword))
+            return pids[(size_t)i];
     }
-
     return -1;
 }
 
