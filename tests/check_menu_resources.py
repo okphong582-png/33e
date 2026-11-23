@@ -23,7 +23,7 @@ assert '__weak MenuView *weakSelf' in menu
 assert 'FloatAimBtn' not in menu and 'AimPos' not in menu
 panel = (root / 'app/sources/ModMenuViewController.mm').read_text(encoding='utf-8')
 aim = panel.split('} else if (tab == MenuTabAimbot) {', 1)[1].split('} else if (tab == MenuTabOther) {', 1)[0]
-assert 'AimSilent' in aim and 'AimPos' not in aim and 'AimMaster' not in aim
+assert 'AimSilent' in aim and 'AimPos' in aim and 'ShowFovCircle' in aim and 'FovSize' in aim and 'AimMaster' not in aim
 print('PASS: exact GIF bytes, all counter paths released on every return, weak menu lifetime, Silent-only controls')
 
 assert "CADisplayLink" not in panel and "__weak ModMenuViewController *weakSelf" in panel

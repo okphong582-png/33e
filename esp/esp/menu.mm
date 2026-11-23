@@ -105,7 +105,7 @@ static const CGFloat kMenuButtonSize = 56.0;
         self.secureCanvas.userInteractionEnabled = NO;
         [self.secureCanvas addSubview:self.menuButton];
     }
-    self.menuButton.hidden = self.presentedModMenu != nil || ESPPrefsBool(@"HideMenu1", NO);
+    self.menuButton.hidden = self.presentedModMenu != nil;
     self.menuIcon.playing = self.window && !self.menuButton.hidden && !self.buttonDragging;
 }
 - (void)reloadFloatingAuxButtonsFromPrefs { [self updateVisibility]; }

@@ -337,6 +337,9 @@ static NSString *const kMZGameSessionKey = @"App_LocalHUDState";
     [MZLog appendLine:@"RUN Starting a new session…"];
 
     if (!ESPPrefsBool(@"AutoVarCleanBeforeHUD", NO)) {
+        // A saved hide flag from old builds must not suppress the only menu entry.
+        ESPPrefsSetBool(@"HideMenu1", NO);
+        ESPPrefsSync();
         [self markSessionRunning:YES];
         SetHUDEnabled(YES);
         kernelBootStart();
@@ -355,6 +358,8 @@ static NSString *const kMZGameSessionKey = @"App_LocalHUDState";
                     return;
                 }
                 [MZLog appendLine:@"OK VarClean done."];
+                ESPPrefsSetBool(@"HideMenu1", NO);
+                ESPPrefsSync();
                 [self markSessionRunning:YES];
                 SetHUDEnabled(YES);
                 kernelBootStart();

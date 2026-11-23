@@ -4338,7 +4338,7 @@ static inline uint64_t ESPPhaseNowUS(void) {
         // circle for a mode that does not use one. The app's ESP/AIM screen
         // already turns the ring off when Aim Type is switched to Assist, so this
         // is the same rule enforced on the engine side where it cannot be skipped.
-        const BOOL fovBoundsAim = isShowFovCircle && isAimbot && aimSphereMode == 0;
+        const BOOL fovBoundsAim = isShowFovCircle && (isAimSilent || (isAimbot && aimSphereMode == 0));
         BOOL hasFov = RenderFOVCirclePath(fovPath, viewWidth, viewHeight,
                                           fovBoundsAim, fovSize);
         self.fovLayer.path = hasFov ? fovPath : nil;
@@ -5239,19 +5239,16 @@ static void EspEmitStatusLine(void) {
     const bool useAssist = isAimAssist;
     const bool useAssistOnly = isAimAssist && !isAimbot; // assist magnet radius only when solo
     // Silent/360 only with wall-through ON.
-    bool useSilent = isAimSilent && AimThroughAnyCoverNow();
-    if (isAimSilent && !AimThroughAnyCoverNow()) {
-        SilentAimClearTarget();
-    }
+    bool useSilent = isAimSilent;
     bool useAim = (isAimbot || useAssist || useSilent);
     const bool useAim180 = isAimbot && aimSphereMode == 1;
     // 360 only with wall-through ON.
     const bool useAim360 = isAimbot && aimSphereMode == 2 && AimThroughAnyCoverNow();
     const bool useSphereAim = useAim180 || useAim360;
-    const bool silentSphereOnly = useSilent && !isAimbot && !useAssist;
+    const bool silentSphereOnly = useSilent && !isAimbot && !useAssist && !isShowFovCircle;
 
     // FOV gate when Aimbot FOV mode; Assist-only uses assist radius; stacked → FOV.
-    const float aimFovSq = (isAimbot && !useSphereAim) ? (aimFov * aimFov) : 0.0f;
+    const float aimFovSq = ((isAimbot && !useSphereAim) || (useSilent && isShowFovCircle)) ? (aimFov * aimFov) : 0.0f;
     const float assistRadius = fminf(fmaxf(viewHeight * 0.12f, 48.f), 140.f);
     const float assistRadiusSq = assistRadius * assistRadius;
     const float safeAimDistance = fmaxf(aimDistance, 1.0f);
@@ -6726,7 +6723,7 @@ static void EspEmitStatusLine(void) {
                 w2sAim.x >= -pad && w2sAim.x <= viewWidth + pad &&
                 w2sAim.y >= -pad && w2sAim.y <= viewHeight + pad;
 
-            if (!allowThroughWall || (!useSphereAim && !silentSphereOnly)) {
+            if (!allowThroughWall || (useSilent && isShowFovCircle) || (!useSphereAim && !silentSphereOnly)) {
                 if (!inFront) {
                     canConsiderForAim = NO;
                 } else if (!onScreen) {
@@ -6774,9 +6771,11 @@ static void EspEmitStatusLine(void) {
                     float fovSq = aimFovSq > 1.f ? aimFovSq : (150.f * 150.f);
                     inRange = inFront && (distSq <= fovSq);
                 } else if (useAssistOnly || useSilent || silentSphereOnly) {
-                    float rSq = fmaxf(assistRadiusSq, aimFovSq > 1.f ? aimFovSq : (150.f * 150.f));
+                    float rSq = (useSilent && isShowFovCircle) ? aimFovSq : fmaxf(assistRadiusSq, aimFovSq > 1.f ? aimFovSq : (150.f * 150.f));
                     inRange = inFront && (distSq <= rSq);
                 }
+            } else if (useSilent && isShowFovCircle) {
+                inRange = inFront && distSq <= aimFovSq;
             } else if (useSilent || (isAimbot && useAim360) || silentSphereOnly) {
                 inRange = true;
             } else if (isAimbot && useAim180) {
@@ -6791,7 +6790,7 @@ static void EspEmitStatusLine(void) {
 
             float distanceNorm = dis / safeAimDistance;
             float score = 0.0f;
-            const bool scoreAsSphere = allowThroughWall && (useSphereAim || useSilent || silentSphereOnly);
+            const bool scoreAsSphere = allowThroughWall && (useSphereAim || silentSphereOnly);
             if (scoreAsSphere) {
                 if (aimTargetMode == 1) {
                     float hpNorm = fminf((float)CurHP / 200.0f, 1.5f);
@@ -7051,8 +7050,10 @@ static void EspEmitStatusLine(void) {
                             else if (isAimbot) {
                                 inR = inF && (dsq <= keepFovSq);
                             } else {
-                                inR = inF && (dsq <= assistRadiusSq * 1.5f);
+                                inR = inF && (dsq <= ((useSilent && isShowFovCircle) ? keepFovSq : assistRadiusSq * 1.5f));
                             }
+                        } else if (useSilent && isShowFovCircle) {
+                            inR = inF && dsq <= keepFovSq;
                         } else if (useSilent || (isAimbot && useAim360) || silentSphereOnly) {
                             inR = true;
                         } else if (isAimbot && useAim180) {

@@ -1139,6 +1139,30 @@ typedef NS_ENUM(NSInteger, MenuTab) {
     } else if (tab == MenuTabAimbot) {
         addSectionHeader(@"SILENT AIM");
         addSwitchRow(@"Silent Aim", @(oxorany("AimSilent")), NO);
+        addSwitchRow([self localized:@"FOV Circle" viText:@"Vòng FOV"], @(oxorany("ShowFovCircle")), YES);
+        CGFloat fov = ESPPrefsFloat(@(oxorany("FovSize")), 120.0f);
+        UILabel *fovLabel = [[UILabel alloc] initWithFrame:CGRectMake(16, y + 4, contentWidth - 32, 20)];
+        fovLabel.text = [NSString stringWithFormat:@"FOV: %.0f", fov];
+        fovLabel.font = MZFont(13, UIFontWeightMedium);
+        fovLabel.textColor = textColor;
+        [_contentContainer addSubview:fovLabel];
+        y += 25;
+        UISlider *fovSlider = [[UISlider alloc] initWithFrame:CGRectMake(16, y, contentWidth - 32, 30)];
+        fovSlider.minimumValue = 10; fovSlider.maximumValue = 190; fovSlider.value = fov;
+        fovSlider.minimumTrackTintColor = MZAccent();
+        objc_setAssociatedObject(fovSlider, kKeyKey, @(oxorany("FovSize")), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(fovSlider, kLabelKey, fovLabel, OBJC_ASSOCIATION_ASSIGN);
+        [fovSlider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
+        [_contentContainer addSubview:fovSlider];
+        y += 40;
+        NSArray *positions = @[@"Head", @"Neck", @"Body"];
+        UIView *posRow = [self createSegmentRowWithTitle:[self localized:@"Target position" viText:@"Vị trí ngắm"]
+                                                  options:positions
+                                            selectedIndex:(int)ESPPrefsFloat(@(oxorany("AimPos")), 0)
+                                                        y:y width:contentWidth key:@(oxorany("AimPos"))];
+        [_contentContainer addSubview:posRow];
+        y += posRow.frame.size.height + 8;
+        addSwitchRow([self localized:@"Behind wall" viText:@"Qua tường"], @(oxorany("AimBehindWall")), NO);
     } else if (tab == MenuTabOther) {
         // Functions only — menu style / language moved to Settings tab
         addSectionHeader(@(oxorany("Streamer Mode")));

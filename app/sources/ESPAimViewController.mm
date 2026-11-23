@@ -379,7 +379,11 @@ typedef NS_ENUM(NSInteger, ESPSection) {
                 @[ @"s", @"Player Count", @"Count",     @YES ],
             ];
         case ESPSectionAim:
-            return @[ @[ @"s", @"Silent Aim", @"AimSilent", @NO ] ];
+            return @[ @[ @"s", @"Silent Aim", @"AimSilent", @NO ],
+                      @[ @"s", @"FOV Circle", @"ShowFovCircle", @YES ],
+                      @[ @"l", @"FOV Size", @"FovSize", @(10.0f), @(190.0f), @(120.0f) ],
+                      @[ @"g", @"Aim Position", @"AimPos", @(0.0f), @[ @"Head", @"Neck", @"Body" ] ],
+                      @[ @"s", @"Behind Wall", @"AimBehindWall", @NO ] ];
     }
     return @[];
 }
