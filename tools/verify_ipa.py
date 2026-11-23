@@ -19,8 +19,11 @@ with zipfile.ZipFile(p) as z:
   binary=Path(t)/'Mizze';binary.write_bytes(data)
   arches=subprocess.check_output(['lipo','-archs',str(binary)],text=True).strip()
   assert 'arm64' in arches
-  ent=plistlib.loads(subprocess.check_output(['ldid','-e',str(binary)]))
-  assert 'com.dts.bugchi' in ent.get('keychain-access-groups',[])
+  for architecture in arches.split():
+   thin=Path(t)/('Mizze-'+architecture)
+   subprocess.run(['lipo',str(binary),'-thin',architecture,'-output',str(thin)],check=True)
+   ent=plistlib.loads(subprocess.check_output(['ldid','-e',str(thin)]))
+   assert 'com.dts.bugchi' in ent.get('keychain-access-groups',[])
  result={'ipa':p.name,'ipaBytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'binarySha256':hashlib.sha256(data).hexdigest(),'bundle':info['CFBundleIdentifier'],'version':info['CFBundleVersion'],'architectures':arches,'zipCrcValid':True,'entitlementsParsed':True,'privateKeyMarkersAbsent':True,'physicalIphoneTested':False,'gameplayFpsMeasured':False}
 out.write_text(json.dumps(result,indent=2))
 print(json.dumps(result))
