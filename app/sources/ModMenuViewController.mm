@@ -930,7 +930,7 @@ typedef NS_ENUM(NSInteger, MenuTab) {
 
             addSectionHeader(@(oxorany("Modes & Setting")));
 
-            CGFloat espDist = ESPPrefsFloat(@(oxorany("EspDistanceLimit")), 150.0f);
+            CGFloat espDist = MIN(110.0f, MAX(10.0f, ESPPrefsFloat(@(oxorany("EspDistanceLimit")), 110.0f)));
             UILabel *espDistLbl = [[UILabel alloc] initWithFrame:CGRectMake(16, y+5, contentWidth - 32, 20)];
             espDistLbl.text = [NSString stringWithFormat:[self localized:@(oxorany("ESP Distance: %.0fm")) viText:@(oxorany("Tầm xa ESP: %.0fm"))], espDist];
             espDistLbl.font = MZFont(14, UIFontWeightMedium);
@@ -938,7 +938,7 @@ typedef NS_ENUM(NSInteger, MenuTab) {
             [_contentContainer addSubview:espDistLbl];
             y += 25;
             UISlider *espDistSlider = [[UISlider alloc] initWithFrame:CGRectMake(16, y, contentWidth - 32, 30)];
-            espDistSlider.minimumValue = 10.0f; espDistSlider.maximumValue = 500.0f; espDistSlider.value = espDist;
+            espDistSlider.minimumValue = 10.0f; espDistSlider.maximumValue = 110.0f; espDistSlider.value = espDist;
             espDistSlider.minimumTrackTintColor = MZAccent();
             objc_setAssociatedObject(espDistSlider, kKeyKey, @(oxorany("EspDistanceLimit")), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             objc_setAssociatedObject(espDistSlider, kLabelKey, espDistLbl, OBJC_ASSOCIATION_ASSIGN);

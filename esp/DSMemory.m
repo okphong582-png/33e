@@ -1445,6 +1445,11 @@ static bool ds_rw_remap(uint64_t va, void *buf, size_t len, bool isWrite) {
     // pages through that function -- so it inherits the gate where it belongs,
     // together with the hit-first ordering.
 
+    // Keep mapped pages pinned until the copy finishes. ds_page_local locks
+    // only while locating a page; without this outer recursive lock another
+    // thread can evict/unmap localAddr between its return and memcpy below.
+    ds_lock();
+    if (!K(g_ff_map)) { ds_unlock(); return false; }
     uint8_t *p = (uint8_t *)buf;
     uint64_t cur = va;
     size_t remain = len;
@@ -1456,7 +1461,7 @@ static bool ds_rw_remap(uint64_t va, void *buf, size_t len, bool isWrite) {
         if (chunk > remain) chunk = remain;
 
         uint64_t localAddr = ds_page_local(page_va);
-        if (!localAddr) return false;
+        if (!localAddr) { ds_unlock(); return false; }
 
         void *local = (void *)(uintptr_t)(localAddr + page_off);
         if (isWrite) memcpy(local, p, chunk);
@@ -1464,6 +1469,7 @@ static bool ds_rw_remap(uint64_t va, void *buf, size_t len, bool isWrite) {
 
         p += chunk; cur += chunk; remain -= chunk;
     }
+    ds_unlock();
     return true;
 }
 

@@ -847,7 +847,10 @@ static inline Vector3 AimCameraOrigin(uint64_t localPawn, const Vector3 &fallbac
 // - NO camera LookAt (silent stays 360)
 // =============================================================================
 static std::mutex        g_silentMtx;
+static std::mutex        g_silentWriteMtx;
 static std::atomic<bool> g_silentKeepRunning{false};
+static std::atomic<bool> g_silentFireWindow{false};
+static std::atomic<uint64_t> g_silentGeneration{0};
 static std::thread       g_silentThread;
 static Vector3           g_silentTargetPos{0, 0, 0};
 static Vector3           g_silentFromLoc{0, 0, 0};
@@ -855,8 +858,8 @@ static bool              g_silentHasTarget = false;
 static uint64_t          g_silentLockedEnemy = 0;
 static uint64_t          g_silentLocalPlayer = 0;
 static int               g_silentAimPosMode = 0; // AimPos snapshotted with target
-static uint64_t          g_lastAimingInfo = 0;
-static uint64_t          g_silentCachedInfo = 0;
+// Never retain an aiming-info pointer across shots or weapon switches. The game
+// replaces these objects while the render and worker threads keep running.
 
 static const uint64_t kSilentDirOff    = 0x40; // sAim4
 static const uint64_t kSilentOriginOff = 0x4C; // sAim3
@@ -945,24 +948,13 @@ static inline void ZeroWeaponScatterForAim(uint64_t localPawn) {
     WriteAddr<float>(rep + 0x1E8, 0.0f);
 }
 
-// Cache last LIVE muzzle origin from game (sAim3). Used only when current origin
-// is momentarily 0 between bullets — still "real muzzle", not camera.
-static Vector3 g_silentLastLiveOrigin{0, 0, 0};
-
 // AimSilent.h dir-only. Prefer live muzzle origin every write.
 // Never write origin/hitPoint (VFX-only hits).
 static inline bool SilentWriteAimingDir(uint64_t aimingInfo, const Vector3 &targetPos, const Vector3 & /*fromFallback*/) {
     if (!isVaildPtr(aimingInfo) || IsZeroVec(targetPos)) return false;
 
     Vector3 startPos = ReadAddr<Vector3>(aimingInfo + kSilentOriginOff);
-    if (!IsZeroVec(startPos)) {
-        g_silentLastLiveOrigin = startPos; // learn real muzzle
-    } else if (!IsZeroVec(g_silentLastLiveOrigin)) {
-        // Between shots origin can clear for 1 tick — reuse last live muzzle.
-        startPos = g_silentLastLiveOrigin;
-    } else {
-        return false; // no real muzzle yet
-    }
+    if (IsZeroVec(startPos) || !looksLikeWorldPos(startPos)) return false;
 
     Vector3 dir;
     dir.x = targetPos.x - startPos.x;
@@ -972,13 +964,10 @@ static inline bool SilentWriteAimingDir(uint64_t aimingInfo, const Vector3 &targ
     if (mag <= 0.0001f) return false;
     dir.x /= mag; dir.y /= mag; dir.z /= mag;
 
-    // ONLY sAim4. Recompute if muzzle updated mid-write.
-    // Two writes max (was 5) — multi-spam on HitObject inflated client hit feedback
-    // (dame ảo) without helping server-side damage.
-    WriteAddr<Vector3>(aimingInfo + kSilentDirOff, dir);
+    // A shot can refresh the muzzle while direction is being calculated. Read it
+    // again before the single write; avoid a stale first write and render stalls.
     Vector3 start2 = ReadAddr<Vector3>(aimingInfo + kSilentOriginOff);
-    if (!IsZeroVec(start2)) {
-        g_silentLastLiveOrigin = start2;
+    if (!IsZeroVec(start2) && looksLikeWorldPos(start2)) {
         if (fabsf(start2.x - startPos.x) > 0.0005f ||
             fabsf(start2.y - startPos.y) > 0.0005f ||
             fabsf(start2.z - startPos.z) > 0.0005f) {
@@ -996,32 +985,29 @@ static inline bool SilentWriteAimingDir(uint64_t aimingInfo, const Vector3 &targ
 }
 
 // Force primary sAim1 only. Returns writes count.
-static inline int SilentForcePrimary(uint64_t localPawn, const Vector3 &fromLoc, const Vector3 &targetPos) {
+static inline int SilentForcePrimaryUnlocked(uint64_t localPawn, const Vector3 &fromLoc, const Vector3 &targetPos) {
     if (!isVaildPtr(localPawn) || IsZeroVec(targetPos)) return 0;
     int wrote = 0;
-
-    if (isVaildPtr(g_silentCachedInfo)) {
-        if (SilentWriteAimingDir(g_silentCachedInfo, targetPos, fromLoc)) {
-            wrote++;
-            g_lastAimingInfo = g_silentCachedInfo;
-        } else if (!isVaildPtr(g_silentCachedInfo)) {
-            g_silentCachedInfo = 0;
-        }
-    }
 
     uint64_t offs[2];
     int n = 0;
     SilentFillPrimaryOnly(offs, &n);
+    uint64_t firstInfo = 0;
     for (int i = 0; i < n; i++) {
         uint64_t aimingInfo = ReadAddr<uint64_t>(localPawn + offs[i]);
+        if (i == 0) firstInfo = aimingInfo;
         if (!isVaildPtr(aimingInfo)) continue;
-        g_silentCachedInfo = aimingInfo; // cache even if origin not ready yet
+        if (i > 0 && aimingInfo == firstInfo) continue;
         if (SilentWriteAimingDir(aimingInfo, targetPos, fromLoc)) {
-            g_lastAimingInfo = aimingInfo;
             wrote++;
         }
     }
     return wrote;
+}
+
+static inline int SilentForcePrimary(uint64_t localPawn, const Vector3 &fromLoc, const Vector3 &targetPos) {
+    std::lock_guard<std::mutex> writeLock(g_silentWriteMtx);
+    return SilentForcePrimaryUnlocked(localPawn, fromLoc, targetPos);
 }
 
 static inline void AimSyncFireHit(uint64_t localPawn, const Vector3 &fromLoc, const Vector3 &targetPos) {
@@ -1037,6 +1023,7 @@ static void SilentAimThread(uint64_t localPlayer) {
         Vector3 fromLoc{0, 0, 0};
         uint64_t lp = 0;
         uint64_t enemy = 0;
+        uint64_t generation = 0;
         int posMode = 0;
         {
             std::lock_guard<std::mutex> lk(g_silentMtx);
@@ -1046,6 +1033,7 @@ static void SilentAimThread(uint64_t localPlayer) {
             lp = g_silentLocalPlayer ? g_silentLocalPlayer : localPlayer;
             enemy = g_silentLockedEnemy;
             posMode = g_silentAimPosMode;
+            generation = g_silentGeneration.load(std::memory_order_relaxed);
         }
 
         if (hasTarget && isVaildPtr(lp)) {
@@ -1054,68 +1042,77 @@ static void SilentAimThread(uint64_t localPlayer) {
                 if (!IsZeroVec(live)) {
                     targetPos = live;
                     std::lock_guard<std::mutex> lk(g_silentMtx);
-                    g_silentTargetPos = live;
+                    if (generation == g_silentGeneration.load(std::memory_order_relaxed)) g_silentTargetPos = live;
                 }
             }
-            if (!IsZeroVec(targetPos)) SilentForcePrimary(lp, fromLoc, targetPos);
-        } else {
-            g_lastAimingInfo = 0;
+            if (!IsZeroVec(targetPos)) {
+                std::lock_guard<std::mutex> writeLock(g_silentWriteMtx);
+                if (generation == g_silentGeneration.load(std::memory_order_relaxed))
+                    SilentForcePrimaryUnlocked(lp, fromLoc, targetPos);
+            }
         }
         // A yield may immediately reschedule this thread, leaving it in a
         // full-speed memory-write loop alongside the ESP render timer.
-        std::this_thread::sleep_for(std::chrono::milliseconds(hasTarget ? 2 : 12));
+        const bool firing = g_silentFireWindow.load(std::memory_order_relaxed);
+        std::this_thread::sleep_for(std::chrono::milliseconds(hasTarget ? (firing ? 2 : 4) : 12));
     }
 }
 
-static void SilentAimSetTarget(uint64_t localPlayer, uint64_t enemy, const Vector3 &bonePos, const Vector3 &fromLoc, int posMode) {
+static void SilentAimSetTarget(uint64_t localPlayer, uint64_t enemy, const Vector3 &bonePos, const Vector3 &fromLoc, int posMode, bool firing) {
     if (!isVaildPtr(localPlayer) || IsZeroVec(bonePos)) return;
     if (posMode < 0) posMode = 0;
     if (posMode > 2) posMode = 2;
     {
-        std::lock_guard<std::mutex> lk(g_silentMtx);
-        g_silentTargetPos = bonePos;
-        g_silentFromLoc = fromLoc;
-        g_silentHasTarget = true;
-        g_silentLockedEnemy = enemy;
-        g_silentLocalPlayer = localPlayer;
-        // Snapshot AimPos with target so worker never force-heads when Body selected.
-        g_silentAimPosMode = posMode;
+        std::lock_guard<std::mutex> writeLock(g_silentWriteMtx);
+        g_silentFireWindow.store(firing, std::memory_order_relaxed);
+        {
+            std::lock_guard<std::mutex> lk(g_silentMtx);
+            g_silentTargetPos = bonePos;
+            g_silentFromLoc = fromLoc;
+            g_silentHasTarget = true;
+            g_silentLockedEnemy = enemy;
+            g_silentLocalPlayer = localPlayer;
+            // Snapshot AimPos with target so worker never force-heads when Body selected.
+            g_silentAimPosMode = posMode;
+            g_silentGeneration.fetch_add(1, std::memory_order_relaxed);
+        }
+        SilentForcePrimaryUnlocked(localPlayer, fromLoc, bonePos);
     }
-    SilentForcePrimary(localPlayer, fromLoc, bonePos);
     if (!g_silentKeepRunning.load(std::memory_order_relaxed)) {
-        g_silentKeepRunning = true;
         if (g_silentThread.joinable()) {
             try { g_silentThread.join(); } catch (...) {}
         }
+        g_silentKeepRunning = true;
         g_silentThread = std::thread(SilentAimThread, localPlayer);
     }
 }
 
 static void SilentAimClearTarget(void) {
+    std::lock_guard<std::mutex> writeLock(g_silentWriteMtx);
+    g_silentFireWindow.store(false, std::memory_order_relaxed);
     std::lock_guard<std::mutex> lk(g_silentMtx);
+    g_silentGeneration.fetch_add(1, std::memory_order_relaxed);
     g_silentHasTarget = false;
     g_silentLockedEnemy = 0;
     g_silentTargetPos = Vector3{0, 0, 0};
     g_silentFromLoc = Vector3{0, 0, 0};
-    g_silentCachedInfo = 0;
-    g_silentLastLiveOrigin = Vector3{0, 0, 0};
     g_silentAimPosMode = 0;
 }
 
 static void SilentAimStop(void) {
     g_silentKeepRunning = false;
+    g_silentFireWindow.store(false, std::memory_order_relaxed);
     if (g_silentThread.joinable()) {
         try { g_silentThread.join(); } catch (...) {}
     }
+    std::lock_guard<std::mutex> writeLock(g_silentWriteMtx);
     std::lock_guard<std::mutex> lk(g_silentMtx);
+    g_silentGeneration.fetch_add(1, std::memory_order_relaxed);
     g_silentHasTarget = false;
     g_silentLockedEnemy = 0;
     g_silentLocalPlayer = 0;
     g_silentTargetPos = Vector3{0, 0, 0};
     g_silentFromLoc = Vector3{0, 0, 0};
-    g_lastAimingInfo = 0;
-    g_silentCachedInfo = 0;
-    g_silentLastLiveOrigin = Vector3{0, 0, 0};
     g_silentAimPosMode = 0;
 }
 
@@ -1720,18 +1717,18 @@ int aimMode = 1;
 
 bool isStreamerMode = NO;
 
-float espDistanceLimit = 150.0f;
-float boxThick = 1.0f;
+float espDistanceLimit = 110.0f;
+float boxThick = 0.55f;
 float boxR = 0.0f, boxG = 1.0f, boxB = 1.0f;
 // 0 = Color Picker (custom RGB), 1 = Rainbow cycle
 int boxColorMode = 0;
 float boneThick = 1.2f;
 float boneR = 0.0f, boneG = 1.0f, boneB = 1.0f;
 int boneColorMode = 0;
-float lineThick = 1.0f;
+float lineThick = 0.55f;
 float lineR = 0.0f, lineG = 1.0f, lineB = 1.0f;
 int lineColorMode = 0;
-float fovThick = 0.6f;
+float fovThick = 0.5f;
 float fovR = 1.0f, fovG = 1.0f, fovB = 0.0f;
 int fovColorMode = 0;
 float aimAssistThick = 1.5f;
@@ -3486,8 +3483,9 @@ void ESPSyncFromPrefs(void) {
     if (aimSpeed < 0.01f) aimSpeed = 0.01f;
     if (aimSpeed > 1.0f) aimSpeed = 1.0f;
 
-    espDistanceLimit = ESPPrefsFloat(@"EspDistanceLimit", 150.0f);
-    if (espDistanceLimit < 10.0f) espDistanceLimit = 150.0f;
+    espDistanceLimit = ESPPrefsFloat(@"EspDistanceLimit", 110.0f);
+    if (!std::isfinite(espDistanceLimit) || espDistanceLimit < 10.0f) espDistanceLimit = 110.0f;
+    espDistanceLimit = fminf(espDistanceLimit, 110.0f);
 
    s_setNameEnabledGlobal = ESPPrefsBool(@"SetName", NO);
 
@@ -3513,7 +3511,7 @@ void ESPSyncFromPrefs(void) {
         isEspCheckVisible = YES;
     }
 
-    boxThick = ESPPrefsFloat(@"BoxThickness", 1.0f);
+    boxThick = fminf(fmaxf(ESPPrefsFloat(@"BoxThickness", 0.55f), 0.4f), 0.7f);
     boxR = ESPPrefsFloat(@"BoxColorR", 0.0f); boxG = ESPPrefsFloat(@"BoxColorG", 1.0f); boxB = ESPPrefsFloat(@"BoxColorB", 1.0f);
     boxColorMode = (int)ESPPrefsFloat(@"BoxColorMode", 0.0f);
     if (boxColorMode < 0) boxColorMode = 0;
@@ -3525,13 +3523,13 @@ void ESPSyncFromPrefs(void) {
     if (boneColorMode < 0) boneColorMode = 0;
     if (boneColorMode > 1) boneColorMode = 1;
 
-    lineThick = ESPPrefsFloat(@"LineThickness", 1.0f);
+    lineThick = fminf(fmaxf(ESPPrefsFloat(@"LineThickness", 0.55f), 0.4f), 0.7f);
     lineR = ESPPrefsFloat(@"LineColorR", 0.0f); lineG = ESPPrefsFloat(@"LineColorG", 1.0f); lineB = ESPPrefsFloat(@"LineColorB", 1.0f);
     lineColorMode = (int)ESPPrefsFloat(@"LineColorMode", 0.0f);
     if (lineColorMode < 0) lineColorMode = 0;
     if (lineColorMode > 1) lineColorMode = 1;
 
-    fovThick = ESPPrefsFloat(@"FovThickness", 0.6f);
+    fovThick = fminf(fmaxf(ESPPrefsFloat(@"FovThickness", 0.5f), 0.4f), 0.65f);
     fovR = ESPPrefsFloat(@"FovColorR", 1.0f); fovG = ESPPrefsFloat(@"FovColorG", 1.0f); fovB = ESPPrefsFloat(@"FovColorB", 0.0f);
     fovColorMode = (int)ESPPrefsFloat(@"FovColorMode", 0.0f);
     if (fovColorMode < 0) fovColorMode = 0;
@@ -3887,20 +3885,20 @@ static void ESPDiagHeartbeat(void) {
     
     self.bgFillBlackLayer = [self buildShapeLayerWithStroke:nil fill:[UIColor colorWithWhite:0.0f alpha:0.65f] lineWidth:0 zPos:baseZ + 4];
     
-    self.snaplineLayer = [self buildShapeLayerWithStroke:[UIColor cyanColor] fill:UIColor.clearColor lineWidth:0.6f zPos:baseZ + 1];
-    self.boxLayer = [self buildShapeLayerWithStroke:[UIColor cyanColor] fill:UIColor.clearColor lineWidth:0.6f zPos:baseZ + 3];
+    self.snaplineLayer = [self buildShapeLayerWithStroke:[UIColor cyanColor] fill:UIColor.clearColor lineWidth:0.55f zPos:baseZ + 1];
+    self.boxLayer = [self buildShapeLayerWithStroke:[UIColor cyanColor] fill:UIColor.clearColor lineWidth:0.55f zPos:baseZ + 3];
     self.boneLayer = [self buildShapeLayerWithStroke:[UIColor cyanColor] fill:UIColor.clearColor lineWidth:0.7f zPos:baseZ + 2];
-    self.snaplineBotLayer = [self buildShapeLayerWithStroke:[UIColor yellowColor] fill:UIColor.clearColor lineWidth:0.6f zPos:baseZ + 1];
-    self.boxBotLayer = [self buildShapeLayerWithStroke:[UIColor yellowColor] fill:UIColor.clearColor lineWidth:0.6f zPos:baseZ + 3];
+    self.snaplineBotLayer = [self buildShapeLayerWithStroke:[UIColor yellowColor] fill:UIColor.clearColor lineWidth:0.55f zPos:baseZ + 1];
+    self.boxBotLayer = [self buildShapeLayerWithStroke:[UIColor yellowColor] fill:UIColor.clearColor lineWidth:0.55f zPos:baseZ + 3];
     self.boneBotLayer = [self buildShapeLayerWithStroke:[UIColor yellowColor] fill:UIColor.clearColor lineWidth:0.7f zPos:baseZ + 2];
-    self.snaplineKnockedLayer = [self buildShapeLayerWithStroke:[UIColor redColor] fill:UIColor.clearColor lineWidth:0.6f zPos:baseZ + 1];
-    self.boxKnockedLayer = [self buildShapeLayerWithStroke:[UIColor redColor] fill:UIColor.clearColor lineWidth:0.6f zPos:baseZ + 3];
+    self.snaplineKnockedLayer = [self buildShapeLayerWithStroke:[UIColor redColor] fill:UIColor.clearColor lineWidth:0.55f zPos:baseZ + 1];
+    self.boxKnockedLayer = [self buildShapeLayerWithStroke:[UIColor redColor] fill:UIColor.clearColor lineWidth:0.55f zPos:baseZ + 3];
     self.boneKnockedLayer = [self buildShapeLayerWithStroke:[UIColor redColor] fill:UIColor.clearColor lineWidth:0.7f zPos:baseZ + 2]; 
     
-    self.fovLayer = [self buildShapeLayerWithStroke:[UIColor yellowColor] fill:UIColor.clearColor lineWidth:0.6f zPos:baseZ];
+    self.fovLayer = [self buildShapeLayerWithStroke:[UIColor yellowColor] fill:UIColor.clearColor lineWidth:0.5f zPos:baseZ];
     self.aimAssistLayer = [self buildShapeLayerWithStroke:[UIColor cyanColor] fill:UIColor.clearColor lineWidth:1.5f zPos:baseZ + 6];
     
-    self.hpFillGreenLayer = [self buildShapeLayerWithStroke:nil fill:[UIColor colorWithRed:0.0f green:1.0f blue:0.0f alpha:1.0f] lineWidth:0 zPos:baseZ + 5]; 
+    self.hpFillGreenLayer = [self buildShapeLayerWithStroke:nil fill:[UIColor colorWithRed:0.19f green:0.83f blue:0.54f alpha:1.0f] lineWidth:0 zPos:baseZ + 5];
     self.hpFillOrangeLayer = [self buildShapeLayerWithStroke:nil fill:[UIColor orangeColor] lineWidth:0 zPos:baseZ + 5];
     self.hpFillRedLayer = [self buildShapeLayerWithStroke:nil fill:[UIColor redColor] lineWidth:0 zPos:baseZ + 5];
     
@@ -4097,11 +4095,11 @@ static inline uint64_t ESPPhaseNowUS(void) {
             }
 
             if (isESP2) {
-                self.boxLayer.lineWidth = 1.0f;
+                self.boxLayer.lineWidth = 0.55f;
                 self.boxLayer.strokeColor = [UIColor whiteColor].CGColor;
-                self.snaplineLayer.lineWidth = 1.0f;
+                self.snaplineLayer.lineWidth = 0.55f;
                 self.snaplineLayer.strokeColor = [UIColor whiteColor].CGColor;
-                self.fovLayer.lineWidth = 0.6f;
+                self.fovLayer.lineWidth = 0.5f;
                 self.fovLayer.strokeColor = [UIColor greenColor].CGColor;
             } else {
                 float drawBoxR = s_liveBoxR, drawBoxG = s_liveBoxG, drawBoxB = s_liveBoxB;
@@ -4691,6 +4689,7 @@ static void EspEmitStatusLine(void) {
 
 
     if (!buffers || Moudule_Base == 0 || Moudule_Base == (uint64_t)-1) {
+        if (g_silentKeepRunning.load(std::memory_order_relaxed)) SilentAimStop();
         DIAG_EARLY(@"no-base");
         return stats;
     }
@@ -4722,6 +4721,7 @@ static void EspEmitStatusLine(void) {
     {
         const bool live = isVaildPtr(match);
         if (s_lastLiveMatch != 0 && !live) {
+            if (g_silentKeepRunning.load(std::memory_order_relaxed)) SilentAimStop();
             const uint64_t left = s_lastLiveMatch;
             // First, while the mappings are still good: give the game back the
             // string pointers we replaced, so its teardown does not free memory it
@@ -4762,6 +4762,7 @@ static void EspEmitStatusLine(void) {
     }
 
     if (!isVaildPtr(matchGame)) {
+        SilentAimClearTarget();
         static int s_lobbyLog = 0;
         if (++s_lobbyLog % 300 == 1) {
             NSLog(@"[ESP] Lobby mode: waiting for match...");
@@ -4771,6 +4772,7 @@ static void EspEmitStatusLine(void) {
     }
 
     if (!isVaildPtr(camera) || !isVaildPtr(match)) {
+        SilentAimClearTarget();
         DIAG_EARLY(@"loading-match");
         return stats;
     }
@@ -6032,7 +6034,7 @@ static void EspEmitStatusLine(void) {
         bool wantDraw = false;
         if ((isESP || isESP2) && (espVisible || (isBot && isEspBot) || mounted)) {
             if (!(isBot && !isEspBot && !mounted)) {
-                float espDrawLimit = mounted ? fmaxf(espDistanceLimit, 250.0f) : espDistanceLimit;
+                float espDrawLimit = espDistanceLimit;
                 if (!useLocalDistance || dis <= espDrawLimit || (mounted && dis < 8.0f)) {
                     wantDraw = true;
                 }
@@ -6855,10 +6857,15 @@ static void EspEmitStatusLine(void) {
             s_lockHoldFrames = 0;
         }
     }
-    if (g_silentLockedEnemy != 0) {
+    uint64_t silentEnemyInFrame = 0;
+    {
+        std::lock_guard<std::mutex> lk(g_silentMtx);
+        silentEnemyInFrame = g_silentLockedEnemy;
+    }
+    if (silentEnemyInFrame != 0) {
         bool stillInFrame = false;
         for (int si = 0; si < snapN; si++) {
-            if (snaps[si].pawn == g_silentLockedEnemy) { stillInFrame = true; break; }
+            if (snaps[si].pawn == silentEnemyInFrame) { stillInFrame = true; break; }
         }
         if (!stillInFrame) {
             SilentAimClearTarget();
@@ -7414,36 +7421,12 @@ static void EspEmitStatusLine(void) {
         Vector3 silentBone = ResolveSilentAimWorldPosOnce(bestTarget, aimPosition);
         if (!IsZeroVec(silentBone) && bestDistance >= 0.15f &&
             (allowThroughWall || GameClearLosToEnemy(myPawnObject, bestTarget, silentBone))) {
-            SilentAimSetTarget(myPawnObject, bestTarget, silentBone, myLocation, aimPosition);
+            SilentAimSetTarget(myPawnObject, bestTarget, silentBone, myLocation, aimPosition, silentFireWindow);
             s_lastAimPawn = bestTarget;
             bestHeadPos = silentBone;
 
-            // Live AimPos bone only (no lead) — prediction was landing a head-width off.
-            // One resolve for the frame. This line used to repeat the resolve
-            // immediately above it, and the burst loop below used to repeat it
-            // another thirty times, for a target that cannot move more than a couple
-            // of centimetres while 120 bursts are written.
-            Vector3 liveBone = ResolveSilentAimWorldPosOnce(bestTarget, aimPosition);
-            if (IsZeroVec(liveBone)) liveBone = silentBone;
-            {
-                std::lock_guard<std::mutex> lk(g_silentMtx);
-                g_silentTargetPos = liveBone;
-                g_silentFromLoc = myLocation;
-            }
-            // The worker keeps the live direction refreshed between frames.
-            // Hundreds of duplicate writes in one frame only stall rendering.
-            const int bursts = silentFireWindow ? 6 : 1;
-            for (int burst = 0; burst < bursts; burst++) {
-                if ((burst & 3) == 0) {
-                    Vector3 h2 = ResolveSilentAimWorldPosOnce(bestTarget, aimPosition);
-                    if (!IsZeroVec(h2) && looksLikeWorldPos(h2)) {
-                        liveBone = h2;
-                        std::lock_guard<std::mutex> lk(g_silentMtx);
-                        g_silentTargetPos = liveBone;
-                    }
-                }
-                AimSyncFireHit(myPawnObject, myLocation, liveBone);
-            }
+            // SetTarget already writes once. The worker refreshes live bone and
+            // muzzle between frames; another burst here stalls the ESP renderer.
         } else {
             SilentAimClearTarget();
         }
