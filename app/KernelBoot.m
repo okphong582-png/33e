@@ -54,11 +54,14 @@ static void boot_start_esp_host(void) {
 }
 
 static void boot_start_sb_overlay(void) {
+    if (!MizzeLicenseAuthorized()) return;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
         static const int delays[] = {3, 2, 3, 4}; // cumulative: 3s, 5s, 8s, 12s
         for (int attempt = 0; attempt < 4; attempt++) {
             sleep(delays[attempt]);
+            if (!MizzeLicenseAuthorized()) return;
             int sbret = SBoardStartOverlay();
+            if (!MizzeLicenseAuthorized()) { SBoardStopOverlay(); return; }
             if (sbret == 0) {
                 NSLog(@"[BOOT] SpringBoard overlay OK attempt %d", attempt + 1);
                 L(@"OK SpringBoard overlay live (attempt %d).", attempt + 1);

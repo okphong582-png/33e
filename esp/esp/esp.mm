@@ -89,6 +89,7 @@ void ClearProBoxScreenForPawn(uint64_t pawn);
 
 static float ESPTickHzFromPrefs(void) {
     float hz = ESPPrefsFloat(@"EspTickHz", ESP_TICK_DEFAULT_HZ);
+    if (!std::isfinite(hz)) hz = ESP_TICK_DEFAULT_HZ;
     if (hz < ESP_TICK_MIN_HZ) hz = ESP_TICK_MIN_HZ;
     if (hz > ESP_TICK_MAX_HZ) hz = ESP_TICK_MAX_HZ;
     return hz;
