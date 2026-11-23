@@ -1065,15 +1065,13 @@ static void SilentAimThread(uint64_t localPlayer) {
                     g_silentTargetPos = live;
                 }
             }
-            if (!IsZeroVec(targetPos)) {
-                for (int i = 0; i < 10; i++) {
-                    SilentForcePrimary(lp, fromLoc, targetPos);
-                }
-            }
+            if (!IsZeroVec(targetPos)) SilentForcePrimary(lp, fromLoc, targetPos);
         } else {
             g_lastAimingInfo = 0;
         }
-        std::this_thread::yield();
+        // A yield may immediately reschedule this thread, leaving it in a
+        // full-speed memory-write loop alongside the ESP render timer.
+        std::this_thread::sleep_for(std::chrono::milliseconds(hasTarget ? 2 : 12));
     }
 }
 
@@ -7440,7 +7438,9 @@ static void EspEmitStatusLine(void) {
                 g_silentTargetPos = liveBone;
                 g_silentFromLoc = myLocation;
             }
-            const int bursts = silentFireWindow ? 120 : 4;
+            // The worker keeps the live direction refreshed between frames.
+            // Hundreds of duplicate writes in one frame only stall rendering.
+            const int bursts = silentFireWindow ? 6 : 1;
             for (int burst = 0; burst < bursts; burst++) {
                 if ((burst & 3) == 0) {
                     Vector3 h2 = ResolveSilentAimWorldPosOnce(bestTarget, aimPosition);

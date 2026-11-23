@@ -5,6 +5,7 @@
 #import "MZUI.h"
 #import "MZTheme.h"
 #import "HUDHelper.h"
+#import "ModMenuViewController.h"
 #import "ESPPrefs.h"
 #import "GameOffsets.h"
 #import "roothide/varCleanController.h"
@@ -107,8 +108,9 @@
         [_tableView reloadRowsAtIndexPaths:@[ statusPath ]
                          withRowAnimation:UITableViewRowAnimationNone];
     }
-    if ([_tableView numberOfRowsInSection:1] > 0) {
-        [_tableView reloadRowsAtIndexPaths:@[ actionPath ]
+    if ([_tableView numberOfRowsInSection:1] > 1) {
+        NSIndexPath *menuPath = [NSIndexPath indexPathForRow:1 inSection:1];
+        [_tableView reloadRowsAtIndexPaths:@[ actionPath, menuPath ]
                          withRowAnimation:UITableViewRowAnimationNone];
     }
 }
@@ -118,7 +120,7 @@
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 2; }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return 1;
+    return section == 1 ? 2 : 1;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
@@ -130,7 +132,7 @@
     if (section == 0) {
         text = @"Keeps the ESP session alive while you play.";
     } else {
-        text = @"Starts a new ESP session.";
+        text = @"Activate Menu + ESP + FOV, then open the menu below.";
     }
     if (!text) return nil;
 
@@ -189,6 +191,15 @@
     // read like a first start rather than the second half of a session already in
     // progress.
     BOOL kernelOnly = (!hudOn && !starting && kernelBootReady());
+    if (indexPath.section == 1 && indexPath.row == 1) {
+        [cell applyIconNamed:@"square.grid.2x2" color:hudOn ? MZThemeAccent() : MZThemeMuted()];
+        [cell applyTitle:@"Click to activate menu"
+                 subtitle:hudOn ? @"Open Mizze controls. The ESP and FOV keep running."
+                                : @"Start the session above first."
+                    value:nil showsChevron:hudOn tappable:hudOn];
+        cell.titleLabel.textColor = hudOn ? MZThemeAccent() : MZThemeMuted();
+        return cell;
+    }
     if (indexPath.section == 0) {
         if (starting) {
             // A muted clock rather than the green of a live session: nothing is on
@@ -203,7 +214,9 @@
         [cell applyIconNamed:@"waveform.path.ecg"
                         color:hudOn ? MZThemeGreen() : (kernelOnly ? MZThemeGreen() : MZThemeRed())];
         if (hudOn) {
-            [cell applyTitle:@"Active" subtitle:@"ESP is on. Session is live."
+            [cell applyTitle:@"Active" subtitle:IsHUDEnabled()
+                ? @"ESP and FOV are live. Tap the Mizze icon in game for the menu."
+                : @"ESP and FOV are live. Open the menu below to retry its HUD."
                        value:nil showsChevron:NO tappable:NO];
         } else if (kernelOnly) {
             [cell applyTitle:@"Kernel ready" subtitle:@"Kernel only. The ESP is off."
@@ -248,12 +261,12 @@
         // SpringBoard overlay and the ESP host without re-running the exploit.
         [cell applyIconNamed:@"play.fill" color:MZThemeAccent()];
         if (kernelOnly) {
-            [cell applyTitle:@"Start ESP"
-                     subtitle:@"Kernel is up. Turns on the overlay and the ESP."
+            [cell applyTitle:@"Activate Menu + ESP + FOV"
+                     subtitle:@"Click to activate the menu and overlays."
                         value:nil showsChevron:YES tappable:YES];
         } else {
-            [cell applyTitle:@"Activate"
-                     subtitle:@"Starts a fresh ESP session."
+            [cell applyTitle:@"Activate Menu + ESP + FOV"
+                     subtitle:@"Click to activate the menu and overlays."
                         value:nil showsChevron:YES tappable:YES];
         }
         cell.titleLabel.textColor = MZThemeAccent();
@@ -264,6 +277,15 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (indexPath.section != 1) return;
+    if (indexPath.row == 1) {
+        if (![self isESPDrawing]) return;
+        if (!IsHUDEnabled() && kernelBootReady()) SetHUDEnabled(YES);
+        ModMenuViewController *menu = [ModMenuViewController new];
+        __weak UINavigationController *weakNav = self.navigationController;
+        menu.onCloseBlock = ^{ [weakNav popViewControllerAnimated:YES]; };
+        [self.navigationController pushViewController:menu animated:YES];
+        return;
+    }
     [self actionTapped];
 }
 
@@ -341,7 +363,6 @@ static NSString *const kMZGameSessionKey = @"App_LocalHUDState";
         ESPPrefsSetBool(@"HideMenu1", NO);
         ESPPrefsSync();
         [self markSessionRunning:YES];
-        SetHUDEnabled(YES);
         kernelBootStart();
         [self refreshStatus];
         return;
@@ -361,7 +382,6 @@ static NSString *const kMZGameSessionKey = @"App_LocalHUDState";
                 ESPPrefsSetBool(@"HideMenu1", NO);
                 ESPPrefsSync();
                 [self markSessionRunning:YES];
-                SetHUDEnabled(YES);
                 kernelBootStart();
                 [self refreshStatus];
             });

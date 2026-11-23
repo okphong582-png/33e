@@ -24,6 +24,7 @@
 // path does not pull the HUD helper's Objective-C surface in.
 extern void StopESPSession(void);
 extern BOOL IsHUDEnabled(void);
+extern void SetHUDEnabled(BOOL isEnabled);
 
 kernel_boot_log_fn kernelBootLog = NULL;
 
@@ -50,6 +51,14 @@ static void boot_start_esp_host(void) {
         extern int StartESPHost(void);
         StartESPHost();
         NSLog(@"[BOOT] ESP host (hidden) — paint via SpringBoard only");
+    });
+}
+
+static void boot_start_hud_menu(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!MizzeLicenseAuthorized()) return;
+        SetHUDEnabled(YES);
+        L(@"OK Menu HUD launch requested after kernel boot.");
     });
 }
 
@@ -85,8 +94,7 @@ static void kernelBootStartEx(BOOL kernelOnly) {
     if (g_booting) {
         // The launch-time boot is already on the queue. Returning here used to
         // drop the tap on the floor, and the caller had already recorded the
-        // session as running before it got here -- markSessionRunning:YES and
-        // SetHUDEnabled(YES) both run ahead of this call. So the Game tab went
+        // session as running before it got here. The Game tab could then go
         // to "Active" with nothing drawing and nothing queued to draw it.
         //
         // Arm the request instead. Whoever owns the queue reads it at the
@@ -108,6 +116,7 @@ static void kernelBootStartEx(BOOL kernelOnly) {
         }
         boot_start_sb_overlay();
         boot_start_esp_host();
+        boot_start_hud_menu();
         return;
     }
 
@@ -227,6 +236,7 @@ static void kernelBootStartEx(BOOL kernelOnly) {
 
         L(@"RUN 6/6 Starting hidden ESP host (mirror → SpringBoard)");
         boot_start_esp_host();
+        boot_start_hud_menu();
         L(@"OK ESP host started — draw only via SpringBoard.");
         g_startESPAfterBoot = NO;
         g_ready = YES;

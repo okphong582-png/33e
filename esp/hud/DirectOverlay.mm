@@ -10,7 +10,6 @@
 #import "../esp/esp.h"
 #import "../esp/ESPPrefs.h"
 #import "../esp/GameOffsets.h"
-#import "../esp/menu.h"
 #import "../../app/KeepAlive.h"
 #import <objc/runtime.h>
 
@@ -62,11 +61,6 @@ int StartESPHost(void) {
         espView.userInteractionEnabled = NO;
         [vc.view addSubview:espView];
 
-        // Menu stays local for toggles; not an all-apps overlay.
-        MenuView *menuView = [[MenuView alloc] initWithFrame:screen];
-        menuView.userInteractionEnabled = YES;
-        [vc.view addSubview:menuView];
-
         g_espHostWindow = [[UIWindow alloc] initWithFrame:screen];
         g_espHostWindow.rootViewController = vc;
         g_espHostWindow.backgroundColor = [UIColor clearColor];
@@ -95,13 +89,9 @@ void StopESPHost(void) {
     // Same queue StartESPHost uses, so this cannot run halfway through it.
     void (^teardown)(void) = ^{
         if (!g_espHostWindow) return;
-        // The two subviews are typed, not filtered by respondsToSelector:
-        // ESP_View's render timer and MenuView's display link are what keep
-        // the session alive, and a string-typed selector on a UIView is a
-        // silent no-op if either class is renamed.
+        // Only the offscreen ESP data source lives in this window.
         for (UIView *v in g_espHostWindow.rootViewController.view.subviews) {
             if ([v isKindOfClass:[ESP_View class]]) [(ESP_View *)v stopRendering];
-            if ([v isKindOfClass:[MenuView class]]) [(MenuView *)v hideMenu];
         }
         g_espHostWindow.hidden = YES;
         g_espHostWindow.rootViewController = nil;

@@ -40,3 +40,15 @@ assert '(useSilent || ld <= aimDistance + 5.f)' in s
 assert '(!useSilent && d > aimDistance + 5.0f)' in s
 assert 'GameClearLosToEnemy(myPawnObject, bestTarget, silentBone)' in s
 print('PASS: Silent no app-side distance cap; live LOS when wall aim is off')
+
+game = (root / 'app/sources/GameViewController.mm').read_text(encoding='utf-8')
+boot = (root / 'app/KernelBoot.m').read_text(encoding='utf-8')
+host = (root / 'esp/hud/DirectOverlay.mm').read_text(encoding='utf-8')
+assert 'Click to activate menu' in game and 'pushViewController:menu' in game
+assert 'SetHUDEnabled(YES)' not in game.split('- (void)startHUDForRequest:', 1)[1]
+assert boot.index('boot_start_hud_menu();') > boot.index('boot_start_esp_host();')
+assert 'MenuView *menuView' not in host
+assert 'self.secureCanvas != self' in menu and 'menuButtonTapped:' in menu
+assert 'silentFireWindow ? 6 : 1' in s
+assert 'sleep_for(std::chrono::milliseconds(hasTarget ? 2 : 12))' in s
+print('PASS: menu activation is reachable; HUD follows boot; Silent worker is paced')

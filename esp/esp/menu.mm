@@ -20,7 +20,7 @@ static const CGFloat kMenuButtonSize = 56.0;
 @property (nonatomic, strong) MZAnimatedMenuIcon *menuIcon;
 @property (nonatomic, strong) NSTimer *visibilityTimer;
 @property (nonatomic, strong) HTHIconSecureWrapper *secureTextField;
-@property (nonatomic, strong) UIView *secureCanvas;
+@property (nonatomic, weak) UIView *secureCanvas;
 @property (nonatomic, strong) ModMenuViewController *presentedModMenu;
 @property (nonatomic) NSInteger trackingPointerId;
 @property (nonatomic) BOOL buttonDragging;
@@ -42,8 +42,9 @@ static const CGFloat kMenuButtonSize = 56.0;
     _secureTextField.secureTextEntry = ESPPrefsBool(@"StreamerMode", NO);
     [self addSubview:_secureTextField];
     [_secureTextField layoutIfNeeded];
-    _secureCanvas = _secureTextField.subviews.firstObject ?: _secureTextField;
-    _secureCanvas.userInteractionEnabled = NO;
+    _secureCanvas = _secureTextField.secureTextEntry
+        ? (_secureTextField.subviews.firstObject ?: _secureTextField) : self;
+    if (_secureCanvas != self) _secureCanvas.userInteractionEnabled = NO;
     _menuButton = [UIButton buttonWithType:UIButtonTypeCustom];
     CGFloat x = ESPPrefsFloat(@"FloatingMenuBtnX", 20);
     CGFloat y = ESPPrefsFloat(@"FloatingMenuBtnY", 100);
@@ -56,6 +57,7 @@ static const CGFloat kMenuButtonSize = 56.0;
     _menuIcon = [[MZAnimatedMenuIcon alloc] initWithFrame:_menuButton.bounds];
     _menuIcon.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [_menuButton addSubview:_menuIcon];
+    [_menuButton addTarget:self action:@selector(menuButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
     [_secureCanvas addSubview:_menuButton];
     [self updateVisibility];
     return self;
@@ -80,7 +82,7 @@ static const CGFloat kMenuButtonSize = 56.0;
 - (void)layoutSubviews {
     [super layoutSubviews];
     self.secureTextField.frame = self.bounds;
-    self.secureCanvas.frame = self.bounds;
+    if (self.secureCanvas != self) self.secureCanvas.frame = self.bounds;
     [self clampMenuButton];
     if (self.presentedModMenu) {
         self.presentedModMenu.view.frame = self.bounds;
@@ -101,8 +103,9 @@ static const CGFloat kMenuButtonSize = 56.0;
         self.secureTextField.secureTextEntry = streamer;
         [self.secureTextField setNeedsLayout];
         [self.secureTextField layoutIfNeeded];
-        self.secureCanvas = self.secureTextField.subviews.firstObject ?: self.secureTextField;
-        self.secureCanvas.userInteractionEnabled = NO;
+        self.secureCanvas = streamer
+            ? (self.secureTextField.subviews.firstObject ?: self.secureTextField) : self;
+        if (self.secureCanvas != self) self.secureCanvas.userInteractionEnabled = NO;
         [self.secureCanvas addSubview:self.menuButton];
     }
     self.menuButton.hidden = self.presentedModMenu != nil;
@@ -111,8 +114,8 @@ static const CGFloat kMenuButtonSize = 56.0;
 - (void)reloadFloatingAuxButtonsFromPrefs { [self updateVisibility]; }
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     UIView *hit = [super hitTest:point withEvent:event];
+    if (hit == self.menuButton || [hit isDescendantOfView:self.menuButton]) return self.menuButton;
     if (!hit || hit == self || hit == self.secureCanvas || hit == self.secureTextField ||
-        hit == self.menuButton || [hit isDescendantOfView:self.menuButton] ||
         hit == self.presentedModMenu.view) return nil;
     return hit; // Empty overlay space never blocks the game's touches.
 }
@@ -120,6 +123,10 @@ static const CGFloat kMenuButtonSize = 56.0;
     UIResponder *responder = self;
     while (responder && ![responder isKindOfClass:UIViewController.class]) responder = responder.nextResponder;
     return [responder isKindOfClass:UIViewController.class] ? (UIViewController *)responder : self.window.rootViewController;
+}
+- (void)menuButtonTapped:(UIButton *)sender {
+    (void)sender;
+    [self showMenu];
 }
 - (void)showMenu {
     if (self.presentedModMenu) return;

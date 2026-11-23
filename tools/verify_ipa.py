@@ -11,8 +11,8 @@ with zipfile.ZipFile(p) as z:
  assert info['CFBundleDisplayName']=='Mizze Kernel'
  assert info['CFBundleIdentifier']=='vn.mizze.kernel.ffvn'
  assert info['UIUserInterfaceStyle']=='Dark'
- assert info['CFBundleVersion']=='20261123.6'
- assert info['CFBundleShortVersionString']=='1.4.5'
+ assert info['CFBundleVersion']=='20261123.7'
+ assert info['CFBundleShortVersionString']=='1.4.6'
  gif_hash=hashlib.sha256(z.read(prefix+'Mizze-Antiban-Eye-Slow.gif')).hexdigest()
  assert gif_hash=='1d98523ecd1ae8a9b45a7d528361caadd3bf56102e8906593b3f9f76eb381c0c'
  data=z.read(prefix+'Mizze')

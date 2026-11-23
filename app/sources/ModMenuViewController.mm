@@ -373,7 +373,7 @@ typedef NS_ENUM(NSInteger, MenuTab) {
 @property (nonatomic, assign) MenuTab currentTab;
 
 @property (nonatomic, strong) HTHMenuSecureWrapper *secureTextField;
-@property (nonatomic, strong) UIView *secureContainer;
+@property (nonatomic, weak) UIView *secureContainer;
 
 @property (nonatomic, strong) UIView *floatingPanel;
 @property (nonatomic, strong) UIView *containerView; 
@@ -480,7 +480,8 @@ typedef NS_ENUM(NSInteger, MenuTab) {
         [_floatingPanel removeFromSuperview];
         _secureTextField.secureTextEntry = isStreamer;
         [_secureTextField layoutIfNeeded];
-        _secureContainer = _secureTextField.subviews.firstObject ?: _secureTextField;
+        _secureContainer = isStreamer
+            ? (_secureTextField.subviews.firstObject ?: _secureTextField) : self.view;
         [_secureContainer addSubview:_floatingPanel];
     }
     
@@ -519,7 +520,8 @@ typedef NS_ENUM(NSInteger, MenuTab) {
     
     _secureTextField.secureTextEntry = ESPPrefsBool(@(oxorany("StreamerMode")), NO);
     [_secureTextField layoutIfNeeded];
-    _secureContainer = _secureTextField.subviews.firstObject ?: _secureTextField;
+    _secureContainer = _secureTextField.secureTextEntry
+        ? (_secureTextField.subviews.firstObject ?: _secureTextField) : self.view;
     
     _floatingPanel = [[UIView alloc] initWithFrame:CGRectMake(saved.x, saved.y, kPanelWidth, kPanelHeight)];
     _floatingPanel.backgroundColor = [UIColor clearColor];
