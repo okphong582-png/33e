@@ -3,7 +3,16 @@
 #include <cmath>
 #include <cstdio>
 #include <initializer_list>
+#include <vector>
+#include <algorithm>
 #import <QuartzCore/QuartzCore.h>
+static std::vector<unsigned char> raster(CGPathRef path){
+ const size_t width=600,height=360;std::vector<unsigned char> pixels(width*height);
+ CGColorSpaceRef space=CGColorSpaceCreateDeviceGray();
+ CGContextRef ctx=CGBitmapContextCreate(pixels.data(),width,height,8,width,space,kCGImageAlphaNone);assert(ctx);
+ CGContextScaleCTM(ctx,3,3);CGContextSetGrayFillColor(ctx,1,1);CGContextAddPath(ctx,path);CGContextFillPath(ctx);
+ CGContextRelease(ctx);CGColorSpaceRelease(space);return pixels;
+}
 static CGPathRef reference(NSString *s,CTFontRef font,CGRect frame){
  if(s.length>48)s=[s substringToIndex:48];CFIndex n=s.length;UniChar chars[48];CGGlyph glyphs[48]={};CGSize widths[48]={};
  [s getCharacters:chars range:NSMakeRange(0,n)];
@@ -21,10 +30,13 @@ int main(){@autoreleasepool{
  for(NSString *text in @[@"Mizze",@"[123M]",@"Người chơi",@"A😀B",@"012345678901234567890123456789012345678901234567890123456789"]){
  for(int i=0;i<4;i++){
  CGRect frame=CGRectMake(i*12.5,i*23.25,90,20);CGPathRef a=reference(text,font,frame);CGMutablePathRef b=CGPathCreateMutable();MizzeAppendTextOutline(b,text,font,frame);
- CGRect x=CGPathGetBoundingBox(a),y=CGPathGetBoundingBox(b);
+ CGRect x=CGPathGetPathBoundingBox(a),y=CGPathGetPathBoundingBox(b);
  if(!(fabs(x.origin.x-y.origin.x)<.00001&&fabs(x.origin.y-y.origin.y)<.00001&&fabs(x.size.width-y.size.width)<.00001&&fabs(x.size.height-y.size.height)<.00001)){
    printf("GEOMETRY size=%.8f text=%s iteration=%d old=(%.8f,%.8f,%.8f,%.8f) cached=(%.8f,%.8f,%.8f,%.8f)\n",size,text.UTF8String,i,x.origin.x,x.origin.y,x.size.width,x.size.height,y.origin.x,y.origin.y,y.size.width,y.size.height);failures++;
  }
+ auto ra=raster(a),rb=raster(b);int maxDelta=0;
+ for(size_t k=0;k<ra.size();k++)maxDelta=std::max(maxDelta,abs((int)ra[k]-(int)rb[k]));
+ if(maxDelta>1){printf("RASTER size=%.8f text=%s delta=%d\n",size,text.UTF8String,maxDelta);failures++;}
  CGPathRelease(a);CGPathRelease(b);
  }}CFRelease(font);}
  assert(failures==0);
