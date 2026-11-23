@@ -1,0 +1,11 @@
+{
+  "hash": "09e32418c7ee3f4a64839a0cc3d1db07726d2a790e7536d3cd1e1666c70c3f7d",
+  "now": 1900000000000,
+  "record": {
+    "protocol": 4,
+    "enabled": true,
+    "expiresAt": 2000000000000,
+    "tipaPayload": "eyJ2IjoxLCJhdWQiOiJtaXp6ZS1mZnZuLXRpcGEiLCJrZXlIYXNoIjoiMDllMzI0MThjN2VlM2Y0YTY0ODM5YTBjYzNkMWRiMDc3MjZkMmE3OTBlNzUzNmQzY2QxZTE2NjZjNzBjM2Y3ZCIsImV4cGlyZXNBdCI6MjAwMDAwMDAwMDAwMH0=",
+    "tipaSignature": "n/9DQb1oKA/Mo6vbZJIuBcZhSvZPGS8hhen1OYdOu9J1vlsbhXSA1YKfPW3qonuaX6I47XudGZfdQqb43yCXBkEejbwIY+Pi1PzVujX4swlvWwVNJIe92DzHj2Kx4U4dZjxgmGAiGzRi+p+CMXvAArJvheqMCDQZEQa5EG7O0gfzWrrDaJesdGxCDR4vBbYE9e7r0WGqqmxMytk3GJvFPe4g1YBq+Kv3u60PxJyiYeCdUZnJH+Ny1Mq6A9XnLuqZ6YSm/dZXUUnFzgQk83f9a6WtBCxjgq13J4UoKKvrc5b0WHhGz1mu+r5DXQYKn9vNpquQ9PULCKxMIgbhUfZnI/N/0pS43DWfMV1CpguxcBTtxq/vqWcBZp6CzhEG2UI3W0vKhCyk7nIUWvfd3E/u3RUKJN/EHJHJSFpl17sakumwcFs2Tn0iIpzaE04OD6JqjdvaZB1n9Otnh7ief22VdYpSyMgi8/RmKU1qwjHr42TbLyqqNVzopD9m7q2IsAPT"
+  }
+}

@@ -1,0 +1,109 @@
+#import "GamePickerViewController.h"
+#import "MZUI.h"
+#import "MZTheme.h"
+#import "GameOffsets.h"
+#import "HUDHelper.h"
+#import "ESPPrefs.h"
+
+@interface GamePickerViewController ()
+@property (nonatomic, copy) NSArray<NSString *> *ids;
+@property (nonatomic, copy) NSArray<NSString *> *titles;
+@property (nonatomic, copy) NSArray<NSString *> *subtitles;
+@property (nonatomic, copy) NSArray<NSString *> *icons;
+@end
+
+@implementation GamePickerViewController
+
+- (instancetype)init {
+    self = [super initWithStyle:UITableViewStyleInsetGrouped];
+    if (self) {
+        self.title = @"Game";
+        // Same order as the version cards the app used to have on Home.
+        // The icon sits beside the name rather than being chosen from it with a
+        // string comparison: `id == @"ffmax"` compares pointers, which is
+        // undefined behaviour and can pick the wrong branch, and a literal is
+        // not required to be identical across two occurrences.
+        _ids = @[ @"ff" ];
+        _titles = @[ @"Free Fire VN" ];
+        _subtitles = @[ @"com.garena.ffvn · 1.134.1" ];
+        _icons = @[ @"flame.fill" ];
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = MZThemeBg();
+    self.tableView.backgroundColor = MZThemeBg();
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.rowHeight = UITableViewAutomaticDimension;
+    self.tableView.estimatedRowHeight = 74.0f;
+    [self.tableView registerClass:[MZIconRowCell class] forCellReuseIdentifier:@"game"];
+    MZUIApplyNavigationBarStyle(self.navigationController.navigationBar);
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    MZUIApplyNavigationBarStyle(self.navigationController.navigationBar);
+    [self.tableView reloadData];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 1; }
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return (NSInteger)_ids.count;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    return @"Changing the game needs a new session before it applies.";
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    MZIconRowCell *cell = [tableView dequeueReusableCellWithIdentifier:@"game"
+                                                        forIndexPath:indexPath];
+    NSInteger i = indexPath.row;
+    BOOL selected = GameTargetIsMax() == ([_ids[i] isEqualToString:@"ffmax"]);
+
+    [cell applyIconNamed:_icons[i] color:(selected ? MZThemeAccent() : MZThemePanel2())];
+    [cell applyTitle:_titles[i] subtitle:_subtitles[i] value:nil showsChevron:NO tappable:YES];
+    cell.titleLabel.textColor = selected ? MZThemeText() : MZThemeMuted();
+    cell.accessoryType = selected ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+    cell.tintColor = MZThemeAccent();
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSString *id = _ids[indexPath.row];
+    BOOL wasMax = GameTargetIsMax();
+    if (wasMax == [id isEqualToString:@"ffmax"]) return;
+
+    GameTargetSetSelectedId(id);
+    [tableView reloadData];
+
+    // A live session is bound to the old process and offset table, so offer
+    // the one action that makes the switch real instead of silently doing
+    // nothing until the user notices. IsESPSessionRunning, not IsHUDEnabled:
+    // the pid file does not cover the session that actually draws.
+    if (IsESPSessionRunning()) {
+        UIAlertController *alert =
+            [UIAlertController alertControllerWithTitle:@"Restart session?"
+                                                message:@"ESP is on for the other game. Turn it off and on again to switch."
+                                         preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
+                                                  style:UIAlertActionStyleCancel
+                                                handler:nil]];
+        [alert addAction:[UIAlertAction actionWithTitle:@"Stop and Restart"
+                                                  style:UIAlertActionStyleDestructive
+                                                handler:^(UIAlertAction *action) {
+            StopESPSession();
+            ESPPrefsSetBool(@"App_LocalHUDState", NO);
+            ESPPrefsSync();
+            [self.navigationController popViewControllerAnimated:YES];
+        }]];
+        [self presentViewController:alert animated:YES completion:nil];
+    }
+}
+
+@end

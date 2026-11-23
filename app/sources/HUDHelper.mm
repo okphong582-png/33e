@@ -1,0 +1,112 @@
+
+#import <cstdint>
+#import <spawn.h>
+#import <notify.h>
+#import "rootless.h"
+#import <mach-o/dyld.h>
+
+#import "HUDHelper.h"
+
+// Real headers, not forward declarations. This is a .mm, so anything declared
+// here without extern "C" gets C++ linkage and the symbol does not match the
+// one the linker found in DirectOverlay.mm / SpringBoardOverlay.m. All three
+// headers already wrap their declarations.
+#import "ESPPrefs.h"
+#import "DirectOverlay.h"
+#import "SpringBoardOverlay.h"
+#import "../esp/menu.h"
+
+extern "C" char **environ;
+
+#define POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE 1
+extern "C" int posix_spawnattr_set_persona_np(const posix_spawnattr_t* __restrict, uid_t, uint32_t);
+extern "C" int posix_spawnattr_set_persona_uid_np(const posix_spawnattr_t* __restrict, uid_t);
+extern "C" int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t* __restrict, uid_t);
+
+BOOL IsHUDEnabled(void)
+{
+    NSString *path = ROOT_PATH_NS(PID_PATH);
+    NSString *pidString = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+    if (!pidString.length)
+        return NO;
+    pid_t pid = (pid_t)[pidString intValue];
+    int k = kill(pid, 0);
+    return (k == 0);
+}
+
+void SetHUDEnabled(BOOL isEnabled)
+{
+    notify_post(NOTIFY_DESTROY_HUD);
+
+    // Jailed: just spawn without persona flags (sandbox already escaped).
+    static char *executablePath = NULL;
+    uint32_t executablePathSize = 0;
+    _NSGetExecutablePath(NULL, &executablePathSize);
+    executablePath = (char *)calloc(1, executablePathSize);
+    _NSGetExecutablePath(executablePath, &executablePathSize);
+
+    if (isEnabled)
+    {
+        pid_t task_pid;
+        const char *args[] = { executablePath, "-hud", NULL };
+        posix_spawn(&task_pid, executablePath, NULL, NULL, (char **)args, environ);
+    }
+    else
+    {
+        NSString *pidString = [NSString stringWithContentsOfFile:ROOT_PATH_NS(PID_PATH)
+                                                        encoding:NSUTF8StringEncoding
+                                                           error:nil];
+
+        if (pidString)
+        {
+            pid_t pid = (pid_t)[pidString intValue];
+            kill(pid, SIGKILL);
+            unlink([ROOT_PATH_NS(PID_PATH) UTF8String]);
+        }
+    }
+}
+
+void RequestExitHUD(void)
+{
+    const char *path = [ROOT_PATH_NS(PID_PATH) UTF8String];
+    if (path) unlink(path);
+    exit(0);
+}
+
+BOOL ESPRealSessionRunning(void)
+{
+    // Only the three signals that report something that is actually running.
+    // No pref: a pref survives the process that wrote it, so it describes the
+    // last launch rather than this one.
+    return ESPHostIsRunning() || SBoardOverlayIsOn() || IsHUDEnabled();
+}
+
+BOOL IsESPSessionRunning(void)
+{
+    if (ESPRealSessionRunning()) return YES;
+    // The pref is a deliberate optimistic flag so the row turns into a stop
+    // button the instant it is tapped instead of waiting for a poll. It is
+    // also the one thing here that can be left over from a previous launch,
+    // which is why MainApplicationDelegate clears it at start when nothing is
+    // running, and why StopESPSession clears it too. Reading it without that
+    // pair made the Game tab show "Active" after a kernel-only boot, so the
+    // first tap killed a session that did not exist and the second one started
+    // the real one.
+    return ESPPrefsBool(@"App_LocalHUDState", NO);
+}
+
+void StopESPSession(void)
+{
+    // Three separate sessions have to be told, in this order: the local host
+    // first so nothing republishes a frame, then the SpringBoard view that
+    // was mirroring it, then the -hud process. Skipping the first two is what
+    // left the overlay on screen after the user pressed Stop.
+    StopESPHost();
+    SBoardStopOverlay();
+    SetHUDEnabled(NO);
+    // The optimistic flag, cleared with the real session. Left set, it made the
+    // next launch open on a Stop button for a session that had ended a
+    // hundred launches earlier.
+    ESPPrefsSetBool(@"App_LocalHUDState", NO);
+    ESPPrefsSync();
+}

@@ -1,0 +1,27 @@
+.theos/
+packages/
+*.deb
+*.ipa
+build/
+.theos
+*.o
+*.d
+.DS_Store
+app/Font/*
+!app/Font/IMAGE.h
+JRMemory.framework/
+XPF/external/ChOma/include/choma/
+*.png
+*.webp
+*.ttf
+*.otf
+*.woff
+*.woff2
+*.zip
+*.tar
+*.tar.*
+.git/
+*.DS_Store
+# Tserver SDK archive: fetched from the serverhihi sdk-latest release.
+# Committed archives were built on Linux and crash on arm64e.
+vendor/APIClient/libAPIClient.a

@@ -1,0 +1,57 @@
+name: Build Mizze FFVN
+on:
+  push:
+    branches: ['build/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mizze-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host regression tests
+        run: |
+          mkdir -p validation
+          clang++ -std=c++17 tests/ProfileAndPacerTests.cpp -o validation/profile-tests
+          validation/profile-tests | tee validation/profile-tests.txt
+          clang++ -std=c++17 -fobjc-arc tests/TextOutlineTests.mm esp/esp/MizzeTextOutline.mm -framework Foundation -framework CoreGraphics -framework CoreText -framework QuartzCore -o validation/text-tests
+          validation/text-tests | tee validation/text-tests.txt
+          clang++ -std=c++17 -fobjc-arc -I. -Iapp/sources tests/LicenseTests.mm -framework Foundation -framework Security -framework Network -framework QuartzCore -o validation/license-tests
+          validation/license-tests tests/license-fixtures.json | tee validation/license-tests.txt
+      - name: Install Theos
+        uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          path: theos
+          submodules: recursive
+      - name: Install SDK and signing utility
+        run: |
+          brew install ldid
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/Tonwalter888/iOS-SDKs.git "$RUNNER_TEMP/ios-sdks"
+          git -C "$RUNNER_TEMP/ios-sdks" sparse-checkout set iPhoneOS18.6.sdk
+          mkdir -p "$GITHUB_WORKSPACE/theos/sdks"
+          cp -R "$RUNNER_TEMP/ios-sdks/iPhoneOS18.6.sdk" "$GITHUB_WORKSPACE/theos/sdks/"
+          echo "THEOS=$GITHUB_WORKSPACE/theos" >> "$GITHUB_ENV"
+      - name: Build signed application
+        run: |
+          set -o pipefail
+          make -f Makefile.app package FINALPACKAGE=1 2>&1 | tee validation/build.log
+      - name: Verify packaged IPA
+        run: |
+          python3 tools/verify_ipa.py packages/Mizze.ipa validation/verification.json
+      - name: Upload IPA and validation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mizze-FFVN-1.134.1-${{ github.run_number }}
+          path: |
+            packages/*.ipa
+            validation/*.json
+            validation/*.txt
+            validation/build.log
+          if-no-files-found: error
