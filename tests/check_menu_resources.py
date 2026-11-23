@@ -49,9 +49,15 @@ assert 'SetHUDEnabled(YES)' not in game.split('- (void)startHUDForRequest:', 1)[
 assert boot.index('boot_start_hud_menu();') > boot.index('boot_start_esp_host();')
 assert 'MenuView *menuView' not in host
 assert 'self.secureCanvas != self' in menu and 'menuButtonTapped:' in menu
-assert 'silentFireWindow ? 6 : 1' in s
-assert 'sleep_for(std::chrono::milliseconds(hasTarget ? 2 : 12))' in s
-print('PASS: menu activation is reachable; HUD follows boot; Silent worker is paced')
+assert 'g_silentCachedInfo' not in s and 'g_silentLastLiveOrigin' not in s
+assert 'g_silentGeneration.load' in s and 'g_silentWriteMtx' in s
+assert 'if (g_silentKeepRunning.load(std::memory_order_relaxed)) SilentAimStop();' in s
+memory = (root / 'esp/DSMemory.m').read_text(encoding='utf-8')
+remap = memory.split('static bool ds_rw_remap(', 1)[1].split('\nbool ds_read(', 1)[0]
+assert remap.index('ds_lock();') < remap.index('memcpy(local, p, chunk)') < remap.rindex('ds_unlock();')
+assert 'espDistanceLimit = fminf(espDistanceLimit, 110.0f)' in s
+assert 'espDistSlider.maximumValue = 110.0f' in panel
+print('PASS: menu activation; Silent target lifetime; remap copy protection; ESP 110m')
 
 assert 'AimCoverHitBlocksTarget(rc.hasCollider' in s
 assert 'sample.hasCollider = isVaildPtr(ReadAddr<uint64_t>(info + 0x20))' in s
