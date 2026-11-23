@@ -407,13 +407,6 @@ static inline bool AimTargetVisibleForWallOff(uint64_t player) {
     return true; // geometric FOV path decides real lock
 }
 
-// Silent only when wall-through is ON.
-static inline bool AimTargetVisibleStrictForSilent(uint64_t player) {
-    if (AimThroughAnyCoverNow()) return true;
-    (void)player;
-    return false;
-}
-
 // Read a Unity Transform / ITransformNode world position via getPositionExt.
 // On vehicle/zipline, skinned bones often fail while Vehicle/Strop transforms remain valid.
 static inline Vector3 tryTransformPos(uint64_t nodeOrTf) {
@@ -1044,7 +1037,7 @@ static inline void AimSyncFireHit(uint64_t localPawn, const Vector3 &fromLoc, co
 }
 
 // Pure yield worker — live AimPos bone (Head/Neck/Chest) + live/cached muzzle origin.
-// Wall-off: drop target if enemy fails visibility (do not magic-bullet through cover).
+// The render thread selects a target only after the per-frame LOS check.
 static void SilentAimThread(uint64_t localPlayer) {
     while (g_silentKeepRunning.load(std::memory_order_relaxed)) {
         bool hasTarget = false;
@@ -1064,13 +1057,6 @@ static void SilentAimThread(uint64_t localPlayer) {
         }
 
         if (hasTarget && isVaildPtr(lp)) {
-            // Wall-off: silent uses STRICT visibility (fail-closed) — no magic through walls.
-            if (!AimThroughAnyCoverNow() && isVaildPtr(enemy) && !AimTargetVisibleStrictForSilent(enemy)) {
-                SilentAimClearTarget();
-                g_lastAimingInfo = 0;
-                std::this_thread::yield();
-                continue;
-            }
             if (isVaildPtr(enemy)) {
                 Vector3 live = ResolveSilentAimWorldPos(enemy, posMode);
                 if (!IsZeroVec(live)) {
@@ -1093,11 +1079,6 @@ static void SilentAimThread(uint64_t localPlayer) {
 
 static void SilentAimSetTarget(uint64_t localPlayer, uint64_t enemy, const Vector3 &bonePos, const Vector3 &fromLoc, int posMode) {
     if (!isVaildPtr(localPlayer) || IsZeroVec(bonePos)) return;
-    // Wall-off: silent needs strict LOS flags (fail-closed).
-    if (!AimThroughAnyCoverNow() && isVaildPtr(enemy) && !AimTargetVisibleStrictForSilent(enemy)) {
-        SilentAimClearTarget();
-        return;
-    }
     if (posMode < 0) posMode = 0;
     if (posMode > 2) posMode = 2;
     {
@@ -5238,7 +5219,7 @@ static void EspEmitStatusLine(void) {
     AimWallOffFrameBegin(myPawnObject, myLocation);
     const bool useAssist = isAimAssist;
     const bool useAssistOnly = isAimAssist && !isAimbot; // assist magnet radius only when solo
-    // Silent/360 only with wall-through ON.
+    // Silent works with live LOS; 360 camera aim still needs wall-through.
     bool useSilent = isAimSilent;
     bool useAim = (isAimbot || useAssist || useSilent);
     const bool useAim180 = isAimbot && aimSphereMode == 1;
@@ -5253,6 +5234,7 @@ static void EspEmitStatusLine(void) {
     const float assistRadiusSq = assistRadius * assistRadius;
     const float safeAimDistance = fmaxf(aimDistance, 1.0f);
     const float safeAimFovSq = fmaxf(aimFovSq, 1.0f);
+    // Silent uses the game's live player list without an app-side range cap.
     const float maxPossibleDistance = fmaxf(espDistanceLimit, aimDistance) + 5.0f;
 
     const uint64_t entriesBase = entriesArr + kIl2CppArrayItems;
@@ -6018,7 +6000,7 @@ static void EspEmitStatusLine(void) {
             : 0.0f;
         // On vehicle distance can be noisy; only skip clearly insane ranges.
         // Min-distance cull skipped for vehicle/collapsed (passenger next to you).
-        if (useLocalDistance && tempDisForAim > maxPossibleDistance) { rej.far++; continue; }
+        if (useLocalDistance && !useSilent && tempDisForAim > maxPossibleDistance) { rej.far++; continue; }
         if (useLocalDistance && !treatAsVehicle && tempDisForAim < 0.35f) { rej.near++; continue; }
 
         // Aimbot + Aim Assist + Silent all honor AimPos (Head/Neck/Chest-Body).
@@ -6701,7 +6683,7 @@ static void EspEmitStatusLine(void) {
     if (iAmAlive && useAim) {
         for (int si = 0; si < snapN; si++) {
             const EspPawnSnap &s = snaps[si];
-            if (!s.canAim || s.dis > aimDistance) continue;
+            if (!s.canAim || (!useSilent && s.dis > aimDistance)) continue;
             uint64_t PawnObject = s.pawn;
             Vector3 aimPos = s.aimPos;
             Vector3 headBonePos = s.head;
@@ -7028,7 +7010,7 @@ static void EspEmitStatusLine(void) {
                     // for a dead local player and true when the HP read fails.
                     float ld = (iAmAlive && useLocalDistance)
                         ? Vector3::Distance(myLocation, lb) : 10.f;
-                    if (ld <= aimDistance + 5.f && ld >= 0.15f) {
+                    if ((useSilent || ld <= aimDistance + 5.f) && ld >= 0.15f) {
                         Vector3 w2s = WorldToScreenLayer(lb, matrixData, (float)matrixVpWidth, (float)matrixVpHeight,
                                                         (float)viewWidth, (float)viewHeight);
                         const bool inF = w2s.z > 0.001f;
@@ -7271,7 +7253,7 @@ static void EspEmitStatusLine(void) {
         if (iAmAlive && useLocalDistance) {
             float d = Vector3::Distance(myLocation, bone);
             // Allow closer while mounted/passenger; only block true self-range ghosts.
-            if (d < 0.15f || d > aimDistance + 5.0f) return false;
+            if (d < 0.15f || (!useSilent && d > aimDistance + 5.0f)) return false;
         }
         return true;
     };
@@ -7436,12 +7418,12 @@ static void EspEmitStatusLine(void) {
         ZeroWeaponScatterForAim(myPawnObject);
     }
 
-    // Wall-off: silent only if strict LOS; camera aimbot already gated looser + FOV.
+    // The selected pawn already passed the live geometric LOS test when wall aim is off.
     // Honor AimPos — never force head when Neck/Body selected.
-    if (silentActive && bestTarget != 0 && AimTargetStillValid(bestTarget) &&
-        (allowThroughWall || AimTargetVisibleStrictForSilent(bestTarget))) {
+    if (silentActive && bestTarget != 0 && AimTargetStillValid(bestTarget)) {
         Vector3 silentBone = ResolveSilentAimWorldPosOnce(bestTarget, aimPosition);
-        if (!IsZeroVec(silentBone) && bestDistance >= 0.15f) {
+        if (!IsZeroVec(silentBone) && bestDistance >= 0.15f &&
+            (allowThroughWall || GameClearLosToEnemy(myPawnObject, bestTarget, silentBone))) {
             SilentAimSetTarget(myPawnObject, bestTarget, silentBone, myLocation, aimPosition);
             s_lastAimPawn = bestTarget;
             bestHeadPos = silentBone;

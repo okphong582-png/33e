@@ -30,3 +30,13 @@ assert "CADisplayLink" not in panel and "__weak ModMenuViewController *weakSelf"
 
 hud = (root / "esp/hud/HUDMainApplicationDelegate.mm").read_text(encoding="utf-8")
 assert "ESP_View *espView" not in hud and "kHUDExitThreshold" not in hud
+
+# Silent must use the selected target's live LOS, and must not inherit the
+# distance slider's app-side cull in collection, selection, sticky hold or validation.
+assert 'AimTargetVisibleStrictForSilent' not in s
+assert 'useLocalDistance && !useSilent && tempDisForAim > maxPossibleDistance' in s
+assert '(!useSilent && s.dis > aimDistance)' in s
+assert '(useSilent || ld <= aimDistance + 5.f)' in s
+assert '(!useSilent && d > aimDistance + 5.0f)' in s
+assert 'GameClearLosToEnemy(myPawnObject, bestTarget, silentBone)' in s
+print('PASS: Silent no app-side distance cap; live LOS when wall aim is off')
