@@ -1,5 +1,6 @@
 #import "../../app/sources/MizzeLicense.h"
 #include "MizzeFramePacer.h"
+#include "AimCoverGeometry.h"
 #import "esp.h"
 #import "ESPPrefs.h"
 #import "offset.h"
@@ -218,6 +219,7 @@ static inline uint64_t kLastAimingTargetFromWeaponOff(void) {
 
 struct GameWeaponRaycast {
     bool valid = false;
+    bool hasCollider = false;
     Vector3 origin{};
     Vector3 hit{};
 };
@@ -240,10 +242,15 @@ static inline GameWeaponRaycast SampleLocalWeaponRaycast(uint64_t localPawn, con
         if (!looksLikeWorldPos(origin)) continue;
         // Reject near-zero garbage.
         if (fabsf(hit.x) < 0.05f && fabsf(hit.y) < 0.05f && fabsf(hit.z) < 0.05f) continue;
-        out.valid = true;
-        out.origin = origin;
-        out.hit = hit;
-        return out;
+        GameWeaponRaycast sample;
+        sample.valid = true;
+        // CGKJLKPMGDJ.Collider at +0x20: an endpoint without a collider is
+        // often the weapon's maximum ray distance, not a wall hit.
+        sample.hasCollider = isVaildPtr(ReadAddr<uint64_t>(info + 0x20));
+        sample.origin = origin;
+        sample.hit = hit;
+        if (sample.hasCollider) return sample;
+        if (!out.valid) out = sample;
     }
     return out;
 }
@@ -345,25 +352,10 @@ static inline bool GameClearLosToEnemy(uint64_t localPawn, uint64_t enemy, const
     if (RaycastHitNearTarget(rc, enemyPos)) return true;
 
     // 2) Hard cover on the line to THIS enemy → block wall aim.
-    if (rc.valid && looksLikeWorldPos(rc.origin) && looksLikeWorldPos(rc.hit)) {
-        const float dxE = enemyPos.x - rc.origin.x;
-        const float dyE = enemyPos.y - rc.origin.y;
-        const float dzE = enemyPos.z - rc.origin.z;
-        const float dxH = rc.hit.x - rc.origin.x;
-        const float dyH = rc.hit.y - rc.origin.y;
-        const float dzH = rc.hit.z - rc.origin.z;
-        const float distEnemy = sqrtf(dxE * dxE + dyE * dyE + dzE * dzE);
-        const float distHit = sqrtf(dxH * dxH + dyH * dyH + dzH * dzH);
-        if (distEnemy > 1.35f && distHit > 0.30f && distHit + 1.10f < distEnemy) {
-            const float invE = 1.0f / distEnemy;
-            const float invH = 1.0f / distHit;
-            const float dot = (dxE * invE) * (dxH * invH)
-                            + (dyE * invE) * (dyH * invH)
-                            + (dzE * invE) * (dzH * invH);
-            // ~30° cone — only block when hit is toward this enemy (not ground off-axis).
-            if (dot > 0.87f) return false;
-        }
-    }
+    if (rc.valid && AimCoverHitBlocksTarget(rc.hasCollider,
+                                            rc.origin.x, rc.origin.y, rc.origin.z,
+                                            rc.hit.x, rc.hit.y, rc.hit.z,
+                                            enemyPos.x, enemyPos.y, enemyPos.z)) return false;
 
     // 3) Bom keo soft list without body hit → never lock.
     if (IceWallAimAssistTargetIsEnemy(localPawn, enemy)) return false;

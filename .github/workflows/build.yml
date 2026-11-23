@@ -19,6 +19,8 @@ jobs:
           set -euo pipefail
           mkdir -p validation
           python3 tests/check_menu_resources.py | tee validation/menu-resources.txt
+          clang++ -std=c++17 -Wall -Werror tests/AimCoverGeometryTests.cpp -o validation/aim-cover-tests
+          validation/aim-cover-tests | tee validation/aim-cover-tests.txt
           clang++ -std=c++17 -fobjc-arc tests/MenuAnimationTests.mm esp/esp/MZMenuAnimationData.mm -framework Foundation -framework ImageIO -framework CoreGraphics -o validation/menu-animation-tests
           validation/menu-animation-tests app/layout/Resources/Mizze-Antiban-Eye-Slow.gif | tee validation/menu-animation-tests.txt
           clang++ -std=c++17 tests/ProfileAndPacerTests.cpp -o validation/profile-tests

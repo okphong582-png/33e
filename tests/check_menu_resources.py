@@ -52,3 +52,7 @@ assert 'self.secureCanvas != self' in menu and 'menuButtonTapped:' in menu
 assert 'silentFireWindow ? 6 : 1' in s
 assert 'sleep_for(std::chrono::milliseconds(hasTarget ? 2 : 12))' in s
 print('PASS: menu activation is reachable; HUD follows boot; Silent worker is paced')
+
+assert 'AimCoverHitBlocksTarget(rc.hasCollider' in s
+assert 'sample.hasCollider = isVaildPtr(ReadAddr<uint64_t>(info + 0x20))' in s
+print('PASS: weapon endpoint only blocks aim when a collider is reported')
