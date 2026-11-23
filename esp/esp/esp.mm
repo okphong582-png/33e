@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <float.h>
 #import <mach/mach.h>
 #include <mutex>
@@ -839,7 +840,7 @@ static inline Vector3 AimCameraOrigin(uint64_t localPawn, const Vector3 &fallbac
 // - Missed fire tick when AimingInfo pointer was null
 //
 // Fix:
-// - PRIMARY sAim1 only (kHitObjectInfo / Alt). Extras only if both primary null.
+// - Resolve the current on-hand weapon's handler and its live shot info.
 // - PURE live head bone only (no hip fallback → no chest)
 // - Only write when aimingInfo != 0 (AimSilent.h). Origin: prefer game; if 0 use
 //   camera for MATH only (do not write origin / hitPoint).
@@ -863,13 +864,6 @@ static int               g_silentAimPosMode = 0; // AimPos snapshotted with targ
 
 static const uint64_t kSilentDirOff    = 0x40; // sAim4
 static const uint64_t kSilentOriginOff = 0x4C; // sAim3
-
-// AimSilent.h uses ONE sAim1. We try primary then alt (same role, FF/MAX switched).
-static inline void SilentFillPrimaryOnly(uint64_t *out, int *outCount) {
-    out[0] = kHitObjectInfo;     // FF 0xDC8 / MAX 0xDD0
-    out[1] = kHitObjectInfoAlt;  // FF 0xDD0 / MAX 0xDD8
-    *outCount = 2;
-}
 
 // PURE live head bone only. No root glue / Y bias / track hybrid —
 // those shifted the hit point ~1 head-width off and missed near+far.
@@ -926,14 +920,43 @@ static inline Vector3 ResolveSilentAimWorldPos(uint64_t pawn, int posMode) {
     return head;
 }
 
+// The Player hit-result fields are raycast results, not the weapon handler's
+// live shot object. Resolve the same on-hand weapon and handler that the
+// verified FFVN 1.134.1 Kernel TIPA uses at native shot dispatch.
+static inline bool SilentClassEquals(uint64_t object, const char *expected, size_t length) {
+    if (!isVaildPtr(object) || length > 16) return false;
+    uint64_t klass = ReadAddr<uint64_t>(object);
+    if (!isVaildPtr(klass)) return false;
+    uint64_t name = ReadAddr<uint64_t>(klass + 0x10);
+    if (!isVaildPtr(name)) return false;
+    char actual[16]{};
+    return ds_read(name, actual, length) && std::memcmp(actual, expected, length) == 0;
+}
+
+static inline uint64_t SilentOnHandWeapon(uint64_t localPawn) {
+    if (GameTargetIsMax() || !isVaildPtr(localPawn)) return 0;
+    uint64_t manager = ReadAddr<uint64_t>(localPawn + kWeaponHolder);
+    if (!isVaildPtr(manager) || ReadAddr<uint64_t>(manager + 0x30) != localPawn) return 0;
+    uint8_t combined = ReadAddr<uint8_t>(manager + 0x148);
+    if (combined > 1) return 0;
+    uint64_t weapon = ReadAddr<uint64_t>(manager + (combined ? 0xA8 : 0xA0));
+    return isVaildPtr(weapon) && ReadAddr<uint64_t>(weapon + 0x60) == localPawn ? weapon : 0;
+}
+
+static inline uint64_t SilentShotInfo(uint64_t localPawn) {
+    uint64_t weapon = SilentOnHandWeapon(localPawn);
+    if (!weapon) return 0;
+    uint64_t handler = ReadAddr<uint64_t>(weapon + 0x80);
+    if (!SilentClassEquals(handler, "MDPBNKPCGNG", sizeof("MDPBNKPCGNG")) ||
+        ReadAddr<uint64_t>(handler + 0x10) != weapon) return 0;
+    uint64_t info = ReadAddr<uint64_t>(handler + 0x28);
+    return SilentClassEquals(info, "CGKJLKPMGDJ", sizeof("CGKJLKPMGDJ")) ? info : 0;
+}
+
 // Zero weapon scatter while Aimbot/Assist is firing (was silent-only → far shots spread).
 static inline void ZeroWeaponScatterForAim(uint64_t localPawn) {
     if (!isVaildPtr(localPawn)) return;
-    uint64_t weapon = ReadAddr<uint64_t>(localPawn + kActiveWeapon);
-    if (!isVaildPtr(weapon)) {
-        uint64_t inv = ReadAddr<uint64_t>(localPawn + kWeaponHolder);
-        if (isVaildPtr(inv)) weapon = ReadAddr<uint64_t>(inv + kHolderActiveWeapon);
-    }
+    uint64_t weapon = SilentOnHandWeapon(localPawn);
     if (!isVaildPtr(weapon)) return;
     uint64_t rep = ReadAddr<uint64_t>(weapon + kWeaponRepItem);
     if (!isVaildPtr(rep)) return;
@@ -984,25 +1007,12 @@ static inline bool SilentWriteAimingDir(uint64_t aimingInfo, const Vector3 &targ
     return true;
 }
 
-// Force primary sAim1 only. Returns writes count.
+// Write only the current weapon handler's shot object. Player hit-result slots
+// do not control the native bullet path and can refer to a different object.
 static inline int SilentForcePrimaryUnlocked(uint64_t localPawn, const Vector3 &fromLoc, const Vector3 &targetPos) {
     if (!isVaildPtr(localPawn) || IsZeroVec(targetPos)) return 0;
-    int wrote = 0;
-
-    uint64_t offs[2];
-    int n = 0;
-    SilentFillPrimaryOnly(offs, &n);
-    uint64_t firstInfo = 0;
-    for (int i = 0; i < n; i++) {
-        uint64_t aimingInfo = ReadAddr<uint64_t>(localPawn + offs[i]);
-        if (i == 0) firstInfo = aimingInfo;
-        if (!isVaildPtr(aimingInfo)) continue;
-        if (i > 0 && aimingInfo == firstInfo) continue;
-        if (SilentWriteAimingDir(aimingInfo, targetPos, fromLoc)) {
-            wrote++;
-        }
-    }
-    return wrote;
+    uint64_t info = SilentShotInfo(localPawn);
+    return info && SilentWriteAimingDir(info, targetPos, fromLoc) ? 1 : 0;
 }
 
 static inline int SilentForcePrimary(uint64_t localPawn, const Vector3 &fromLoc, const Vector3 &targetPos) {
@@ -1014,7 +1024,7 @@ static inline void AimSyncFireHit(uint64_t localPawn, const Vector3 &fromLoc, co
     (void)SilentForcePrimary(localPawn, fromLoc, targetPos);
 }
 
-// Pure yield worker — live AimPos bone (Head/Neck/Chest) + live/cached muzzle origin.
+// Padded worker — live AimPos bone (Head/Neck/Chest) + live muzzle origin.
 // The render thread selects a target only after the per-frame LOS check.
 static void SilentAimThread(uint64_t localPlayer) {
     while (g_silentKeepRunning.load(std::memory_order_relaxed)) {
